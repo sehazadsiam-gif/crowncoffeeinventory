@@ -11,7 +11,6 @@ const navItems = [
   { href: '/bazar', icon: ShoppingCart, label: 'Bazar' },
   { href: '/sales', icon: ClipboardList, label: 'Sales' },
   { href: '/stock', icon: Package, label: 'Stock' },
-  { href: '/transcribe', icon: ScanLine, label: 'Scan Document' },
   { href: '/login', icon: Coffee, label: 'Admin' },
 ]
 

@@ -6,7 +6,7 @@ import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
-const ImageScanner = dynamic(() => import('../../components/ImageScanner'), { ssr: false })
+const DocumentScanner = dynamic(() => import('../../components/DocumentScanner'), { ssr: false })
 import { 
   ShoppingCart, CheckCircle, Trash2, Info, 
   Plus, Minus, Receipt, ArrowRight, Package,
@@ -234,7 +234,7 @@ export default function SalesPage() {
             
             {/* Menu Selection - Left/Top */}
             <div className="lg:col-span-8 space-y-8">
-              <ImageScanner 
+              <DocumentScanner 
                 onScanComplete={handleScan} 
                 scanType="sales" 
                 menuItems={menuItems.map(m => m.name)} 

@@ -3,27 +3,23 @@ import anthropic from "../../../lib/anthropic";
 
 export async function POST(req) {
   try {
-    const { image, mimeType, menuItems } = await req.json();
+    const { image, mimeType, textData, fileType, menuItems } = await req.json();
 
-    if (!image || !mimeType) {
-      return NextResponse.json({ error: "Image and mimeType are required" }, { status: 400 });
+    if (!image && !textData) {
+      return NextResponse.json({ error: "No document content provided" }, { status: 400 });
     }
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [
+    const userMessage = {
+      role: "user",
+      content: [
         {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `You are helping a cafe called Crown Coffee read a handwritten daily sales record.
-   
+          type: "text",
+          text: `You are helping a cafe called Crown Coffee read a ${fileType || 'handwritten'} daily sales record.
+          
 Known menu items at Crown Coffee: ${menuItems ? menuItems.join(", ") : "Not provided"}
-   
-Look at this handwritten note and extract each sold item with its quantity and price per unit if written.
-   
+          
+Analyze this ${fileType === 'excel' ? 'spreadsheet data' : 'document'} and extract each sold item with its quantity and price per unit.
+          
 Return ONLY a valid JSON array, no explanation, no markdown:
 [
   {
@@ -32,24 +28,32 @@ Return ONLY a valid JSON array, no explanation, no markdown:
     "price": number or null
   }
 ]
-   
+          
 Rules:
 - Match names to the known menu items list as closely as possible
 - quantity must be a number
 - price should be the amount per unit if specifically written, otherwise null
-- do not include any text outside the JSON array`,
-            },
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mimeType,
-                data: image,
-              },
-            },
-          ],
+- do not include any text outside the JSON array
+${textData ? `\n\nContent to analyze:\n${textData}` : ''}`,
+        }
+      ]
+    };
+
+    if (image) {
+      userMessage.content.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: mimeType,
+          data: image,
         },
-      ],
+      });
+    }
+
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      messages: [userMessage],
     });
 
     const text = response.content[0].text;

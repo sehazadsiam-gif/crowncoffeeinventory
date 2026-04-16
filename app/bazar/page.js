@@ -5,7 +5,7 @@ import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
 import dynamic from 'next/dynamic'
-const ImageScanner = dynamic(() => import('../../components/ImageScanner'), { ssr: false })
+const DocumentScanner = dynamic(() => import('../../components/DocumentScanner'), { ssr: false })
 import { 
   Plus, Trash2, ShoppingBag, Info, Calendar, 
   Trash, Calculator, Save, CheckCircle2, ShoppingCart, X, Package
@@ -250,7 +250,7 @@ export default function BazarPage() {
           
           {/* Main Log Entry - Left/Top */}
           <div className="lg:col-span-8 space-y-6">
-            <ImageScanner onScanComplete={handleScan} scanType="bazar" />
+            <DocumentScanner onScanComplete={handleScan} scanType="bazar" />
             
             <div className="flex items-center gap-4 my-8">
               <div className="h-px bg-gray-200 flex-1"></div>
