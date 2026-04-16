@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
-import ImageScanner from '../../components/ImageScanner'
+import dynamic from 'next/dynamic'
+const ImageScanner = dynamic(() => import('../../components/ImageScanner'), { ssr: false })
 import { 
   Plus, Trash2, ShoppingBag, Info, Calendar, 
   Trash, Calculator, Save, CheckCircle2, ShoppingCart, X

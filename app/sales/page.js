@@ -5,7 +5,8 @@ import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
 import Link from 'next/link'
-import ImageScanner from '../../components/ImageScanner'
+import dynamic from 'next/dynamic'
+const ImageScanner = dynamic(() => import('../../components/ImageScanner'), { ssr: false })
 import { 
   ShoppingCart, CheckCircle, Trash2, Info, 
   Plus, Minus, Receipt, ArrowRight, Package,
