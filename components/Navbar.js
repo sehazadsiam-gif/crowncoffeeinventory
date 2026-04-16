@@ -1,8 +1,9 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Coffee, BookOpen, ShoppingCart, ClipboardList, Package, Home, Menu, X, ScanLine } from 'lucide-react'
+import { Coffee, BookOpen, ShoppingCart, ClipboardList, Package, Home, Menu, X, ScanLine, Calculator as CalcIcon } from 'lucide-react'
 import { useState } from 'react'
+import Calculator from './Calculator'
 
 const navItems = [
   { href: '/', icon: Home, label: 'Dashboard' },
@@ -17,6 +18,7 @@ const navItems = [
 export default function Navbar() {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isCalcOpen, setIsCalcOpen] = useState(false)
 
   return (
     <nav className="bg-[var(--cafe-brown)] text-white shadow-xl sticky top-0 z-[100] border-b border-[var(--cafe-brown-light)]">
@@ -49,7 +51,25 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Mobile Menu Toggle */}
+          {/* Desktop Nav Actions */}
+          <div className="hidden md:flex items-center gap-3">
+            <button 
+              onClick={() => setIsCalcOpen(!isCalcOpen)}
+              className={`p-2.5 rounded-xl border-2 transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-widest ${isCalcOpen ? 'bg-[var(--cafe-gold)] border-[var(--cafe-gold)] text-[var(--cafe-brown)] shadow-lg' : 'border-white/10 text-white hover:bg-white/10'}`}
+            >
+              <CalcIcon size={18} /> Calculator
+            </button>
+            <div className="w-px h-6 bg-white/10 mx-2" />
+            
+            {/* Mobile Menu Toggle (re-using for layout alignment) */}
+            <button 
+              className="md:hidden p-2 rounded-lg hover:bg-[var(--cafe-brown-light)] transition-colors"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+
           <button 
             className="md:hidden p-2 rounded-lg hover:bg-[var(--cafe-brown-light)] transition-colors"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -78,6 +98,8 @@ export default function Navbar() {
           ))}
         </div>
       </div>
+      {/* Calculator instance */}
+      <Calculator isOpen={isCalcOpen} onClose={() => setIsCalcOpen(false)} />
     </nav>
   )
 }

@@ -17,7 +17,7 @@ export default function BazarPage() {
   const [entries, setEntries] = useState([])
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(true)
-  const [rows, setRows] = useState([{ ingredient_id: '', quantity: '', cost_per_unit: '', notes: '' }])
+  const [rows, setRows] = useState([{ ingredient_id: '', quantity: '', cost_per_unit: '', total_cost: '', notes: '' }])
   const [scanSummary, setScanSummary] = useState(null)
 
   // Modal states
@@ -55,10 +55,25 @@ export default function BazarPage() {
   function updateRow(idx, field, value) {
     const updated = [...rows]
     updated[idx][field] = value
+    
+    const qty = parseFloat(updated[idx].quantity) || 0
+    const rate = parseFloat(updated[idx].cost_per_unit) || 0
+    const total = parseFloat(updated[idx].total_cost) || 0
+
+    // Auto-calculate logic
+    if (field === 'quantity' || field === 'cost_per_unit') {
+      if (qty && rate) updated[idx].total_cost = (qty * rate).toFixed(2)
+    } else if (field === 'total_cost') {
+      if (qty && total) updated[idx].cost_per_unit = (total / qty).toFixed(2)
+    }
+
     // Auto-fill last known price
     if (field === 'ingredient_id') {
       const ing = ingredients.find(i => i.id === value)
-      if (ing && ing.cost_per_unit) updated[idx].cost_per_unit = ing.cost_per_unit
+      if (ing && ing.cost_per_unit) {
+        updated[idx].cost_per_unit = ing.cost_per_unit
+        if (qty) updated[idx].total_cost = (qty * ing.cost_per_unit).toFixed(2)
+      }
     }
     setRows(updated)
   }
@@ -230,8 +245,9 @@ export default function BazarPage() {
                 <div className="hidden md:grid grid-cols-12 gap-3 px-2 mb-2">
                   <div className="col-span-4 text-[10px] font-black uppercase text-gray-400 tracking-widest">Ingredient</div>
                   <div className="col-span-2 text-[10px] font-black uppercase text-gray-400 tracking-widest">Quantity</div>
-                  <div className="col-span-2 text-[10px] font-black uppercase text-gray-400 tracking-widest">Rate (৳) per Unit</div>
-                  <div className="col-span-3 text-[10px] font-black uppercase text-gray-400 tracking-widest">Notes</div>
+                  <div className="col-span-2 text-[10px] font-black uppercase text-gray-400 tracking-widest text-emerald-600">Total Price (৳)</div>
+                  <div className="col-span-2 text-[10px] font-black uppercase text-gray-400 tracking-widest">Rate (৳)</div>
+                  <div className="col-span-2 text-[10px] font-black uppercase text-gray-400 tracking-widest">Notes</div>
                 </div>
 
                 {rows.map((row, idx) => {
@@ -248,12 +264,15 @@ export default function BazarPage() {
                         <input className="input text-sm pr-10" type="number" placeholder="Qty" value={row.quantity} onChange={e => updateRow(idx, 'quantity', e.target.value)} />
                         {unit && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 uppercase">{unit}</span>}
                       </div>
-                      <div className="col-span-6 md:col-span-2 relative group-hover/row:scale-[1.02] transition-transform">
-                        <input className="input text-sm border-emerald-50 focus:border-emerald-400" type="number" placeholder="৳" value={row.cost_per_unit} onChange={e => updateRow(idx, 'cost_per_unit', e.target.value)} />
-                        {unit && <span className="absolute -top-3 left-1 text-[8px] font-black text-emerald-600 uppercase bg-white px-1 tracking-tighter">per {unit}</span>}
+                      <div className="col-span-6 md:col-span-2 group-hover/row:scale-[1.02] transition-transform">
+                        <input className="input text-sm border-emerald-100 bg-emerald-50/10 font-black text-emerald-700" type="number" placeholder="Total" value={row.total_cost} onChange={e => updateRow(idx, 'total_cost', e.target.value)} />
                       </div>
-                      <div className="col-span-10 md:col-span-3">
-                        <input className="input text-xs italic" placeholder="e.g. Fresh batch" value={row.notes} onChange={e => updateRow(idx, 'notes', e.target.value)} />
+                      <div className="col-span-6 md:col-span-2 relative">
+                        <input className="input text-[10px] opacity-70" type="number" placeholder="Rate" value={row.cost_per_unit} onChange={e => updateRow(idx, 'cost_per_unit', e.target.value)} />
+                        {unit && <span className="absolute -top-3 left-1 text-[7px] font-black text-gray-400 uppercase bg-white px-1 tracking-tighter">per {unit}</span>}
+                      </div>
+                      <div className="col-span-10 md:col-span-2">
+                        <input className="input text-xs italic opacity-60" placeholder="Notes" value={row.notes} onChange={e => updateRow(idx, 'notes', e.target.value)} />
                       </div>
                       <div className="col-span-2 md:col-span-1 flex justify-center">
                         <button onClick={() => removeRow(idx)} className="text-gray-300 hover:text-rose-500 transition-all p-1">

@@ -24,7 +24,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
 
   // New menu item form
   const [newMenu, setNewMenu] = useState({ name: '', category: 'Coffee', selling_price: '' })
-  const [newIngredient, setNewIngredient] = useState({ name: '', unit: 'gm', min_stock: '', cost_per_unit: '' })
+  const [newIngredient, setNewIngredient] = useState({ name: '', unit: 'gm', min_stock: '', cost_per_unit: '', price_basis: '1' })
 
   // Recipe management
   const [recipeForm, setRecipeForm] = useState({ ingredient_id: '', quantity: '', unit: 'gm' })
@@ -60,11 +60,20 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
   }
 
   async function addIngredient() {
-    if (!newIngredient.name) return addToast('Please enter ingredient name', 'error')
-    const { error } = await supabase.from('ingredients').insert([{ 
-      ...newIngredient, 
+    if (!newIngredient.name || !newIngredient.unit || !newIngredient.cost_per_unit) {
+      return addToast('Please fill all fields', 'error')
+    }
+    
+    // Normalize to cost per SINGLE unit
+    const basis = parseFloat(newIngredient.price_basis) || 1
+    const totalCost = parseFloat(newIngredient.cost_per_unit) || 0
+    const costPerSingle = totalCost / basis
+
+    const { error } = await supabase.from('ingredients').insert([{
+      name: newIngredient.name,
+      unit: newIngredient.unit,
       min_stock: parseFloat(newIngredient.min_stock) || 0,
-      cost_per_unit: parseFloat(newIngredient.cost_per_unit) || 0,
+      cost_per_unit: costPerSingle,
       current_stock: 0 
     }])
     
@@ -369,11 +378,34 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
               <input className="input" type="number" placeholder="1000" value={newIngredient.min_stock} onChange={e => setNewIngredient({ ...newIngredient, min_stock: e.target.value })} />
             </div>
           </div>
-          <div>
-            <label className="label uppercase text-[10px] tracking-widest text-emerald-600 font-black">
-              Price for 1 {newIngredient.unit || 'unit'} (৳)
-            </label>
-            <input className="input border-emerald-100 focus:ring-emerald-500" type="number" placeholder="0.00" value={newIngredient.cost_per_unit} onChange={e => setNewIngredient({ ...newIngredient, cost_per_unit: e.target.value })} />
+          <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex-1">
+                <label className="label uppercase text-[10px] tracking-widest text-emerald-800 font-black mb-2 flex items-center gap-2">
+                   Price for amount (৳)
+                </label>
+                <div className="flex items-center gap-2">
+                   <span className="text-xs font-bold text-emerald-600">Price for</span>
+                   <input 
+                    className="w-20 bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-black text-[var(--cafe-brown)]" 
+                    type="number" 
+                    value={newIngredient.price_basis} 
+                    onChange={e => setNewIngredient({ ...newIngredient, price_basis: e.target.value })} 
+                   />
+                   <span className="text-xs font-bold text-emerald-600">{newIngredient.unit} is</span>
+                   <input 
+                    className="flex-1 bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-black text-emerald-700" 
+                    type="number" 
+                    placeholder="৳" 
+                    value={newIngredient.cost_per_unit} 
+                    onChange={e => setNewIngredient({ ...newIngredient, cost_per_unit: e.target.value })} 
+                   />
+                </div>
+                <p className="text-[9px] text-emerald-800/50 mt-2 font-bold uppercase tracking-tighter">
+                  Pro-tip: Entering "Price for 1000 gm is 3100" is same as 1 kg.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </Modal>
