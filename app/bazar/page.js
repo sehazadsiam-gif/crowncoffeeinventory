@@ -14,6 +14,9 @@ import {
 export default function BazarPage() {
   const { addToast } = useToast()
   const [ingredients, setIngredients] = useState([])
+  const [entries, setEntries] = useState([])
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState([{ ingredient_id: '', quantity: '', cost_per_unit: '', total_cost: '', notes: '' }])
   const [scanSummary, setScanSummary] = useState(null)
   const [adjustment, setAdjustment] = useState({ ingredient_id: '', quantity: '', unit: 'gm' })
