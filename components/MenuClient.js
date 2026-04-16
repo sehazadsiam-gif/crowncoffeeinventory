@@ -337,10 +337,19 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">Unit</label>
-              <select className="input" value={newIngredient.unit} onChange={e => setNewIngredient({ ...newIngredient, unit: e.target.value })}>
+              <select className="input text-sm" value={newIngredient.unit} onChange={e => setNewIngredient({ ...newIngredient, unit: e.target.value })}>
                 <option value="gm">gm (Grams)</option>
+                <option value="kg">kg (Kilograms)</option>
                 <option value="ml">ml (Milliliters)</option>
+                <option value="ltr">ltr (Liters)</option>
                 <option value="pcs">pcs (Pieces)</option>
+                <option value="pkt">pkt (Packet)</option>
+                <option value="box">box (Box)</option>
+                <option value="cup">cup</option>
+                <option value="tsp">tsp</option>
+                <option value="tbsp">tbsp</option>
+                <option value="can">can</option>
+                <option value="btl">btl (Bottle)</option>
               </select>
             </div>
             <div>
