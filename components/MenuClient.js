@@ -24,7 +24,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
 
   // New menu item form
   const [newMenu, setNewMenu] = useState({ name: '', category: 'Coffee', selling_price: '' })
-  const [newIngredient, setNewIngredient] = useState({ name: '', unit: 'gm', min_stock: '', cost_per_unit: '', price_basis: '1' })
+  const [newIngredient, setNewIngredient] = useState({ name: '', unit: 'gm', min_stock: '', cost_per_unit: '', price_basis: '1', opening_stock: '' })
 
   // Recipe management
   const [recipeForm, setRecipeForm] = useState({ ingredient_id: '', quantity: '', unit: 'gm' })
@@ -69,18 +69,30 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
     const totalCost = parseFloat(newIngredient.cost_per_unit) || 0
     const costPerSingle = totalCost / basis
 
-    const { error } = await supabase.from('ingredients').insert([{
+    const openingStock = parseFloat(newIngredient.opening_stock) || 0
+
+    const { data: ingData, error } = await supabase.from('ingredients').insert([{
       name: newIngredient.name,
       unit: newIngredient.unit,
       min_stock: parseFloat(newIngredient.min_stock) || 0,
       cost_per_unit: costPerSingle,
-      current_stock: 0 
-    }])
+      current_stock: openingStock
+    }]).select()
     
     if (error) {
       console.error("Supabase error:", error)
       addToast(error.message || "Something went wrong", "error")
       return
+    }
+
+    // Record movement if opening stock was provided
+    if (openingStock > 0 && ingData?.[0]) {
+      await supabase.from('stock_movements').insert([{
+        ingredient_id: ingData[0].id,
+        movement_type: 'manual_adjust',
+        quantity: openingStock,
+        notes: 'Initial opening stock setup'
+      }])
     }
     
     setNewIngredient({ name: '', unit: 'gm', min_stock: '', cost_per_unit: '' })
@@ -374,8 +386,18 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
               </select>
             </div>
             <div>
-              <label className="label">Min Alert level</label>
-              <input className="input" type="number" placeholder="1000" value={newIngredient.min_stock} onChange={e => setNewIngredient({ ...newIngredient, min_stock: e.target.value })} />
+              <label className="label uppercase text-[10px] tracking-widest text-amber-600 font-black">Initial Stock on Hand</label>
+              <div className="relative">
+                <input 
+                  className="input border-amber-100 focus:ring-amber-500 pr-12" 
+                  type="number" 
+                  placeholder="2.5" 
+                  value={newIngredient.opening_stock} 
+                  onChange={e => setNewIngredient({ ...newIngredient, opening_stock: e.target.value })} 
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-amber-500 uppercase">{newIngredient.unit}</span>
+              </div>
+              <p className="text-[9px] text-amber-800/40 mt-1 font-bold">Have items remaining from before? Enter them here.</p>
             </div>
           </div>
           <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100">

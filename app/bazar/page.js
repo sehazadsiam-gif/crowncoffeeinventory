@@ -191,6 +191,9 @@ export default function BazarPage() {
                 Log everything you bought today for Crown Coffee. 
                 This will automatically add to your stock and calculate costs for profit analysis.
               </p>
+              <p className="mt-3 text-[10px] font-bold text-amber-200 uppercase tracking-widest flex items-center gap-1">
+                Tip: Have items from before today? Add them as "Opening Stock" in the Menu page.
+              </p>
             </div>
           </div>
         </section>
