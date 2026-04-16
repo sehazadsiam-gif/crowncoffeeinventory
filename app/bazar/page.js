@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic'
 const ImageScanner = dynamic(() => import('../../components/ImageScanner'), { ssr: false })
 import { 
   Plus, Trash2, ShoppingBag, Info, Calendar, 
-  Trash, Calculator, Save, CheckCircle2, ShoppingCart, X
+  Trash, Calculator, Save, CheckCircle2, ShoppingCart, X, Package
 } from 'lucide-react'
 
 export default function BazarPage() {
@@ -19,6 +19,8 @@ export default function BazarPage() {
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState([{ ingredient_id: '', quantity: '', cost_per_unit: '', total_cost: '', notes: '' }])
   const [scanSummary, setScanSummary] = useState(null)
+  const [adjustment, setAdjustment] = useState({ ingredient_id: '', quantity: '' })
+  const [adjusting, setAdjusting] = useState(false)
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false)
@@ -169,6 +171,38 @@ export default function BazarPage() {
     }
     addToast('Entry removed successfully', 'success')
     fetchEntries()
+  }
+
+  async function saveAdjustment() {
+    if (!adjustment.ingredient_id || !adjustment.quantity) {
+      return addToast('Please select an item and enter quantity', 'warning')
+    }
+
+    setAdjusting(true)
+    const qty = parseFloat(adjustment.quantity)
+    const { error } = await supabase
+      .from('ingredients')
+      .update({ current_stock: qty })
+      .eq('id', adjustment.ingredient_id)
+
+    if (error) {
+      addToast(error.message, 'error')
+      setAdjusting(false)
+      return
+    }
+
+    // Record the movement
+    await supabase.from('stock_movements').insert([{
+      ingredient_id: adjustment.ingredient_id,
+      movement_type: 'manual_adjust',
+      quantity: qty,
+      notes: 'Initial stock setup / Manual adjustment'
+    }])
+
+    addToast('Stock level updated successfully!', 'success')
+    setAdjustment({ ingredient_id: '', quantity: '' })
+    setAdjusting(false)
+    fetchIngredients() // Refresh local list
   }
 
   const runningTotal = rows.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.cost_per_unit) || 0), 0)
@@ -352,6 +386,65 @@ export default function BazarPage() {
             </div>
           </div>
         </div>
+
+        {/* Initial Stock Section - NEW */}
+        <section className="mt-12 pt-12 border-t-2 border-dashed border-gray-200 fade-in">
+          <div className="card-premium border-amber-200 bg-amber-50/20">
+            <div className="flex items-start gap-4 mb-8">
+              <div className="bg-amber-100 p-3 rounded-2xl text-amber-600 shrink-0">
+                <Package size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-amber-900 uppercase tracking-tighter">📦 Initial Stock Setup</h3>
+                <p className="text-amber-800/60 text-xs font-bold uppercase tracking-widest mt-1">Have items from before today? Initialize them here.</p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 items-end">
+              <div className="md:col-span-1">
+                <label className="label text-[10px] font-black text-amber-800 uppercase tracking-widest mb-2">Select Ingredient</label>
+                <select 
+                  className="input bg-white border-amber-100 focus:ring-amber-500 font-bold"
+                  value={adjustment.ingredient_id}
+                  onChange={e => setAdjustment({ ...adjustment, ingredient_id: e.target.value })}
+                >
+                  <option value="">Choose item...</option>
+                  {ingredients.map(ing => (
+                    <option key={ing.id} value={ing.id}>{ing.name} (Current: {ing.current_stock} {ing.unit})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="md:col-span-1">
+                <label className="label text-[10px] font-black text-amber-800 uppercase tracking-widest mb-2">Current Physical Stock</label>
+                <div className="relative">
+                  <input 
+                    type="number" 
+                    className="input bg-white border-amber-100 focus:ring-amber-500 font-black"
+                    placeholder="e.g. 5.0"
+                    value={adjustment.quantity}
+                    onChange={e => setAdjustment({ ...adjustment, quantity: e.target.value })}
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-amber-400 uppercase">
+                    {ingredients.find(i => i.id === adjustment.ingredient_id)?.unit || ''}
+                  </span>
+                </div>
+              </div>
+              <div className="md:col-span-1">
+                <button 
+                  onClick={saveAdjustment}
+                  disabled={adjusting}
+                  className="btn-primary bg-amber-600 hover:bg-amber-700 w-full py-4 text-[10px] font-black uppercase tracking-[0.2em] shadow-lg disabled:opacity-50"
+                >
+                  {adjusting ? 'Updating...' : 'Initialize Stock Level'}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 p-4 bg-white/50 rounded-2xl border border-amber-100 text-[10px] text-amber-800 font-bold italic">
+              * This will directly set the ingredient's level to the quantity you enter. Use this for your opening balance.
+            </div>
+          </div>
+        </section>
       </main>
 
       <Modal 
