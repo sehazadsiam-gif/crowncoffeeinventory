@@ -1,72 +1,77 @@
-import { NextResponse } from "next/server";
-import anthropic from "../../../lib/anthropic";
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
-export async function POST(req) {
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+
+export async function POST(request) {
   try {
-    const { image, mimeType, textData, fileType } = await req.json();
+    if (!process.env.GEMINI_API_KEY) {
+      return Response.json(
+        { error: "GEMINI_API_KEY is not set in .env.local" },
+        { status: 500 }
+      )
+    }
+
+    const { image, mimeType, textData } = await request.json()
 
     if (!image && !textData) {
-      return NextResponse.json({ error: "No document content provided" }, { status: 400 });
+      return Response.json({ error: "No document content provided" }, { status: 400 })
     }
 
-    const userMessage = {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: `You are helping a cafe called Crown Coffee read a ${fileType || 'handwritten'} bazar (shopping/purchase) list.
-          
-Analyze this ${fileType === 'excel' ? 'spreadsheet data' : 'document'} and extract each item.
-          
-Return ONLY a valid JSON array, no explanation, no markdown:
-[
-  {
-    "name": "ingredient name as written",
-    "quantity": number only,
-    "unit": "gm or ml or pcs or kg or liter",
-    "cost_per_unit": number or null,
-    "notes": "any extra notes or null"
-  }
-]
-          
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+
+    const prompt = `You are a data extraction assistant for Crown Coffee cafe.
+Extract each purchased ingredient and its details from this bazar (shopping) list.
+Return ONLY a valid JSON array with no explanation, no markdown, no code blocks.
+Format: [{"name": "ingredient name", "quantity": number, "unit": "gm or ml or pcs or kg or ltr", "cost_per_unit": number or null, "notes": "string or null"}]
 Rules:
-- quantity must be a number, not a string
-- unit should be your best guess based on the item
+- quantity must be a number
+- unit should be your best guess based on the item type
 - if cost is not written, set cost_per_unit to null
-- if unsure about a value, make a reasonable guess
-- do not include any text outside the JSON array
-${textData ? `\n\nContent to analyze:\n${textData}` : ''}`,
-        }
-      ]
-    };
+- do not return anything outside the JSON array
+${textData ? `\n\nContent to analyze:\n${textData}` : ""}`
 
+    let result
     if (image) {
-      userMessage.content.push({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: mimeType,
-          data: image,
+      result = await model.generateContent([
+        {
+          inlineData: {
+            mimeType: mimeType || "image/jpeg",
+            data: image,
+          },
         },
-      });
+        prompt,
+      ])
+    } else {
+      result = await model.generateContent(prompt)
     }
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [userMessage],
-    });
+    const raw = result.response.text().trim()
+    console.log("Gemini scan-bazar response:", raw)
 
-    const text = response.content[0].text;
+    const cleaned = raw
+      .replace(/^```json\n?/, "")
+      .replace(/^```\n?/, "")
+      .replace(/\n?```$/, "")
+      .trim()
+
+    let data
     try {
-      const data = JSON.parse(text);
-      return NextResponse.json(data);
-    } catch (parseError) {
-      console.error("Failed to parse Claude response:", text);
-      return NextResponse.json({ error: "Could not read the document" }, { status: 500 });
+      data = JSON.parse(cleaned)
+    } catch (e) {
+      console.error("JSON parse failed:", cleaned)
+      return Response.json(
+        { error: "AI returned unexpected format. Please try again." },
+        { status: 500 }
+      )
     }
+
+    return Response.json(data)
+
   } catch (error) {
-    console.error("Scan Bazar Error:", error);
-    return NextResponse.json({ error: "Could not read the document" }, { status: 500 });
+    console.error("scan-bazar error:", error)
+    return Response.json(
+      { error: error.message || "Unexpected error scanning document" },
+      { status: 500 }
+    )
   }
 }

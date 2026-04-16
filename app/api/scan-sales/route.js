@@ -1,71 +1,75 @@
-import { NextResponse } from "next/server";
-import anthropic from "../../../lib/anthropic";
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
-export async function POST(req) {
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+
+export async function POST(request) {
   try {
-    const { image, mimeType, textData, fileType, menuItems } = await req.json();
-
-    if (!image && !textData) {
-      return NextResponse.json({ error: "No document content provided" }, { status: 400 });
+    if (!process.env.GEMINI_API_KEY) {
+      return Response.json(
+        { error: "GEMINI_API_KEY is not set in .env.local" },
+        { status: 500 }
+      )
     }
 
-    const userMessage = {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: `You are helping a cafe called Crown Coffee read a ${fileType || 'handwritten'} daily sales record.
-          
-Known menu items at Crown Coffee: ${menuItems ? menuItems.join(", ") : "Not provided"}
-          
-Analyze this ${fileType === 'excel' ? 'spreadsheet data' : 'document'} and extract each sold item with its quantity and price per unit.
-          
-Return ONLY a valid JSON array, no explanation, no markdown:
-[
-  {
-    "name": "item name matched to known menu items if possible",
-    "quantity": number only,
-    "price": number or null
-  }
-]
-          
+    const { image, mimeType, menuItems } = await request.json()
+
+    if (!image) {
+      return Response.json({ error: "No image provided" }, { status: 400 })
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+
+    const menuList = menuItems && menuItems.length > 0
+      ? `Known menu items at Crown Coffee: ${menuItems.join(", ")}`
+      : ""
+
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: mimeType || "image/jpeg",
+          data: image,
+        },
+      },
+      `You are a data extraction assistant for Crown Coffee cafe.
+${menuList}
+
+Extract each sold menu item and its quantity from this image.
+Return ONLY a valid JSON array with no explanation, no markdown, no code blocks.
+Format: [{"name": "item name", "quantity": number, "price": number or null}]
 Rules:
 - Match names to the known menu items list as closely as possible
 - quantity must be a number
-- price should be the amount per unit if specifically written, otherwise null
-- do not include any text outside the JSON array
-${textData ? `\n\nContent to analyze:\n${textData}` : ''}`,
-        }
-      ]
-    };
+- price should be the amount per unit if written, otherwise null
+- do not return anything outside the JSON array`,
+    ])
 
-    if (image) {
-      userMessage.content.push({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: mimeType,
-          data: image,
-        },
-      });
-    }
+    const raw = result.response.text().trim()
+    console.log("Gemini scan-sales response:", raw)
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      messages: [userMessage],
-    });
+    const cleaned = raw
+      .replace(/^```json\n?/, "")
+      .replace(/^```\n?/, "")
+      .replace(/\n?```$/, "")
+      .trim()
 
-    const text = response.content[0].text;
+    let data
     try {
-      const data = JSON.parse(text);
-      return NextResponse.json(data);
-    } catch (parseError) {
-      console.error("Failed to parse Claude response:", text);
-      return NextResponse.json({ error: "Could not read the document" }, { status: 500 });
+      data = JSON.parse(cleaned)
+    } catch (e) {
+      console.error("JSON parse failed:", cleaned)
+      return Response.json(
+        { error: "AI returned unexpected format. Please try again." },
+        { status: 500 }
+      )
     }
+
+    return Response.json(data)
+
   } catch (error) {
-    console.error("Scan Sales Error:", error);
-    return NextResponse.json({ error: "Could not read the document" }, { status: 500 });
+    console.error("scan-sales error:", error)
+    return Response.json(
+      { error: error.message || "Unexpected error scanning image" },
+      { status: 500 }
+    )
   }
 }
