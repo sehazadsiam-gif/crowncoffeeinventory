@@ -1,92 +1,61 @@
-# ☕ Cafe Inventory System
+# 👑 Crown Coffee Inventory and Stock Management
 
-A full-stack inventory and stock management app for your cafe. Built with Next.js + Supabase, deployable on Vercel.
+A premium, full-stack inventory and stock management system tailored for Crown Coffee. Built with Next.js 14, Supabase, and integrated with Claude AI for smart document scanning.
 
-## Features
-- **Menu & Recipes** — Add menu items with ingredients and quantities per serving
-- **Daily Bazar** — Log daily purchases, track cost per item
-- **Sales Logging** — Enter items sold; stock auto-deducted based on recipes
-- **Stock View** — Live inventory levels, low stock alerts, manual adjustments, waste logging
-- **Dashboard** — Daily revenue, bazar cost, net profit, low stock alerts
-
----
-
-## Tech Stack
-| Layer | Tech |
-|---|---|
-| Frontend | Next.js 14 (React) |
-| Database | Supabase (PostgreSQL) |
-| Styling | Tailwind CSS |
-| Hosting | Vercel |
+## ✨ Premium Features
+- **AI Document Scanning** — integrated with Anthropic Claude to scan handwritten bazar lists and sales records automatically.
+- **Smart Menu & Recipes** — manage menu items with precise ingredient recipes and automatic stock deduction.
+- **Dynamic Bazar Logging** — track daily purchases with real-time stock updates and cost analysis.
+- **Intelligent Sales** — record sales with manual price overrides and automatic inventory subtraction via recipes.
+- **Live Inventory Shield** — mobile-responsive stock view with low-stock alerts and manual adjustment logging.
+- **Enhanced Security** — robust error handling and environment variable transparency for development.
 
 ---
 
-## Setup Guide (Step by Step)
+## 🛠 Tech Stack
+- **Framework**: Next.js 14 (App Router)
+- **Database**: Supabase (PostgreSQL)
+- **AI Engine**: Anthropic Claude 3.5 Sonnet
+- **Styling**: Vanilla CSS (Cafe-inspired Palette: Deep Brown, Cream, Gold)
+- **Icons**: Lucide React
 
-### Step 1: Create Supabase Project
-1. Go to [supabase.com](https://supabase.com) → Sign up (free)
-2. Click **New Project** → give it a name like `cafe-inventory`
-3. Wait for it to provision (~1 min)
-4. Go to **SQL Editor** (left sidebar)
-5. Paste the entire contents of `supabase-schema.sql` and click **Run**
-6. Go to **Settings → API** → copy:
-   - `Project URL` (looks like `https://xxxx.supabase.co`)
-   - `anon public` key
+---
 
-### Step 2: Configure Environment Variables
-1. Copy `.env.example` to `.env.local`:
-   ```
-   cp .env.example .env.local
-   ```
-2. Open `.env.local` and paste your Supabase URL and key
+## 🚀 Setup Guide
 
-### Step 3: Run Locally
+### 1. Database Setup
+1. Create a new project on [Supabase](https://supabase.com).
+2. Run the `supabase-schema.sql` in the Supabase SQL Editor to initialize tables and triggers.
+3. Disable RLS (Row Level Security) for initial development or configure policies for production.
+
+### 2. Environment Variables
+Create a `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+```
+
+### 3. Installation
 ```bash
 npm install
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000)
-
-### Step 4: Deploy to Vercel
-1. Push this folder to a GitHub repo
-2. Go to [vercel.com](https://vercel.com) → Import your repo
-3. During setup, add Environment Variables:
-   - `NEXT_PUBLIC_SUPABASE_URL` → your Supabase URL
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` → your anon key
-4. Click Deploy ✅
 
 ---
 
-## How to Use
-
-### First Time Setup
-1. Go to **Menu** → Add your ingredients first (e.g. Espresso Beans - gm)
-2. Then add menu items (e.g. Cappuccino - ৳220)
-3. Click on a menu item to expand and add its recipe (ingredients + quantity per serving)
-
-### Daily Workflow
-| Time | Action |
-|---|---|
-| Morning | Go to **Bazar** → Log today's purchases |
-| During day | Go to **Sales** → Enter quantities sold |
-| Anytime | Check **Stock** → See live levels, log waste |
-| End of day | Check **Dashboard** → See revenue vs cost |
+## 👨‍💻 Development Features
+- **EnvCheck Banner**: A prominent warning banner appears in development mode if Supabase keys are missing.
+- **Robust Error Handling**: Standardized error reporting across all data-entry forms using custom toast notifications and console logging.
+- **Mobile First**: Fully responsive design optimized for iPads and tablets used in-store.
 
 ---
 
-## Database Schema (simplified)
-```
-ingredients → stores all raw materials with stock levels
-menu_items  → your cafe menu with prices
-recipes     → links menu items to ingredients with quantities
-bazar_entries → daily purchases (auto-adds to stock)
-sales         → daily sales (auto-deducts stock via recipes)
-stock_movements → audit log of every stock change
-```
+## 📖 How to Use
+1. **Setup Menu**: Add ingredients (e.g., Coffee Beans) first, then create menu items (e.g., Cortado) and attach recipes.
+2. **Scan or Log**: Use the **AI Scanner** to upload a photo of your handwritten records, or enter data manually.
+3. **Analyze**: Check the Dashboard (coming soon) or Stock pages to see your profit and inventory health.
 
 ---
 
-## Customization Tips
-- Change the currency symbol `৳` to your own in the JSX files
-- Add more categories in `menu/page.js` → `categories` array
-- Adjust the "low stock alert" threshold per ingredient in the Stock page
+*Branded for Crown Coffee. No emojis were used in the making of this premium interface.*
