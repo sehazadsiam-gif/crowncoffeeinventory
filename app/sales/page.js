@@ -67,7 +67,7 @@ export default function SalesPage() {
   async function fetchMenu() {
     const { data } = await supabase
       .from('menu_items')
-      .select('*, recipes(quantity, ingredients(name, unit))')
+      .select('*, recipes(quantity, unit, ingredients(name, unit))')
       .eq('is_active', true)
       .order('category')
     setMenuItems(data || [])
@@ -105,19 +105,39 @@ export default function SalesPage() {
 
   function computePreview() {
     const deductions = {}
+    
+    // Helper for preview conversion
+    const convert = (qty, from, to) => {
+      if (!from || !to || from === to) return qty
+      if (from === 'gm' && to === 'kg') return qty / 1000
+      if (from === 'kg' && to === 'gm') return qty * 1000
+      if (from === 'ml' && to === 'ltr') return qty / 1000
+      if (from === 'ltr' && to === 'ml') return qty * 1000
+      return qty
+    }
+
     for (const [menuItemId, data] of Object.entries(cart)) {
       const { qty } = data
       const item = menuItems.find(m => m.id === menuItemId)
       if (!item) continue
       for (const r of item.recipes || []) {
         const key = r.ingredients.name
-        deductions[key] = (deductions[key] || 0) + r.quantity * qty
-        deductions[`${key}__unit`] = r.ingredients.unit
+        const stockUnit = r.ingredients.unit
+        const recipeUnit = r.unit || stockUnit // fallback
+        
+        const convertedUsage = convert(r.quantity * qty, recipeUnit, stockUnit)
+        
+        deductions[key] = (deductions[key] || 0) + convertedUsage
+        deductions[`${key}__unit`] = stockUnit
       }
     }
     const result = Object.entries(deductions)
       .filter(([k]) => !k.endsWith('__unit'))
-      .map(([name, qty]) => ({ name, qty: qty.toFixed(1), unit: deductions[`${name}__unit`] }))
+      .map(([name, qty]) => ({ 
+        name, 
+        qty: qty >= 1 ? qty.toFixed(2) : qty.toFixed(3), 
+        unit: deductions[`${name}__unit`] 
+      }))
     setPreview(result)
   }
 

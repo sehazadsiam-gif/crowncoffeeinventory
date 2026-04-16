@@ -27,7 +27,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
   const [newIngredient, setNewIngredient] = useState({ name: '', unit: 'gm', min_stock: '', cost_per_unit: '' })
 
   // Recipe management
-  const [recipeForm, setRecipeForm] = useState({ ingredient_id: '', quantity: '' })
+  const [recipeForm, setRecipeForm] = useState({ ingredient_id: '', quantity: '', unit: 'gm' })
 
   async function refreshData() {
     const [menuRes, ingRes] = await Promise.all([
@@ -97,6 +97,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
       menu_item_id: menuItemId,
       ingredient_id: recipeForm.ingredient_id,
       quantity: parseFloat(recipeForm.quantity),
+      unit: recipeForm.unit
     }])
     
     if (error) {
@@ -105,7 +106,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
       return
     }
     
-    setRecipeForm({ ingredient_id: '', quantity: '' })
+    setRecipeForm({ ingredient_id: '', quantity: '', unit: 'gm' })
     addToast('Ingredient added to recipe', 'success')
     refreshData()
   }
@@ -205,7 +206,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                                     <p className="text-sm font-bold text-[var(--cafe-brown)]">{r.ingredients?.name}</p>
                                   </div>
                                   <div className="flex items-center gap-4">
-                                    <p className="text-sm font-black text-gray-500">{r.quantity} <span className="text-[10px] uppercase">{r.ingredients?.unit}</span></p>
+                                    <p className="text-sm font-black text-gray-500">{r.quantity} <span className="text-[10px] uppercase font-black text-[var(--cafe-gold)]">{r.unit || r.ingredients?.unit}</span></p>
                                     <button onClick={() => deleteRecipe(r.id)} className="text-gray-300 hover:text-rose-500 transition-colors">
                                       <X size={14} />
                                     </button>
@@ -232,12 +233,23 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                                 </select>
                                 <div className="flex gap-2">
                                   <input 
-                                    className="input text-xs w-24" 
+                                    className="input text-xs w-20" 
                                     type="number" 
                                     placeholder="Qty" 
                                     value={recipeForm.quantity}
                                     onChange={e => setRecipeForm({ ...recipeForm, quantity: e.target.value })}
                                   />
+                                  <select 
+                                    className="input text-[10px] w-20 px-1 font-bold"
+                                    value={recipeForm.unit}
+                                    onChange={e => setRecipeForm({ ...recipeForm, unit: e.target.value })}
+                                  >
+                                    <option value="gm">gm</option>
+                                    <option value="kg">kg</option>
+                                    <option value="ml">ml</option>
+                                    <option value="ltr">ltr</option>
+                                    <option value="pcs">pcs</option>
+                                  </select>
                                   <button onClick={() => addRecipe(item.id)} className="btn-primary py-2 px-6 text-[10px] uppercase tracking-widest">Add</button>
                                 </div>
                               </div>
