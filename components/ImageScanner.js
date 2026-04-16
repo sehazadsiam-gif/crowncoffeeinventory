@@ -73,7 +73,11 @@ export default function ImageScanner({ onScanComplete, scanType, menuItems = [] 
       setSuccess(true);
       onScanComplete(data);
     } catch (err) {
-      setError(err.message);
+      if (err instanceof TypeError && err.message === 'Failed to fetch') {
+        setError("Network Error: Could not reach the local server. Ensure 'npm run dev' is running and active.");
+      } else {
+        setError(err.message || "An unexpected error occurred during scanning.");
+      }
     } finally {
       setScanning(false);
     }

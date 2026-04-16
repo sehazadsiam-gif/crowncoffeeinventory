@@ -27,17 +27,26 @@ export default function BazarPage() {
   useEffect(() => { fetchEntries() }, [selectedDate])
 
   async function fetchIngredients() {
-    const { data } = await supabase.from('ingredients').select('*').order('name')
+    const { data, error } = await supabase.from('ingredients').select('*').order('name')
+    if (error) {
+      console.error("fetchIngredients error:", error)
+      addToast(`Failed to load ingredients: ${error.message}`, "error")
+    }
     setIngredients(data || [])
   }
 
   async function fetchEntries() {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('bazar_entries')
       .select('*, ingredients(name, unit)')
       .eq('date', selectedDate)
       .order('created_at')
+    
+    if (error) {
+      console.error("fetchEntries error:", error)
+      addToast(`Failed to load records: ${error.message}`, "error")
+    }
     setEntries(data || [])
     setLoading(false)
   }

@@ -54,7 +54,10 @@ export default function MenuPage() {
     if (!newMenu.name || !newMenu.selling_price) {
       return addToast('Please enter both name and price', 'error')
     }
-    const { data, error } = await supabase.from('menu_items').insert([newMenu]).select()
+    const { data, error } = await supabase.from('menu_items').insert([{
+      ...newMenu,
+      selling_price: parseFloat(newMenu.selling_price) || 0
+    }]).select()
     if (error) {
       console.error("Supabase error:", error)
       addToast(error.message || "Something went wrong", "error")
@@ -72,7 +75,12 @@ export default function MenuPage() {
 
   async function addIngredient() {
     if (!newIngredient.name) return addToast('Please enter ingredient name', 'error')
-    const { error } = await supabase.from('ingredients').insert([{ ...newIngredient, current_stock: 0 }])
+    const { error } = await supabase.from('ingredients').insert([{ 
+      ...newIngredient, 
+      min_stock: parseFloat(newIngredient.min_stock) || 0,
+      cost_per_unit: parseFloat(newIngredient.cost_per_unit) || 0,
+      current_stock: 0 
+    }])
     if (error) {
       console.error("Supabase error:", error)
       addToast(error.message || "Something went wrong", "error")
