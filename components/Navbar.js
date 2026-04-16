@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Coffee, BookOpen, ShoppingCart, ClipboardList, Package, Home, Menu, X, ScanLine, Calculator as CalcIcon } from 'lucide-react'
+import { Coffee, BookOpen, ShoppingCart, ClipboardList, Package, Home, Menu, X, ScanLine, Calculator as CalcIcon, Zap } from 'lucide-react'
 import { useState } from 'react'
 import Calculator from './Calculator'
 
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/bazar', icon: ShoppingCart, label: 'Bazar' },
   { href: '/sales', icon: ClipboardList, label: 'Sales' },
   { href: '/stock', icon: Package, label: 'Stock' },
+  { href: '/transcribe', icon: Zap, label: 'Transcribe' },
   { href: '/login', icon: Coffee, label: 'Admin' },
 ]
 
