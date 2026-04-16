@@ -370,8 +370,10 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
             </div>
           </div>
           <div>
-            <label className="label">Cost per unit (৳)</label>
-            <input className="input" type="number" placeholder="0.25" value={newIngredient.cost_per_unit} onChange={e => setNewIngredient({ ...newIngredient, cost_per_unit: e.target.value })} />
+            <label className="label uppercase text-[10px] tracking-widest text-emerald-600 font-black">
+              Price for 1 {newIngredient.unit || 'unit'} (৳)
+            </label>
+            <input className="input border-emerald-100 focus:ring-emerald-500" type="number" placeholder="0.00" value={newIngredient.cost_per_unit} onChange={e => setNewIngredient({ ...newIngredient, cost_per_unit: e.target.value })} />
           </div>
         </div>
       </Modal>

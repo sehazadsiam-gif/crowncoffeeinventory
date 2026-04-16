@@ -29,6 +29,12 @@ export default function AdminClient({ initialStats }) {
     router.push('/')
   }
 
+  const handleReset = async () => {
+    // This requires the user to run SQL in Supabase for full wipe,
+    // but we can trigger a front-end warning.
+    addToast('To clear entries, please run the factory-reset.sql script in your Supabase SQL Editor.', 'info')
+  }
+
   if (!isAuthorized) return (
     <div className="flex flex-col items-center justify-center py-20">
       <div className="animate-spin rounded-full h-12 w-12 border-4 border-amber-100 border-t-amber-900 mb-4"></div>
@@ -122,9 +128,16 @@ export default function AdminClient({ initialStats }) {
               <span className="text-sm font-bold text-gray-600">Download Sales Report (CSV)</span>
               <Download size={18} className="text-gray-300 group-hover:text-[var(--cafe-gold)]" />
             </button>
-            <button className="flex items-center justify-between w-full p-4 rounded-xl border border-rose-50 hover:bg-rose-50 transition-all group opacity-40 cursor-not-allowed">
-              <span className="text-sm font-bold text-rose-300">Clear All Transactions (Reset)</span>
-              <Trash2 size={18} className="text-rose-200" />
+            <button 
+              onClick={() => {
+                if (confirm("DANGER: This will recommend wiping all data. Check factory-reset.sql. Continue?")) {
+                  handleReset();
+                }
+              }}
+              className="flex items-center justify-between w-full p-4 rounded-xl border border-rose-100 hover:bg-rose-50 transition-all group"
+            >
+              <span className="text-sm font-bold text-rose-500">Clear All Dashboard Entries (Factory Reset)</span>
+              <Trash2 size={18} className="text-rose-400 group-hover:text-rose-600" />
             </button>
              <div className="mt-4 p-4 bg-amber-50 rounded-xl border border-amber-100 flex items-start gap-3">
               <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />

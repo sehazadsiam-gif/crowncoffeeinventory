@@ -230,7 +230,7 @@ export default function BazarPage() {
                 <div className="hidden md:grid grid-cols-12 gap-3 px-2 mb-2">
                   <div className="col-span-4 text-[10px] font-black uppercase text-gray-400 tracking-widest">Ingredient</div>
                   <div className="col-span-2 text-[10px] font-black uppercase text-gray-400 tracking-widest">Quantity</div>
-                  <div className="col-span-2 text-[10px] font-black uppercase text-gray-400 tracking-widest">Rate (৳)</div>
+                  <div className="col-span-2 text-[10px] font-black uppercase text-gray-400 tracking-widest">Rate (৳) per Unit</div>
                   <div className="col-span-3 text-[10px] font-black uppercase text-gray-400 tracking-widest">Notes</div>
                 </div>
 
@@ -248,8 +248,9 @@ export default function BazarPage() {
                         <input className="input text-sm pr-10" type="number" placeholder="Qty" value={row.quantity} onChange={e => updateRow(idx, 'quantity', e.target.value)} />
                         {unit && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 uppercase">{unit}</span>}
                       </div>
-                      <div className="col-span-6 md:col-span-2">
-                        <input className="input text-sm" type="number" placeholder="৳" value={row.cost_per_unit} onChange={e => updateRow(idx, 'cost_per_unit', e.target.value)} />
+                      <div className="col-span-6 md:col-span-2 relative group-hover/row:scale-[1.02] transition-transform">
+                        <input className="input text-sm border-emerald-50 focus:border-emerald-400" type="number" placeholder="৳" value={row.cost_per_unit} onChange={e => updateRow(idx, 'cost_per_unit', e.target.value)} />
+                        {unit && <span className="absolute -top-3 left-1 text-[8px] font-black text-emerald-600 uppercase bg-white px-1 tracking-tighter">per {unit}</span>}
                       </div>
                       <div className="col-span-10 md:col-span-3">
                         <input className="input text-xs italic" placeholder="e.g. Fresh batch" value={row.notes} onChange={e => updateRow(idx, 'notes', e.target.value)} />
