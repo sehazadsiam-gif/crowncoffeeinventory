@@ -14,12 +14,9 @@ import {
 export default function BazarPage() {
   const { addToast } = useToast()
   const [ingredients, setIngredients] = useState([])
-  const [entries, setEntries] = useState([])
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState([{ ingredient_id: '', quantity: '', cost_per_unit: '', total_cost: '', notes: '' }])
   const [scanSummary, setScanSummary] = useState(null)
-  const [adjustment, setAdjustment] = useState({ ingredient_id: '', quantity: '' })
+  const [adjustment, setAdjustment] = useState({ ingredient_id: '', quantity: '', unit: 'gm' })
   const [adjusting, setAdjusting] = useState(false)
 
   // Modal states
@@ -179,10 +176,24 @@ export default function BazarPage() {
     }
 
     setAdjusting(true)
-    const qty = parseFloat(adjustment.quantity)
+    
+    // Client-side conversion logic
+    const convert = (val, from, to) => {
+      if (!from || !to || from === to) return val
+      if (from === 'gm' && to === 'kg') return val / 1000
+      if (from === 'kg' && to === 'gm') return val * 1000
+      if (from === 'ml' && to === 'ltr') return val / 1000
+      if (from === 'ltr' && to === 'ml') return val * 1000
+      return val
+    }
+
+    const ing = ingredients.find(i => i.id === adjustment.ingredient_id)
+    const rawQty = parseFloat(adjustment.quantity)
+    const normalizedQty = convert(rawQty, adjustment.unit, ing.unit)
+
     const { error } = await supabase
       .from('ingredients')
-      .update({ current_stock: qty })
+      .update({ current_stock: normalizedQty })
       .eq('id', adjustment.ingredient_id)
 
     if (error) {
@@ -195,12 +206,12 @@ export default function BazarPage() {
     await supabase.from('stock_movements').insert([{
       ingredient_id: adjustment.ingredient_id,
       movement_type: 'manual_adjust',
-      quantity: qty,
-      notes: 'Initial stock setup / Manual adjustment'
+      quantity: normalizedQty,
+      notes: `Initial stock setup: ${rawQty} ${adjustment.unit} (Normalized to ${normalizedQty} ${ing.unit})`
     }])
 
-    addToast('Stock level updated successfully!', 'success')
-    setAdjustment({ ingredient_id: '', quantity: '' })
+    addToast(`Stock level updated to ${normalizedQty} ${ing.unit}`, 'success')
+    setAdjustment({ ingredient_id: '', quantity: '', unit: 'gm' })
     setAdjusting(false)
     fetchIngredients() // Refresh local list
   }
@@ -416,18 +427,29 @@ export default function BazarPage() {
               </div>
               <div className="md:col-span-1">
                 <label className="label text-[10px] font-black text-amber-800 uppercase tracking-widest mb-2">Current Physical Stock</label>
-                <div className="relative">
+                <div className="flex gap-2">
                   <input 
                     type="number" 
-                    className="input bg-white border-amber-100 focus:ring-amber-500 font-black"
-                    placeholder="e.g. 5.0"
+                    className="input flex-1 bg-white border-amber-100 focus:ring-amber-500 font-black"
+                    placeholder="e.g. 500"
                     value={adjustment.quantity}
                     onChange={e => setAdjustment({ ...adjustment, quantity: e.target.value })}
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-amber-400 uppercase">
-                    {ingredients.find(i => i.id === adjustment.ingredient_id)?.unit || ''}
-                  </span>
+                  <select 
+                    className="input w-24 bg-white border-amber-100 focus:ring-amber-500 font-bold text-[10px]"
+                    value={adjustment.unit}
+                    onChange={e => setAdjustment({ ...adjustment, unit: e.target.value })}
+                  >
+                    <option value="gm">gm</option>
+                    <option value="kg">kg</option>
+                    <option value="ml">ml</option>
+                    <option value="ltr">ltr</option>
+                    <option value="pcs">pcs</option>
+                  </select>
                 </div>
+                <p className="mt-1 text-[8px] text-amber-700/50 uppercase font-black tracking-tighter">
+                   Item is tracked in: <span className="text-amber-900">{ingredients.find(i => i.id === adjustment.ingredient_id)?.unit || '...'}</span>
+                </p>
               </div>
               <div className="md:col-span-1">
                 <button 
