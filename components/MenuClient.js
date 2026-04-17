@@ -7,7 +7,7 @@ import Modal from '../components/Modal'
 import {
   Plus, Trash2, BookOpen, Layers,
   ChevronDown, ChevronUp, ShoppingBag,
-  Info, X
+  Info, X, Search
 } from 'lucide-react'
 
 export default function MenuClient({ initialMenuItems, initialIngredients }) {
@@ -15,6 +15,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
   const [menuItems, setMenuItems] = useState(initialMenuItems)
   const [ingredients, setIngredients] = useState(initialIngredients)
   const [expanded, setExpanded] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [showAddIngredient, setShowAddIngredient] = useState(false)
 
@@ -112,9 +113,21 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
         {/* Menu List */}
         <div className="card animate-in">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
-            <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' }}>
-              Active Menu
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Active Menu
+              </h3>
+              <div style={{ position: 'relative', width: '200px' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search menu..." 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{ width: '100%', padding: '6px 10px 6px 30px', fontSize: '13px', borderRadius: '20px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)', outline: 'none' }}
+                />
+              </div>
+            </div>
             <button className="btn-primary" onClick={() => setShowAddMenu(true)} style={{ padding: '8px 16px', fontSize: '11px' }}>
               <Plus size={13} /> Add Item
             </button>
@@ -122,7 +135,10 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
 
           <div>
             {categories.map(cat => {
-              const items = menuItems.filter(i => i.category === cat)
+              const items = menuItems.filter(i => 
+                i.category === cat && 
+                (!searchQuery || i.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              )
               if (items.length === 0) return null
               return (
                 <div key={cat} style={{ marginBottom: '28px' }}>

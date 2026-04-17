@@ -9,7 +9,7 @@ import Link from 'next/link'
 import {
   ShoppingCart, CheckCircle2, Trash2, Info,
   Plus, Minus, Receipt, ArrowRight, Package,
-  TrendingUp, Layers, X, Calendar
+  TrendingUp, Layers, X, Calendar, Search
 } from 'lucide-react'
 import { convertUnit } from '../../lib/convert'
 
@@ -19,6 +19,7 @@ export default function SalesPage() {
   const [sales, setSales] = useState([])
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [cart, setCart] = useState({})
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [preview, setPreview] = useState([])
@@ -158,13 +159,15 @@ export default function SalesPage() {
   const totalQty = (sales || []).reduce((s, e) => s + (e?.quantity || 0), 0)
   const cartTotal = Object.entries(cart || {}).reduce((s, [id, data]) => s + ((data?.qty || 0) * (data?.price || 0)), 0)
   
-  const grouped = (menuItems || []).reduce((acc, item) => {
-    if (!item) return acc
-    const cat = item.category || 'Other'
-    if (!acc[cat]) acc[cat] = []
-    acc[cat].push(item)
-    return acc
-  }, {})
+  const grouped = (menuItems || [])
+    .filter(item => !searchQuery || item?.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+    .reduce((acc, item) => {
+      if (!item) return acc
+      const cat = item.category || 'Other'
+      if (!acc[cat]) acc[cat] = []
+      acc[cat].push(item)
+      return acc
+    }, {})
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -210,8 +213,20 @@ export default function SalesPage() {
                 <div className="divider-label">Select items manually below</div>
 
                 {/* Date + Running Total */}
-                <div ref={menuGridRef} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                  <div style={{ textAlign: 'right', width: '100%' }}>
+                <div ref={menuGridRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                  
+                  <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
+                    <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input 
+                      type="text" 
+                      placeholder="Search menu items..." 
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      style={{ width: '100%', padding: '10px 14px 10px 36px', fontSize: '14px', borderRadius: '8px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)', outline: 'none' }}
+                    />
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>Current Total</p>
                     <p style={{ fontSize: '28px', fontWeight: 700, color: 'var(--primary)' }}>৳{cartTotal.toLocaleString()}</p>
                   </div>

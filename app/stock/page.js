@@ -7,7 +7,7 @@ import { useToast } from '../../components/Toast'
 import {
   Package, RefreshCcw, Info,
   ChevronDown, ChevronUp, History,
-  TrendingDown, TrendingUp, Settings2, Calendar
+  TrendingDown, TrendingUp, Settings2, Calendar, Search
 } from 'lucide-react'
 
 export default function StockPage() {
@@ -18,6 +18,7 @@ export default function StockPage() {
   const [expanded, setExpanded] = useState(null)
   const [adjustForm, setAdjustForm] = useState({ method: 'add', quantity: '', reason: 'Restock' })
   const [filter, setFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0])
 
   useEffect(() => { fetchStock(); }, [])
@@ -75,8 +76,9 @@ export default function StockPage() {
   ]
 
   const filteredStock = stock.filter(item => {
-    if (filter === 'low') return item.current_stock > 0 && item.current_stock <= item.min_stock
-    if (filter === 'out') return item.current_stock <= 0
+    if (filter === 'low' && !(item.current_stock > 0 && item.current_stock <= item.min_stock)) return false
+    if (filter === 'out' && !(item.current_stock <= 0)) return false
+    if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
     return true
   })
 
@@ -119,9 +121,21 @@ export default function StockPage() {
                   {p.label}
                 </button>
               ))}
+              
+              <div style={{ position: 'relative', flex: 1, maxWidth: '300px', marginLeft: 'auto' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Search stock..." 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{ width: '100%', padding: '6px 10px 6px 30px', fontSize: '13px', borderRadius: '20px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)', outline: 'none' }}
+                />
+              </div>
+
               <button
                 onClick={fetchStock}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', padding: '6px 10px', borderRadius: '6px' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', padding: '6px 10px', borderRadius: '6px' }}
               >
                 <RefreshCcw size={14} /> Refresh
               </button>

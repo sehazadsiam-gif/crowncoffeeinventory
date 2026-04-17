@@ -5,7 +5,7 @@ import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
 import {
-  Plus, Trash, Calendar, Save, ShoppingCart, X, Package
+  Plus, Trash, Calendar, Save, ShoppingCart, X, Package, Search
 } from 'lucide-react'
 import { convertUnit } from '../../lib/convert'
 
@@ -13,6 +13,7 @@ export default function BazarPage() {
   const { addToast } = useToast()
   const [ingredients, setIngredients] = useState([])
   const [entries, setEntries] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState([{ ingredient_id: '', quantity: '', cost_per_unit: '', total_cost: '', notes: '' }])
@@ -224,11 +225,23 @@ export default function BazarPage() {
 
             {/* Records Sidebar */}
             <div className="card" style={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 200px)', position: 'sticky', top: '80px', padding: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-subtle)' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Daily Records
-                </h3>
-                <span className="badge badge-green" style={{ fontSize: '14px', padding: '4px 10px' }}>৳{totalCost.toLocaleString()}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Daily Records
+                  </h3>
+                  <span className="badge badge-green" style={{ fontSize: '14px', padding: '4px 10px' }}>৳{totalCost.toLocaleString()}</span>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input 
+                    type="text" 
+                    placeholder="Search records..." 
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    style={{ width: '100%', padding: '6px 10px 6px 30px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)', outline: 'none' }}
+                  />
+                </div>
               </div>
 
               {loading ? (
@@ -243,7 +256,7 @@ export default function BazarPage() {
               ) : (
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }} className="no-scrollbar">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {entries.map(e => (
+                    {entries.filter(e => !searchQuery || e.ingredients?.name.toLowerCase().includes(searchQuery.toLowerCase()) || e.notes?.toLowerCase().includes(searchQuery.toLowerCase())).map(e => (
                       <div key={e.id} style={{
                         padding: '12px 14px',
                         background: 'var(--bg-surface)',
