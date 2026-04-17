@@ -15,7 +15,6 @@ export default function BazarPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(true)
   const [rows, setRows] = useState([{ ingredient_id: '', quantity: '', cost_per_unit: '', total_cost: '', notes: '' }])
-  const [scanSummary, setScanSummary] = useState(null)
   const [adjustment, setAdjustment] = useState({ ingredient_id: '', quantity: '', unit: 'gm' })
   const [adjusting, setAdjusting] = useState(false)
 
@@ -76,26 +75,7 @@ export default function BazarPage() {
     }
   }
 
-  function handleScan(scannedItems) {
-    const newRows = []
-    let matchedCount = 0, unmatchedCount = 0
-    scannedItems.forEach(item => {
-      const match = ingredients.find(ing =>
-        ing.name.toLowerCase().includes(item.name.toLowerCase()) ||
-        item.name.toLowerCase().includes(ing.name.toLowerCase())
-      )
-      if (match) {
-        matchedCount++
-        newRows.push({ ingredient_id: match.id, quantity: item.quantity || '', cost_per_unit: item.cost_per_unit || match.cost_per_unit || '', notes: item.notes || '' })
-      } else {
-        unmatchedCount++
-        newRows.push({ ingredient_id: '', quantity: item.quantity || '', cost_per_unit: item.cost_per_unit || '', notes: `(Unmatched: ${item.name}) ${item.notes || ''}`.trim() })
-      }
-    })
-    setRows(newRows)
-    setScanSummary({ matched: matchedCount, unmatched: unmatchedCount })
-    addToast(`Scan complete: ${matchedCount} matched, ${unmatchedCount} unmatched.`, 'success')
-  }
+
 
   async function saveBazar() {
     const valid = rows.filter(r => r.ingredient_id && r.quantity && r.cost_per_unit)

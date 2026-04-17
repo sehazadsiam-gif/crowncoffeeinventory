@@ -16,40 +16,13 @@ export default function SalesPage() {
   const [menuItems, setMenuItems] = useState([])
   const [sales, setSales] = useState([])
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [cart, setCart] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [preview, setPreview] = useState([])
-  const [unrecognized, setUnrecognized] = useState([])
-  const menuGridRef = useRef(null)
-
   const [modalOpen, setModalOpen] = useState(false)
   const [modalConfig, setModalConfig] = useState({})
 
   useEffect(() => { fetchMenu() }, [])
   useEffect(() => { fetchSales() }, [selectedDate])
   useEffect(() => { computePreview() }, [cart])
-
-  const handleScan = (scannedItems) => {
-    const newCart = { ...cart }
-    const unknown = []
-    scannedItems.forEach(item => {
-      const match = menuItems.find(mi =>
-        mi.name.toLowerCase().includes(item.name.toLowerCase()) ||
-        item.name.toLowerCase().includes(mi.name.toLowerCase())
-      )
-      if (match) {
-        const existing = newCart[match.id] || { qty: 0, price: match.selling_price }
-        newCart[match.id] = { qty: existing.qty + (item.quantity || 0), price: item.price || existing.price }
-      } else {
-        unknown.push(item.name)
-      }
-    })
-    setCart(newCart)
-    setUnrecognized(unknown)
-    if (menuGridRef.current) menuGridRef.current.scrollIntoView({ behavior: 'smooth' })
-    addToast(unknown.length > 0 ? `Scan processed with ${unknown.length} unrecognized items.` : 'Scan successful! All items matched.', unknown.length > 0 ? 'warning' : 'success')
-  }
 
   async function fetchMenu() {
     const { data } = await supabase.from('menu_items').select('*, recipes(quantity, unit, ingredients(name, unit))').eq('is_active', true).order('category')
