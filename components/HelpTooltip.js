@@ -32,8 +32,8 @@ export default function HelpTooltip() {
             alignItems: 'center',
             justifyContent: 'space-between'
           }}>
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <HelpCircle size={14} style={{ color: 'var(--accent-gold)' }} /> Quick Guide
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <HelpCircle size={14} style={{ color: 'var(--warning)' }} /> Quick Guide
             </span>
             <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
               <X size={16} />
@@ -44,19 +44,19 @@ export default function HelpTooltip() {
               <div key={i} style={{ display: 'flex', gap: '12px' }}>
                 <div style={{
                   background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)',
-                  color: 'var(--accent-brown)', width: '24px', height: '24px', borderRadius: '50%',
+                  color: 'var(--primary)', width: '24px', height: '24px', borderRadius: '50%',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, flexShrink: 0
+                  fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, flexShrink: 0
                 }}>
                   {i + 1}
                 </div>
                 <div>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{step.title}</p>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4, marginTop: '2px' }}>{step.desc}</p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{step.title}</p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4, marginTop: '2px' }}>{step.desc}</p>
                 </div>
               </div>
             ))}
-            <div style={{ paddingTop: '12px', borderTop: '1px solid var(--border-light)', textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            <div style={{ paddingTop: '12px', borderTop: '1px solid var(--border-light)', textAlign: 'center', fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
               Need more help? Ask the manager.
             </div>
           </div>
@@ -66,7 +66,7 @@ export default function HelpTooltip() {
       <button 
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          background: 'var(--accent-brown)', color: '#fff',
+          background: 'var(--primary)', color: '#fff',
           width: '56px', height: '56px', borderRadius: '50%',
           boxShadow: 'var(--shadow-md)', border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',

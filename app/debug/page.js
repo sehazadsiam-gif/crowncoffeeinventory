@@ -51,14 +51,14 @@ export default function DebugPage() {
   const isHealthy = status.url !== 'MISSING' && status.key !== 'MISSING' && status.connection === 'Success'
 
   return (
-    <div className="min-h-screen bg-[var(--cafe-cream)]">
+    <div className="min-h-screen bg-[var(--cream)]">
       <Navbar />
       <main className="max-w-4xl mx-auto px-4 py-12">
         <header className="mb-12 text-center">
           <div className={`w-20 h-20 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-lg transition-colors ${isHealthy ? 'bg-emerald-500' : 'bg-rose-500'}`}>
             {isHealthy ? <ShieldCheck size={40} className="text-white" /> : <ShieldAlert size={40} className="text-white" />}
           </div>
-          <h1 className="text-3xl font-black text-[var(--cafe-brown)] uppercase tracking-tighter mb-2">System Diagnostics</h1>
+          <h1 className="text-3xl font-black text-[var(--brown)] uppercase tracking-tighter mb-2">System Diagnostics</h1>
           <p className="text-gray-400 font-bold text-xs uppercase tracking-[0.2em]">Deployment Connectivity Check</p>
         </header>
 
@@ -127,7 +127,7 @@ export default function DebugPage() {
       </main>
       
       {copied && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[var(--cafe-brown)] text-white px-6 py-3 rounded-full flex items-center gap-3 shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-300">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-[var(--brown)] text-white px-6 py-3 rounded-full flex items-center gap-3 shadow-2xl animate-in fade-in slide-in-from-bottom-5 duration-300">
           <CheckCircle2 size={18} className="text-emerald-400" />
           <span className="text-sm font-bold">Value copied to clipboard!</span>
         </div>

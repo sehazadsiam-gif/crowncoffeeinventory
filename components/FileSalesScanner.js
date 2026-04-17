@@ -71,7 +71,7 @@ export default function FileSalesScanner({ onScanComplete, menuItems = [] }) {
           style={{
             cursor: 'pointer',
             borderRadius: '10px',
-            border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--accent-brown)' : 'var(--border-medium)'}`,
+            border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--primary)' : 'var(--border-medium)'}`,
             background: isDragging ? 'var(--bg-subtle)' : 'var(--bg-base)',
             padding: '36px 24px',
             textAlign: 'center',
@@ -79,13 +79,13 @@ export default function FileSalesScanner({ onScanComplete, menuItems = [] }) {
           }}
         >
           <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'center', transform: isDragging ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.3s ease' }}>
-            <UploadCloud size={40} style={{ color: isDragging ? 'var(--accent-brown)' : 'var(--text-muted)' }} strokeWidth={1.5} />
+            <UploadCloud size={40} style={{ color: isDragging ? 'var(--primary)' : 'var(--text-muted)' }} strokeWidth={1.5} />
           </div>
-          <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '17px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '6px' }}>
+          <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '17px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '6px' }}>
             {isDragging ? 'Release to upload' : 'Drag and drop your file here'}
           </h4>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>or click to browse</p>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px' }}>or click to browse</p>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
             PDF, XLSX, XLS, CSV — Max 10MB
           </p>
         </div>
@@ -93,11 +93,11 @@ export default function FileSalesScanner({ onScanComplete, menuItems = [] }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', background: 'var(--bg-surface)', border: '1px solid var(--border-medium)', borderRadius: '10px', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ background: 'var(--bg-subtle)', padding: '10px', borderRadius: '8px', flexShrink: 0 }}>
-              <FileText size={20} style={{ color: 'var(--accent-brown)' }} strokeWidth={1.5} />
+              <FileText size={20} style={{ color: 'var(--primary)' }} strokeWidth={1.5} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</p>
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{formatSize(file.size)}</p>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</p>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{formatSize(file.size)}</p>
             </div>
             <button onClick={clearFile} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', display: 'flex', alignItems: 'center', transition: 'color 0.15s ease' }}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
@@ -114,7 +114,7 @@ export default function FileSalesScanner({ onScanComplete, menuItems = [] }) {
       )}
 
       {error && (
-        <div style={{ marginTop: '12px', padding: '12px 14px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--danger)' }}>
+        <div style={{ marginTop: '12px', padding: '12px 14px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--danger)' }}>
           {error}
         </div>
       )}

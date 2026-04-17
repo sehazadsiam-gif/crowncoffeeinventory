@@ -112,7 +112,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
         {/* Menu List */}
         <div className="card animate-in">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' }}>
               Active Menu
             </h3>
             <button className="btn-primary" onClick={() => setShowAddMenu(true)} style={{ padding: '8px 16px', fontSize: '11px' }}>
@@ -149,15 +149,15 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                           onClick={() => setExpanded(expanded === item.id ? null : item.id)}
                         >
                           <div>
-                            <p style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
                               {item.name}
                             </p>
-                            <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
                               {item.recipes?.length || 0} ingredients in recipe
                             </p>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <p style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, color: 'var(--accent-brown)' }}>
+                            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 600, color: 'var(--primary)' }}>
                               ৳{item.selling_price}
                             </p>
                             <div style={{ color: 'var(--text-muted)' }}>
@@ -173,7 +173,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                             borderTop: '1px solid var(--border-light)',
                           }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                              <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
                                 Recipe Breakdown
                               </p>
                               <button
@@ -204,14 +204,14 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                                   border: '1px solid var(--border-light)',
                                 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-gold)', flexShrink: 0 }} />
-                                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--warning)', flexShrink: 0 }} />
+                                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-secondary)' }}>
                                       {r.ingredients?.name}
                                     </p>
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)' }}>
-                                      {r.quantity} <span style={{ color: 'var(--accent-gold)', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>{r.unit || r.ingredients?.unit}</span>
+                                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)' }}>
+                                      {r.quantity} <span style={{ color: 'var(--warning)', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>{r.unit || r.ingredients?.unit}</span>
                                     </p>
                                     <button onClick={() => deleteRecipe(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border-medium)' }}>
                                       <X size={13} />
@@ -221,13 +221,13 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                               ))}
                               {(!item.recipes || item.recipes.length === 0) && (
                                 <div style={{ textAlign: 'center', padding: '20px', border: '1px dashed var(--border-medium)', borderRadius: '8px' }}>
-                                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-muted)' }}>No recipe items added yet</p>
+                                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--text-muted)' }}>No recipe items added yet</p>
                                 </div>
                               )}
                             </div>
 
                             <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
-                              <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>
                                 Add ingredient to recipe
                               </p>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
@@ -277,7 +277,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
             {menuItems.length === 0 && (
               <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
                 <BookOpen size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} strokeWidth={1} />
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px' }}>No menu items yet. Add your first item above.</p>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px' }}>No menu items yet. Add your first item above.</p>
               </div>
             )}
           </div>
@@ -287,12 +287,12 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
         <div style={{ position: 'sticky', top: '80px' }}>
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '14px', borderBottom: '1px solid var(--border-light)' }}>
-              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
                 Raw Materials
               </h3>
               <button
                 onClick={() => setShowAddIngredient(true)}
-                style={{ background: 'none', border: '1px solid var(--border-medium)', borderRadius: '6px', cursor: 'pointer', padding: '6px', color: 'var(--accent-brown)', display: 'flex', alignItems: 'center' }}
+                style={{ background: 'none', border: '1px solid var(--border-medium)', borderRadius: '6px', cursor: 'pointer', padding: '6px', color: 'var(--primary)', display: 'flex', alignItems: 'center' }}
               >
                 <Plus size={16} />
               </button>
@@ -311,26 +311,26 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                   transition: 'border-color 0.15s ease',
                 }}>
                   <div>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>{ing.name}</p>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>{ing.name}</p>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                       {ing.unit} &bull; min {ing.min_stock}
                     </p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--accent-brown)' }}>৳{ing.cost_per_unit || 0}</p>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>per {ing.unit}</p>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}>৳{ing.cost_per_unit || 0}</p>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>per {ing.unit}</p>
                   </div>
                 </div>
               ))}
               {ingredients.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px' }}>No ingredients yet.</p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px' }}>No ingredients yet.</p>
                 </div>
               )}
             </div>
 
-            <div style={{ marginTop: '16px', padding: '14px', background: 'var(--bg-subtle)', borderRadius: '8px', borderLeft: '3px solid var(--accent-gold)' }}>
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <div style={{ marginTop: '16px', padding: '14px', background: 'var(--bg-subtle)', borderRadius: '8px', borderLeft: '3px solid var(--warning)' }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 Create your ingredients first, then assign them to menu items to build recipes.
               </p>
             </div>
@@ -423,7 +423,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
           <div style={{ background: 'var(--success-bg)', border: '1px solid rgba(58,125,92,0.15)', borderRadius: '8px', padding: '14px' }}>
             <label className="label" style={{ color: 'var(--success)' }}>Price Calculation</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)' }}>Price for</span>
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--text-secondary)' }}>Price for</span>
               <input
                 className="input"
                 type="number"
@@ -431,7 +431,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                 onChange={e => setNewIngredient({ ...newIngredient, price_basis: e.target.value })}
                 style={{ width: '70px' }}
               />
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)' }}>{newIngredient.unit} is ৳</span>
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--text-secondary)' }}>{newIngredient.unit} is ৳</span>
               <input
                 className="input"
                 type="number"
@@ -441,7 +441,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                 style={{ flex: 1, minWidth: '80px' }}
               />
             </div>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
               Example: "Price for 1000 gm is 3100" equals ৳3.10 per gm.
             </p>
           </div>

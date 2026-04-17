@@ -7,7 +7,7 @@ import { useToast } from '../../components/Toast'
 import dynamic from 'next/dynamic'
 const DocumentScanner = dynamic(() => import('../../components/DocumentScanner'), { ssr: false })
 import {
-  Plus, Trash, Calendar, Save, CheckCircle2, ShoppingCart, X, Package
+  Plus, Trash, Calendar, Save, ShoppingCart, X, Package
 } from 'lucide-react'
 
 export default function BazarPage() {
@@ -165,24 +165,30 @@ export default function BazarPage() {
   const totalCost = entries.reduce((s, e) => s + (e.total_cost || 0), 0)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div style={{ minHeight: '100vh' }}>
       <Navbar />
 
-      <header style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-light)', padding: '32px 0 24px' }}>
-        <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '0 24px' }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '36px', fontWeight: 400, color: 'var(--text-primary)' }}>Daily Bazar</h1>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '6px' }}>
-            Log ingredient purchases and update stock
-          </p>
-          <div style={{ marginTop: '12px', width: '40px', height: '1px', background: 'var(--accent-gold)' }} />
-        </div>
-      </header>
-
       <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '32px 24px 60px' }}>
-        <div className="instruction-box animate-in">
-          Log everything you purchased today for Crown Coffee.
-          Stock will be automatically updated and costs tracked for profit analysis.
-          For pre-existing inventory, use the Initial Stock Setup section below.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 600 }}>Bazar Logs</h1>
+            <p style={{ color: 'var(--text-muted)' }}>
+              Record daily purchases to restock inventory
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-surface)', padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border-medium)' }}>
+            <Calendar size={18} style={{ color: 'var(--primary)' }} />
+            <input 
+              type="date" 
+              value={selectedDate} 
+              onChange={e => setSelectedDate(e.target.value)}
+              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}
+            />
+          </div>
+        </div>
+
+        <div className="instruction-box">
+          If you are starting for the first time, use the "Initial Stock" section below to set your current inventory levels. Otherwise, log daily bazar purchases to automatically increase stock.
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
@@ -195,26 +201,12 @@ export default function BazarPage() {
               <div className="divider-label">Or enter manually below</div>
 
               <div className="card">
-                {/* Header row: Date + Running Total */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px', marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid var(--border-light)' }}>
-                  <div>
-                    <label className="label">
-                      <Calendar size={11} style={{ display: 'inline', marginRight: '4px' }} />
-                      Purchase Date
-                    </label>
-                    <input
-                      type="date"
-                      className="input"
-                      style={{ width: 'auto', fontWeight: 500, color: 'var(--accent-brown)' }}
-                      value={selectedDate}
-                      onChange={e => setSelectedDate(e.target.value)}
-                    />
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  <div style={{ textAlign: 'right', width: '100%' }}>
+                    <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>
                       Running Total
                     </p>
-                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 700, color: 'var(--accent-brown)' }}>
+                    <p style={{ fontSize: '28px', fontWeight: 700, color: 'var(--primary)' }}>
                       ৳{runningTotal.toLocaleString()}
                     </p>
                   </div>
@@ -223,14 +215,14 @@ export default function BazarPage() {
                 {scanSummary && (
                   <div style={{
                     marginBottom: '16px', padding: '12px 14px',
-                    background: 'var(--warning-bg)', border: '1px solid rgba(176,120,48,0.2)',
+                    background: 'var(--warning-bg)', border: '1px solid rgba(217,119,6,0.2)',
                     borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   }}>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--warning)' }}>
+                    <p style={{ fontSize: '13px', color: 'var(--warning)', fontWeight: 500 }}>
                       AI Scan: {scanSummary.matched} items recognized, {scanSummary.unmatched} need manual matching
                     </p>
                     <button onClick={() => setScanSummary(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warning)' }}>
-                      <X size={14} />
+                      <X size={16} />
                     </button>
                   </div>
                 )}
@@ -238,7 +230,7 @@ export default function BazarPage() {
                 {/* Column headers */}
                 <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr 2fr 2fr 2fr 40px', gap: '8px', padding: '0 4px 8px', marginBottom: '4px' }} className="hide-mobile">
                   {['Ingredient', 'Quantity', 'Total (৳)', 'Rate (৳)', 'Notes', ''].map((h, i) => (
-                    <div key={i} style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{h}</div>
+                    <div key={i} style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: 'var(--text-muted)' }}>{h}</div>
                   ))}
                 </div>
 
@@ -255,24 +247,23 @@ export default function BazarPage() {
                         padding: '8px',
                         borderRadius: '8px',
                         background: isUnmatched ? 'var(--warning-bg)' : 'transparent',
-                        border: isUnmatched ? '1px solid rgba(176,120,48,0.2)' : '1px solid transparent',
+                        border: isUnmatched ? '1px solid rgba(217,119,6,0.2)' : '1px solid transparent',
                       }} className="bazar-row">
-                        <select className="input" style={{ fontSize: '13px' }} value={row.ingredient_id} onChange={e => updateRow(idx, 'ingredient_id', e.target.value)}>
+                        <select className="input" value={row.ingredient_id} onChange={e => updateRow(idx, 'ingredient_id', e.target.value)}>
                           <option value="">Select item...</option>
                           {ingredients.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                         </select>
                         <div style={{ position: 'relative' }}>
-                          <input className="input" style={{ fontSize: '13px', paddingRight: unit ? '36px' : '14px' }} type="number" placeholder="Qty" value={row.quantity} onChange={e => updateRow(idx, 'quantity', e.target.value)} />
-                          {unit && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{unit}</span>}
+                          <input className="input" style={{ paddingRight: unit ? '36px' : '14px' }} type="number" placeholder="Qty" value={row.quantity} onChange={e => updateRow(idx, 'quantity', e.target.value)} />
+                          {unit && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>{unit}</span>}
                         </div>
-                        <input className="input" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--success)' }} type="number" placeholder="Total" value={row.total_cost} onChange={e => updateRow(idx, 'total_cost', e.target.value)} />
+                        <input className="input" style={{ fontWeight: 600, color: 'var(--success)' }} type="number" placeholder="Total" value={row.total_cost} onChange={e => updateRow(idx, 'total_cost', e.target.value)} />
                         <div style={{ position: 'relative' }}>
-                          <input className="input" style={{ fontSize: '12px', color: 'var(--text-muted)' }} type="number" placeholder="Rate" value={row.cost_per_unit} onChange={e => updateRow(idx, 'cost_per_unit', e.target.value)} />
-                          {unit && <span style={{ position: 'absolute', top: '-9px', left: '8px', fontSize: '8px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', background: 'var(--bg-surface)', padding: '0 3px' }}>per {unit}</span>}
+                          <input className="input" type="number" placeholder="Rate" value={row.cost_per_unit} onChange={e => updateRow(idx, 'cost_per_unit', e.target.value)} />
                         </div>
-                        <input className="input" style={{ fontSize: '12px', fontStyle: 'italic' }} placeholder="Notes" value={row.notes} onChange={e => updateRow(idx, 'notes', e.target.value)} />
+                        <input className="input" placeholder="Notes" value={row.notes} onChange={e => updateRow(idx, 'notes', e.target.value)} />
                         <button onClick={() => removeRow(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}>
-                          <Trash size={15} />
+                          <Trash size={16} />
                         </button>
                       </div>
                     )
@@ -281,95 +272,78 @@ export default function BazarPage() {
 
                 <div style={{ display: 'flex', gap: '12px', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)', flexWrap: 'wrap' }}>
                   <button className="btn-secondary" onClick={addRow} style={{ flex: 1 }}>
-                    <Plus size={14} /> Add Row
+                    <Plus size={16} /> Add Row
                   </button>
                   <button className="btn-primary" onClick={saveBazar} style={{ flex: 1 }}>
-                    <Save size={14} /> Save & Update Stock
+                    <Save size={16} /> Save & Update Stock
                   </button>
                 </div>
               </div>
             </div>
 
             {/* Records Sidebar */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 200px)', position: 'sticky', top: '80px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-light)', flexShrink: 0 }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div className="card" style={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 200px)', position: 'sticky', top: '80px', padding: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-subtle)' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
                   Daily Records
                 </h3>
-                <span className="badge badge-green" style={{ fontFamily: 'var(--font-display)', fontSize: '14px', padding: '4px 10px' }}>৳{totalCost.toLocaleString()}</span>
+                <span className="badge badge-green" style={{ fontSize: '14px', padding: '4px 10px' }}>৳{totalCost.toLocaleString()}</span>
               </div>
 
               {loading ? (
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
                   <div className="loader" />
                 </div>
               ) : entries.length === 0 ? (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '24px', opacity: 0.5 }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '40px', opacity: 0.5 }}>
                   <ShoppingCart size={36} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} strokeWidth={1} />
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)' }}>No purchases logged today.</p>
+                  <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>No purchases logged today.</p>
                 </div>
               ) : (
-                <div style={{ flex: 1, overflowY: 'auto' }} className="no-scrollbar">
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }} className="no-scrollbar">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {entries.map(e => (
                       <div key={e.id} style={{
                         padding: '12px 14px',
-                        background: 'var(--bg-subtle)',
+                        background: 'var(--bg-surface)',
                         borderRadius: '8px',
                         border: '1px solid var(--border-light)',
-                        transition: 'border-color 0.15s ease',
-                        position: 'relative',
-                      }}
-                        onMouseEnter={ev => ev.currentTarget.style.borderColor = 'var(--border-medium)'}
-                        onMouseLeave={ev => ev.currentTarget.style.borderColor = 'var(--border-light)'}
-                      >
+                      }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <div>
-                            <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{e.ingredients?.name}</p>
-                            <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{e.ingredients?.name}</p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                               {e.quantity} {e.ingredients?.unit} @ ৳{e.cost_per_unit}
                             </p>
                           </div>
-                          <button onClick={() => confirmDeleteEntry(e)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border-medium)', padding: '2px' }}>
-                            <Trash size={13} />
+                          <button onClick={() => confirmDeleteEntry(e)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                            <Trash size={14} />
                           </button>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--border-light)' }}>
-                          <span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>{e.notes || '—'}</span>
-                          <span style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 600, color: 'var(--accent-brown)' }}>৳{e.total_cost?.toLocaleString()}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>{e.notes || '—'}</span>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--primary)' }}>৳{e.total_cost?.toLocaleString()}</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-light)', flexShrink: 0 }}>
-                <div style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)', borderRadius: '8px', padding: '14px 16px' }}>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    Total Investment
-                  </p>
-                  <p style={{ fontFamily: 'var(--font-display)', fontSize: '26px', fontWeight: 700, color: 'var(--accent-brown)' }}>
-                    ৳{totalCost.toLocaleString()}
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
 
           {/* Initial Stock Section */}
-          <section style={{ marginTop: '16px' }}>
-            <div className="divider" />
-            <div className="card" style={{ borderLeft: '3px solid var(--warning)' }}>
+          <section style={{ marginTop: '24px' }}>
+            <div className="card" style={{ borderLeft: '4px solid var(--warning)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '24px' }}>
                 <div style={{ background: 'var(--warning-bg)', borderRadius: '8px', padding: '10px', flexShrink: 0 }}>
                   <Package size={20} style={{ color: 'var(--warning)' }} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' }}>
                     Initial Stock Setup
                   </h3>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
                     Have items from before today? Set their current levels here.
                   </p>
                 </div>
@@ -413,18 +387,13 @@ export default function BazarPage() {
                       <option value="pcs">pcs</option>
                     </select>
                   </div>
-                  {adjustment.ingredient_id && (
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                      Tracked in: {ingredients.find(i => i.id === adjustment.ingredient_id)?.unit || '...'}
-                    </p>
-                  )}
                 </div>
                 <div>
                   <button
                     onClick={saveAdjustment}
                     disabled={adjusting}
                     className="btn-primary"
-                    style={{ width: '100%', padding: '12px' }}
+                    style={{ width: '100%', padding: '10px' }}
                   >
                     {adjusting ? 'Updating...' : 'Initialize Stock Level'}
                   </button>
@@ -434,7 +403,7 @@ export default function BazarPage() {
               <div style={{
                 marginTop: '16px', padding: '12px 14px',
                 background: 'var(--bg-subtle)', borderRadius: '8px',
-                fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic',
+                fontSize: '13px', color: 'var(--text-muted)',
               }}>
                 This will directly set the ingredient level to the quantity you enter. Use this for your opening balance only.
               </div>

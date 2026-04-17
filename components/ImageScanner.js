@@ -117,7 +117,7 @@ export default function ImageScanner({ onScanComplete, scanType = 'sales', menuI
           style={{
             cursor: 'pointer',
             borderRadius: '10px',
-            border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--accent-brown)' : 'var(--border-medium)'}`,
+            border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--primary)' : 'var(--border-medium)'}`,
             background: isDragging ? 'var(--bg-subtle)' : 'var(--bg-base)',
             padding: '48px 24px',
             textAlign: 'center',
@@ -125,14 +125,14 @@ export default function ImageScanner({ onScanComplete, scanType = 'sales', menuI
           }}
         >
           <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center', transition: 'transform 0.3s ease', transform: isDragging ? 'scale(1.1)' : 'scale(1)' }}>
-            <UploadCloud size={48} style={{ color: isDragging ? 'var(--accent-brown)' : 'var(--text-muted)' }} strokeWidth={1.5} />
+            <UploadCloud size={48} style={{ color: isDragging ? 'var(--primary)' : 'var(--text-muted)' }} strokeWidth={1.5} />
           </div>
-          <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
+          <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
             {isDragging ? 'Release to upload' : 'Drag and drop image'}
           </h4>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>or click to browse</p>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>or click to browse</p>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '20px', padding: '8px 20px' }}>
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
               JPG, PNG, WEBP, GIF — Max 5MB
             </span>
           </div>
@@ -149,12 +149,12 @@ export default function ImageScanner({ onScanComplete, scanType = 'sales', menuI
             )}
             <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-                <ImageIcon size={18} style={{ color: 'var(--accent-brown)', flexShrink: 0 }} />
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</p>
+                <ImageIcon size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</p>
               </div>
               <button 
                 onClick={clearFile}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.15s ease' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.15s ease' }}
               >
                 <X size={13} /> Remove
               </button>
@@ -177,7 +177,7 @@ export default function ImageScanner({ onScanComplete, scanType = 'sales', menuI
       )}
 
       {error && (
-        <div style={{ marginTop: '12px', padding: '12px 14px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--danger)' }}>
+        <div style={{ marginTop: '12px', padding: '12px 14px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--danger)' }}>
           {error}
         </div>
       )}

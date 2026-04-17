@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Crown, BookOpen, ShoppingCart, ClipboardList, Package, Home, Menu, X, Zap, Calculator as CalcIcon } from 'lucide-react'
+import { Coffee, Menu as MenuIcon, X, Calculator as CalcIcon } from 'lucide-react'
 import { useState } from 'react'
 import Calculator from './Calculator'
 
@@ -19,7 +19,6 @@ export default function Navbar() {
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isCalcOpen, setIsCalcOpen] = useState(false)
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 
   return (
     <>
@@ -31,34 +30,21 @@ export default function Navbar() {
         top: 0,
         zIndex: 100,
       }}>
-        <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '0 24px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
 
             {/* Logo */}
-            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-              <Crown size={20} style={{ color: 'var(--accent-gold)' }} strokeWidth={1.5} />
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-                <span style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: 'var(--text-primary)',
-                  letterSpacing: '0.02em',
-                }}>Crown</span>
-                <span style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '9px',
-                  fontWeight: 500,
-                  letterSpacing: '0.22em',
-                  textTransform: 'uppercase',
-                  color: 'var(--text-muted)',
-                  marginTop: '1px',
-                }}>Coffee</span>
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+              <div style={{ background: 'var(--primary-light)', padding: '6px', borderRadius: '6px' }}>
+                <Coffee size={20} style={{ color: 'var(--primary)' }} strokeWidth={2} />
               </div>
+              <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                Crown Coffee
+              </span>
             </Link>
 
             {/* Desktop Nav */}
-            <div className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {navItems.map(({ href, label }) => {
                 const isActive = pathname === href
                 return (
@@ -66,20 +52,15 @@ export default function Navbar() {
                     key={href}
                     href={href}
                     style={{
-                      fontFamily: 'var(--font-body)',
-                      fontSize: '11px',
+                      fontSize: '14px',
                       fontWeight: 500,
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      padding: '6px 14px',
-                      color: isActive ? 'var(--accent-brown)' : 'var(--text-muted)',
-                      borderBottom: isActive ? '2px solid var(--accent-brown)' : '2px solid transparent',
-                      transition: 'color 0.2s ease, border-color 0.2s ease',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
+                      background: isActive ? 'var(--primary-light)' : 'transparent',
+                      transition: 'all 0.15s ease',
                       textDecoration: 'none',
-                      whiteSpace: 'nowrap',
                     }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = 'var(--text-secondary)' }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = 'var(--text-muted)' }}
                   >
                     {label}
                   </Link>
@@ -88,51 +69,22 @@ export default function Navbar() {
             </div>
 
             {/* Right Side */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <span className="hide-mobile" style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-                letterSpacing: '0.06em',
-              }}>{today}</span>
-
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button
                 onClick={() => setIsCalcOpen(!isCalcOpen)}
-                className="hide-mobile"
-                style={{
-                  background: isCalcOpen ? 'var(--accent-gold-dim)' : 'transparent',
-                  border: `1px solid ${isCalcOpen ? 'var(--accent-gold)' : 'var(--border-light)'}`,
-                  borderRadius: '8px',
-                  padding: '7px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: isCalcOpen ? '#9A7020' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
+                className="hide-mobile btn-secondary"
+                style={{ padding: '6px 12px', fontSize: '13px' }}
               >
-                <CalcIcon size={14} /> Calc
+                <CalcIcon size={16} /> Calculator
               </button>
 
               {/* Mobile hamburger */}
               <button
                 className="show-mobile"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '6px',
-                  color: 'var(--text-secondary)',
-                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
               >
-                {isMobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+                {isMobileMenuOpen ? <X size={24} /> : <MenuIcon size={24} />}
               </button>
             </div>
           </div>
@@ -143,10 +95,10 @@ export default function Navbar() {
           <div style={{
             background: 'var(--bg-surface)',
             borderTop: '1px solid var(--border-light)',
-            padding: '16px 24px',
+            padding: '16px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '4px',
+            gap: '8px',
           }}>
             {navItems.map(({ href, label }) => {
               const isActive = pathname === href
@@ -156,31 +108,19 @@ export default function Navbar() {
                   href={href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   style={{
-                    fontFamily: 'var(--font-body)',
-                    fontSize: '13px',
+                    fontSize: '15px',
                     fontWeight: 500,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
                     padding: '12px 16px',
-                    borderRadius: '8px',
-                    color: isActive ? 'var(--accent-brown)' : 'var(--text-secondary)',
-                    background: isActive ? 'var(--bg-subtle)' : 'transparent',
-                    borderLeft: isActive ? '2px solid var(--accent-brown)' : '2px solid transparent',
+                    borderRadius: '6px',
+                    color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
+                    background: isActive ? 'var(--primary-light)' : 'transparent',
                     textDecoration: 'none',
-                    transition: 'all 0.15s ease',
                   }}
                 >
                   {label}
                 </Link>
               )
             })}
-            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
-              <span style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-              }}>{today}</span>
-            </div>
           </div>
         )}
       </nav>

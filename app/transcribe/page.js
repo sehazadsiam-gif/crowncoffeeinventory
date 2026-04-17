@@ -82,13 +82,13 @@ export default function TranscribePage() {
 
       <header style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-light)', padding: '32px 0 24px' }}>
         <div style={{ maxWidth: '896px', margin: '0 auto', padding: '0 24px' }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '36px', fontWeight: 400, color: 'var(--text-primary)' }}>
+          <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: '36px', fontWeight: 400, color: 'var(--text-primary)' }}>
             AI Transcriber
           </h1>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '6px' }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '6px' }}>
             Convert document images to text instantly
           </p>
-          <div style={{ marginTop: '12px', width: '40px', height: '1px', background: 'var(--accent-gold)' }} />
+          <div style={{ marginTop: '12px', width: '40px', height: '1px', background: 'var(--warning)' }} />
         </div>
       </header>
 
@@ -116,7 +116,7 @@ export default function TranscribePage() {
               style={{
                 cursor: 'pointer',
                 borderRadius: '10px',
-                border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--accent-brown)' : 'var(--border-medium)'}`,
+                border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--primary)' : 'var(--border-medium)'}`,
                 background: isDragging ? 'var(--bg-subtle)' : 'var(--bg-base)',
                 padding: '64px 32px',
                 textAlign: 'center',
@@ -124,19 +124,19 @@ export default function TranscribePage() {
               }}
             >
               <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center', transition: 'transform 0.3s ease', transform: isDragging ? 'scale(1.1)' : 'scale(1)' }}>
-                <UploadCloud size={56} style={{ color: isDragging ? 'var(--accent-brown)' : 'var(--text-muted)' }} strokeWidth={1.5} />
+                <UploadCloud size={56} style={{ color: isDragging ? 'var(--primary)' : 'var(--text-muted)' }} strokeWidth={1.5} />
               </div>
-              <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
+              <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '22px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
                 {isDragging ? 'Release to upload' : 'Drag and drop your image here'}
               </h4>
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
                 or click to browse your computer
               </p>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '20px', padding: '8px 20px' }}>
                 {['JPG', 'PNG', 'WEBP', 'GIF', 'Max 100MB'].map((t, i) => (
                   <span key={t} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{t}</span>
-                    {i < 4 && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent-gold)', display: 'inline-block' }} />}
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{t}</span>
+                    {i < 4 && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--warning)', display: 'inline-block' }} />}
                   </span>
                 ))}
               </div>
@@ -152,18 +152,18 @@ export default function TranscribePage() {
                 <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-light)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ background: 'var(--bg-subtle)', padding: '8px', borderRadius: '8px' }}>
-                      <ImageIcon size={18} style={{ color: 'var(--accent-brown)' }} strokeWidth={1.5} />
+                      <ImageIcon size={18} style={{ color: 'var(--primary)' }} strokeWidth={1.5} />
                     </div>
                     <div>
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</p>
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</p>
+                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {(file.size / (1024 * 1024)).toFixed(2)} MB
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={clearFile}
-                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.15s ease' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.15s ease' }}
                   >
                     <X size={13} /> Remove
                   </button>
@@ -186,7 +186,7 @@ export default function TranscribePage() {
           )}
 
           {error && (
-            <div style={{ marginTop: '16px', padding: '14px 16px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--danger)' }}>
+            <div style={{ marginTop: '16px', padding: '14px 16px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--danger)' }}>
               {error}
             </div>
           )}
@@ -195,8 +195,8 @@ export default function TranscribePage() {
             <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FileText size={16} style={{ color: 'var(--accent-gold)' }} />
-                  <h3 style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+                  <FileText size={16} style={{ color: 'var(--warning)' }} />
+                  <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
                     Transcription Result
                   </h3>
                 </div>
@@ -208,7 +208,7 @@ export default function TranscribePage() {
                     color: copied ? 'var(--success)' : 'var(--text-muted)',
                     borderColor: copied ? 'var(--success)' : 'var(--border-medium)',
                     borderRadius: '6px', padding: '6px 12px', cursor: 'pointer',
-                    fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 600,
+                    fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600,
                     letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.2s ease',
                   }}
                 >
@@ -218,7 +218,7 @@ export default function TranscribePage() {
               <div style={{
                 background: 'var(--bg-surface)',
                 border: '1px solid var(--border-light)',
-                borderTop: '3px solid var(--accent-brown)',
+                borderTop: '3px solid var(--primary)',
                 borderRadius: '0 0 10px 10px',
                 padding: '20px',
                 minHeight: '200px',

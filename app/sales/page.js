@@ -10,7 +10,7 @@ const DocumentScanner = dynamic(() => import('../../components/DocumentScanner')
 import {
   ShoppingCart, CheckCircle2, Trash2, Info,
   Plus, Minus, Receipt, ArrowRight, Package,
-  TrendingUp, Layers, X
+  TrendingUp, Layers, X, Calendar
 } from 'lucide-react'
 
 export default function SalesPage() {
@@ -150,29 +150,38 @@ export default function SalesPage() {
   }, {})
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
+    <div style={{ minHeight: '100vh' }}>
       <Navbar />
 
-      <header style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-light)', padding: '32px 0 24px' }}>
-        <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '0 24px' }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '36px', fontWeight: 400, color: 'var(--text-primary)' }}>Record Sales</h1>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '6px' }}>
-            Daily sales entry and stock deduction
-          </p>
-          <div style={{ marginTop: '12px', width: '40px', height: '1px', background: 'var(--accent-gold)' }} />
-        </div>
-      </header>
-
       <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '32px 24px 60px' }}>
-        <div className="instruction-box animate-in">
-          Enter how many of each item you sold today. Stock will be automatically deducted based on the recipes defined for each menu item.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div>
+            <h1 style={{ fontSize: '28px', fontWeight: 600 }}>Daily Sales</h1>
+            <p style={{ color: 'var(--text-muted)' }}>
+              Record items sold to update inventory and revenue
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-surface)', padding: '10px 16px', borderRadius: '8px', border: '1px solid var(--border-medium)' }}>
+            <Calendar size={18} style={{ color: 'var(--primary)' }} />
+            <input 
+              type="date" 
+              value={selectedDate} 
+              onChange={e => setSelectedDate(e.target.value)}
+              style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}
+            />
+          </div>
+        </div>
+
+        <div className="instruction-box">
+          Select items from the menu, click to increase quantity. The right panel shows your current order 
+          and the projected stock impact based on the recipe.
         </div>
 
         {menuItems.length === 0 ? (
           <div className="card" style={{ textAlign: 'center', padding: '60px 24px' }}>
             <Layers size={40} style={{ margin: '0 auto 16px', color: 'var(--text-muted)', opacity: 0.4 }} strokeWidth={1} />
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '8px' }}>No menu items found.</p>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>Add items in the Menu page before recording sales.</p>
+            <p style={{ fontSize: '22px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '8px' }}>No menu items found.</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>Add items in the Menu page before recording sales.</p>
             <Link href="/menu" className="btn-primary" style={{ display: 'inline-flex' }}>Go to Menu Page</Link>
           </div>
         ) : (
@@ -183,18 +192,18 @@ export default function SalesPage() {
               <DocumentScanner onScanComplete={handleScan} scanType="sales" menuItems={menuItems.map(m => m.name)} />
 
               {unrecognized.length > 0 && (
-                <div style={{ background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '10px', padding: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Info size={14} /> These items were not recognized:
+                    <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Info size={16} /> These items were not recognized:
                     </p>
                     <button onClick={() => setUnrecognized([])} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
-                      <X size={14} />
+                      <X size={16} />
                     </button>
                   </div>
-                  <ul style={{ paddingLeft: '20px' }}>
+                  <ul style={{ paddingLeft: '24px' }}>
                     {unrecognized.map((name, i) => (
-                      <li key={i} style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--danger)', marginBottom: '4px' }}>{name}</li>
+                      <li key={i} style={{ fontSize: '13px', color: 'var(--danger)', marginBottom: '4px' }}>{name}</li>
                     ))}
                   </ul>
                 </div>
@@ -204,13 +213,9 @@ export default function SalesPage() {
 
               {/* Date + Running Total */}
               <div ref={menuGridRef} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                <div>
-                  <label className="label">Sales Date</label>
-                  <input type="date" className="input" style={{ width: 'auto', fontWeight: 500, color: 'var(--accent-brown)' }} value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>Current Total</p>
-                  <p style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 700, color: 'var(--accent-brown)' }}>৳{cartTotal.toLocaleString()}</p>
+                <div style={{ textAlign: 'right', width: '100%' }}>
+                  <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>Current Total</p>
+                  <p style={{ fontSize: '28px', fontWeight: 700, color: 'var(--primary)' }}>৳{cartTotal.toLocaleString()}</p>
                 </div>
               </div>
 
@@ -218,8 +223,8 @@ export default function SalesPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
                 {Object.entries(grouped).map(([category, items]) => (
                   <section key={category}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{category}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                      <p style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{category}</p>
                       <div style={{ flex: 1, height: '1px', background: 'var(--border-light)' }} />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
@@ -229,42 +234,42 @@ export default function SalesPage() {
                         return (
                           <div key={item.id} style={{
                             background: 'var(--bg-surface)',
-                            border: `1px solid ${isInCart ? 'var(--accent-gold)' : 'var(--border-light)'}`,
+                            border: `1px solid ${isInCart ? 'var(--primary)' : 'var(--border-light)'}`,
                             borderRadius: '10px',
-                            padding: '14px 16px',
-                            boxShadow: isInCart ? 'var(--shadow-md)' : 'var(--shadow-sm)',
-                            transition: 'all 0.2s ease',
+                            padding: '16px',
+                            boxShadow: isInCart ? 'var(--shadow-sm)' : 'none',
+                            transition: 'all 0.15s ease',
                           }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px', marginBottom: '16px' }}>
                               <div>
-                                <p style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{item.name}</p>
-                                <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--success)', fontWeight: 600, marginTop: '4px' }}>৳{item.selling_price}</p>
+                                <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3 }}>{item.name}</p>
+                                <p style={{ fontSize: '13px', color: 'var(--success)', fontWeight: 600, marginTop: '4px' }}>৳{item.selling_price}</p>
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '4px' }}>
                                 <button onClick={() => setQty(item.id, qty - 1)} style={{
                                   width: '28px', height: '28px', borderRadius: '6px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)',
-                                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'all 0.15s ease',
+                                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)'
                                 }}><Minus size={14} /></button>
                                 <input
                                   type="number"
-                                  style={{ width: '36px', textAlign: 'center', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '14px', color: 'var(--accent-brown)', background: 'transparent', border: 'none', outline: 'none' }}
+                                  style={{ width: '36px', textAlign: 'center', fontWeight: 700, fontSize: '14px', color: 'var(--primary)', background: 'transparent', border: 'none', outline: 'none' }}
                                   value={qty || ''}
                                   onChange={e => setQty(item.id, e.target.value)}
                                   placeholder="0"
                                 />
                                 <button onClick={() => setQty(item.id, qty + 1)} style={{
                                   width: '28px', height: '28px', borderRadius: '6px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)',
-                                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', transition: 'all 0.15s ease',
+                                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)'
                                 }}><Plus size={14} /></button>
                               </div>
                             </div>
 
                             {isInCart && (
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--border-light)' }}>
-                                <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Selling ৳</span>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid var(--border-light)' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Selling ৳</span>
                                 <input
                                   type="number"
-                                  style={{ width: '80px', textAlign: 'right', fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '13px', color: 'var(--success)', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '4px 8px', outline: 'none' }}
+                                  style={{ width: '80px', textAlign: 'right', fontWeight: 700, fontSize: '13px', color: 'var(--success)', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', borderRadius: '6px', padding: '6px 8px', outline: 'none' }}
                                   value={cart[item.id]?.price || ''}
                                   onChange={e => setPrice(item.id, e.target.value)}
                                 />
@@ -283,57 +288,48 @@ export default function SalesPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'sticky', top: '80px' }}>
 
               {/* Cart Summary */}
-              <div className="card" style={{ borderLeft: '3px solid var(--accent-gold)' }}>
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '20px' }}>
+              <div className="card" style={{ borderLeft: '4px solid var(--primary)' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '20px' }}>
                   Order Summary
                 </h3>
 
                 {Object.keys(cart).length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '24px', opacity: 0.5 }}>
                     <Receipt size={28} style={{ color: 'var(--text-muted)', margin: '0 auto 8px' }} strokeWidth={1} />
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)' }}>Cart is empty</p>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Cart is empty</p>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
                     {Object.entries(cart).map(([id, data]) => {
                       const item = menuItems.find(m => m.id === id)
                       return item ? (
-                        <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 12px', background: 'var(--bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+                        <div key={id} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
-                              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{item.name}</p>
-                              <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Qty: {data.qty}</p>
+                              <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{item.name}</p>
+                              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Qty: {data.qty}</p>
                             </div>
-                            <p style={{ fontFamily: 'var(--font-display)', fontSize: '15px', fontWeight: 600, color: 'var(--accent-brown)' }}>৳{(data.qty * data.price).toLocaleString()}</p>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-light)' }}>
-                            <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Override ৳</span>
-                            <input
-                              type="number"
-                              style={{ width: '70px', textAlign: 'right', fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--accent-brown)', background: 'transparent', borderBottom: '1px solid var(--border-medium)', border: 'none', borderBottom: '1px solid var(--border-medium)', outline: 'none', paddingBottom: '2px' }}
-                              value={data.price}
-                              onChange={e => setPrice(id, e.target.value)}
-                            />
+                            <p style={{ fontSize: '15px', fontWeight: 600, color: 'var(--primary)' }}>৳{(data.qty * data.price).toLocaleString()}</p>
                           </div>
                         </div>
                       ) : null
                     })}
 
-                    <div style={{ background: 'var(--success-bg)', border: '1px solid rgba(58,125,92,0.15)', borderRadius: '8px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--success)' }}>Total Revenue</span>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 700, color: 'var(--success)' }}>৳{cartTotal.toLocaleString()}</span>
+                    <div style={{ background: 'var(--success-bg)', border: '1px solid rgba(5,150,105,0.2)', borderRadius: '8px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--success)' }}>Total Revenue</span>
+                      <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--success)' }}>৳{cartTotal.toLocaleString()}</span>
                     </div>
 
                     {preview.length > 0 && (
-                      <div style={{ background: 'var(--warning-bg)', border: '1px solid rgba(176,120,48,0.15)', borderRadius: '8px', padding: '12px 14px' }}>
-                        <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Package size={12} /> Stock to be deducted
+                      <div style={{ background: 'var(--warning-bg)', border: '1px solid rgba(217,119,6,0.2)', borderRadius: '8px', padding: '12px 14px' }}>
+                        <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Package size={14} /> Stock to be deducted
                         </p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           {preview.map(p => (
                             <div key={p.name} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)' }}>{p.name}</span>
-                              <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--warning)' }}>-{p.qty} {p.unit}</span>
+                              <span style={{ fontSize: '13px', color: 'var(--warning)' }}>{p.name}</span>
+                              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--warning)' }}>-{p.qty} {p.unit}</span>
                             </div>
                           ))}
                         </div>
@@ -346,49 +342,46 @@ export default function SalesPage() {
                   onClick={submitSales}
                   disabled={saving || Object.keys(cart).length === 0}
                   className="btn-primary"
-                  style={{ width: '100%', padding: '14px', fontSize: '12px' }}
+                  style={{ width: '100%', padding: '14px', fontSize: '14px' }}
                 >
                   {saving ? 'Processing...' : 'Submit Sales & Update Stock'}
                 </button>
               </div>
 
               {/* Day's Log */}
-              <div className="card" style={{ display: 'flex', flexDirection: 'column', maxHeight: '400px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-light)', flexShrink: 0 }}>
-                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>Today's Log</h3>
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', maxHeight: '400px', padding: 0 }}>
+                <div style={{ padding: '16px', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-subtle)' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>Today's Log</h3>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 600, color: 'var(--success)' }}>৳{totalRevenue.toLocaleString()}</p>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{totalQty} items sold</p>
+                    <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--success)' }}>৳{totalRevenue.toLocaleString()}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{totalQty} items sold</p>
                   </div>
                 </div>
 
                 {loading ? (
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div className="loader" /></div>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}><div className="loader" /></div>
                 ) : sales.length === 0 ? (
-                  <div style={{ flex: 1, textAlign: 'center', padding: '24px', opacity: 0.5 }}>
+                  <div style={{ flex: 1, textAlign: 'center', padding: '40px', opacity: 0.5 }}>
                     <Receipt size={28} style={{ color: 'var(--text-muted)', margin: '0 auto 8px' }} strokeWidth={1} />
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)' }}>No sales recorded yet.</p>
+                    <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>No sales recorded yet.</p>
                   </div>
                 ) : (
-                  <div style={{ flex: 1, overflowY: 'auto' }} className="no-scrollbar">
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }} className="no-scrollbar">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {sales.map(s => (
-                        <div key={s.id} style={{ padding: '10px 12px', background: 'var(--bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-light)' }}
-                          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-medium)'}
-                          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-light)'}
-                        >
+                        <div key={s.id} style={{ padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{s.menu_items?.name}</p>
-                              <span className="badge badge-gold" style={{ marginTop: '4px', display: 'inline-block' }}>{s.menu_items?.category}</span>
+                              <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{s.menu_items?.name}</p>
+                              <span className="badge badge-gray" style={{ marginTop: '4px' }}>{s.menu_items?.category}</span>
                             </div>
-                            <button onClick={() => confirmDeleteSale(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border-medium)', padding: '2px' }}>
-                              <Trash2 size={13} />
+                            <button onClick={() => confirmDeleteSale(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                              <Trash2 size={14} />
                             </button>
                           </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                            <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)' }}>{s.quantity}x served</p>
-                            <p style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 600, color: 'var(--success)' }}>৳{s.total_revenue?.toLocaleString()}</p>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{s.quantity}x served</p>
+                            <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--success)' }}>৳{s.total_revenue?.toLocaleString()}</p>
                           </div>
                         </div>
                       ))}

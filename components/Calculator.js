@@ -111,11 +111,11 @@ export default function Calculator({ isOpen, onClose }) {
     >
       {/* Header / Drag Handle */}
       <div className="drag-handle" style={{
-        background: 'var(--accent-brown)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'move', color: '#fff'
+        background: 'var(--primary)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'move', color: '#fff'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Hash size={14} style={{ color: 'var(--accent-gold)' }} />
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Pricing Calculator</span>
+          <Hash size={14} style={{ color: 'var(--warning)' }} />
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Pricing Calculator</span>
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', opacity: 0.8, padding: '4px' }}>
           <X size={16} />
@@ -124,8 +124,8 @@ export default function Calculator({ isOpen, onClose }) {
 
       {/* Display */}
       <div style={{ padding: '24px 20px', background: 'var(--bg-surface)', textAlign: 'right', borderBottom: '1px solid var(--border-light)' }}>
-        <div style={{ height: '16px', fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{equation}</div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ height: '16px', fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{equation}</div>
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: '32px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {display}
         </div>
       </div>
@@ -135,29 +135,29 @@ export default function Calculator({ isOpen, onClose }) {
         <CalcButton label="C" onClick={clear} style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} />
         <CalcButton label={<Delete size={16} />} onClick={del} style={{ color: 'var(--text-muted)' }} />
         <CalcButton label="%" onClick={() => setDisplay(String(parseFloat(display) / 100))} style={{ color: 'var(--success)' }} />
-        <CalcButton label={<Divide size={16} />} onClick={() => appendOperator('/')} style={{ color: 'var(--accent-brown)', background: 'var(--bg-surface)' }} />
+        <CalcButton label={<Divide size={16} />} onClick={() => appendOperator('/')} style={{ color: 'var(--primary)', background: 'var(--bg-surface)' }} />
 
         <CalcButton label="7" onClick={() => appendNumber('7')} />
         <CalcButton label="8" onClick={() => appendNumber('8')} />
         <CalcButton label="9" onClick={() => appendNumber('9')} />
-        <CalcButton label={<X size={14} />} onClick={() => appendOperator('*')} style={{ color: 'var(--accent-brown)', background: 'var(--bg-surface)' }} />
+        <CalcButton label={<X size={14} />} onClick={() => appendOperator('*')} style={{ color: 'var(--primary)', background: 'var(--bg-surface)' }} />
 
         <CalcButton label="4" onClick={() => appendNumber('4')} />
         <CalcButton label="5" onClick={() => appendNumber('5')} />
         <CalcButton label="6" onClick={() => appendNumber('6')} />
-        <CalcButton label={<Minus size={16} />} onClick={() => appendOperator('-')} style={{ color: 'var(--accent-brown)', background: 'var(--bg-surface)' }} />
+        <CalcButton label={<Minus size={16} />} onClick={() => appendOperator('-')} style={{ color: 'var(--primary)', background: 'var(--bg-surface)' }} />
 
         <CalcButton label="1" onClick={() => appendNumber('1')} />
         <CalcButton label="2" onClick={() => appendNumber('2')} />
         <CalcButton label="3" onClick={() => appendNumber('3')} />
-        <CalcButton label={<Plus size={16} />} onClick={() => appendOperator('+')} style={{ color: 'var(--accent-brown)', background: 'var(--bg-surface)' }} />
+        <CalcButton label={<Plus size={16} />} onClick={() => appendOperator('+')} style={{ color: 'var(--primary)', background: 'var(--bg-surface)' }} />
 
         <CalcButton label="0" onClick={() => appendNumber('0')} colSpan={2} />
         <CalcButton label="." onClick={() => appendNumber('.')} />
-        <CalcButton label={<Equal size={16} />} onClick={calculate} style={{ background: 'var(--accent-gold)', color: '#fff' }} />
+        <CalcButton label={<Equal size={16} />} onClick={calculate} style={{ background: 'var(--warning)', color: '#fff' }} />
       </div>
 
-      <div style={{ padding: '12px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-light)', textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+      <div style={{ padding: '12px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-light)', textAlign: 'center', fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
         Tip: Use this to split bulk prices
       </div>
     </div>
@@ -172,7 +172,7 @@ function CalcButton({ label, onClick, style = {}, colSpan = 1 }) {
         height: '44px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         borderRadius: '8px', border: '1px solid var(--border-light)',
-        fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 600,
+        fontFamily: 'var(--font-sans)', fontSize: '15px', fontWeight: 600,
         background: 'var(--bg-surface)', color: 'var(--text-secondary)',
         cursor: 'pointer', transition: 'all 0.1s ease',
         gridColumn: `span ${colSpan}`,

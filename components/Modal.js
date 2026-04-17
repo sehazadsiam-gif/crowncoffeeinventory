@@ -19,7 +19,7 @@ export default function Modal({ isOpen, onClose, onConfirm, title, message, chil
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '20px 24px', borderBottom: '1px solid var(--border-light)'
         }}>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' }}>
+          <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' }}>
             {title}
           </h3>
           <button onClick={onClose} style={{
@@ -42,7 +42,7 @@ export default function Modal({ isOpen, onClose, onConfirm, title, message, chil
               }}>
                 <AlertCircle size={24} strokeWidth={1.5} />
               </div>
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 {message}
               </p>
             </div>
@@ -61,7 +61,7 @@ export default function Modal({ isOpen, onClose, onConfirm, title, message, chil
             onClick={() => { onConfirm(); onClose() }} 
             className="btn-primary"
             style={{
-              background: type === 'danger' ? 'var(--danger)' : (type === 'warning' ? 'var(--warning)' : 'var(--accent-brown)'),
+              background: type === 'danger' ? 'var(--danger)' : (type === 'warning' ? 'var(--warning)' : 'var(--primary)'),
               boxShadow: 'none'
             }}
           >

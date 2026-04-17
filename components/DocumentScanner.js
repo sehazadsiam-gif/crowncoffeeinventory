@@ -113,9 +113,9 @@ export default function DocumentScanner({ onScanComplete, scanType, menuItems = 
     <div className="card-premium" style={{ marginBottom: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
         <div style={{ background: 'var(--bg-subtle)', padding: '8px', borderRadius: '8px' }}>
-          <Scan size={20} style={{ color: 'var(--accent-brown)' }} />
+          <Scan size={20} style={{ color: 'var(--primary)' }} />
         </div>
-        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
+        <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
           AI Document Scanner
         </h3>
       </div>
@@ -129,7 +129,7 @@ export default function DocumentScanner({ onScanComplete, scanType, menuItems = 
           style={{
             cursor: 'pointer',
             borderRadius: '10px',
-            border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--accent-brown)' : 'var(--border-medium)'}`,
+            border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--primary)' : 'var(--border-medium)'}`,
             background: isDragging ? 'var(--bg-subtle)' : 'var(--bg-base)',
             padding: '48px 24px',
             textAlign: 'center',
@@ -144,16 +144,16 @@ export default function DocumentScanner({ onScanComplete, scanType, menuItems = 
             style={{ display: 'none' }}
           />
           <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center', transform: isDragging ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.3s ease' }}>
-            <UploadCloud size={48} style={{ color: isDragging ? 'var(--accent-brown)' : 'var(--text-muted)' }} strokeWidth={1.5} />
+            <UploadCloud size={48} style={{ color: isDragging ? 'var(--primary)' : 'var(--text-muted)' }} strokeWidth={1.5} />
           </div>
-          <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
+          <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
             {isDragging ? 'Release to upload' : 'Drag & Drop Document'}
           </h4>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
             Images, PDFs, or Excel sheets
           </p>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '20px', padding: '8px 20px' }}>
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Max 10MB</span>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Max 10MB</span>
           </div>
         </div>
       ) : (
@@ -164,17 +164,17 @@ export default function DocumentScanner({ onScanComplete, scanType, menuItems = 
             ) : preview === 'excel' ? (
               <div style={{ display: 'flex', flexDirection: 'column', itemsCenter: 'center', gap: '12px', color: 'var(--success)' }}>
                 <FileSpreadsheet size={64} style={{ margin: '0 auto' }} />
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600 }}>{file.name}</p>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 600 }}>{file.name}</p>
               </div>
             ) : preview === 'pdf' ? (
               <div style={{ display: 'flex', flexDirection: 'column', itemsCenter: 'center', gap: '12px', color: 'var(--danger)' }}>
                 <FileText size={64} style={{ margin: '0 auto' }} />
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600 }}>{file.name}</p>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 600 }}>{file.name}</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', itemsCenter: 'center', gap: '12px', color: 'var(--text-muted)' }}>
                 <FileImage size={64} style={{ margin: '0 auto' }} />
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600 }}>{file.name}</p>
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 600 }}>{file.name}</p>
               </div>
             )}
             
@@ -201,13 +201,13 @@ export default function DocumentScanner({ onScanComplete, scanType, menuItems = 
             </button>
 
             {error && (
-              <div style={{ padding: '14px 16px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--danger)' }}>
+              <div style={{ padding: '14px 16px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--danger)' }}>
                 {error}
               </div>
             )}
 
             {success && (
-              <div style={{ padding: '14px 16px', background: 'var(--success-bg)', border: '1px solid rgba(58,125,92,0.2)', borderRadius: '8px', fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--success)' }}>
+              <div style={{ padding: '14px 16px', background: 'var(--success-bg)', border: '1px solid rgba(58,125,92,0.2)', borderRadius: '8px', fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--success)' }}>
                 Document processed! Review extracted items below.
               </div>
             )}

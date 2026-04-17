@@ -29,22 +29,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--cafe-cream)]">
+    <div className="min-h-screen bg-[var(--cream)]">
       <Navbar />
       
       <main className="max-w-md mx-auto px-4 py-20 flex flex-col items-center">
-        <div className="bg-[var(--cafe-brown)] p-4 rounded-3xl shadow-xl mb-8 animate-bounce">
-          <Coffee size={40} className="text-[var(--cafe-gold)]" />
+        <div className="bg-[var(--brown)] p-4 rounded-3xl shadow-xl mb-8 animate-bounce">
+          <Coffee size={40} className="text-[var(--gold)]" />
         </div>
         
         <div className="card-premium w-full text-center">
-          <h2 className="text-2xl font-black text-[var(--cafe-brown)] mb-2">Admin Portal</h2>
+          <h2 className="text-2xl font-black text-[var(--brown)] mb-2">Admin Portal</h2>
           <p className="text-gray-400 text-xs uppercase tracking-widest mb-8">Secure Access Only</p>
           
           <form onSubmit={handleLogin} className="space-y-6 text-left">
             <div>
               <label className="label flex items-center gap-2">
-                <User size={14} className="text-[var(--cafe-gold)]" /> Username
+                <User size={14} className="text-[var(--gold)]" /> Username
               </label>
               <input 
                 type="text" 
@@ -58,7 +58,7 @@ export default function LoginPage() {
             
             <div>
               <label className="label flex items-center gap-2">
-                <Lock size={14} className="text-[var(--cafe-gold)]" /> Password
+                <Lock size={14} className="text-[var(--gold)]" /> Password
               </label>
               <input 
                 type="password" 

@@ -36,7 +36,7 @@ export default function AdminClient({ initialStats }) {
   if (!isAuthorized) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px' }}>
       <div className="loader" style={{ marginBottom: '16px' }} />
-      <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
         Verifying Authorization...
       </p>
     </div>
@@ -48,11 +48,11 @@ export default function AdminClient({ initialStats }) {
     <div className="animate-in" style={{ display: 'grid', gap: '32px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-light)', paddingBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '28px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <ShieldCheck size={28} style={{ color: 'var(--accent-gold)' }} strokeWidth={1.5} /> 
+          <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '28px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <ShieldCheck size={28} style={{ color: 'var(--warning)' }} strokeWidth={1.5} /> 
             Advanced Business Logic
           </h2>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
             Full-system diagnostics and lifetime performance data.
           </p>
         </div>
@@ -82,15 +82,15 @@ export default function AdminClient({ initialStats }) {
           value={`৳${(stats.totalRevenue / (stats.totalSalesCount || 1)).toFixed(2)}`} 
           icon={Activity} 
           trend="Based on all transactions"
-          color="var(--accent-brown)"
+          color="var(--primary)"
         />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px' }}>
         {/* System Health */}
         <div className="card-premium">
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
-            <Activity size={18} style={{ color: 'var(--accent-brown)' }} /> System Integrity
+          <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+            <Activity size={18} style={{ color: 'var(--primary)' }} /> System Integrity
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--bg-subtle)', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
@@ -99,8 +99,8 @@ export default function AdminClient({ initialStats }) {
                   <ShieldCheck size={20} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Database Connection</p>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '2px' }}>Operational • 100%</p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Database Connection</p>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '2px' }}>Operational • 100%</p>
                 </div>
               </div>
               <span className="badge badge-green">Stable</span>
@@ -121,10 +121,10 @@ export default function AdminClient({ initialStats }) {
 
         {/* Data Management */}
         <div className="card" style={{ borderStyle: 'dashed', borderWidth: '2px' }}>
-          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <FileText size={18} style={{ color: 'var(--accent-brown)' }} /> Data Operations
+          <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <FileText size={18} style={{ color: 'var(--primary)' }} /> Data Operations
           </h3>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: 1.5 }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: 1.5 }}>
             Export or manage your database records. High-risk operations are marked in red.
           </p>
           
@@ -143,7 +143,7 @@ export default function AdminClient({ initialStats }) {
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '16px 20px', background: 'var(--bg-surface)', border: '1px solid var(--danger)',
                 borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease', color: 'var(--danger)',
-                fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em'
+                fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em'
               }}
             >
               <span>Factory Reset (Clear All)</span>
@@ -152,7 +152,7 @@ export default function AdminClient({ initialStats }) {
 
             <div style={{ marginTop: '16px', padding: '16px', background: 'var(--warning-bg)', borderRadius: '10px', border: '1px solid rgba(176,120,48,0.2)', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
               <AlertCircle size={18} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: '2px' }} />
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, color: 'var(--warning)', lineHeight: 1.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, color: 'var(--warning)', lineHeight: 1.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 Note: Resetting data is currently locked in development mode for safety.
               </p>
             </div>
@@ -165,15 +165,15 @@ export default function AdminClient({ initialStats }) {
 
 function AdminStatCard({ label, value, icon: Icon, trend, color }) {
   return (
-    <div className="card" style={{ borderBottom: `4px solid var(--accent-gold)`, padding: '24px' }}>
+    <div className="card" style={{ borderBottom: `4px solid var(--warning)`, padding: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <div style={{ background: 'var(--bg-subtle)', width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={22} style={{ color: 'var(--accent-brown)' }} />
+          <Icon size={22} style={{ color: 'var(--primary)' }} />
         </div>
       </div>
-      <p style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 700, color: color, lineHeight: 1.1, marginBottom: '6px' }}>{value}</p>
-      <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>{label}</p>
-      <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontStyle: 'italic', color: 'var(--text-muted)' }}>{trend}</p>
+      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '32px', fontWeight: 700, color: color, lineHeight: 1.1, marginBottom: '6px' }}>{value}</p>
+      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>{label}</p>
+      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontStyle: 'italic', color: 'var(--text-muted)' }}>{trend}</p>
     </div>
   )
 }

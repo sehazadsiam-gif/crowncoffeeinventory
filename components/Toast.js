@@ -51,14 +51,14 @@ const borderColors = {
   success: 'var(--success)',
   error: 'var(--danger)',
   warning: 'var(--warning)',
-  info: 'var(--accent-brown)',
+  info: 'var(--primary)',
 }
 
 const icons = {
   success: <CheckCircle size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />,
   error: <AlertCircle size={16} style={{ color: 'var(--danger)', flexShrink: 0 }} />,
   warning: <AlertTriangle size={16} style={{ color: 'var(--warning)', flexShrink: 0 }} />,
-  info: <AlertCircle size={16} style={{ color: 'var(--accent-brown)', flexShrink: 0 }} />,
+  info: <AlertCircle size={16} style={{ color: 'var(--primary)', flexShrink: 0 }} />,
 }
 
 function ToastItem({ message, type, onClose }) {
@@ -83,7 +83,7 @@ function ToastItem({ message, type, onClose }) {
         border: `1px solid var(--border-light)`,
         borderLeftWidth: '3px',
         borderLeftColor: borderColors[type] || borderColors.info,
-        fontFamily: 'var(--font-body)',
+        fontFamily: 'var(--font-sans)',
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateY(0)' : 'translateY(-10px)',
         transition: 'opacity 0.25s ease, transform 0.25s ease',
