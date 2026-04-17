@@ -20,6 +20,17 @@ export default function DashboardClient() {
 
   useEffect(() => {
     fetchStatsForDate(date)
+    
+    // Subscribe to realtime database changes so the dashboard updates instantly
+    const channel = supabase.channel('dashboard_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => fetchStatsForDate(date))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bazar_entries' }, () => fetchStatsForDate(date))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ingredients' }, () => fetchStatsForDate(date))
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [date])
 
   async function fetchStatsForDate(selectedDate) {
@@ -27,12 +38,12 @@ export default function DashboardClient() {
     try {
       const [salesRes, bazarRes, ingRes] = await Promise.all([
         supabase.from('sales').select('total_revenue').eq('date', selectedDate),
-        supabase.from('bazar').select('total_price').eq('date', selectedDate),
+        supabase.from('bazar_entries').select('total_cost').eq('date', selectedDate),
         supabase.from('ingredients').select('current_stock, cost_per_unit, min_stock')
       ])
 
       const totalSales = (salesRes.data || []).reduce((s, row) => s + (row.total_revenue || 0), 0)
-      const totalBazar = (bazarRes.data || []).reduce((s, row) => s + (row.total_price || 0), 0)
+      const totalBazar = (bazarRes.data || []).reduce((s, row) => s + (row.total_cost || 0), 0)
       
       const ingredients = ingRes.data || []
       const stockValue = ingredients.reduce((s, i) => s + ((i.current_stock || 0) * (i.cost_per_unit || 0)), 0)
