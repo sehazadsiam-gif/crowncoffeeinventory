@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 import {
   ShoppingCart, BookOpen, Package, ClipboardList,
-  CheckCircle2, ArrowRight, Wallet, TrendingUp, AlertTriangle, Zap, Calendar
+  CheckCircle2, ArrowRight, Wallet, TrendingUp, AlertTriangle, Zap, Calendar,
+  Users, UserCheck, FileText
 } from 'lucide-react'
 
 export default function DashboardClient() {
@@ -15,6 +16,12 @@ export default function DashboardClient() {
     totalBazar: 0,
     stockValue: 0,
     lowStockCount: 0,
+  })
+  const [hrStats, setHrStats] = useState({
+    activeStaff: 0,
+    presentToday: 0,
+    pendingAdvances: 0,
+    payrollEstimate: 0
   })
   const [loading, setLoading] = useState(true)
 
@@ -36,10 +43,13 @@ export default function DashboardClient() {
   async function fetchStatsForDate(selectedDate) {
     setLoading(true)
     try {
-      const [salesRes, bazarRes, ingRes] = await Promise.all([
+      const [salesRes, bazarRes, ingRes, staffRes, attRes, advRes] = await Promise.all([
         supabase.from('sales').select('total_revenue').eq('date', selectedDate),
         supabase.from('bazar_entries').select('total_cost').eq('date', selectedDate),
-        supabase.from('ingredients').select('current_stock, cost_per_unit, min_stock')
+        supabase.from('ingredients').select('current_stock, cost_per_unit, min_stock'),
+        supabase.from('staff').select('base_salary').eq('is_active', true),
+        supabase.from('attendance').select('status').eq('date', selectedDate),
+        supabase.from('advance_log').select('amount').eq('month', new Date(selectedDate).getMonth() + 1).eq('year', new Date(selectedDate).getFullYear())
       ])
 
       const totalSales = (salesRes.data || []).reduce((s, row) => s + (row.total_revenue || 0), 0)
@@ -50,6 +60,13 @@ export default function DashboardClient() {
       const lowStockCount = ingredients.filter(i => i.current_stock <= i.min_stock).length
 
       setStats({ totalSales, totalBazar, stockValue, lowStockCount })
+
+      const activeStaff = staffRes.data?.length || 0
+      const payrollEstimate = (staffRes.data || []).reduce((s, row) => s + (Number(row.base_salary) || 0), 0)
+      const presentToday = (attRes.data || []).filter(a => a.status === 'present').length
+      const pendingAdvances = (advRes.data || []).reduce((s, row) => s + (Number(row.amount) || 0), 0)
+      
+      setHrStats({ activeStaff, presentToday, payrollEstimate, pendingAdvances })
     } catch (err) {
       console.error(err)
     } finally {
@@ -179,6 +196,73 @@ export default function DashboardClient() {
             </div>
           </div>
           
+        </div>
+      </div>
+
+      {/* HR Summary Section */}
+      <div style={{ marginTop: '32px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '20px', color: 'var(--text-primary)' }}>HR & Staff Management</h2>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '24px' }} className="dash-grid">
+          
+          <div className="card hr-theme" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--hr-primary)' }}>
+              <Users size={20} />
+              <h3 style={{ fontSize: '18px', fontWeight: 600, margin: 0, fontFamily: 'var(--font-display)' }}>Staff Summary</h3>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ background: 'var(--bg-subtle)', padding: '12px', borderRadius: '8px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Active Staff</p>
+                <p style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>{hrStats.activeStaff}</p>
+              </div>
+              <div style={{ background: 'var(--bg-subtle)', padding: '12px', borderRadius: '8px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Attendance Today</p>
+                <p style={{ fontSize: '24px', fontWeight: 700, color: 'var(--success)' }}>{hrStats.presentToday} <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-muted)' }}>/ {hrStats.activeStaff}</span></p>
+              </div>
+              <div style={{ background: 'var(--bg-subtle)', padding: '12px', borderRadius: '8px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Monthly Payroll Est.</p>
+                <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--hr-primary)' }}>৳{hrStats.payrollEstimate.toLocaleString()}</p>
+              </div>
+              <div style={{ background: 'var(--bg-subtle)', padding: '12px', borderRadius: '8px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Pending Advances</p>
+                <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--danger)' }}>৳{hrStats.pendingAdvances.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="card hr-theme">
+            <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: 'var(--hr-text-primary)' }}>HR Quick Links</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <Link href="/staff/attendance" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-subtle)', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-primary)' }}>
+                <div style={{ background: '#e6f4ea', padding: '8px', borderRadius: '6px', color: '#1e8e3e' }}><UserCheck size={18} /></div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, fontSize: '14px' }}>Mark Attendance</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Log today's staff attendance</p>
+                </div>
+                <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
+              </Link>
+              
+              <Link href="/staff/payroll" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-subtle)', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-primary)' }}>
+                <div style={{ background: 'var(--primary-light)', padding: '8px', borderRadius: '6px', color: 'var(--primary)' }}><FileText size={18} /></div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, fontSize: '14px' }}>Run Payroll</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Generate monthly salary and payslips</p>
+                </div>
+                <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
+              </Link>
+              
+              <Link href="/staff/advances" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-subtle)', borderRadius: '8px', textDecoration: 'none', color: 'var(--text-primary)' }}>
+                <div style={{ background: '#fce8e6', padding: '8px', borderRadius: '6px', color: '#d93025' }}><Wallet size={18} /></div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, fontSize: '14px' }}>Log Advance</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Record salary advances taken</p>
+                </div>
+                <ArrowRight size={16} style={{ color: 'var(--text-muted)' }} />
+              </Link>
+            </div>
+          </div>
+
         </div>
       </div>
 

@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap");
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
@@ -254,3 +255,50 @@ select.input {
   animation: spin 0.8s linear infinite;
   display: inline-block;
 }
+
+.hr-theme {
+  --hr-bg: #FAF7F2;
+  --hr-surface: #FFFFFF;
+  --hr-primary: #8B5E3C;
+  --hr-warning: #C9A84C;
+  --hr-text-primary: #1C1410;
+  --hr-text-secondary: #5C4A36;
+  --hr-text-muted: #9C8A76;
+  --font-display: "Playfair Display", serif;
+  --font-body: "Jost", sans-serif;
+  background-color: var(--hr-bg);
+  min-height: 100vh;
+  font-family: var(--font-body);
+  color: var(--hr-text-primary);
+}
+.hr-theme h1, .hr-theme h2, .hr-theme h3 {
+  font-family: var(--font-display);
+}
+.hr-theme .card {
+  background: var(--hr-surface);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  padding: 24px;
+}
+.hr-theme .btn-primary {
+  background: var(--hr-primary);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+.hr-theme .input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid rgba(139, 94, 60, 0.2);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  outline: none;
+}
+.hr-theme .input:focus {
+  border-color: var(--hr-primary);
+}
+
