@@ -9,7 +9,6 @@ export default function Calculator({ isOpen, onClose }) {
   const [isReset, setIsReset] = useState(true)
   const calcRef = useRef(null)
 
-  // Dragging logic
   const [position, setPosition] = useState({ x: 20, y: 100 })
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0 })
@@ -93,73 +92,100 @@ export default function Calculator({ isOpen, onClose }) {
   return (
     <div 
       ref={calcRef}
-      className="fixed z-[999] bg-[rgba(255,255,255,0.8)] backdrop-blur-xl border border-white/50 shadow-2xl rounded-3xl overflow-hidden w-72 select-none animate-in zoom-in duration-200"
-      style={{ left: position.x, top: position.y }}
+      className="animate-in"
+      style={{
+        position: 'fixed',
+        zIndex: 999,
+        background: 'rgba(250, 247, 242, 0.9)',
+        backdropFilter: 'blur(12px)',
+        border: '1px solid var(--border-light)',
+        boxShadow: 'var(--shadow-lg)',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        width: '280px',
+        userSelect: 'none',
+        left: position.x,
+        top: position.y
+      }}
       onMouseDown={handleMouseDown}
     >
       {/* Header / Drag Handle */}
-      <div className="drag-handle bg-[var(--cafe-brown)] p-4 flex items-center justify-between cursor-move text-white">
-        <div className="flex items-center gap-2">
-          <Hash size={14} className="text-[var(--cafe-gold)]" />
-          <span className="text-[10px] font-black uppercase tracking-widest">Pricing Calculator</span>
+      <div className="drag-handle" style={{
+        background: 'var(--accent-brown)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'move', color: '#fff'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Hash size={14} style={{ color: 'var(--accent-gold)' }} />
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Pricing Calculator</span>
         </div>
-        <button onClick={onClose} className="hover:bg-white/10 p-1 rounded-lg transition-colors">
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', opacity: 0.8, padding: '4px' }}>
           <X size={16} />
         </button>
       </div>
 
       {/* Display */}
-      <div className="p-6 bg-white/40 text-right">
-        <div className="h-4 text-[10px] font-bold text-gray-400 mb-1">{equation}</div>
-        <div className="text-3xl font-black text-[var(--cafe-brown)] tracking-tighter truncate">
+      <div style={{ padding: '24px 20px', background: 'var(--bg-surface)', textAlign: 'right', borderBottom: '1px solid var(--border-light)' }}>
+        <div style={{ height: '16px', fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{equation}</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {display}
         </div>
       </div>
 
       {/* Keys */}
-      <div className="p-4 grid grid-cols-4 gap-2">
-        <CalcButton label="C" onClick={clear} className="text-rose-500 bg-rose-50 hover:bg-rose-100" />
-        <CalcButton label={<Delete size={18} />} onClick={del} className="text-gray-500" />
-        <CalcButton label="%" onClick={() => setDisplay(String(parseFloat(display) / 100))} className="text-emerald-500" />
-        <CalcButton label={<Divide size={18} />} onClick={() => appendOperator('/')} className="text-amber-600 bg-amber-50" />
+      <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', background: 'var(--bg-subtle)' }}>
+        <CalcButton label="C" onClick={clear} style={{ color: 'var(--danger)', background: 'var(--danger-bg)' }} />
+        <CalcButton label={<Delete size={16} />} onClick={del} style={{ color: 'var(--text-muted)' }} />
+        <CalcButton label="%" onClick={() => setDisplay(String(parseFloat(display) / 100))} style={{ color: 'var(--success)' }} />
+        <CalcButton label={<Divide size={16} />} onClick={() => appendOperator('/')} style={{ color: 'var(--accent-brown)', background: 'var(--bg-surface)' }} />
 
         <CalcButton label="7" onClick={() => appendNumber('7')} />
         <CalcButton label="8" onClick={() => appendNumber('8')} />
         <CalcButton label="9" onClick={() => appendNumber('9')} />
-        <CalcButton label={<X size={16} />} onClick={() => appendOperator('*')} className="text-amber-600 bg-amber-50" />
+        <CalcButton label={<X size={14} />} onClick={() => appendOperator('*')} style={{ color: 'var(--accent-brown)', background: 'var(--bg-surface)' }} />
 
         <CalcButton label="4" onClick={() => appendNumber('4')} />
         <CalcButton label="5" onClick={() => appendNumber('5')} />
         <CalcButton label="6" onClick={() => appendNumber('6')} />
-        <CalcButton label={<Minus size={18} />} onClick={() => appendOperator('-')} className="text-amber-600 bg-amber-50" />
+        <CalcButton label={<Minus size={16} />} onClick={() => appendOperator('-')} style={{ color: 'var(--accent-brown)', background: 'var(--bg-surface)' }} />
 
         <CalcButton label="1" onClick={() => appendNumber('1')} />
         <CalcButton label="2" onClick={() => appendNumber('2')} />
         <CalcButton label="3" onClick={() => appendNumber('3')} />
-        <CalcButton label={<Plus size={18} />} onClick={() => appendOperator('+')} className="text-amber-600 bg-amber-50" />
+        <CalcButton label={<Plus size={16} />} onClick={() => appendOperator('+')} style={{ color: 'var(--accent-brown)', background: 'var(--bg-surface)' }} />
 
-        <CalcButton label="0" onClick={() => appendNumber('0')} className="col-span-2" />
+        <CalcButton label="0" onClick={() => appendNumber('0')} colSpan={2} />
         <CalcButton label="." onClick={() => appendNumber('.')} />
-        <CalcButton label={<Equal size={18} />} onClick={calculate} className="bg-[var(--cafe-gold)] text-[var(--cafe-brown)]" />
+        <CalcButton label={<Equal size={16} />} onClick={calculate} style={{ background: 'var(--accent-gold)', color: '#fff' }} />
       </div>
 
-      <div className="p-3 bg-amber-50/50 border-t border-amber-100/50 text-[9px] text-center font-bold text-amber-800 uppercase tracking-tighter opacity-70">
+      <div style={{ padding: '12px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-light)', textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
         Tip: Use this to split bulk prices
       </div>
     </div>
   )
 }
 
-function CalcButton({ label, onClick, className = "", colSpan = 1 }) {
+function CalcButton({ label, onClick, style = {}, colSpan = 1 }) {
   return (
     <button
       onClick={onClick}
-      className={`
-        h-12 flex items-center justify-center rounded-xl font-black text-sm transition-all active:scale-90
-        ${className.includes('bg-') ? className : 'bg-white hover:bg-gray-50 text-[var(--cafe-brown)]'}
-        ${className}
-      `}
-      style={{ gridColumn: `span ${colSpan}` }}
+      style={{
+        height: '44px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: '8px', border: '1px solid var(--border-light)',
+        fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 600,
+        background: 'var(--bg-surface)', color: 'var(--text-secondary)',
+        cursor: 'pointer', transition: 'all 0.1s ease',
+        gridColumn: `span ${colSpan}`,
+        ...style
+      }}
+      onMouseEnter={e => {
+        if (!style.background) e.currentTarget.style.background = 'var(--bg-hover)'
+      }}
+      onMouseLeave={e => {
+        if (!style.background) e.currentTarget.style.background = 'var(--bg-surface)'
+      }}
+      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
+      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
     >
       {label}
     </button>

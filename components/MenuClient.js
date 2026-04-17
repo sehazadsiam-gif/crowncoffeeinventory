@@ -4,10 +4,10 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
 import Modal from '../components/Modal'
-import { 
-  Plus, Trash2, BookOpen, Layers, 
-  ChevronDown, ChevronUp, ShoppingBag, Coffee,
-  Info, X, Search, Filter, AlertCircle
+import {
+  Plus, Trash2, BookOpen, Layers,
+  ChevronDown, ChevronUp, ShoppingBag,
+  Info, X
 } from 'lucide-react'
 
 export default function MenuClient({ initialMenuItems, initialIngredients }) {
@@ -17,16 +17,12 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
   const [expanded, setExpanded] = useState(null)
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [showAddIngredient, setShowAddIngredient] = useState(false)
-  
-  // Modal states
+
   const [modalOpen, setModalOpen] = useState(false)
   const [modalConfig, setModalConfig] = useState({})
 
-  // New menu item form
   const [newMenu, setNewMenu] = useState({ name: '', category: 'Coffee', selling_price: '' })
   const [newIngredient, setNewIngredient] = useState({ name: '', unit: 'gm', min_stock: '', cost_per_unit: '', price_basis: '1', opening_stock: '' })
-
-  // Recipe management
   const [recipeForm, setRecipeForm] = useState({ ingredient_id: '', quantity: '', unit: 'gm' })
 
   async function refreshData() {
@@ -39,20 +35,12 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
   }
 
   async function addMenuItem() {
-    if (!newMenu.name || !newMenu.selling_price) {
-      return addToast('Please enter both name and price', 'error')
-    }
-    const { data, error } = await supabase.from('menu_items').insert([{
+    if (!newMenu.name || !newMenu.selling_price) return addToast('Please enter both name and price', 'error')
+    const { error } = await supabase.from('menu_items').insert([{
       ...newMenu,
       selling_price: parseFloat(newMenu.selling_price) || 0
-    }]).select()
-    
-    if (error) {
-      console.error("Supabase error:", error)
-      addToast(error.message || "Something went wrong", "error")
-      return
-    }
-    
+    }])
+    if (error) { addToast(error.message || 'Something went wrong', 'error'); return }
     setNewMenu({ name: '', category: 'Coffee', selling_price: '' })
     setShowAddMenu(false)
     addToast('Item added to menu', 'success')
@@ -60,17 +48,11 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
   }
 
   async function addIngredient() {
-    if (!newIngredient.name || !newIngredient.unit || !newIngredient.cost_per_unit) {
-      return addToast('Please fill all fields', 'error')
-    }
-    
-    // Normalize to cost per SINGLE unit
+    if (!newIngredient.name || !newIngredient.unit || !newIngredient.cost_per_unit) return addToast('Please fill all fields', 'error')
     const basis = parseFloat(newIngredient.price_basis) || 1
     const totalCost = parseFloat(newIngredient.cost_per_unit) || 0
     const costPerSingle = totalCost / basis
-
     const openingStock = parseFloat(newIngredient.opening_stock) || 0
-
     const { data: ingData, error } = await supabase.from('ingredients').insert([{
       name: newIngredient.name,
       unit: newIngredient.unit,
@@ -78,14 +60,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
       cost_per_unit: costPerSingle,
       current_stock: openingStock
     }]).select()
-    
-    if (error) {
-      console.error("Supabase error:", error)
-      addToast(error.message || "Something went wrong", "error")
-      return
-    }
-
-    // Record movement if opening stock was provided
+    if (error) { addToast(error.message || 'Something went wrong', 'error'); return }
     if (openingStock > 0 && ingData?.[0]) {
       await supabase.from('stock_movements').insert([{
         ingredient_id: ingData[0].id,
@@ -94,8 +69,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
         notes: 'Initial opening stock setup'
       }])
     }
-    
-    setNewIngredient({ name: '', unit: 'gm', min_stock: '', cost_per_unit: '' })
+    setNewIngredient({ name: '', unit: 'gm', min_stock: '', cost_per_unit: '', price_basis: '1', opening_stock: '' })
     setShowAddIngredient(false)
     addToast('Ingredient created', 'success')
     refreshData()
@@ -103,11 +77,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
 
   async function deleteMenuItem(id) {
     const { error } = await supabase.from('menu_items').delete().eq('id', id)
-    if (error) {
-      console.error("Supabase error:", error)
-      addToast(error.message || "Something went wrong", "error")
-      return
-    }
+    if (error) { addToast(error.message || 'Something went wrong', 'error'); return }
     addToast('Item removed from menu', 'success')
     refreshData()
   }
@@ -120,13 +90,7 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
       quantity: parseFloat(recipeForm.quantity),
       unit: recipeForm.unit
     }])
-    
-    if (error) {
-      console.error("Supabase error:", error)
-      addToast(error.message || "Something went wrong", "error")
-      return
-    }
-    
+    if (error) { addToast(error.message || 'Something went wrong', 'error'); return }
     setRecipeForm({ ingredient_id: '', quantity: '', unit: 'gm' })
     addToast('Ingredient added to recipe', 'success')
     refreshData()
@@ -134,75 +98,84 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
 
   async function deleteRecipe(id) {
     const { error } = await supabase.from('recipes').delete().eq('id', id)
-    if (error) {
-      console.error("Supabase error:", error)
-      addToast(error.message || "Something went wrong", "error")
-      return
-    }
+    if (error) { addToast(error.message || 'Something went wrong', 'error'); return }
     refreshData()
   }
 
   const categories = ['Coffee', 'Tea', 'Pastry', 'Sandwich', 'Other']
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start fade-in">
-      
-      {/* Menu List - Left/Top */}
-      <div className="lg:col-span-8 space-y-6">
-        <div className="card-premium">
-          <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-100">
-            <h3 className="font-bold text-[var(--cafe-brown)] uppercase text-xs tracking-widest flex items-center gap-2">
-              <BookOpen size={14} className="text-[var(--cafe-gold)]" /> Active Menu
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: '24px', alignItems: 'start' }}
+        className="menu-grid">
+
+        {/* Menu List */}
+        <div className="card animate-in">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Active Menu
             </h3>
-            <button
-              onClick={() => setShowAddMenu(true)}
-              className="btn-primary py-2 px-4 text-[10px] uppercase tracking-[0.2em]"
-            >
-              <Plus size={14} /> Add New Item
+            <button className="btn-primary" onClick={() => setShowAddMenu(true)} style={{ padding: '8px 16px', fontSize: '11px' }}>
+              <Plus size={13} /> Add Item
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div>
             {categories.map(cat => {
               const items = menuItems.filter(i => i.category === cat)
               if (items.length === 0) return null
               return (
-                <div key={cat} className="mb-8">
-                  <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.3em] mb-4 flex items-center gap-2">
-                    <div className="h-px bg-gray-200 flex-1"></div>
-                    {cat}
-                    <div className="h-px bg-gray-200 flex-1"></div>
-                  </h4>
-                  <div className="grid gap-3">
+                <div key={cat} style={{ marginBottom: '28px' }}>
+                  <div className="divider-label">{cat}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {items.map(item => (
-                      <div key={item.id} className={`card p-0 overflow-hidden transition-all duration-300 ${expanded === item.id ? 'ring-2 ring-[var(--cafe-gold)] shadow-xl' : 'hover:border-[var(--cafe-gold-light)]'}`}>
-                        <div 
-                          className="p-5 flex items-center justify-between cursor-pointer group"
+                      <div key={item.id} style={{
+                        border: `1px solid ${expanded === item.id ? 'var(--border-medium)' : 'var(--border-light)'}`,
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        transition: 'all 0.2s ease',
+                        boxShadow: expanded === item.id ? 'var(--shadow-md)' : 'none',
+                      }}>
+                        <div
+                          style={{
+                            padding: '14px 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                            background: expanded === item.id ? 'var(--bg-subtle)' : 'var(--bg-surface)',
+                            transition: 'background 0.15s ease',
+                          }}
                           onClick={() => setExpanded(expanded === item.id ? null : item.id)}
                         >
-                          <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${expanded === item.id ? 'bg-[var(--cafe-brown)] text-white' : 'bg-gray-50 text-[var(--cafe-brown)] group-hover:bg-amber-50'}`}>
-                              <Coffee size={20} className={expanded === item.id ? 'animate-pulse' : ''} />
-                            </div>
-                            <div>
-                              <p className="font-bold text-[var(--cafe-brown)] text-lg leading-tight">{item.name}</p>
-                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{item.recipes?.length || 0} Ingredients</p>
-                            </div>
+                          <div>
+                            <p style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                              {item.name}
+                            </p>
+                            <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                              {item.recipes?.length || 0} ingredients in recipe
+                            </p>
                           </div>
-                          <div className="flex items-center gap-6">
-                            <p className="text-xl font-black text-emerald-600 tracking-tighter">৳{item.selling_price}</p>
-                            <div className="text-gray-300 group-hover:text-[var(--cafe-gold)] transition-colors">
-                              {expanded === item.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <p style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, color: 'var(--accent-brown)' }}>
+                              ৳{item.selling_price}
+                            </p>
+                            <div style={{ color: 'var(--text-muted)' }}>
+                              {expanded === item.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                             </div>
                           </div>
                         </div>
 
                         {expanded === item.id && (
-                          <div className="bg-[var(--cafe-cream)] p-6 border-t border-[var(--cafe-cream-dark)] fade-in">
-                            <div className="flex items-center justify-between mb-4">
-                              <h5 className="text-[10px] font-black uppercase tracking-widest text-[var(--cafe-brown)] opacity-70 flex items-center gap-2">
-                                <Layers size={12} /> Recipe Breakdown
-                              </h5>
+                          <div style={{
+                            background: 'var(--bg-subtle)',
+                            padding: '16px',
+                            borderTop: '1px solid var(--border-light)',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                              <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                                Recipe Breakdown
+                              </p>
                               <button
                                 onClick={() => {
                                   setModalConfig({
@@ -213,66 +186,83 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                                   })
                                   setModalOpen(true)
                                 }}
-                                className="text-rose-400 hover:text-rose-600 p-1 transition-colors"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px' }}
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={15} />
                               </button>
                             </div>
 
-                            <div className="space-y-2 mb-6">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
                               {item.recipes?.map(r => (
-                                <div key={r.id} className="flex items-center justify-between bg-white/60 p-3 rounded-xl border border-white">
-                                  <div className="flex items-center gap-3">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--cafe-gold)]"></span>
-                                    <p className="text-sm font-bold text-[var(--cafe-brown)]">{r.ingredients?.name}</p>
+                                <div key={r.id} style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '10px 12px',
+                                  background: 'var(--bg-surface)',
+                                  borderRadius: '8px',
+                                  border: '1px solid var(--border-light)',
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-gold)', flexShrink: 0 }} />
+                                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                      {r.ingredients?.name}
+                                    </p>
                                   </div>
-                                  <div className="flex items-center gap-4">
-                                    <p className="text-sm font-black text-gray-500">{r.quantity} <span className="text-[10px] uppercase font-black text-[var(--cafe-gold)]">{r.unit || r.ingredients?.unit}</span></p>
-                                    <button onClick={() => deleteRecipe(r.id)} className="text-gray-300 hover:text-rose-500 transition-colors">
-                                      <X size={14} />
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)' }}>
+                                      {r.quantity} <span style={{ color: 'var(--accent-gold)', fontWeight: 600, fontSize: '10px', textTransform: 'uppercase' }}>{r.unit || r.ingredients?.unit}</span>
+                                    </p>
+                                    <button onClick={() => deleteRecipe(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--border-medium)' }}>
+                                      <X size={13} />
                                     </button>
                                   </div>
                                 </div>
                               ))}
                               {(!item.recipes || item.recipes.length === 0) && (
-                                <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-2xl">
-                                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">No recipe items added</p>
+                                <div style={{ textAlign: 'center', padding: '20px', border: '1px dashed var(--border-medium)', borderRadius: '8px' }}>
+                                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-muted)' }}>No recipe items added yet</p>
                                 </div>
                               )}
                             </div>
 
-                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mt-4">
-                              <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">Add ingredient to recipe</p>
-                              <div className="flex flex-col md:flex-row gap-3">
-                                <select 
-                                  className="input text-xs flex-1"
+                            <div style={{ background: 'var(--bg-surface)', padding: '14px', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+                              <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '10px' }}>
+                                Add ingredient to recipe
+                              </p>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                                <select
+                                  className="input"
+                                  style={{ flex: '1 1 160px', fontSize: '13px' }}
                                   value={recipeForm.ingredient_id}
                                   onChange={e => setRecipeForm({ ...recipeForm, ingredient_id: e.target.value })}
                                 >
                                   <option value="">Select ingredient...</option>
                                   {ingredients.map(ing => <option key={ing.id} value={ing.id}>{ing.name}</option>)}
                                 </select>
-                                <div className="flex gap-2">
-                                  <input 
-                                    className="input text-xs w-20" 
-                                    type="number" 
-                                    placeholder="Qty" 
-                                    value={recipeForm.quantity}
-                                    onChange={e => setRecipeForm({ ...recipeForm, quantity: e.target.value })}
-                                  />
-                                  <select 
-                                    className="input text-[10px] w-20 px-1 font-bold"
-                                    value={recipeForm.unit}
-                                    onChange={e => setRecipeForm({ ...recipeForm, unit: e.target.value })}
-                                  >
-                                    <option value="gm">gm</option>
-                                    <option value="kg">kg</option>
-                                    <option value="ml">ml</option>
-                                    <option value="ltr">ltr</option>
-                                    <option value="pcs">pcs</option>
-                                  </select>
-                                  <button onClick={() => addRecipe(item.id)} className="btn-primary py-2 px-6 text-[10px] uppercase tracking-widest">Add</button>
-                                </div>
+                                <input
+                                  className="input"
+                                  style={{ width: '80px', flex: '0 0 80px', fontSize: '13px' }}
+                                  type="number"
+                                  placeholder="Qty"
+                                  value={recipeForm.quantity}
+                                  onChange={e => setRecipeForm({ ...recipeForm, quantity: e.target.value })}
+                                />
+                                <select
+                                  className="input"
+                                  style={{ width: '80px', flex: '0 0 80px', fontSize: '12px' }}
+                                  value={recipeForm.unit}
+                                  onChange={e => setRecipeForm({ ...recipeForm, unit: e.target.value })}
+                                >
+                                  <option value="gm">gm</option>
+                                  <option value="kg">kg</option>
+                                  <option value="ml">ml</option>
+                                  <option value="ltr">ltr</option>
+                                  <option value="pcs">pcs</option>
+                                </select>
+                                <button className="btn-primary" onClick={() => addRecipe(item.id)} style={{ padding: '10px 16px', fontSize: '11px' }}>
+                                  Add
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -283,44 +273,65 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                 </div>
               )
             })}
+
+            {menuItems.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)' }}>
+                <BookOpen size={36} style={{ margin: '0 auto 12px', opacity: 0.4 }} strokeWidth={1} />
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px' }}>No menu items yet. Add your first item above.</p>
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Ingredients Sidebar - Right/Bottom */}
-      <div className="lg:col-span-4 space-y-6">
-        <div className="card h-fit sticky top-8">
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-50">
-             <h3 className="font-bold text-[var(--cafe-brown)] uppercase text-xs tracking-widest flex items-center gap-2">
-              <ShoppingBag size={14} className="text-[var(--cafe-gold)]" /> Raw Materials
-            </h3>
-            <button onClick={() => setShowAddIngredient(true)} className="p-1 hover:bg-gray-100 rounded-lg text-[var(--cafe-gold)] transition-colors">
-              <Plus size={20} />
-            </button>
-          </div>
+        {/* Ingredients Sidebar */}
+        <div style={{ position: 'sticky', top: '80px' }}>
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '14px', borderBottom: '1px solid var(--border-light)' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Raw Materials
+              </h3>
+              <button
+                onClick={() => setShowAddIngredient(true)}
+                style={{ background: 'none', border: '1px solid var(--border-medium)', borderRadius: '6px', cursor: 'pointer', padding: '6px', color: 'var(--accent-brown)', display: 'flex', alignItems: 'center' }}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
 
-          <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2 no-scrollbar">
-            {ingredients.map(ing => (
-              <div key={ing.id} className="flex items-center justify-between p-3 bg-[var(--cafe-cream)] rounded-xl border border-[var(--cafe-cream-dark)] group hover:border-[var(--cafe-gold-light)] transition-all">
-                <div>
-                  <p className="text-sm font-bold text-[var(--cafe-brown)]">{ing.name}</p>
-                  <p className="text-[10px] uppercase font-bold text-gray-400">{ing.unit} • min {ing.min_stock}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '450px', overflowY: 'auto' }} className="no-scrollbar">
+              {ingredients.map(ing => (
+                <div key={ing.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  background: 'var(--bg-subtle)',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-light)',
+                  transition: 'border-color 0.15s ease',
+                }}>
+                  <div>
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>{ing.name}</p>
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {ing.unit} &bull; min {ing.min_stock}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--accent-brown)' }}>৳{ing.cost_per_unit || 0}</p>
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>per {ing.unit}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs font-black text-[var(--cafe-brown)]">৳{ing.cost_per_unit || 0}</p>
-                  <p className="text-[9px] uppercase font-bold text-gray-400 tracking-tighter">per {ing.unit}</p>
+              ))}
+              {ingredients.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px' }}>No ingredients yet.</p>
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
 
-          <div className="mt-8 pt-6 border-t border-gray-100 bg-amber-50/50 p-6 rounded-2xl">
-            <div className="flex items-start gap-4">
-              <div className="bg-[var(--cafe-brown)] p-2 rounded-lg text-white">
-                <Info size={16} />
-              </div>
-              <p className="text-[11px] leading-relaxed text-[var(--cafe-brown)] opacity-80 italic">
-                <strong>Tip:</strong> Create your generic ingredients here first, then add them to your menu items!
+            <div style={{ marginTop: '16px', padding: '14px', background: 'var(--bg-subtle)', borderRadius: '8px', borderLeft: '3px solid var(--accent-gold)' }}>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                Create your ingredients first, then assign them to menu items to build recipes.
               </p>
             </div>
           </div>
@@ -328,19 +339,19 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
       </div>
 
       {/* Modals */}
-      <Modal 
-        isOpen={showAddMenu} 
+      <Modal
+        isOpen={showAddMenu}
         onClose={() => setShowAddMenu(false)}
         title="New Menu Item"
         confirmLabel="Add Item"
         onConfirm={addMenuItem}
       >
-        <div className="space-y-4 py-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px 0' }}>
           <div>
             <label className="label">Item Name</label>
             <input className="input" placeholder="e.g. Iced Latte" value={newMenu.name} onChange={e => setNewMenu({ ...newMenu, name: e.target.value })} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label className="label">Category</label>
               <select className="input" value={newMenu.category} onChange={e => setNewMenu({ ...newMenu, category: e.target.value })}>
@@ -355,22 +366,22 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
         </div>
       </Modal>
 
-      <Modal 
-        isOpen={showAddIngredient} 
+      <Modal
+        isOpen={showAddIngredient}
         onClose={() => setShowAddIngredient(false)}
         title="New Ingredient"
         confirmLabel="Create Ingredient"
         onConfirm={addIngredient}
       >
-        <div className="space-y-4 py-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px 0' }}>
           <div>
             <label className="label">Ingredient Name</label>
             <input className="input" placeholder="e.g. Whole Milk" value={newIngredient.name} onChange={e => setNewIngredient({ ...newIngredient, name: e.target.value })} />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label className="label">Unit</label>
-              <select className="input text-sm" value={newIngredient.unit} onChange={e => setNewIngredient({ ...newIngredient, unit: e.target.value })}>
+              <select className="input" value={newIngredient.unit} onChange={e => setNewIngredient({ ...newIngredient, unit: e.target.value })}>
                 <option value="gm">gm (Grams)</option>
                 <option value="kg">kg (Kilograms)</option>
                 <option value="ml">ml (Milliliters)</option>
@@ -386,57 +397,68 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
               </select>
             </div>
             <div>
-              <label className="label uppercase text-[10px] tracking-widest text-amber-600 font-black">Initial Stock on Hand</label>
-              <div className="relative">
-                <input 
-                  className="input border-amber-100 focus:ring-amber-500 pr-12" 
-                  type="number" 
-                  placeholder="2.5" 
-                  value={newIngredient.opening_stock} 
-                  onChange={e => setNewIngredient({ ...newIngredient, opening_stock: e.target.value })} 
+              <label className="label" style={{ color: 'var(--warning)' }}>Initial Stock on Hand</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="input"
+                  type="number"
+                  placeholder="0"
+                  value={newIngredient.opening_stock}
+                  onChange={e => setNewIngredient({ ...newIngredient, opening_stock: e.target.value })}
+                  style={{ paddingRight: '40px' }}
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-amber-500 uppercase">{newIngredient.unit}</span>
+                <span style={{
+                  position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                  fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase'
+                }}>{newIngredient.unit}</span>
               </div>
-              <p className="text-[9px] text-amber-800/40 mt-1 font-bold">Have items remaining from before? Enter them here.</p>
             </div>
           </div>
-          <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100">
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="flex-1">
-                <label className="label uppercase text-[10px] tracking-widest text-emerald-800 font-black mb-2 flex items-center gap-2">
-                   Price for amount (৳)
-                </label>
-                <div className="flex items-center gap-2">
-                   <span className="text-xs font-bold text-emerald-600">Price for</span>
-                   <input 
-                    className="w-20 bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-black text-[var(--cafe-brown)]" 
-                    type="number" 
-                    value={newIngredient.price_basis} 
-                    onChange={e => setNewIngredient({ ...newIngredient, price_basis: e.target.value })} 
-                   />
-                   <span className="text-xs font-bold text-emerald-600">{newIngredient.unit} is</span>
-                   <input 
-                    className="flex-1 bg-white border border-emerald-200 rounded-xl px-3 py-2 text-sm font-black text-emerald-700" 
-                    type="number" 
-                    placeholder="৳" 
-                    value={newIngredient.cost_per_unit} 
-                    onChange={e => setNewIngredient({ ...newIngredient, cost_per_unit: e.target.value })} 
-                   />
-                </div>
-                <p className="text-[9px] text-emerald-800/50 mt-2 font-bold uppercase tracking-tighter">
-                  Pro-tip: Entering "Price for 1000 gm is 3100" is same as 1 kg.
-                </p>
-              </div>
+
+          <div>
+            <label className="label">Minimum Stock Level</label>
+            <input className="input" type="number" placeholder="e.g. 100" value={newIngredient.min_stock} onChange={e => setNewIngredient({ ...newIngredient, min_stock: e.target.value })} />
+          </div>
+
+          <div style={{ background: 'var(--success-bg)', border: '1px solid rgba(58,125,92,0.15)', borderRadius: '8px', padding: '14px' }}>
+            <label className="label" style={{ color: 'var(--success)' }}>Price Calculation</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)' }}>Price for</span>
+              <input
+                className="input"
+                type="number"
+                value={newIngredient.price_basis}
+                onChange={e => setNewIngredient({ ...newIngredient, price_basis: e.target.value })}
+                style={{ width: '70px' }}
+              />
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)' }}>{newIngredient.unit} is ৳</span>
+              <input
+                className="input"
+                type="number"
+                placeholder="Cost"
+                value={newIngredient.cost_per_unit}
+                onChange={e => setNewIngredient({ ...newIngredient, cost_per_unit: e.target.value })}
+                style={{ flex: 1, minWidth: '80px' }}
+              />
             </div>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+              Example: "Price for 1000 gm is 3100" equals ৳3.10 per gm.
+            </p>
           </div>
         </div>
       </Modal>
 
-      <Modal 
-        isOpen={modalOpen} 
+      <Modal
+        isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         {...modalConfig}
       />
+
+      <style>{`
+        @media (max-width: 768px) {
+          .menu-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   )
 }

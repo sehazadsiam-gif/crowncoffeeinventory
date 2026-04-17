@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 import DashboardClient from '../components/DashboardClient'
 
-export const revalidate = 0 // Disable cache for now to ensure real-time-ish dashboard
+export const revalidate = 0
 
 async function getStats() {
   const today = new Date().toISOString().split('T')[0]
@@ -42,19 +42,63 @@ async function getStats() {
 
 export default async function Dashboard() {
   const { stats, lowStockItems } = await getStats()
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
   return (
-    <div className="min-h-screen bg-[var(--cafe-cream)]">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       <Navbar />
-      
-      <main className="max-w-6xl mx-auto px-4 py-8 md:py-12">
-        <section className="mb-10 text-center md:text-left fade-in">
-          <h1 className="text-3xl md:text-4xl font-display font-black text-[var(--cafe-brown)] tracking-tight">
-            Crown Coffee <span className="text-[var(--cafe-gold)]">Management</span>
-          </h1>
-          <p className="text-gray-500 mt-2 text-lg">Manage your stock, recipes, and daily sales with ease.</p>
-        </section>
 
+      {/* Hero Header */}
+      <header style={{
+        background: 'var(--bg-surface)',
+        borderBottom: '1px solid var(--border-light)',
+        padding: '40px 0 32px',
+      }}>
+        <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h1 style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 'clamp(32px, 5vw, 48px)',
+              fontWeight: 400,
+              color: 'var(--text-primary)',
+              lineHeight: 1.15,
+            }}>Crown Coffee</h1>
+            <p style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '11px',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              marginTop: '6px',
+            }}>Inventory and Stock Management</p>
+            <div style={{
+              marginTop: '12px',
+              width: '60px',
+              height: '1px',
+              background: 'var(--accent-gold)',
+            }} />
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <p style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: '22px',
+              fontWeight: 500,
+              color: 'var(--text-secondary)',
+              lineHeight: 1.2,
+            }}>{new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long' })}</p>
+            <p style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '11px',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              marginTop: '4px',
+            }}>{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric' })}</p>
+          </div>
+        </div>
+      </header>
+
+      <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '36px 24px 60px' }}>
         <DashboardClient initialStats={stats} initialLowStock={lowStockItems} />
       </main>
     </div>

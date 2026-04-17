@@ -39,9 +39,9 @@ export default async function AdminPage() {
   const data = await getAdminStats()
 
   return (
-    <div className="min-h-screen bg-[var(--cafe-cream)]">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 py-8 md:py-12">
+      <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '48px 24px 60px' }}>
         <AdminClient initialStats={data} />
       </main>
     </div>

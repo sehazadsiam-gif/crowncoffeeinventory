@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, createContext, useContext } from 'react'
-import { X, CheckCircle, AlertCircle, Info } from 'lucide-react'
+import { X, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react'
 
 const ToastContext = createContext()
 
@@ -10,7 +10,7 @@ export function ToastProvider({ children }) {
   const addToast = (message, type = 'success') => {
     const id = Date.now()
     setToasts((prev) => [...prev, { id, message, type }])
-    setTimeout(() => removeToast(id), 5000)
+    setTimeout(() => removeToast(id), 3000)
   }
 
   const removeToast = (id) => {
@@ -20,9 +20,20 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ addToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+      <div style={{
+        position: 'fixed',
+        top: '80px',
+        right: '20px',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+        pointerEvents: 'none',
+        maxWidth: '340px',
+        width: '100%',
+      }}>
         {toasts.map((toast) => (
-          <Toast
+          <ToastItem
             key={toast.id}
             message={toast.message}
             type={toast.type}
@@ -36,25 +47,70 @@ export function ToastProvider({ children }) {
 
 export const useToast = () => useContext(ToastContext)
 
-function Toast({ message, type, onClose }) {
-  const icons = {
-    success: <CheckCircle className="text-emerald-500" size={18} />,
-    error: <AlertCircle className="text-rose-500" size={18} />,
-    info: <Info className="text-blue-500" size={18} />,
-  }
+const borderColors = {
+  success: 'var(--success)',
+  error: 'var(--danger)',
+  warning: 'var(--warning)',
+  info: 'var(--accent-brown)',
+}
 
-  const bgColors = {
-    success: 'bg-emerald-50 border-emerald-100',
-    error: 'bg-rose-50 border-rose-100',
-    info: 'bg-blue-50 border-blue-100',
-  }
+const icons = {
+  success: <CheckCircle size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />,
+  error: <AlertCircle size={16} style={{ color: 'var(--danger)', flexShrink: 0 }} />,
+  warning: <AlertTriangle size={16} style={{ color: 'var(--warning)', flexShrink: 0 }} />,
+  info: <AlertCircle size={16} style={{ color: 'var(--accent-brown)', flexShrink: 0 }} />,
+}
+
+function ToastItem({ message, type, onClose }) {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true))
+  }, [])
 
   return (
-    <div className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg fade-in min-w-[300px] ${bgColors[type]}`}>
-      {icons[type]}
-      <p className="text-sm font-medium text-gray-800 flex-1">{message}</p>
-      <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
-        <X size={16} />
+    <div
+      style={{
+        pointerEvents: 'auto',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px',
+        padding: '14px 16px',
+        background: 'var(--bg-surface)',
+        borderRadius: '10px',
+        boxShadow: 'var(--shadow-md)',
+        borderLeft: `3px solid ${borderColors[type] || borderColors.info}`,
+        border: `1px solid var(--border-light)`,
+        borderLeftWidth: '3px',
+        borderLeftColor: borderColors[type] || borderColors.info,
+        fontFamily: 'var(--font-body)',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(-10px)',
+        transition: 'opacity 0.25s ease, transform 0.25s ease',
+      }}
+    >
+      {icons[type] || icons.info}
+      <p style={{
+        flex: 1,
+        fontSize: '13px',
+        color: 'var(--text-secondary)',
+        lineHeight: 1.5,
+        fontWeight: 400,
+      }}>{message}</p>
+      <button
+        onClick={onClose}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'var(--text-muted)',
+          padding: '2px',
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        <X size={14} />
       </button>
     </div>
   )

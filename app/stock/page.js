@@ -4,9 +4,9 @@ import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
-import { 
-  Package, AlertTriangle, CheckCircle, RefreshCcw, 
-  Trash2, Info, ChevronDown, ChevronUp, History,
+import {
+  Package, RefreshCcw, Info,
+  ChevronDown, ChevronUp, History,
   TrendingDown, TrendingUp, Settings2, ShieldCheck
 } from 'lucide-react'
 
@@ -17,11 +17,9 @@ export default function StockPage() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(null)
   const [adjustForm, setAdjustForm] = useState({ method: 'add', quantity: '', reason: 'Restock' })
+  const [filter, setFilter] = useState('all')
 
-  useEffect(() => {
-    fetchStock()
-    fetchLogs()
-  }, [])
+  useEffect(() => { fetchStock(); fetchLogs() }, [])
 
   async function fetchStock() {
     const { data } = await supabase.from('ingredients').select('*').order('name')
@@ -30,34 +28,19 @@ export default function StockPage() {
   }
 
   async function fetchLogs() {
-    const { data } = await supabase
-      .from('stock_logs')
-      .select('*, ingredients(name, unit)')
-      .order('created_at', { ascending: false })
-      .limit(20)
+    const { data } = await supabase.from('stock_logs').select('*, ingredients(name, unit)').order('created_at', { ascending: false }).limit(20)
     setLogs(data || [])
   }
 
   async function adjustStock(ingredientId) {
-    if (!adjustForm.quantity || adjustForm.quantity <= 0) {
-      return addToast('Please enter a valid quantity', 'error')
-    }
-
+    if (!adjustForm.quantity || adjustForm.quantity <= 0) return addToast('Please enter a valid quantity', 'error')
     const { error } = await supabase.from('stock_logs').insert([{
       ingredient_id: ingredientId,
       change_amount: adjustForm.method === 'subtract' ? -parseFloat(adjustForm.quantity) : parseFloat(adjustForm.quantity),
       reason: adjustForm.reason,
-      method: adjustForm.method, // 'add', 'subtract', 'set' - handles 'set' logic in DB or client? 
-      // Assuming DB trigger handles simple +- from change_amount. 
-      // For 'set', we might need to calculate the diff.
+      method: adjustForm.method,
     }])
-
-    if (error) {
-      console.error("Supabase error:", error)
-      addToast(error.message || "Something went wrong", "error")
-      return
-    }
-
+    if (error) { addToast(error.message || 'Something went wrong', 'error'); return }
     addToast('Stock level updated successfully', 'success')
     setAdjustForm({ method: 'add', quantity: '', reason: 'Restock' })
     setExpanded(null)
@@ -66,113 +49,161 @@ export default function StockPage() {
   }
 
   function getStatus(item) {
-    if (item.current_stock <= 0) return { label: 'Out of Stock', color: 'bg-rose-100 text-rose-700 border-rose-200' }
-    if (item.current_stock <= item.min_stock) return { label: 'Low Stock', color: 'bg-amber-100 text-amber-700 border-amber-200' }
-    return { label: 'Healthy', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
+    if (item.current_stock <= 0) return { label: 'Out of Stock', badge: 'badge-red', borderColor: 'var(--danger)', rowBg: 'rgba(166,60,60,0.03)' }
+    if (item.current_stock <= item.min_stock) return { label: 'Low Stock', badge: 'badge-amber', borderColor: 'var(--warning)', rowBg: 'var(--warning-bg)' }
+    return { label: 'In Stock', badge: 'badge-green', borderColor: 'var(--success)', rowBg: 'transparent' }
   }
 
+  const filterPills = [
+    { key: 'all', label: 'All Items' },
+    { key: 'low', label: 'Low Stock' },
+    { key: 'out', label: 'Out of Stock' },
+  ]
+
+  const filteredStock = stock.filter(item => {
+    if (filter === 'low') return item.current_stock > 0 && item.current_stock <= item.min_stock
+    if (filter === 'out') return item.current_stock <= 0
+    return true
+  })
+
   return (
-    <div className="min-h-screen bg-[var(--cafe-cream)] no-scrollbar">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       <Navbar />
-      <main className="max-w-6xl mx-auto px-4 py-8 md:py-12">
-        
-        {/* Instruction Box */}
-        <section className="instruction-box fade-in">
-          <div className="flex items-start gap-4">
-            <div className="bg-white/20 p-3 rounded-2xl shrink-0">
-              <Package size={24} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold mb-1">Inventory and Stock</h2>
-              <p className="text-white/80 text-sm max-w-2xl leading-relaxed">
-                Monitor your current raw materials. Green labels mean you're well-stocked. 
-                Red or Amber indicates it's time to visit the bazar.
-              </p>
-            </div>
-          </div>
-        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start fade-in">
-          
-          {/* Main Stock Table - Left */}
-          <div className="lg:col-span-8 space-y-6">
-            <div className="card-premium">
-              <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-100">
-                <h3 className="font-bold text-[var(--cafe-brown)] uppercase text-xs tracking-widest flex items-center gap-2">
-                  <ShieldCheck size={14} className="text-[var(--cafe-gold)]" /> Live Inventory
-                </h3>
-                <RefreshCcw size={14} className="text-gray-400 cursor-pointer hover:rotate-180 transition-transform duration-500" onClick={fetchStock} />
-              </div>
+      <header style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-light)', padding: '32px 0 24px' }}>
+        <div style={{ maxWidth: '1152px', margin: '0 auto', padding: '0 24px' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '36px', fontWeight: 400, color: 'var(--text-primary)' }}>Stock Manager</h1>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '6px' }}>
+            Live inventory levels and adjustment history
+          </p>
+          <div style={{ marginTop: '12px', width: '40px', height: '1px', background: 'var(--accent-gold)' }} />
+        </div>
+      </header>
 
+      <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '32px 24px 60px' }}>
+        <div className="instruction-box animate-in">
+          Monitor your current raw materials. Green labels mean you are well-stocked.
+          Amber or Red means it is time to visit the bazar. Click any item to make manual adjustments.
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,2fr) minmax(0,1fr)', gap: '24px', alignItems: 'start' }} className="stock-grid">
+
+          {/* Main Stock Table */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+            {/* Filter Pills */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {filterPills.map(p => (
+                <button
+                  key={p.key}
+                  onClick={() => setFilter(p.key)}
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    padding: '6px 16px',
+                    borderRadius: '20px',
+                    border: `1px solid ${filter === p.key ? 'var(--accent-brown)' : 'var(--border-medium)'}`,
+                    background: filter === p.key ? 'var(--accent-brown)' : 'transparent',
+                    color: filter === p.key ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+              <button
+                onClick={fetchStock}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-body)', fontSize: '11px', padding: '6px 10px', borderRadius: '6px', transition: 'all 0.2s ease' }}
+              >
+                <RefreshCcw size={13} /> Refresh
+              </button>
+            </div>
+
+            <div className="card animate-in" style={{ padding: '0', overflow: 'hidden' }}>
               {loading ? (
-                <div className="py-20 flex justify-center"><div className="animate-spin rounded-full h-10 w-10 border-4 border-amber-100 border-t-amber-900"></div></div>
-              ) : stock.length === 0 ? (
-                <div className="text-center py-20 grayscale opacity-40">
-                  <Package size={48} className="mx-auto mb-4 text-[var(--cafe-brown)]" />
-                  <p className="font-bold text-[var(--cafe-brown)]">Warehouse is empty.</p>
-                  <p className="text-xs uppercase tracking-tighter mt-1">Add ingredients in the Menu page to see them here.</p>
+                <div style={{ padding: '60px', display: 'flex', justifyContent: 'center' }}><div className="loader" /></div>
+              ) : filteredStock.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px', opacity: 0.5 }}>
+                  <Package size={36} style={{ margin: '0 auto 12px', color: 'var(--text-muted)' }} strokeWidth={1} />
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--text-muted)' }}>No items found for this filter.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {stock.map(item => {
+                <div>
+                  {filteredStock.map((item, idx) => {
                     const status = getStatus(item)
                     const isExpanded = expanded === item.id
                     return (
-                      <div key={item.id} className={`card p-0 transition-all duration-300 overflow-hidden ${isExpanded ? 'ring-2 ring-[var(--cafe-gold)] shadow-xl' : 'hover:border-[var(--cafe-gold-light)]'}`}>
-                        <div 
-                          className="p-5 flex items-center justify-between cursor-pointer group"
+                      <div key={item.id} style={{ borderBottom: idx < filteredStock.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
+                        <div
+                          style={{
+                            padding: '16px 20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                            background: isExpanded ? 'var(--bg-subtle)' : status.rowBg,
+                            borderLeft: `3px solid ${status.borderColor}`,
+                            transition: 'background 0.15s ease',
+                          }}
                           onClick={() => setExpanded(isExpanded ? null : item.id)}
                         >
-                          <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isExpanded ? 'bg-[var(--cafe-brown)] text-white' : 'bg-gray-50 text-[var(--cafe-brown)] group-hover:bg-amber-50'}`}>
-                              <Settings2 size={20} className={isExpanded ? 'animate-pulse' : ''} />
-                            </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <Settings2 size={16} style={{ color: isExpanded ? 'var(--accent-brown)' : 'var(--text-muted)', flexShrink: 0 }} strokeWidth={1.5} />
                             <div>
-                              <p className="font-bold text-[var(--cafe-brown)] text-lg leading-tight">{item.name}</p>
-                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mt-1">Min level: {item.min_stock} {item.unit}</p>
+                              <p style={{ fontFamily: 'var(--font-display)', fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>{item.name}</p>
+                              <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                Min level: {item.min_stock} {item.unit}
+                              </p>
                             </div>
                           </div>
-
-                          <div className="flex items-center gap-6">
-                            <div className="text-right">
-                              <p className="text-xl font-black text-[var(--cafe-brown)] leading-none">{item.current_stock} <span className="text-[10px] uppercase opacity-50">{item.unit}</span></p>
-                              <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${status.color}`}>
-                                {status.label}
-                              </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                            <div style={{ textAlign: 'right' }}>
+                              <p style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 600, color: 'var(--accent-brown)' }}>
+                                {item.current_stock}
+                                <span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '4px', textTransform: 'uppercase' }}>{item.unit}</span>
+                              </p>
+                              <span className={`badge ${status.badge}`} style={{ marginTop: '4px', display: 'inline-block' }}>{status.label}</span>
                             </div>
-                            <div className="text-gray-300 group-hover:text-[var(--cafe-gold)] transition-colors">
-                              {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                            <div style={{ color: 'var(--text-muted)' }}>
+                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                             </div>
                           </div>
                         </div>
 
-                        {/* Expandable Adjustment Form */}
                         {isExpanded && (
-                          <div className="bg-[var(--cafe-cream)] p-6 border-t border-[var(--cafe-cream-dark)] fade-in">
-                            <div className="flex items-center gap-2 mb-4">
-                              <Info size={14} className="text-[var(--cafe-gold)]" />
-                              <h4 className="text-[10px] font-black uppercase tracking-widest text-[var(--cafe-brown)] opacity-70">Manual stock adjustment</h4>
+                          <div style={{ background: 'var(--bg-subtle)', padding: '16px 20px', borderLeft: `3px solid ${status.borderColor}` }} className="animate-in">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                              <Info size={13} style={{ color: 'var(--accent-gold)' }} />
+                              <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                                Manual Stock Adjustment
+                              </p>
                             </div>
-                            
-                            <div className="grid md:grid-cols-4 gap-4">
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', alignItems: 'end' }}>
                               <div>
-                                <label className="label uppercase text-[9px]">Method</label>
-                                <select className="input text-sm bg-white border-transparent shadow-sm" value={adjustForm.method} onChange={e => setAdjustForm({ ...adjustForm, method: e.target.value })}>
+                                <label className="label">Method</label>
+                                <select className="input" style={{ background: 'var(--bg-surface)' }} value={adjustForm.method} onChange={e => setAdjustForm({ ...adjustForm, method: e.target.value })}>
                                   <option value="add">Add (+)</option>
                                   <option value="subtract">Subtract (-)</option>
                                   <option value="set">Set To (=)</option>
                                 </select>
                               </div>
                               <div>
-                                <label className="label uppercase text-[9px]">Amount ({item.unit})</label>
-                                <input className="input text-sm bg-white border-transparent shadow-sm" type="number" placeholder="0" value={adjustForm.quantity} onChange={e => setAdjustForm({ ...adjustForm, quantity: e.target.value })} />
+                                <label className="label">Amount ({item.unit})</label>
+                                <input className="input" style={{ background: 'var(--bg-surface)' }} type="number" placeholder="0" value={adjustForm.quantity} onChange={e => setAdjustForm({ ...adjustForm, quantity: e.target.value })} />
                               </div>
-                              <div className="md:col-span-2">
-                                <label className="label uppercase text-[9px]">Reason / Reference</label>
-                                <div className="flex gap-2">
-                                  <input className="input text-sm bg-white border-transparent shadow-sm flex-1" placeholder="e.g. Waste, Correction..." value={adjustForm.reason} onChange={e => setAdjustForm({ ...adjustForm, reason: e.target.value })} />
-                                  <button onClick={() => adjustStock(item.id)} className="btn-primary py-2.5 px-6 text-xs uppercase tracking-widest h-full">Update</button>
-                                </div>
+                              <div>
+                                <label className="label">Reason / Reference</label>
+                                <input className="input" style={{ background: 'var(--bg-surface)' }} placeholder="e.g. Waste, Correction..." value={adjustForm.reason} onChange={e => setAdjustForm({ ...adjustForm, reason: e.target.value })} />
+                              </div>
+                              <div>
+                                <button onClick={() => adjustStock(item.id)} className="btn-primary" style={{ width: '100%', padding: '10px' }}>
+                                  Update
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -185,47 +216,71 @@ export default function StockPage() {
             </div>
           </div>
 
-          {/* History Sidebar - Right */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="card h-[calc(100vh-250px)] flex flex-col no-scrollbar bg-white/50 border-dashed">
-              <div className="flex items-center justify-between mb-6 shrink-0">
-                <h3 className="font-black text-[var(--cafe-brown)] uppercase text-xs tracking-widest flex items-center gap-2">
-                  <History size={14} className="text-[var(--cafe-gold)]" /> Stock History
-                </h3>
-              </div>
+          {/* History Sidebar */}
+          <div className="card animate-in" style={{ display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 200px)', position: 'sticky', top: '80px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-light)', flexShrink: 0 }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>Stock History</h3>
+              <History size={15} style={{ color: 'var(--accent-gold)' }} strokeWidth={1.5} />
+            </div>
 
-              {logs.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center px-4 grayscale opacity-30">
-                  <RefreshCcw size={48} className="mb-4 text-[var(--cafe-brown)]" />
-                  <p className="text-xs font-bold uppercase tracking-widest">No recent changes</p>
-                </div>
-              ) : (
-                <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-3">
+            {logs.length === 0 ? (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', opacity: 0.4 }}>
+                <RefreshCcw size={28} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} strokeWidth={1} />
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-muted)' }}>No recent changes</p>
+              </div>
+            ) : (
+              <div style={{ flex: 1, overflowY: 'auto', position: 'relative', paddingLeft: '16px' }} className="no-scrollbar">
+                {/* Timeline vertical line */}
+                <div style={{ position: 'absolute', left: '6px', top: 0, bottom: 0, width: '1px', background: 'var(--border-medium)' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {logs.map(log => (
-                    <div key={log.id} className="p-4 bg-white rounded-2xl border border-gray-100 group">
-                      <div className="flex justify-between items-start mb-1">
-                        <p className="font-bold text-[var(--cafe-brown)] text-sm leading-tight">{log.ingredients?.name}</p>
-                        <div className={`flex items-center gap-1 font-black text-xs ${log.change_amount > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                          {log.change_amount > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                          {log.change_amount > 0 ? '+' : ''}{log.change_amount} {log.ingredients?.unit}
+                    <div key={log.id} style={{ position: 'relative' }}>
+                      {/* Timeline dot */}
+                      <div style={{
+                        position: 'absolute',
+                        left: '-19px',
+                        top: '12px',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: log.change_amount > 0 ? 'var(--success)' : 'var(--danger)',
+                        border: '2px solid var(--bg-surface)',
+                      }} />
+                      <div style={{ padding: '10px 12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{log.ingredients?.name}</p>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: log.change_amount > 0 ? 'var(--success)' : 'var(--danger)', fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 700 }}>
+                            {log.change_amount > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                            {log.change_amount > 0 ? '+' : ''}{log.change_amount} {log.ingredients?.unit}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex justify-between items-center text-[9px] uppercase font-black tracking-widest text-gray-400 mt-3 pt-3 border-t border-gray-50">
-                        <span className="truncate max-w-[120px]">{log.reason}</span>
-                        <span>{new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px', borderTop: '1px solid var(--border-light)' }}>
+                          <span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.reason}</span>
+                          <span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
-              
-              <div className="mt-6 pt-6 border-t border-gray-100 shrink-0 text-center">
-                <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Showing last 20 operations</p>
               </div>
+            )}
+
+            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-light)', flexShrink: 0, textAlign: 'center' }}>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Showing last 20 operations
+              </p>
             </div>
           </div>
         </div>
       </main>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .stock-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   )
 }

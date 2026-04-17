@@ -73,7 +73,6 @@ export default function ImageScanner({ onScanComplete, scanType = 'sales', menuI
     setError(null)
 
     try {
-      // Logic from DocumentScanner.js adapted for ImageScanner
       const reader = new FileReader()
       const base64Promise = new Promise((resolve) => {
         reader.onloadend = () => resolve(reader.result.split(',')[1])
@@ -100,12 +99,12 @@ export default function ImageScanner({ onScanComplete, scanType = 'sales', menuI
   }
 
   return (
-    <div className="w-full">
+    <div style={{ width: '100%' }}>
       <input
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/gif"
-        className="hidden"
+        style={{ display: 'none' }}
         onChange={handleFileInput}
       />
 
@@ -115,44 +114,49 @@ export default function ImageScanner({ onScanComplete, scanType = 'sales', menuI
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current.click()}
-          className={`
-            relative cursor-pointer rounded-2xl border-2 p-12 text-center transition-all duration-200
-            ${isDragging 
-              ? 'scale-[1.01] border-solid border-[var(--cafe-brown)] bg-amber-100 shadow-xl' 
-              : 'border-dashed border-amber-200 bg-[var(--cafe-cream)] hover:bg-amber-50/50 hover:border-amber-300'}
-          `}
+          style={{
+            cursor: 'pointer',
+            borderRadius: '10px',
+            border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--accent-brown)' : 'var(--border-medium)'}`,
+            background: isDragging ? 'var(--bg-subtle)' : 'var(--bg-base)',
+            padding: '48px 24px',
+            textAlign: 'center',
+            transition: 'all 0.2s ease',
+          }}
         >
-          <div className={`mb-6 flex justify-center transition-transform duration-300 ${isDragging ? 'scale-125' : ''}`}>
-            <UploadCloud size={56} className={isDragging ? 'text-[var(--cafe-brown)]' : 'text-amber-400'} />
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center', transition: 'transform 0.3s ease', transform: isDragging ? 'scale(1.1)' : 'scale(1)' }}>
+            <UploadCloud size={48} style={{ color: isDragging ? 'var(--accent-brown)' : 'var(--text-muted)' }} strokeWidth={1.5} />
           </div>
-          <h4 className="text-lg font-bold text-[var(--cafe-brown)]">
-            {isDragging ? 'Release to upload' : 'Drag and drop your image here'}
+          <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
+            {isDragging ? 'Release to upload' : 'Drag and drop image'}
           </h4>
-          <p className="text-sm text-gray-500 mt-1 font-medium">or click to browse</p>
-          <p className="text-[10px] uppercase font-bold text-gray-400 mt-6 tracking-[0.2em]">
-            Accepted formats: JPG, PNG, WEBP, GIF - Max 5MB
-          </p>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>or click to browse</p>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '20px', padding: '8px 20px' }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              JPG, PNG, WEBP, GIF — Max 5MB
+            </span>
+          </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="relative group rounded-2xl overflow-hidden border-2 border-[var(--cafe-gold-light)] bg-white shadow-md p-4 flex flex-col items-center">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-light)', background: 'var(--bg-subtle)', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             {previewUrl && (
               <img 
                 src={previewUrl} 
                 alt="Preview" 
-                className="max-h-[300px] w-auto object-contain rounded-lg shadow-sm"
+                style={{ maxHeight: '250px', objectFit: 'contain', borderRadius: '8px', boxShadow: 'var(--shadow-md)' }}
               />
             )}
-            <div className="mt-3 flex items-center justify-between w-full">
-              <div className="flex items-center gap-2 overflow-hidden">
-                <ImageIcon size={14} className="text-amber-500 shrink-0" />
-                <p className="text-xs font-bold text-[var(--cafe-brown)] truncate">{file.name}</p>
+            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '12px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                <ImageIcon size={18} style={{ color: 'var(--accent-brown)', flexShrink: 0 }} />
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</p>
               </div>
               <button 
                 onClick={clearFile}
-                className="flex items-center gap-1 text-[10px] font-black uppercase text-rose-500 hover:text-rose-700 transition-colors"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.15s ease' }}
               >
-                <X size={14} /> Remove
+                <X size={13} /> Remove
               </button>
             </div>
           </div>
@@ -160,25 +164,20 @@ export default function ImageScanner({ onScanComplete, scanType = 'sales', menuI
           <button
             onClick={scanDocument}
             disabled={scanning}
-            className="btn-primary w-full py-4 text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-lg"
+            className="btn-primary"
+            style={{ width: '100%', padding: '14px', fontSize: '13px' }}
           >
             {scanning ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Analyzing Image...
-              </>
+              <><Loader2 size={16} style={{ animation: 'spin 0.7s linear infinite' }} /> Analyzing Image...</>
             ) : (
-              <>
-                <ImageIcon size={16} />
-                Scan Document with AI
-              </>
+              <><ImageIcon size={16} /> Scan Image with AI</>
             )}
           </button>
         </div>
       )}
 
       {error && (
-        <div className="mt-4 p-4 bg-rose-50 border border-rose-100 rounded-xl text-xs font-bold text-rose-600">
+        <div style={{ marginTop: '12px', padding: '12px 14px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--danger)' }}>
           {error}
         </div>
       )}

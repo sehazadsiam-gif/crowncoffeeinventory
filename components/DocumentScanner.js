@@ -1,24 +1,35 @@
 'use client';
 import { useState, useRef } from 'react';
-import { Upload, Scan, Loader2, FileImage, X, FileText, FileSpreadsheet } from 'lucide-react';
-
+import { UploadCloud, Scan, Loader2, FileImage, X, FileText, FileSpreadsheet } from 'lucide-react';
 
 export default function DocumentScanner({ onScanComplete, scanType, menuItems = [] }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef(null);
 
+  function handleDragOver(e) { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }
+  function handleDragLeave(e) { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }
+  function handleDrop(e) {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
+    if (!droppedFile) return;
+    validateAndSetFile(droppedFile);
+  }
+
   const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+    validateAndSetFile(selectedFile);
+  };
+
+  function validateAndSetFile(selectedFile) {
     setError(null);
     setSuccess(false);
 
-    if (!selectedFile) return;
-
-    // Size limit 10MB for Docs
     if (selectedFile.size > 10 * 1024 * 1024) {
       setError("File size exceeds 10MB limit.");
       return;
@@ -26,19 +37,18 @@ export default function DocumentScanner({ onScanComplete, scanType, menuItems = 
 
     setFile(selectedFile);
 
-    // Handle Previews
     if (selectedFile.type.startsWith('image/')) {
       const reader = new FileReader();
       reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(selectedFile);
     } else if (selectedFile.type === 'application/pdf') {
       setPreview('pdf');
-    } else if (selectedFile.type.includes('spreadsheet') || selectedFile.type.includes('excel') || selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls')) {
+    } else if (selectedFile.type.includes('spreadsheet') || selectedFile.type.includes('excel') || selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls') || selectedFile.name.endsWith('.csv')) {
       setPreview('excel');
     } else {
       setPreview('file');
     }
-  };
+  }
 
   const clearFile = () => {
     setFile(null);
@@ -66,7 +76,6 @@ export default function DocumentScanner({ onScanComplete, scanType, menuItems = 
           body: JSON.stringify({ image: base64Content, mimeType: file.type, menuItems }),
         });
       } else {
-        // PDF or Excel - use FormData and new dedicated endpoints
         const formData = new FormData();
         formData.append('file', file);
         
@@ -81,7 +90,7 @@ export default function DocumentScanner({ onScanComplete, scanType, menuItems = 
 
         res = await fetch(endpoint, {
           method: 'POST',
-          body: formData, // Browser handles boundary and Content-Type
+          body: formData,
         });
       }
 
@@ -100,95 +109,105 @@ export default function DocumentScanner({ onScanComplete, scanType, menuItems = 
     }
   };
 
-
   return (
-    <div className="card-premium mb-8 overflow-hidden">
-      <div className="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
-        <div className="bg-[var(--cafe-gold)] p-2 rounded-lg">
-          <Scan size={20} className="text-[var(--cafe-brown)]" />
+    <div className="card-premium" style={{ marginBottom: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--border-light)' }}>
+        <div style={{ background: 'var(--bg-subtle)', padding: '8px', borderRadius: '8px' }}>
+          <Scan size={20} style={{ color: 'var(--accent-brown)' }} />
         </div>
-        <h3 className="font-bold text-[var(--cafe-brown)] uppercase text-xs tracking-widest">
-          AI Smart Scanner (Image, PDF, Excel)
+        <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
+          AI Document Scanner
         </h3>
       </div>
 
       {!file ? (
         <div 
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center hover:border-[var(--cafe-gold)] hover:bg-amber-50/20 transition-all cursor-pointer group"
+          style={{
+            cursor: 'pointer',
+            borderRadius: '10px',
+            border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--accent-brown)' : 'var(--border-medium)'}`,
+            background: isDragging ? 'var(--bg-subtle)' : 'var(--bg-base)',
+            padding: '48px 24px',
+            textAlign: 'center',
+            transition: 'all 0.2s ease',
+          }}
         >
           <input 
             type="file" 
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept="image/*,.pdf,.xlsx,.xls"
-            className="hidden"
+            accept="image/*,.pdf,.xlsx,.xls,.csv"
+            style={{ display: 'none' }}
           />
-          <div className="bg-gray-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-            <Upload size={28} className="text-gray-400 group-hover:text-[var(--cafe-gold)]" />
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center', transform: isDragging ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.3s ease' }}>
+            <UploadCloud size={48} style={{ color: isDragging ? 'var(--accent-brown)' : 'var(--text-muted)' }} strokeWidth={1.5} />
           </div>
-          <h4 className="font-bold text-[var(--cafe-brown)] mb-1">Upload Document</h4>
-          <p className="text-gray-400 text-xs max-w-xs mx-auto">
-            Upload images, PDFs, or Excel sheets of your sales or purchases
+          <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '20px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
+            {isDragging ? 'Release to upload' : 'Drag & Drop Document'}
+          </h4>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+            Images, PDFs, or Excel sheets
           </p>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '20px', padding: '8px 20px' }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Max 10MB</span>
+          </div>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="relative rounded-2xl overflow-hidden border border-gray-100 shadow-sm bg-gray-50 p-8 flex flex-col items-center justify-center min-h-[200px]">
-            {preview.startsWith('data:image') ? (
-              <img src={preview} alt="Preview" className="max-h-[300px] object-contain rounded-lg" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ position: 'relative', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-light)', background: 'var(--bg-subtle)', padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+            {preview && preview.startsWith('data:image') ? (
+              <img src={preview} alt="Preview" style={{ maxHeight: '250px', objectFit: 'contain', borderRadius: '8px', boxShadow: 'var(--shadow-md)' }} />
             ) : preview === 'excel' ? (
-              <div className="flex flex-col items-center gap-3 text-emerald-600">
-                <FileSpreadsheet size={64} />
-                <p className="font-bold text-sm">{file.name}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', itemsCenter: 'center', gap: '12px', color: 'var(--success)' }}>
+                <FileSpreadsheet size={64} style={{ margin: '0 auto' }} />
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600 }}>{file.name}</p>
               </div>
             ) : preview === 'pdf' ? (
-              <div className="flex flex-col items-center gap-3 text-rose-500">
-                <FileText size={64} />
-                <p className="font-bold text-sm">{file.name}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', itemsCenter: 'center', gap: '12px', color: 'var(--danger)' }}>
+                <FileText size={64} style={{ margin: '0 auto' }} />
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600 }}>{file.name}</p>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-3 text-gray-400">
-                <FileImage size={64} />
-                <p className="font-bold text-sm">{file.name}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', itemsCenter: 'center', gap: '12px', color: 'var(--text-muted)' }}>
+                <FileImage size={64} style={{ margin: '0 auto' }} />
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600 }}>{file.name}</p>
               </div>
             )}
             
             <button 
               onClick={clearFile}
-              className="absolute top-4 right-4 bg-white/80 backdrop-blur-sm p-1.5 rounded-full text-gray-500 hover:text-rose-500 transition-colors shadow-sm"
+              style={{ position: 'absolute', top: '16px', right: '16px', background: 'var(--bg-surface)', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: '6px', padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
             >
               <X size={16} />
             </button>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <button
               onClick={scanDocument}
               disabled={scanning}
-              className="btn-primary w-full py-4 text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2"
+              className="btn-primary"
+              style={{ width: '100%', padding: '14px', fontSize: '13px' }}
             >
               {scanning ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Analyzing {preview === 'excel' ? 'Spreadsheet' : 'Document'}...
-                </>
+                <><Loader2 size={16} style={{ animation: 'spin 0.7s linear infinite' }} /> Processing with AI...</>
               ) : (
-                <>
-                  <Scan size={16} />
-                  Process with AI
-                </>
+                <><Scan size={16} /> Read Document & Fill Forms</>
               )}
             </button>
 
             {error && (
-              <div className="bg-rose-50 text-rose-600 p-4 rounded-xl text-xs font-bold border border-rose-100">
+              <div style={{ padding: '14px 16px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--danger)' }}>
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="bg-emerald-50 text-emerald-600 p-4 rounded-xl text-xs font-bold border border-emerald-100">
+              <div style={{ padding: '14px 16px', background: 'var(--success-bg)', border: '1px solid rgba(58,125,92,0.2)', borderRadius: '8px', fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--success)' }}>
                 Document processed! Review extracted items below.
               </div>
             )}

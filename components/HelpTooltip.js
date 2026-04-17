@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { HelpCircle, X, ChevronRight } from 'lucide-react'
+import { HelpCircle, X } from 'lucide-react'
 
 export default function HelpTooltip() {
   const [isOpen, setIsOpen] = useState(false)
@@ -13,45 +13,68 @@ export default function HelpTooltip() {
   ]
 
   return (
-    <div className="help-tooltip">
-      {isOpen ? (
-        <div className="bg-white rounded-2xl shadow-2xl border border-[var(--cafe-cream-dark)] w-72 mb-4 overflow-hidden fade-in">
-          <div className="bg-[var(--cafe-brown)] text-white px-4 py-3 flex items-center justify-between">
-            <span className="font-bold flex items-center gap-2 text-sm uppercase tracking-wider">
-              <HelpCircle size={14} /> Quick Guide
+    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 50 }}>
+      {isOpen && (
+        <div className="fade-in" style={{
+          background: 'var(--bg-surface)',
+          borderRadius: '16px',
+          boxShadow: 'var(--shadow-lg)',
+          border: '1px solid var(--border-light)',
+          width: '280px',
+          marginBottom: '16px',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            background: 'var(--bg-subtle)',
+            borderBottom: '1px solid var(--border-light)',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <HelpCircle size={14} style={{ color: 'var(--accent-gold)' }} /> Quick Guide
             </span>
-            <button onClick={() => setIsOpen(false)} className="hover:text-amber-200">
+            <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
               <X size={16} />
             </button>
           </div>
-          <div className="p-4 space-y-4">
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {steps.map((step, i) => (
-              <div key={i} className="flex gap-3">
-                <div className="bg-[var(--cafe-cream-dark)] text-[var(--cafe-brown)] w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+              <div key={i} style={{ display: 'flex', gap: '12px' }}>
+                <div style={{
+                  background: 'var(--bg-subtle)', border: '1px solid var(--border-medium)',
+                  color: 'var(--accent-brown)', width: '24px', height: '24px', borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, flexShrink: 0
+                }}>
                   {i + 1}
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-[var(--cafe-brown)] uppercase tracking-tight">{step.title}</p>
-                  <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{step.desc}</p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{step.title}</p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4, marginTop: '2px' }}>{step.desc}</p>
                 </div>
               </div>
             ))}
-            <div className="pt-2 border-t border-gray-100 italic text-[10px] text-gray-400 text-center">
+            <div style={{ paddingTop: '12px', borderTop: '1px solid var(--border-light)', textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
               Need more help? Ask the manager.
             </div>
           </div>
         </div>
-      ) : null}
+      )}
       
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="bg-[var(--cafe-brown)] text-white w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center hover:scale-110 active:scale-95 group relative"
+        style={{
+          background: 'var(--accent-brown)', color: '#fff',
+          width: '56px', height: '56px', borderRadius: '50%',
+          boxShadow: 'var(--shadow-md)', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all 0.2s ease', transform: isOpen ? 'scale(0.95)' : 'scale(1)',
+          position: 'relative'
+        }}
       >
-        <HelpCircle size={28} className={isOpen ? 'hidden' : 'block'} />
-        <X size={28} className={isOpen ? 'block' : 'hidden'} />
-        <span className="absolute right-full mr-3 bg-white text-[var(--cafe-brown)] px-3 py-1.5 rounded-lg text-xs font-bold shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-          Need help?
-        </span>
+        {isOpen ? <X size={24} /> : <HelpCircle size={24} />}
       </button>
     </div>
   )

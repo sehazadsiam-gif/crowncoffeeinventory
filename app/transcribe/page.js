@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import Navbar from '../../components/Navbar'
-import { UploadCloud, Image as ImageIcon, X, Loader2, FileText, Zap } from 'lucide-react'
+import { UploadCloud, Image as ImageIcon, X, Loader2, FileText, Copy, Check } from 'lucide-react'
 
 export default function TranscribePage() {
   const [file, setFile] = useState(null)
@@ -10,72 +10,44 @@ export default function TranscribePage() {
   const [error, setError] = useState(null)
   const [scanning, setScanning] = useState(false)
   const [result, setResult] = useState(null)
+  const [copied, setCopied] = useState(false)
   const fileInputRef = useRef(null)
 
   useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
-    }
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }
   }, [previewUrl])
 
-  function handleDragOver(e) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(true)
-  }
-
-  function handleDragLeave(e) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-  }
-
+  function handleDragOver(e) { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }
+  function handleDragLeave(e) { e.preventDefault(); e.stopPropagation(); setIsDragging(false) }
   function handleDrop(e) {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false)
     const droppedFile = e.dataTransfer.files[0]
     if (!droppedFile) return
     validateAndSetFile(droppedFile)
   }
-
   function handleFileInput(e) {
     const selected = e.target.files[0]
     if (!selected) return
     validateAndSetFile(selected)
   }
-
   function validateAndSetFile(f) {
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-    if (!allowed.includes(f.type)) {
-      setError('Invalid file type. Please upload an image (JPG, PNG, WEBP, GIF).')
-      return
-    }
-    if (f.size > 100 * 1024 * 1024) {
-      setError('Image is too large. Maximum size is 100MB.')
-      return
-    }
-    setError(null)
-    setFile(f)
+    if (!allowed.includes(f.type)) { setError('Invalid file type. Please upload an image (JPG, PNG, WEBP, GIF).'); return }
+    if (f.size > 100 * 1024 * 1024) { setError('Image is too large. Maximum size is 100MB.'); return }
+    setError(null); setFile(f)
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setPreviewUrl(URL.createObjectURL(f))
     setResult(null)
   }
-
   function clearFile() {
     setFile(null)
     if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(null)
-    setError(null)
-    setResult(null)
+    setPreviewUrl(null); setError(null); setResult(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
-
   async function transcribeDocument() {
     if (!file) return
-    setScanning(true)
-    setError(null)
-
+    setScanning(true); setError(null)
     try {
       const reader = new FileReader()
       const base64Promise = new Promise((resolve) => {
@@ -83,16 +55,13 @@ export default function TranscribePage() {
         reader.readAsDataURL(file)
       })
       const base64Content = await base64Promise
-
       const res = await fetch('/api/transcribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: base64Content, mimeType: file.type }),
       })
-
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || 'Transcription failed')
-
       setResult(data.text)
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.')
@@ -101,99 +70,102 @@ export default function TranscribePage() {
     }
   }
 
-  const draggingClass = 'scale-[1.01] border-solid border-[var(--cafe-brown)] bg-amber-100 shadow-xl'
-  const idleClass = 'border-dashed border-amber-200 bg-[var(--cafe-cream)] hover:bg-amber-50/50 hover:border-amber-300'
+  async function handleCopy() {
+    await navigator.clipboard.writeText(result)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
-    <div className="min-h-screen bg-[var(--cafe-cream)]">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       <Navbar />
-      <main className="max-w-4xl mx-auto px-4 py-8 md:py-12">
 
-        {/* Header */}
-        <section className="instruction-box fade-in mb-8">
-          <div className="flex items-start gap-4">
-            <div className="bg-white/20 p-3 rounded-2xl shrink-0">
-              <Zap size={24} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold mb-1">AI Document Transcriber</h2>
-              <p className="text-white/80 text-sm max-w-2xl leading-relaxed">
-                Convert any document image into text instantly. High-precision AI analysis
-                for receipts, menus, or handwritten notes.
-              </p>
-            </div>
-          </div>
-        </section>
+      <header style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-light)', padding: '32px 0 24px' }}>
+        <div style={{ maxWidth: '896px', margin: '0 auto', padding: '0 24px' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '36px', fontWeight: 400, color: 'var(--text-primary)' }}>
+            AI Transcriber
+          </h1>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '6px' }}>
+            Convert document images to text instantly
+          </p>
+          <div style={{ marginTop: '12px', width: '40px', height: '1px', background: 'var(--accent-gold)' }} />
+        </div>
+      </header>
 
-        <div className="card-premium fade-in">
-          {/* Hidden file input */}
+      <main style={{ maxWidth: '896px', margin: '0 auto', padding: '32px 24px 60px' }}>
+        <div className="instruction-box animate-in">
+          Upload any image — receipts, handwritten notes, printed menus — and our AI will extract the text precisely.
+          High accuracy for both printed and handwritten content.
+        </div>
+
+        <div className="card animate-in" style={{ marginTop: '8px' }}>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
+            style={{ display: 'none' }}
             onChange={handleFileInput}
           />
 
-          {/* Drop Zone */}
           {!file ? (
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current.click()}
-              className={`relative cursor-pointer rounded-2xl border-2 p-16 text-center transition-all duration-200 ${isDragging ? draggingClass : idleClass}`}
+              style={{
+                cursor: 'pointer',
+                borderRadius: '10px',
+                border: `2px ${isDragging ? 'solid' : 'dashed'} ${isDragging ? 'var(--accent-brown)' : 'var(--border-medium)'}`,
+                background: isDragging ? 'var(--bg-subtle)' : 'var(--bg-base)',
+                padding: '64px 32px',
+                textAlign: 'center',
+                transition: 'all 0.2s ease',
+              }}
             >
-              <div className={`mb-8 flex justify-center transition-transform duration-300 ${isDragging ? 'scale-125' : ''}`}>
-                <UploadCloud
-                  size={80}
-                  className={isDragging ? 'text-[var(--cafe-brown)]' : 'text-amber-400'}
-                />
+              <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center', transition: 'transform 0.3s ease', transform: isDragging ? 'scale(1.1)' : 'scale(1)' }}>
+                <UploadCloud size={56} style={{ color: isDragging ? 'var(--accent-brown)' : 'var(--text-muted)' }} strokeWidth={1.5} />
               </div>
-              <h4 className="text-2xl font-bold text-[var(--cafe-brown)]">
+              <h4 style={{ fontFamily: 'var(--font-display)', fontSize: '22px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '8px' }}>
                 {isDragging ? 'Release to upload' : 'Drag and drop your image here'}
               </h4>
-              <p className="text-gray-500 mt-2 font-medium">or click to browse your computer</p>
-              <div className="mt-10 inline-flex items-center gap-3 text-[10px] font-black uppercase text-gray-400 tracking-[0.3em] bg-white/60 py-3 px-6 rounded-full border border-amber-100">
-                <span>JPG</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
-                <span>PNG</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
-                <span>WEBP</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
-                <span>GIF</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
-                <span>Max 100MB</span>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>
+                or click to browse your computer
+              </p>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '20px', padding: '8px 20px' }}>
+                {['JPG', 'PNG', 'WEBP', 'GIF', 'Max 100MB'].map((t, i) => (
+                  <span key={t} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{t}</span>
+                    {i < 4 && <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent-gold)', display: 'inline-block' }} />}
+                  </span>
+                ))}
               </div>
             </div>
           ) : (
-            /* File Preview */
-            <div className="space-y-6">
-              <div className="rounded-2xl overflow-hidden border-2 border-[var(--cafe-gold-light)] bg-white shadow-lg p-6 flex flex-col items-center">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ borderRadius: '10px', border: '1px solid var(--border-light)', overflow: 'hidden', background: 'var(--bg-subtle)' }}>
                 {previewUrl && (
-                  <img
-                    src={previewUrl}
-                    alt="Preview"
-                    className="max-h-[400px] w-auto object-contain rounded-xl shadow-sm"
-                  />
+                  <div style={{ padding: '16px', display: 'flex', justifyContent: 'center', background: 'var(--bg-subtle)' }}>
+                    <img src={previewUrl} alt="Preview" style={{ maxHeight: '400px', maxWidth: '100%', objectFit: 'contain', borderRadius: '8px', boxShadow: 'var(--shadow-md)' }} />
+                  </div>
                 )}
-                <div className="mt-5 flex items-center justify-between w-full border-t border-gray-100 pt-5">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="bg-amber-50 p-2 rounded-lg text-amber-600 shrink-0">
-                      <ImageIcon size={20} />
+                <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-light)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: 'var(--bg-subtle)', padding: '8px', borderRadius: '8px' }}>
+                      <ImageIcon size={18} style={{ color: 'var(--accent-brown)' }} strokeWidth={1.5} />
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-[var(--cafe-brown)] truncate">{file.name}</p>
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
+                    <div>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</p>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {(file.size / (1024 * 1024)).toFixed(2)} MB
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={clearFile}
-                    className="flex items-center gap-1.5 ml-4 shrink-0 text-[10px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-700 px-3 py-2 rounded-lg hover:bg-rose-50 transition-colors border border-rose-100"
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.15s ease' }}
                   >
-                    <X size={14} /> Remove
+                    <X size={13} /> Remove
                   </button>
                 </div>
               </div>
@@ -201,46 +173,64 @@ export default function TranscribePage() {
               <button
                 onClick={transcribeDocument}
                 disabled={scanning}
-                className="btn-primary w-full py-5 text-sm font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-2xl disabled:opacity-50"
+                className="btn-primary"
+                style={{ width: '100%', padding: '14px', fontSize: '13px' }}
               >
                 {scanning ? (
-                  <>
-                    <Loader2 size={20} className="animate-spin" />
-                    Transcribing with AI...
-                  </>
+                  <><Loader2 size={18} style={{ animation: 'spin 0.7s linear infinite' }} /> Transcribing with AI...</>
                 ) : (
-                  <>
-                    <Zap size={20} />
-                    Start Transcription
-                  </>
+                  'Start Transcription'
                 )}
               </button>
             </div>
           )}
 
-          {/* Error */}
           {error && (
-            <div className="mt-6 p-5 bg-rose-50 border border-rose-100 rounded-2xl text-sm font-bold text-rose-600">
+            <div style={{ marginTop: '16px', padding: '14px 16px', background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', borderRadius: '8px', fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--danger)' }}>
               {error}
             </div>
           )}
 
-          {/* Result */}
           {result && (
-            <div className="mt-8 space-y-4">
-              <div className="flex items-center gap-2 text-[var(--cafe-brown)]">
-                <FileText size={18} className="text-[var(--cafe-gold)]" />
-                <h3 className="font-black uppercase text-xs tracking-[0.2em]">Transcription Result</h3>
+            <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <FileText size={16} style={{ color: 'var(--accent-gold)' }} />
+                  <h3 style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+                    Transcription Result
+                  </h3>
+                </div>
+                <button
+                  onClick={handleCopy}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    background: 'none', border: '1px solid var(--border-medium)',
+                    color: copied ? 'var(--success)' : 'var(--text-muted)',
+                    borderColor: copied ? 'var(--success)' : 'var(--border-medium)',
+                    borderRadius: '6px', padding: '6px 12px', cursor: 'pointer',
+                    fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 600,
+                    letterSpacing: '0.06em', textTransform: 'uppercase', transition: 'all 0.2s ease',
+                  }}
+                >
+                  {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy</>}
+                </button>
               </div>
-              <div className="bg-white border-2 border-amber-100 rounded-2xl p-6 shadow-inner min-h-[200px] font-mono text-sm leading-relaxed whitespace-pre-wrap text-gray-700">
+              <div style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-light)',
+                borderTop: '3px solid var(--accent-brown)',
+                borderRadius: '0 0 10px 10px',
+                padding: '20px',
+                minHeight: '200px',
+                fontFamily: 'monospace',
+                fontSize: '13px',
+                lineHeight: 1.8,
+                whiteSpace: 'pre-wrap',
+                color: 'var(--text-secondary)',
+                boxShadow: 'var(--shadow-sm)',
+              }}>
                 {result}
               </div>
-              <button
-                onClick={() => navigator.clipboard.writeText(result)}
-                className="btn-secondary w-full py-3 text-[10px] font-black uppercase tracking-widest"
-              >
-                Copy to Clipboard
-              </button>
             </div>
           )}
         </div>

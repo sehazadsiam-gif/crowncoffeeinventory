@@ -5,18 +5,22 @@ import EnvCheck from '../components/EnvCheck'
 import LoginGate from '../components/LoginGate'
 
 export const metadata = {
-  title: 'Crown Coffee Inventory and Stock Management',
-  description: 'Premium stock and inventory management for Crown Coffee',
+  title: 'Crown Coffee — Inventory & Stock Management',
+  description: 'Premium inventory and stock management for Crown Coffee. Track ingredients, recipes, sales, and bazar purchases.',
 }
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body>
         <EnvCheck />
         <ToastProvider>
           <LoginGate>
-            <div className="relative min-h-screen flex flex-col">
+            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
               {children}
               <HelpTooltip />
             </div>

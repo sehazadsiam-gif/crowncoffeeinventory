@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Coffee, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react'
+import { Crown, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react'
 
 export default function LoginGate({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -41,62 +41,67 @@ export default function LoginGate({ children }) {
   }
 
   if (checking) return (
-    <div className="min-h-screen bg-[var(--cafe-cream)] flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-amber-100 border-t-amber-900"></div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="loader" style={{ width: '40px', height: '40px', borderWidth: '3px' }}></div>
     </div>
   )
 
   if (isAuthenticated) return <>{children}</>
 
   return (
-    <div className="min-h-screen bg-[var(--cafe-brown)] flex items-center justify-center p-4 relative overflow-hidden">
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', position: 'relative', overflow: 'hidden' }}>
       {/* Decorative background elements */}
-      <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-[var(--cafe-gold)]/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-900/40 rounded-full blur-[100px]" />
+      <div style={{ position: 'absolute', top: '-10%', right: '-10%', width: '50%', height: '50%', background: 'var(--accent-gold)', borderRadius: '50%', filter: 'blur(120px)', opacity: 0.05 }} />
+      <div style={{ position: 'absolute', bottom: '-10%', left: '-10%', width: '40%', height: '40%', background: 'var(--accent-brown)', borderRadius: '50%', filter: 'blur(100px)', opacity: 0.03 }} />
 
-      <div className="max-w-md w-full animate-in fade-in zoom-in duration-500">
-        <div className="text-center mb-10">
-          <div className="inline-flex bg-[var(--cafe-gold)] p-4 rounded-3xl shadow-2xl mb-6 transform hover:rotate-12 transition-transform cursor-pointer">
-            <Coffee size={40} className="text-[var(--cafe-brown)]" />
+      <div className="animate-in" style={{ maxWidth: '440px', width: '100%', zIndex: 10 }}>
+        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <div style={{
+            display: 'inline-flex', background: 'var(--bg-surface)', padding: '16px', borderRadius: '20px',
+            boxShadow: 'var(--shadow-md)', marginBottom: '24px', border: '1px solid var(--border-light)'
+          }}>
+            <Crown size={36} style={{ color: 'var(--accent-gold)' }} strokeWidth={1.5} />
           </div>
-          <h1 className="text-3xl font-display font-black text-white tracking-tight uppercase">
-            Crown <span className="text-[var(--cafe-gold)]">Coffee</span>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '36px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.02em', marginBottom: '8px' }}>
+            Crown <span style={{ color: 'var(--accent-brown)' }}>Coffee</span>
           </h1>
-          <p className="text-amber-100/60 mt-2 font-bold text-xs uppercase tracking-[0.3em]">
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
             System Authentication
           </p>
         </div>
 
-        <div className="bg-white/10 backdrop-blur-xl border border-white/10 p-8 rounded-[2.5rem] shadow-2xl">
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-amber-100/50 uppercase tracking-widest ml-1">Admin Username</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-amber-100/30 group-focus-within:text-[var(--cafe-gold)] transition-colors">
+        <div className="card-premium" style={{ padding: '40px 32px' }}>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div>
+              <label style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '8px', marginLeft: '4px' }}>Admin Username</label>
+              <div style={{ position: 'relative' }}>
+                <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                   <User size={18} />
                 </div>
                 <input
                   type="text"
                   required
-                  placeholder="Username"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-[var(--cafe-gold)]/50 focus:border-[var(--cafe-gold)] transition-all"
+                  placeholder="Enter username"
+                  className="input"
+                  style={{ padding: '14px 16px 14px 44px', fontSize: '14px', background: 'var(--bg-base)' }}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-amber-100/50 uppercase tracking-widest ml-1">Security Password</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-amber-100/30 group-focus-within:text-[var(--cafe-gold)] transition-colors">
+            <div>
+              <label style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'block', marginBottom: '8px', marginLeft: '4px' }}>Security Password</label>
+              <div style={{ position: 'relative' }}>
+                <div style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>
                   <Lock size={18} />
                 </div>
                 <input
                   type="password"
                   required
                   placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-[var(--cafe-gold)]/50 focus:border-[var(--cafe-gold)] transition-all"
+                  className="input"
+                  style={{ padding: '14px 16px 14px 44px', fontSize: '14px', background: 'var(--bg-base)' }}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -104,7 +109,7 @@ export default function LoginGate({ children }) {
             </div>
 
             {error && (
-              <div className="bg-rose-500/10 border border-rose-500/50 text-rose-200 text-xs font-bold p-4 rounded-xl text-center animate-shake">
+              <div style={{ background: 'var(--danger-bg)', border: '1px solid rgba(166,60,60,0.2)', color: 'var(--danger)', fontSize: '12px', fontWeight: 600, padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
                 {error}
               </div>
             )}
@@ -112,22 +117,21 @@ export default function LoginGate({ children }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[var(--cafe-gold)] hover:bg-[var(--cafe-gold-light)] text-[var(--cafe-brown)] font-black py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl transform active:scale-95 transition-all disabled:opacity-50"
+              className="btn-primary"
+              style={{ width: '100%', padding: '16px', fontSize: '13px', marginTop: '8px' }}
             >
               {loading ? (
-                <div className="h-5 w-5 border-2 border-[var(--cafe-brown)]/20 border-t-[var(--cafe-brown)] rounded-full animate-spin" />
+                <div className="loader" style={{ borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />
               ) : (
-                <>
-                  AUTHENTICATE <ArrowRight size={18} />
-                </>
+                <>AUTHENTICATE <ArrowRight size={18} /></>
               )}
             </button>
           </form>
         </div>
 
-        <div className="mt-8 flex items-center justify-center gap-2 text-amber-100/30 font-bold text-[10px] uppercase tracking-widest">
+        <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-muted)' }}>
           <ShieldCheck size={14} />
-          <span>Crown Coffee Secure Network v2.0</span>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Crown Coffee Secure Network v2.0</span>
         </div>
       </div>
     </div>
