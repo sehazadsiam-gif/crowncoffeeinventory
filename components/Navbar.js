@@ -11,7 +11,6 @@ const navItems = [
   { href: '/bazar', label: 'Bazar' },
   { href: '/sales', label: 'Sales' },
   { href: '/stock', label: 'Stock' },
-  { href: '/transcribe', label: 'Transcribe' },
   { href: '/login', label: 'Admin' },
 ]
 

@@ -5,8 +5,6 @@ import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
-const DocumentScanner = dynamic(() => import('../../components/DocumentScanner'), { ssr: false })
 import {
   ShoppingCart, CheckCircle2, Trash2, Info,
   Plus, Minus, Receipt, ArrowRight, Package,
@@ -189,27 +187,7 @@ export default function SalesPage() {
 
             {/* Menu Selection */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <DocumentScanner onScanComplete={handleScan} scanType="sales" menuItems={menuItems.map(m => m.name)} />
-
-              {unrecognized.length > 0 && (
-                <div style={{ background: 'var(--danger-bg)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: '10px', padding: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Info size={16} /> These items were not recognized:
-                    </p>
-                    <button onClick={() => setUnrecognized([])} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
-                      <X size={16} />
-                    </button>
-                  </div>
-                  <ul style={{ paddingLeft: '24px' }}>
-                    {unrecognized.map((name, i) => (
-                      <li key={i} style={{ fontSize: '13px', color: 'var(--danger)', marginBottom: '4px' }}>{name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="divider-label">Or select manually below</div>
+              <div className="divider-label">Select items manually below</div>
 
               {/* Date + Running Total */}
               <div ref={menuGridRef} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>

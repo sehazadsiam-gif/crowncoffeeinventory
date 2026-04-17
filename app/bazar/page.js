@@ -4,8 +4,6 @@ import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
-import dynamic from 'next/dynamic'
-const DocumentScanner = dynamic(() => import('../../components/DocumentScanner'), { ssr: false })
 import {
   Plus, Trash, Calendar, Save, ShoppingCart, X, Package
 } from 'lucide-react'
@@ -196,36 +194,7 @@ export default function BazarPage() {
 
             {/* Main Entry */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <DocumentScanner onScanComplete={handleScan} scanType="bazar" />
-
-              <div className="divider-label">Or enter manually below</div>
-
               <div className="card">
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '16px', marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid var(--border-light)' }}>
-                  <div style={{ textAlign: 'right', width: '100%' }}>
-                    <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                      Running Total
-                    </p>
-                    <p style={{ fontSize: '28px', fontWeight: 700, color: 'var(--primary)' }}>
-                      ৳{runningTotal.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {scanSummary && (
-                  <div style={{
-                    marginBottom: '16px', padding: '12px 14px',
-                    background: 'var(--warning-bg)', border: '1px solid rgba(217,119,6,0.2)',
-                    borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  }}>
-                    <p style={{ fontSize: '13px', color: 'var(--warning)', fontWeight: 500 }}>
-                      AI Scan: {scanSummary.matched} items recognized, {scanSummary.unmatched} need manual matching
-                    </p>
-                    <button onClick={() => setScanSummary(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warning)' }}>
-                      <X size={16} />
-                    </button>
-                  </div>
-                )}
 
                 {/* Column headers */}
                 <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr 2fr 2fr 2fr 40px', gap: '8px', padding: '0 4px 8px', marginBottom: '4px' }} className="hide-mobile">
