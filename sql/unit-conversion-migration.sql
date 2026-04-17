@@ -9,27 +9,41 @@ ALTER TABLE recipes ADD COLUMN IF NOT EXISTS unit TEXT DEFAULT 'gm';
 -- 2. Helper function for unit conversion
 CREATE OR REPLACE FUNCTION convert_unit(qty NUMERIC, from_unit TEXT, to_unit TEXT)
 RETURNS NUMERIC AS $$
+DECLARE
+  from_factor NUMERIC;
+  to_factor NUMERIC;
 BEGIN
-  -- Normalize unit names (lowercase)
   from_unit := lower(from_unit);
   to_unit := lower(to_unit);
 
-  -- If units are the same, no conversion needed
   IF from_unit = to_unit THEN
     RETURN qty;
   END IF;
 
-  -- Mass Conversions
-  IF from_unit = 'gm' AND to_unit = 'kg' THEN RETURN qty / 1000; END IF;
-  IF from_unit = 'kg' AND to_unit = 'gm' THEN RETURN qty * 1000; END IF;
+  -- Assign base factors relative to gm/ml
+  -- 1 gm = 1, 1 ml = 1
+  -- 1 kg = 1000, 1 ltr = 1000
+  from_factor := CASE from_unit
+    WHEN 'gm' THEN 1
+    WHEN 'ml' THEN 1
+    WHEN 'kg' THEN 1000
+    WHEN 'ltr' THEN 1000
+    ELSE NULL
+  END;
 
-  -- Volume Conversions
-  IF from_unit = 'ml' AND to_unit = 'ltr' THEN RETURN qty / 1000; END IF;
-  IF from_unit = 'ltr' AND to_unit = 'ml' THEN RETURN qty * 1000; END IF;
+  to_factor := CASE to_unit
+    WHEN 'gm' THEN 1
+    WHEN 'ml' THEN 1
+    WHEN 'kg' THEN 1000
+    WHEN 'ltr' THEN 1000
+    ELSE NULL
+  END;
 
-  -- Fallback: If no conversion rule exists, return as-is
-  -- (This covers pcs, box, cup etc if they match exactly)
-  RETURN qty;
+  IF from_factor IS NULL OR to_factor IS NULL THEN
+    RETURN qty;
+  END IF;
+
+  RETURN (qty * from_factor) / to_factor;
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 

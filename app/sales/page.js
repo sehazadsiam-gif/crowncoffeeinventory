@@ -11,6 +11,7 @@ import {
   Plus, Minus, Receipt, ArrowRight, Package,
   TrendingUp, Layers, X, Calendar
 } from 'lucide-react'
+import { convertUnit } from '../../lib/convert'
 
 export default function SalesPage() {
   const { addToast } = useToast()
@@ -80,14 +81,6 @@ export default function SalesPage() {
     try {
       if (!menuItems || !cart) return
       const deductions = {}
-      const convert = (qty, from, to) => {
-        if (!from || !to || from === to) return qty
-        if (from === 'gm' && to === 'kg') return qty / 1000
-        if (from === 'kg' && to === 'gm') return qty * 1000
-        if (from === 'ml' && to === 'ltr') return qty / 1000
-        if (from === 'ltr' && to === 'ml') return qty * 1000
-        return qty
-      }
       for (const [menuItemId, data] of Object.entries(cart || {})) {
         if (!menuItemId || !data) continue
         const { qty } = data
@@ -98,7 +91,7 @@ export default function SalesPage() {
           const key = r.ingredients.name
           const stockUnit = r.ingredients.unit
           const recipeUnit = r.unit || stockUnit
-          const convertedUsage = convert((r.quantity || 0) * qty, recipeUnit, stockUnit)
+          const convertedUsage = convertUnit((r.quantity || 0) * qty, recipeUnit, stockUnit)
           deductions[key] = (deductions[key] || 0) + convertedUsage
           deductions[`${key}__unit`] = stockUnit
         }

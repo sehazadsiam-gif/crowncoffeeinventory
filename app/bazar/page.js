@@ -7,6 +7,7 @@ import { useToast } from '../../components/Toast'
 import {
   Plus, Trash, Calendar, Save, ShoppingCart, X, Package
 } from 'lucide-react'
+import { convertUnit } from '../../lib/convert'
 
 export default function BazarPage() {
   const { addToast } = useToast()
@@ -113,18 +114,9 @@ export default function BazarPage() {
 
   async function saveAdjustment() {
     if (!adjustment.ingredient_id || !adjustment.quantity) return addToast('Please select an item and enter quantity', 'warning')
-    setAdjusting(true)
-    const convert = (val, from, to) => {
-      if (!from || !to || from === to) return val
-      if (from === 'gm' && to === 'kg') return val / 1000
-      if (from === 'kg' && to === 'gm') return val * 1000
-      if (from === 'ml' && to === 'ltr') return val / 1000
-      if (from === 'ltr' && to === 'ml') return val * 1000
-      return val
-    }
     const ing = ingredients.find(i => i.id === adjustment.ingredient_id)
     const rawQty = parseFloat(adjustment.quantity)
-    const normalizedQty = convert(rawQty, adjustment.unit, ing.unit)
+    const normalizedQty = convertUnit(rawQty, adjustment.unit, ing.unit)
     const { error } = await supabase.from('ingredients').update({ current_stock: normalizedQty }).eq('id', adjustment.ingredient_id)
     if (error) { addToast(error.message, 'error'); setAdjusting(false); return }
     await supabase.from('stock_movements').insert([{
