@@ -5,8 +5,13 @@ import EnvCheck from '../components/EnvCheck'
 import LoginGate from '../components/LoginGate'
 
 export const metadata = {
-  title: 'Crown Coffee — Inventory & Stock Management',
-  description: 'Premium inventory and stock management for Crown Coffee. Track ingredients, recipes, sales, and bazar purchases.',
+  title: 'Crown Coffee Inventory and Stock Management',
+  description: 'Stock and inventory management for Crown Coffee',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 }
 
 export default function RootLayout({ children }) {

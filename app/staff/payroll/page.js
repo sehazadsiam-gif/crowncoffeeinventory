@@ -1,9 +1,10 @@
+
 'use client'
 import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
-import { Printer } from 'lucide-react'
+import { Printer, CheckCircle } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../../components/PaySlip'), { ssr: false })
@@ -162,7 +163,7 @@ export default function PayrollPage() {
         notes: paymentForm.notes
       }])
       if (error) throw error
-      addToast('Payment recorded', 'success')
+      addToast('Payment confirmed for ' + s.name, 'success')
       setShowPaymentForm(null)
       setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], notes: '' })
       fetchPayments()
@@ -183,9 +184,9 @@ export default function PayrollPage() {
         final_salary: finalSalary,
         paid_date: isPaid ? new Date().toISOString() : null
       }, { onConflict: 'staff_id,month,year' })
-      addToast(isPaid ? 'Marked as paid' : 'Marked as unpaid', 'success')
+      addToast(isPaid ? 'Marked as fully paid' : 'Marked as unpaid', 'success')
     } catch (err) {
-      addToast('Error updating paid status', 'error')
+      addToast('Error updating status', 'error')
     }
   }
 
@@ -198,37 +199,57 @@ export default function PayrollPage() {
     return acc + calculateFinalSalary(s, payroll[s.id] || {})
   }, 0)
 
+  const totalPaidAll = Object.values(payments).flat().reduce((s, p) => s + Number(p.amount), 0)
+  const totalRemainingAll = grandTotal - totalPaidAll
+
   const inputStyle = {
-    width: '72px',
-    padding: '6px 8px',
+    width: '80px',
+    padding: '7px 8px',
     fontSize: '13px',
-    borderRadius: '4px',
-    border: '1px solid var(--border-light)',
+    borderRadius: '6px',
+    border: '1px solid #e0d8cc',
     outline: 'none',
-    background: 'var(--bg-surface)',
-    color: 'var(--text-primary)',
-    fontFamily: 'var(--font-body)'
+    background: '#faf8f5',
+    color: '#1C1410',
+    fontFamily: 'system-ui, sans-serif',
+    textAlign: 'center'
   }
+
+  const colHeaders = [
+    'Staff',
+    'Base Salary',
+    'Overtime Hours',
+    'Service Charge',
+    'Bonus',
+    'Lunch + Dinner',
+    'Morning Food',
+    'Advance',
+    'Others',
+    'Miscellaneous',
+    'Net Pay',
+    'Payment'
+  ]
 
   return (
     <>
-      <div>
+      <div style={{ background: '#FAF7F2', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
         <Navbar />
-        <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px 60px' }}>
+        <main style={{ maxWidth: '1500px', margin: '0 auto', padding: '32px 24px 60px' }}>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
-              <h1 style={{ fontSize: '32px', color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+              <h1 style={{ fontSize: '28px', color: '#1C1410', fontWeight: 700, margin: 0 }}>
                 Monthly Payroll
               </h1>
-              <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
-                Manage salary and generate payslips
+              <p style={{ color: '#9C8A76', marginTop: '4px', fontSize: '14px' }}>
+                {months[month - 1]} {year} — {staff.length} active staff
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <select
                 className="input"
-                style={{ width: '150px' }}
+                style={{ width: '140px', fontFamily: 'system-ui, sans-serif' }}
                 value={month}
                 onChange={e => setMonth(Number(e.target.value))}
               >
@@ -239,182 +260,250 @@ export default function PayrollPage() {
               <input
                 type="number"
                 className="input"
-                style={{ width: '100px' }}
+                style={{ width: '90px', fontFamily: 'system-ui, sans-serif' }}
                 value={year}
                 onChange={e => setYear(Number(e.target.value))}
               />
             </div>
           </div>
 
-          <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+          {/* Summary cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+            {[
+              { label: 'Total Payroll', value: '৳' + grandTotal.toLocaleString(), color: '#5C4A36' },
+              { label: 'Total Paid', value: '৳' + totalPaidAll.toLocaleString(), color: '#1e8e3e' },
+              { label: 'Total Remaining', value: '৳' + totalRemainingAll.toLocaleString(), color: totalRemainingAll > 0 ? '#d93025' : '#1e8e3e' },
+              { label: 'Staff Count', value: staff.length + ' staff', color: '#5C4A36' },
+            ].map(card => (
+              <div key={card.label} style={{
+                background: 'white',
+                border: '1px solid #E8E0D4',
+                borderRadius: '10px',
+                padding: '16px 20px',
+                boxShadow: '0 1px 4px rgba(28,20,16,0.06)'
+              }}>
+                <p style={{ fontSize: '11px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '6px' }}>
+                  {card.label}
+                </p>
+                <p style={{ fontSize: '22px', fontWeight: 700, color: card.color }}>
+                  {card.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Table */}
+          <div style={{
+            background: 'white',
+            border: '1px solid #E8E0D4',
+            borderRadius: '12px',
+            boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
+            overflow: 'hidden'
+          }}>
             {loading ? (
               <div style={{ padding: '60px', textAlign: 'center' }}>
                 <div className="loader"></div>
               </div>
             ) : staff.length === 0 ? (
-              <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <div style={{ padding: '60px', textAlign: 'center', color: '#9C8A76' }}>
                 No active staff found. Add staff members first.
               </div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{
-                    background: 'var(--bg-subtle)',
-                    borderBottom: '1px solid var(--border-light)',
-                    fontSize: '11px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    color: 'var(--text-muted)'
-                  }}>
-                    {['Staff', 'Base', 'OT Hrs', 'Srv Chg', 'Bonus', 'Lunch', 'Morn Food', 'Advance', 'Others', 'Misc', 'Net Pay', 'Payments'].map(h => (
-                      <th key={h} style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {staff.map(s => {
-                    const row = payroll[s.id]
-                    if (!row) return null
-                    const finalSalary = calculateFinalSalary(s, row)
-                    const miscColor = Number(row.miscellaneous) < 0 ? '#d93025' : '#1e8e3e'
-                    const staffPayments = payments[s.id] || []
-                    const totalPaid = staffPayments.reduce((sum, p) => sum + Number(p.amount), 0)
-                    const remaining = finalSalary - totalPaid
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'system-ui, sans-serif' }}>
+                  <thead>
+                    <tr style={{ background: '#F5F0E8', borderBottom: '2px solid #E8E0D4' }}>
+                      {colHeaders.map(h => (
+                        <th key={h} style={{
+                          padding: '12px 14px',
+                          fontSize: '11px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.07em',
+                          color: '#9C8A76',
+                          fontWeight: 700,
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staff.map((s, idx) => {
+                      const row = payroll[s.id]
+                      if (!row) return null
+                      const finalSalary = calculateFinalSalary(s, row)
+                      const miscColor = Number(row.miscellaneous) < 0 ? '#d93025' : '#1e8e3e'
+                      const staffPayments = payments[s.id] || []
+                      const totalPaid = staffPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+                      const remaining = finalSalary - totalPaid
+                      const isFullyPaid = remaining <= 0
 
-                    return (
-                      <tr key={s.id} style={{
-                        borderBottom: '1px solid var(--border-light)',
-                        opacity: row.is_paid ? 0.75 : 1,
-                        verticalAlign: 'top'
-                      }}>
-                        <td style={{ padding: '12px 16px', minWidth: '140px' }}>
-                          <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
-                            {s.name}
-                          </p>
-                          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            {s.designation}
-                          </p>
-                          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                            OT rate: ৳{Math.round(s.base_salary / 30 / 10)}/hr
-                          </p>
-                        </td>
-                        <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--accent-brown)', whiteSpace: 'nowrap' }}>
-                          ৳{Number(s.base_salary).toLocaleString()}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input
-                            type="number"
-                            style={inputStyle}
-                            value={row.overtime_hours}
-                            onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)}
-                            onBlur={() => handleBlur(s.id)}
-                          />
-                          {Number(row.overtime_hours) > 0 && (
-                            <p style={{ fontSize: '10px', color: '#1e8e3e', marginTop: '3px' }}>
-                              +৳{Math.round(row.overtime_pay || 0)}
+                      return (
+                        <tr key={s.id} style={{
+                          borderBottom: '1px solid #F0EBE3',
+                          background: idx % 2 === 0 ? 'white' : '#FDFAF7',
+                          verticalAlign: 'top'
+                        }}>
+
+                          {/* Staff */}
+                          <td style={{ padding: '14px', minWidth: '160px' }}>
+                            <p style={{ fontWeight: 700, fontSize: '14px', color: '#1C1410' }}>
+                              {s.name}
                             </p>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input
-                            type="number"
-                            style={inputStyle}
-                            value={row.service_charge}
-                            onChange={e => handleInput(s.id, 'service_charge', e.target.value)}
-                            onBlur={() => handleBlur(s.id)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input
-                            type="number"
-                            style={inputStyle}
-                            value={row.bonus}
-                            onChange={e => handleInput(s.id, 'bonus', e.target.value)}
-                            onBlur={() => handleBlur(s.id)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input
-                            type="number"
-                            style={inputStyle}
-                            value={row.lunch_dinner}
-                            onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)}
-                            onBlur={() => handleBlur(s.id)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input
-                            type="number"
-                            style={inputStyle}
-                            value={row.morning_food}
-                            onChange={e => handleInput(s.id, 'morning_food', e.target.value)}
-                            onBlur={() => handleBlur(s.id)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input
-                            type="number"
-                            style={{ ...inputStyle, color: '#d93025' }}
-                            value={row.advance_taken}
-                            onChange={e => handleInput(s.id, 'advance_taken', e.target.value)}
-                            onBlur={() => handleBlur(s.id)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input
-                            type="number"
-                            style={inputStyle}
-                            value={row.others_taken}
-                            onChange={e => handleInput(s.id, 'others_taken', e.target.value)}
-                            onBlur={() => handleBlur(s.id)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input
-                            type="number"
-                            style={{ ...inputStyle, color: miscColor }}
-                            value={row.miscellaneous}
-                            onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)}
-                            onBlur={() => handleBlur(s.id)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px 16px', fontWeight: 700, fontSize: '15px', color: 'var(--accent-brown)', whiteSpace: 'nowrap' }}>
-                          ৳{finalSalary.toLocaleString()}
-                        </td>
+                            <p style={{ fontSize: '12px', color: '#9C8A76', marginTop: '2px' }}>
+                              {s.designation}
+                            </p>
+                            <p style={{ fontSize: '11px', color: '#B07850', marginTop: '3px' }}>
+                              OT: ৳{Math.round(s.base_salary / 30 / 10)}/hr
+                            </p>
+                          </td>
 
-                        {/* Payments column */}
-                        <td style={{ padding: '12px 16px', minWidth: '200px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {/* Base Salary */}
+                          <td style={{ padding: '14px', fontWeight: 700, color: '#8B5E3C', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                            ৳{Number(s.base_salary).toLocaleString()}
+                          </td>
 
-                            <div style={{ fontSize: '12px' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Paid:</span>
-                                <span style={{ color: '#1e8e3e', fontWeight: 600 }}>
-                                  ৳{totalPaid.toLocaleString()}
-                                </span>
+                          {/* Overtime Hours */}
+                          <td style={{ padding: '14px' }}>
+                            <input
+                              type="number"
+                              style={inputStyle}
+                              value={row.overtime_hours}
+                              onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)}
+                              onBlur={() => handleBlur(s.id)}
+                            />
+                            {Number(row.overtime_hours) > 0 && (
+                              <p style={{ fontSize: '11px', color: '#1e8e3e', marginTop: '4px', fontWeight: 600 }}>
+                                +৳{Math.round(row.overtime_pay || 0)}
+                              </p>
+                            )}
+                          </td>
+
+                          {/* Service Charge */}
+                          <td style={{ padding: '14px' }}>
+                            <input type="number" style={inputStyle} value={row.service_charge}
+                              onChange={e => handleInput(s.id, 'service_charge', e.target.value)}
+                              onBlur={() => handleBlur(s.id)} />
+                          </td>
+
+                          {/* Bonus */}
+                          <td style={{ padding: '14px' }}>
+                            <input type="number" style={inputStyle} value={row.bonus}
+                              onChange={e => handleInput(s.id, 'bonus', e.target.value)}
+                              onBlur={() => handleBlur(s.id)} />
+                          </td>
+
+                          {/* Lunch + Dinner */}
+                          <td style={{ padding: '14px' }}>
+                            <input type="number" style={inputStyle} value={row.lunch_dinner}
+                              onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)}
+                              onBlur={() => handleBlur(s.id)} />
+                          </td>
+
+                          {/* Morning Food */}
+                          <td style={{ padding: '14px' }}>
+                            <input type="number" style={inputStyle} value={row.morning_food}
+                              onChange={e => handleInput(s.id, 'morning_food', e.target.value)}
+                              onBlur={() => handleBlur(s.id)} />
+                          </td>
+
+                          {/* Advance */}
+                          <td style={{ padding: '14px' }}>
+                            <input type="number" style={{ ...inputStyle, color: '#d93025' }} value={row.advance_taken}
+                              onChange={e => handleInput(s.id, 'advance_taken', e.target.value)}
+                              onBlur={() => handleBlur(s.id)} />
+                          </td>
+
+                          {/* Others */}
+                          <td style={{ padding: '14px' }}>
+                            <input type="number" style={inputStyle} value={row.others_taken}
+                              onChange={e => handleInput(s.id, 'others_taken', e.target.value)}
+                              onBlur={() => handleBlur(s.id)} />
+                          </td>
+
+                          {/* Miscellaneous */}
+                          <td style={{ padding: '14px' }}>
+                            <input type="number" style={{ ...inputStyle, color: miscColor }} value={row.miscellaneous}
+                              onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)}
+                              onBlur={() => handleBlur(s.id)} />
+                          </td>
+
+                          {/* Net Pay */}
+                          <td style={{ padding: '14px', whiteSpace: 'nowrap' }}>
+                            <p style={{ fontWeight: 700, fontSize: '16px', color: '#8B5E3C' }}>
+                              ৳{finalSalary.toLocaleString()}
+                            </p>
+                            {isFullyPaid && (
+                              <p style={{ fontSize: '11px', color: '#1e8e3e', fontWeight: 600, marginTop: '2px' }}>
+                                Fully Paid
+                              </p>
+                            )}
+                          </td>
+
+                          {/* Payment column */}
+                          <td style={{ padding: '14px', minWidth: '220px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+                              {/* Paid / Remaining summary */}
+                              <div style={{
+                                background: '#F5F0E8',
+                                borderRadius: '8px',
+                                padding: '8px 10px',
+                                fontSize: '12px'
+                              }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                  <span style={{ color: '#9C8A76' }}>Paid so far</span>
+                                  <span style={{ color: '#1e8e3e', fontWeight: 700 }}>৳{totalPaid.toLocaleString()}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                  <span style={{ color: '#9C8A76' }}>Remaining</span>
+                                  <span style={{ color: remaining > 0 ? '#d93025' : '#1e8e3e', fontWeight: 700 }}>
+                                    ৳{remaining.toLocaleString()}
+                                  </span>
+                                </div>
                               </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Remaining:</span>
-                                <span style={{ color: remaining > 0 ? '#d93025' : '#1e8e3e', fontWeight: 600 }}>
-                                  ৳{remaining.toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
 
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              <button
-                                onClick={() => {
-                                  setShowPaymentForm(showPaymentForm === s.id ? null : s.id)
-                                  setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], notes: '' })
-                                }}
-                                style={{
-                                  padding: '5px 10px', fontSize: '11px', borderRadius: '4px',
-                                  border: '1px solid var(--accent-brown)', background: 'transparent',
-                                  color: 'var(--accent-brown)', cursor: 'pointer', fontWeight: 600
-                                }}
-                              >
-                                + Pay
-                              </button>
+                              {/* Progress bar */}
+                              <div style={{ height: '6px', background: '#E8E0D4', borderRadius: '3px', overflow: 'hidden' }}>
+                                <div style={{
+                                  height: '100%',
+                                  width: Math.min(100, finalSalary > 0 ? (totalPaid / finalSalary) * 100 : 0) + '%',
+                                  background: isFullyPaid ? '#1e8e3e' : '#8B5E3C',
+                                  borderRadius: '3px',
+                                  transition: 'width 0.3s ease'
+                                }} />
+                              </div>
+
+                              {/* Confirm Payment button */}
+                              {!isFullyPaid && (
+                                <button
+                                  onClick={() => {
+                                    setShowPaymentForm(showPaymentForm === s.id ? null : s.id)
+                                    setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], notes: '' })
+                                  }}
+                                  style={{
+                                    padding: '8px 12px',
+                                    fontSize: '12px',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: showPaymentForm === s.id ? '#5C4A36' : '#8B5E3C',
+                                    color: 'white',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    width: '100%',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  <CheckCircle size={13} />
+                                  {showPaymentForm === s.id ? 'Cancel Payment' : 'Confirm Payment'}
+                                </button>
+                              )}
+
+                              {/* Print payslip button */}
                               <button
                                 onClick={() => setPrintData({
                                   staff: s,
@@ -423,116 +512,152 @@ export default function PayrollPage() {
                                   year
                                 })}
                                 style={{
-                                  padding: '5px', background: 'transparent',
-                                  border: '1px solid var(--border-medium)',
-                                  borderRadius: '4px', cursor: 'pointer',
-                                  display: 'flex', alignItems: 'center'
+                                  padding: '7px 12px',
+                                  fontSize: '12px',
+                                  borderRadius: '6px',
+                                  border: '1px solid #D4C8B8',
+                                  background: 'white',
+                                  color: '#5C4A36',
+                                  cursor: 'pointer',
+                                  fontWeight: 500,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  width: '100%',
+                                  justifyContent: 'center'
                                 }}
                               >
-                                <Printer size={14} color="var(--text-secondary)" />
+                                <Printer size={13} />
+                                Print Payslip
                               </button>
-                            </div>
 
-                            {showPaymentForm === s.id && (
-                              <div style={{
-                                background: 'var(--bg-subtle)',
-                                border: '1px solid var(--border-light)',
-                                borderRadius: '6px',
-                                padding: '10px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '6px'
-                              }}>
-                                <input
-                                  type="number"
-                                  className="input"
-                                  style={{ padding: '6px', fontSize: '13px' }}
-                                  placeholder={'Max ৳' + remaining.toLocaleString()}
-                                  value={paymentForm.amount}
-                                  onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                                />
-                                <input
-                                  type="date"
-                                  className="input"
-                                  style={{ padding: '6px', fontSize: '13px' }}
-                                  value={paymentForm.date}
-                                  onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })}
-                                />
-                                <input
-                                  className="input"
-                                  style={{ padding: '6px', fontSize: '13px' }}
-                                  placeholder="Notes (optional)"
-                                  value={paymentForm.notes}
-                                  onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })}
-                                />
-                                <div style={{ display: 'flex', gap: '4px' }}>
+                              {/* Payment form */}
+                              {showPaymentForm === s.id && (
+                                <div style={{
+                                  background: 'white',
+                                  border: '2px solid #8B5E3C',
+                                  borderRadius: '8px',
+                                  padding: '12px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '8px'
+                                }}>
+                                  <p style={{ fontSize: '12px', fontWeight: 700, color: '#5C4A36', margin: 0 }}>
+                                    Record Payment for {s.name}
+                                  </p>
+                                  <div>
+                                    <label style={{ fontSize: '11px', color: '#9C8A76', display: 'block', marginBottom: '3px' }}>
+                                      Amount (max ৳{remaining.toLocaleString()})
+                                    </label>
+                                    <input
+                                      type="number"
+                                      className="input"
+                                      style={{ fontSize: '14px', fontWeight: 600 }}
+                                      placeholder="Enter amount"
+                                      value={paymentForm.amount}
+                                      onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '11px', color: '#9C8A76', display: 'block', marginBottom: '3px' }}>
+                                      Payment Date
+                                    </label>
+                                    <input
+                                      type="date"
+                                      className="input"
+                                      value={paymentForm.date}
+                                      onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '11px', color: '#9C8A76', display: 'block', marginBottom: '3px' }}>
+                                      Notes (optional)
+                                    </label>
+                                    <input
+                                      className="input"
+                                      placeholder="e.g. Cash payment"
+                                      value={paymentForm.notes}
+                                      onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                                    />
+                                  </div>
                                   <button
                                     onClick={() => savePayment(s.id)}
                                     style={{
-                                      flex: 1, padding: '6px', fontSize: '12px',
-                                      background: 'var(--accent-brown)', color: 'white',
-                                      border: 'none', borderRadius: '4px',
-                                      cursor: 'pointer', fontWeight: 600
+                                      padding: '9px',
+                                      fontSize: '13px',
+                                      background: '#1e8e3e',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      fontWeight: 700,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
+                                      justifyContent: 'center'
                                     }}
                                   >
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() => setShowPaymentForm(null)}
-                                    style={{
-                                      padding: '6px 10px', fontSize: '12px',
-                                      background: 'transparent',
-                                      border: '1px solid var(--border-medium)',
-                                      borderRadius: '4px', cursor: 'pointer',
-                                      color: 'var(--text-muted)'
-                                    }}
-                                  >
-                                    Cancel
+                                    <CheckCircle size={14} /> Confirm Payment
                                   </button>
                                 </div>
-                              </div>
-                            )}
+                              )}
 
-                            {staffPayments.length > 0 && (
-                              <div style={{ fontSize: '11px', color: 'var(--text-muted)', borderTop: '1px solid var(--border-light)', paddingTop: '6px' }}>
-                                {staffPayments.map(p => (
-                                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
-                                    <span>
-                                      {new Date(p.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                      {p.notes ? ' · ' + p.notes : ''}
-                                    </span>
-                                    <span style={{ color: '#1e8e3e', fontWeight: 600 }}>
-                                      ৳{Number(p.amount).toLocaleString()}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                              {/* Payment history */}
+                              {staffPayments.length > 0 && (
+                                <div style={{
+                                  borderTop: '1px solid #F0EBE3',
+                                  paddingTop: '6px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '4px'
+                                }}>
+                                  <p style={{ fontSize: '10px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                                    Payment History
+                                  </p>
+                                  {staffPayments.map(p => (
+                                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                      <span style={{ color: '#9C8A76' }}>
+                                        {new Date(p.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                        {p.notes ? ' · ' + p.notes : ''}
+                                      </span>
+                                      <span style={{ color: '#1e8e3e', fontWeight: 700 }}>
+                                        ৳{Number(p.amount).toLocaleString()}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
 
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
 
+            {/* Grand Total */}
             <div style={{
               padding: '20px 24px',
-              background: 'var(--accent-brown)',
+              background: '#8B5E3C',
               color: 'white',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              borderRadius: '0 0 12px 12px'
+              flexWrap: 'wrap',
+              gap: '12px'
             }}>
-              <h2 style={{ fontSize: '20px', fontFamily: 'var(--font-display)', margin: 0, fontWeight: 500 }}>
-                Grand Total — {months[month - 1]} {year}
-              </h2>
-              <h2 style={{ fontSize: '28px', fontFamily: 'var(--font-display)', margin: 0 }}>
+              <div>
+                <p style={{ fontSize: '13px', opacity: 0.8, margin: 0 }}>Grand Total — {months[month - 1]} {year}</p>
+                <p style={{ fontSize: '13px', opacity: 0.7, margin: '4px 0 0 0' }}>
+                  Paid: ৳{totalPaidAll.toLocaleString()} &nbsp;|&nbsp; Remaining: ৳{totalRemainingAll.toLocaleString()}
+                </p>
+              </div>
+              <p style={{ fontSize: '32px', fontWeight: 800, margin: 0 }}>
                 ৳{grandTotal.toLocaleString()}
-              </h2>
+              </p>
             </div>
           </div>
         </main>
