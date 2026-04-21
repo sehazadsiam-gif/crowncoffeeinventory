@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, Users, ChevronDown } from 'lucide-react'
+import { Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, Users, ChevronDown, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import Calculator from './Calculator'
 
@@ -11,8 +11,9 @@ const navItems = [
   { href: '/bazar', label: 'Bazar' },
   { href: '/sales', label: 'Sales' },
   { href: '/stock', label: 'Stock' },
-  { 
-    label: 'Staff', 
+  { href: '/waste', label: 'Wastage' },
+  {
+    label: 'Staff',
     icon: Users,
     subItems: [
       { href: '/staff', label: 'Directory' },
@@ -44,42 +45,41 @@ export default function Navbar() {
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
 
-            {/* Logo */}
             <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-              <div style={{ background: 'var(--primary-light)', padding: '6px', borderRadius: '6px' }}>
-                <Coffee size={20} style={{ color: 'var(--primary)' }} strokeWidth={2} />
+              <div style={{ background: 'var(--accent-gold-dim)', padding: '6px', borderRadius: '6px' }}>
+                <Coffee size={20} style={{ color: 'var(--accent-brown)' }} strokeWidth={2} />
               </div>
-              <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
                 Crown Coffee
               </span>
             </Link>
 
-            {/* Desktop Nav */}
-            <div className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               {navItems.map((item) => {
-                const isActive = item.href ? pathname === item.href : item.subItems?.some(sub => pathname === sub.href) || pathname.startsWith('/staff')
-                
+                const isActive = item.href
+                  ? pathname === item.href
+                  : item.subItems?.some(sub => pathname === sub.href) || pathname.startsWith('/staff')
+
                 if (item.subItems) {
                   return (
                     <div key={item.label} className="nav-dropdown" style={{ position: 'relative' }}>
-                      <div
-                        style={{
-                          fontSize: '14px',
-                          fontWeight: 500,
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          color: (isActive && item.label === 'Staff') ? 'var(--primary)' : 'var(--text-secondary)',
-                          background: (isActive && item.label === 'Staff') ? 'var(--primary-light)' : 'transparent',
-                          transition: 'all 0.15s ease',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        {item.icon && <item.icon size={16} />}
+                      <div style={{
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        color: isActive ? 'var(--accent-brown)' : 'var(--text-secondary)',
+                        background: isActive ? 'rgba(139,94,60,0.08)' : 'transparent',
+                        transition: 'all 0.15s ease',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontFamily: 'var(--font-body)'
+                      }}>
+                        {item.icon && <item.icon size={15} />}
                         {item.label}
-                        <ChevronDown size={14} />
+                        <ChevronDown size={13} />
                       </div>
                       <div className="nav-dropdown-content" style={{
                         position: 'absolute',
@@ -96,14 +96,20 @@ export default function Navbar() {
                         zIndex: 1000
                       }}>
                         {item.subItems.map(sub => (
-                          <Link key={sub.href} href={sub.href} style={{
-                            padding: '10px 16px',
-                            fontSize: '14px',
-                            color: pathname === sub.href ? 'var(--primary)' : 'var(--text-primary)',
-                            background: pathname === sub.href ? 'var(--bg-subtle)' : 'transparent',
-                            textDecoration: 'none',
-                            transition: 'background 0.15s ease'
-                          }} className="dropdown-item">
+                          <Link
+                            key={sub.href}
+                            href={sub.href}
+                            className="dropdown-item"
+                            style={{
+                              padding: '10px 16px',
+                              fontSize: '14px',
+                              color: pathname === sub.href ? 'var(--accent-brown)' : 'var(--text-primary)',
+                              background: pathname === sub.href ? 'var(--bg-subtle)' : 'transparent',
+                              textDecoration: 'none',
+                              transition: 'background 0.15s ease',
+                              fontFamily: 'var(--font-body)'
+                            }}
+                          >
                             {sub.label}
                           </Link>
                         ))}
@@ -121,29 +127,32 @@ export default function Navbar() {
                       fontWeight: 500,
                       padding: '8px 12px',
                       borderRadius: '6px',
-                      color: pathname === item.href ? 'var(--primary)' : 'var(--text-secondary)',
-                      background: pathname === item.href ? 'var(--primary-light)' : 'transparent',
+                      color: pathname === item.href ? 'var(--accent-brown)' : 'var(--text-secondary)',
+                      background: pathname === item.href ? 'rgba(139,94,60,0.08)' : 'transparent',
                       transition: 'all 0.15s ease',
                       textDecoration: 'none',
+                      fontFamily: 'var(--font-body)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
                     }}
                   >
+                    {item.label === 'Wastage' && <Trash2 size={14} />}
                     {item.label}
                   </Link>
                 )
               })}
             </div>
 
-            {/* Right Side */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button
                 onClick={() => setIsCalcOpen(!isCalcOpen)}
-                className="hide-mobile btn-secondary"
-                style={{ padding: '6px 12px', fontSize: '13px' }}
+                className="btn-secondary hide-mobile"
+                style={{ padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                <CalcIcon size={16} /> Calculator
+                <CalcIcon size={15} /> Calculator
               </button>
 
-              {/* Mobile hamburger */}
               <button
                 className="show-mobile"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -155,7 +164,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Drawer */}
         {isMobileMenuOpen && (
           <div style={{
             background: 'var(--bg-surface)',
@@ -163,14 +171,25 @@ export default function Navbar() {
             padding: '16px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px',
+            gap: '4px',
           }}>
             {navItems.map((item) => {
               if (item.subItems) {
                 return (
-                  <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '4px 0' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {item.icon && <item.icon size={14} />} {item.label}
+                  <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '4px 0' }}>
+                    <div style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: 'var(--text-muted)',
+                      padding: '8px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontFamily: 'var(--font-body)'
+                    }}>
+                      {item.icon && <item.icon size={13} />} {item.label}
                     </div>
                     {item.subItems.map(sub => (
                       <Link
@@ -178,13 +197,14 @@ export default function Navbar() {
                         href={sub.href}
                         onClick={() => setIsMobileMenuOpen(false)}
                         style={{
-                          fontSize: '15px',
+                          fontSize: '14px',
                           fontWeight: 500,
-                          padding: '12px 16px 12px 32px',
+                          padding: '10px 16px 10px 32px',
                           borderRadius: '6px',
-                          color: pathname === sub.href ? 'var(--primary)' : 'var(--text-secondary)',
-                          background: pathname === sub.href ? 'var(--primary-light)' : 'transparent',
+                          color: pathname === sub.href ? 'var(--accent-brown)' : 'var(--text-secondary)',
+                          background: pathname === sub.href ? 'rgba(139,94,60,0.08)' : 'transparent',
                           textDecoration: 'none',
+                          fontFamily: 'var(--font-body)'
                         }}
                       >
                         {sub.label}
@@ -193,6 +213,7 @@ export default function Navbar() {
                   </div>
                 )
               }
+
               const isActive = pathname === item.href
               return (
                 <Link
@@ -200,15 +221,20 @@ export default function Navbar() {
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   style={{
-                    fontSize: '15px',
+                    fontSize: '14px',
                     fontWeight: 500,
-                    padding: '12px 16px',
+                    padding: '10px 16px',
                     borderRadius: '6px',
-                    color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
-                    background: isActive ? 'var(--primary-light)' : 'transparent',
+                    color: isActive ? 'var(--accent-brown)' : 'var(--text-secondary)',
+                    background: isActive ? 'rgba(139,94,60,0.08)' : 'transparent',
                     textDecoration: 'none',
+                    fontFamily: 'var(--font-body)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
                   }}
                 >
+                  {item.label === 'Wastage' && <Trash2 size={14} />}
                   {item.label}
                 </Link>
               )
@@ -232,6 +258,7 @@ export default function Navbar() {
         }
         .dropdown-item:hover {
           background: var(--bg-subtle) !important;
+          color: var(--accent-brown) !important;
         }
       `}</style>
     </>

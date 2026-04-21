@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
-import { Printer, Download, Save } from 'lucide-react'
-import PaySlip from '../../../components/PaySlip'
+import { Printer } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const PaySlip = dynamic(() => import('../../../components/PaySlip'), { ssr: false })
 
 export default function PayrollPage() {
   const { addToast } = useToast()
@@ -27,32 +29,35 @@ export default function PayrollPage() {
       ])
 
       const advancesMap = {}
-      ;(advRes.data || []).forEach(a => {
-        advancesMap[a.staff_id] = (advancesMap[a.staff_id] || 0) + Number(a.amount)
-      })
+        ; (advRes.data || []).forEach(a => {
+          advancesMap[a.staff_id] = (advancesMap[a.staff_id] || 0) + Number(a.amount)
+        })
 
       const payMap = {}
-      ;(payRes.data || []).forEach(p => {
-        payMap[p.staff_id] = { ...p, advance_taken: Math.max(p.advance_taken, advancesMap[p.staff_id] || 0) }
-      })
+        ; (payRes.data || []).forEach(p => {
+          payMap[p.staff_id] = {
+            ...p,
+            advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0)
+          }
+        })
 
       const activeStaff = staffRes.data || []
-      const finalPay = { ...payMap }
-
-      // Generate missing rows
       for (const s of activeStaff) {
-        if (!finalPay[s.id]) {
-          finalPay[s.id] = {
+        if (!payMap[s.id]) {
+          payMap[s.id] = {
             staff_id: s.id, month, year,
-            overtime_hours: 0, overtime_pay: 0, service_charge: 0, bonus: 0,
-            lunch_dinner: 0, morning_food: 0, advance_taken: advancesMap[s.id] || 0,
-            others_taken: 0, miscellaneous: 0, miscellaneous_note: '', is_paid: false
+            overtime_hours: 0, overtime_pay: 0,
+            service_charge: 0, bonus: 0,
+            lunch_dinner: 0, morning_food: 0,
+            advance_taken: advancesMap[s.id] || 0,
+            others_taken: 0, miscellaneous: 0,
+            miscellaneous_note: '', is_paid: false
           }
         }
       }
 
       setStaff(activeStaff)
-      setPayroll(finalPay)
+      setPayroll(payMap)
     } catch (err) {
       addToast('Error loading payroll', 'error')
     } finally {
@@ -61,8 +66,10 @@ export default function PayrollPage() {
   }
 
   function calculateFinalSalary(s, p) {
+    if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
-    const ot = (Number(p.overtime_hours) || 0) * (Number(s.per_hour_rate) || 0)
+    const perHour = Number(s.per_hour_rate) || Math.round(base / 30 / 8)
+    const ot = (Number(p.overtime_hours) || 0) * perHour
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
     const lunch = Number(p.lunch_dinner) || 0
@@ -70,7 +77,6 @@ export default function PayrollPage() {
     const misc = Number(p.miscellaneous) || 0
     const adv = Number(p.advance_taken) || 0
     const others = Number(p.others_taken) || 0
-
     return Math.round(base + ot + sc + bonus + lunch + morn + misc - adv - others)
   }
 
@@ -79,7 +85,8 @@ export default function PayrollPage() {
       const row = { ...prev[staffId], [field]: value }
       if (field === 'overtime_hours') {
         const s = staff.find(st => st.id === staffId)
-        row.overtime_pay = (Number(value) || 0) * (s?.per_hour_rate || 0)
+        const perHour = Number(s?.per_hour_rate) || Math.round((Number(s?.base_salary) || 0) / 30 / 8)
+        row.overtime_pay = (Number(value) || 0) * perHour
       }
       return { ...prev, [staffId]: row }
     })
@@ -88,13 +95,12 @@ export default function PayrollPage() {
   async function handleBlur(staffId) {
     const row = payroll[staffId]
     const s = staff.find(st => st.id === staffId)
+    if (!s || !row) return
     const finalSalary = calculateFinalSalary(s, row)
-
     try {
       const { error } = await supabase.from('payroll_entries').upsert({
-        ...row,
-        final_salary: finalSalary,
-      }, { onConflict: 'staff_id, month, year' })
+        ...row, final_salary: finalSalary
+      }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
     } catch (err) {
       addToast('Auto-save failed', 'error')
@@ -103,59 +109,102 @@ export default function PayrollPage() {
 
   async function togglePaid(staffId) {
     const isPaid = !payroll[staffId].is_paid
-    handleInput(staffId, 'is_paid', isPaid)
-    
-    // Immediate save for paid toggle
     const row = { ...payroll[staffId], is_paid: isPaid }
     const s = staff.find(st => st.id === staffId)
     const finalSalary = calculateFinalSalary(s, row)
-
+    setPayroll(prev => ({ ...prev, [staffId]: row }))
     try {
       await supabase.from('payroll_entries').upsert({
-        ...row, final_salary: finalSalary, paid_date: isPaid ? new Date().toISOString() : null
-      }, { onConflict: 'staff_id, month, year' })
+        ...row,
+        final_salary: finalSalary,
+        paid_date: isPaid ? new Date().toISOString() : null
+      }, { onConflict: 'staff_id,month,year' })
       addToast(isPaid ? 'Marked as paid' : 'Marked as unpaid', 'success')
-    } catch (err) { }
+    } catch (err) {
+      addToast('Error updating paid status', 'error')
+    }
   }
 
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-  const grandTotal = staff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id]), 0)
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ]
+
+  const grandTotal = staff.reduce((acc, s) => {
+    return acc + calculateFinalSalary(s, payroll[s.id] || {})
+  }, 0)
+
+  const inputStyle = {
+    width: '72px',
+    padding: '6px 8px',
+    fontSize: '13px',
+    borderRadius: '4px',
+    border: '1px solid var(--border-light)',
+    outline: 'none',
+    background: 'var(--bg-surface)',
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--font-body)'
+  }
 
   return (
     <>
-      <div className="hr-theme">
+      <div>
         <Navbar />
         <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px 60px' }}>
+
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
             <div>
-              <h1 style={{ fontSize: '32px', color: 'var(--hr-text-primary)' }}>Monthly Payroll</h1>
-              <p style={{ color: 'var(--hr-text-muted)' }}>Manage and generate payslips</p>
+              <h1 style={{ fontSize: '32px', color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+                Monthly Payroll
+              </h1>
+              <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>
+                Manage salary and generate payslips
+              </p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <select className="input" style={{ width: '150px' }} value={month} onChange={e => setMonth(Number(e.target.value))}>
-                {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+              <select
+                className="input"
+                style={{ width: '150px' }}
+                value={month}
+                onChange={e => setMonth(Number(e.target.value))}
+              >
+                {months.map((m, i) => (
+                  <option key={m} value={i + 1}>{m}</option>
+                ))}
               </select>
-              <input type="number" className="input" style={{ width: '100px' }} value={year} onChange={e => setYear(Number(e.target.value))} />
+              <input
+                type="number"
+                className="input"
+                style={{ width: '100px' }}
+                value={year}
+                onChange={e => setYear(Number(e.target.value))}
+              />
             </div>
           </div>
 
-          <div className="card" style={{ overflowX: 'auto', padding: '0' }}>
+          <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
             {loading ? (
-              <div style={{ padding: '60px', textAlign: 'center' }}><div className="loader"></div></div>
+              <div style={{ padding: '60px', textAlign: 'center' }}>
+                <div className="loader"></div>
+              </div>
+            ) : staff.length === 0 ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                No active staff found. Add staff members first.
+              </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-light)', fontSize: '12px', textTransform: 'uppercase', color: 'var(--hr-text-muted)' }}>
-                    <th style={{ padding: '16px' }}>Staff</th>
-                    <th style={{ padding: '16px' }}>Base</th>
-                    <th style={{ padding: '16px' }}>OT (Hrs)</th>
-                    <th style={{ padding: '16px' }}>Srv Chrg</th>
-                    <th style={{ padding: '16px' }}>Bonus</th>
-                    <th style={{ padding: '16px' }}>Lunch/Morn</th>
-                    <th style={{ padding: '16px' }}>Advance/Other</th>
-                    <th style={{ padding: '16px' }}>Misc</th>
-                    <th style={{ padding: '16px' }}>Net Pay</th>
-                    <th style={{ padding: '16px', textAlign: 'center' }}>Action</th>
+                  <tr style={{
+                    background: 'var(--bg-subtle)',
+                    borderBottom: '1px solid var(--border-light)',
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    color: 'var(--text-muted)'
+                  }}>
+                    {['Staff', 'Base', 'OT Hrs', 'Srv Chg', 'Bonus', 'Lunch', 'Morn Food', 'Advance', 'Others', 'Misc', 'Net Pay', 'Action'].map(h => (
+                      <th key={h} style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -163,48 +212,140 @@ export default function PayrollPage() {
                     const row = payroll[s.id]
                     if (!row) return null
                     const finalSalary = calculateFinalSalary(s, row)
-                    
-                    const inputStyle = { width: '80px', padding: '6px', fontSize: '13px', borderRadius: '4px', border: '1px solid var(--border-light)', outline: 'none' }
-                    
+                    const miscColor = Number(row.miscellaneous) < 0 ? '#d93025' : '#1e8e3e'
+
                     return (
-                      <tr key={s.id} style={{ borderBottom: '1px solid var(--border-light)', opacity: row.is_paid ? 0.8 : 1 }}>
-                        <td style={{ padding: '12px 16px' }}>
-                          <p style={{ fontWeight: 600, fontSize: '14px' }}>{s.name}</p>
-                          <p style={{ fontSize: '11px', color: 'var(--hr-text-muted)' }}>{s.designation}</p>
+                      <tr key={s.id} style={{
+                        borderBottom: '1px solid var(--border-light)',
+                        opacity: row.is_paid ? 0.75 : 1
+                      }}>
+                        <td style={{ padding: '12px 16px', minWidth: '140px' }}>
+                          <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
+                            {s.name}
+                          </p>
+                          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {s.designation}
+                          </p>
                         </td>
-                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>৳{s.base_salary}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input type="number" style={inputStyle} value={row.overtime_hours} onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input type="number" style={inputStyle} value={row.service_charge} onChange={e => handleInput(s.id, 'service_charge', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                        </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <input type="number" style={inputStyle} value={row.bonus} onChange={e => handleInput(s.id, 'bonus', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                        </td>
-                        <td style={{ padding: '12px 16px', display: 'flex', gap: '4px' }}>
-                          <input type="number" style={{...inputStyle, width: '60px'}} placeholder="L" value={row.lunch_dinner} onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                          <input type="number" style={{...inputStyle, width: '60px'}} placeholder="M" value={row.morning_food} onChange={e => handleInput(s.id, 'morning_food', e.target.value)} onBlur={() => handleBlur(s.id)} />
+                        <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--accent-brown)', whiteSpace: 'nowrap' }}>
+                          ৳{Number(s.base_salary).toLocaleString()}
                         </td>
                         <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <input type="number" style={{...inputStyle, width: '60px', color: 'var(--hr-primary)'}} placeholder="Adv" value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} title="Advance Taken" />
-                            <input type="number" style={{...inputStyle, width: '60px'}} placeholder="Oth" value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} title="Others Taken" />
-                          </div>
+                          <input
+                            type="number"
+                            style={inputStyle}
+                            value={row.overtime_hours}
+                            onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)}
+                            onBlur={() => handleBlur(s.id)}
+                          />
                         </td>
                         <td style={{ padding: '12px 16px' }}>
-                          <input type="number" style={{...inputStyle, color: row.miscellaneous < 0 ? '#d93025' : '#1e8e3e'}} value={row.miscellaneous} onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)} onBlur={() => handleBlur(s.id)} title="Miscellaneous" />
+                          <input
+                            type="number"
+                            style={inputStyle}
+                            value={row.service_charge}
+                            onChange={e => handleInput(s.id, 'service_charge', e.target.value)}
+                            onBlur={() => handleBlur(s.id)}
+                          />
                         </td>
-                        <td style={{ padding: '12px 16px', fontWeight: 700, fontSize: '16px', color: 'var(--hr-primary)' }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <input
+                            type="number"
+                            style={inputStyle}
+                            value={row.bonus}
+                            onChange={e => handleInput(s.id, 'bonus', e.target.value)}
+                            onBlur={() => handleBlur(s.id)}
+                          />
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <input
+                            type="number"
+                            style={inputStyle}
+                            value={row.lunch_dinner}
+                            onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)}
+                            onBlur={() => handleBlur(s.id)}
+                          />
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <input
+                            type="number"
+                            style={inputStyle}
+                            value={row.morning_food}
+                            onChange={e => handleInput(s.id, 'morning_food', e.target.value)}
+                            onBlur={() => handleBlur(s.id)}
+                          />
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <input
+                            type="number"
+                            style={{ ...inputStyle, color: '#d93025' }}
+                            value={row.advance_taken}
+                            onChange={e => handleInput(s.id, 'advance_taken', e.target.value)}
+                            onBlur={() => handleBlur(s.id)}
+                          />
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <input
+                            type="number"
+                            style={inputStyle}
+                            value={row.others_taken}
+                            onChange={e => handleInput(s.id, 'others_taken', e.target.value)}
+                            onBlur={() => handleBlur(s.id)}
+                          />
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <input
+                            type="number"
+                            style={{ ...inputStyle, color: miscColor }}
+                            value={row.miscellaneous}
+                            onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)}
+                            onBlur={() => handleBlur(s.id)}
+                          />
+                        </td>
+                        <td style={{
+                          padding: '12px 16px',
+                          fontWeight: 700,
+                          fontSize: '15px',
+                          color: 'var(--accent-brown)',
+                          whiteSpace: 'nowrap'
+                        }}>
                           ৳{finalSalary.toLocaleString()}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'center' }}>
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                            <button onClick={() => togglePaid(s.id)} style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '4px', border: 'none', background: row.is_paid ? '#e6f4ea' : 'var(--bg-subtle)', color: row.is_paid ? '#1e8e3e' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <button
+                              onClick={() => togglePaid(s.id)}
+                              style={{
+                                padding: '5px 10px',
+                                fontSize: '11px',
+                                borderRadius: '4px',
+                                border: 'none',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                background: row.is_paid ? '#e6f4ea' : 'var(--bg-subtle)',
+                                color: row.is_paid ? '#1e8e3e' : 'var(--text-secondary)'
+                              }}
+                            >
                               {row.is_paid ? 'Paid' : 'Mark Paid'}
                             </button>
-                            <button onClick={() => setPrintData({ staff: s, payroll: { ...row, final_salary: finalSalary }, month: months[month-1], year })} style={{ padding: '6px', background: 'transparent', border: '1px solid var(--border-medium)', borderRadius: '4px', cursor: 'pointer' }}>
-                              <Printer size={16} />
+                            <button
+                              onClick={() => setPrintData({
+                                staff: s,
+                                payroll: { ...row, final_salary: finalSalary },
+                                month: months[month - 1],
+                                year
+                              })}
+                              style={{
+                                padding: '5px',
+                                background: 'transparent',
+                                border: '1px solid var(--border-medium)',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
+                              }}
+                            >
+                              <Printer size={14} color="var(--text-secondary)" />
                             </button>
                           </div>
                         </td>
@@ -214,16 +355,39 @@ export default function PayrollPage() {
                 </tbody>
               </table>
             )}
-            
-            <div style={{ padding: '24px', background: 'var(--hr-primary)', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '0 0 12px 12px' }}>
-              <h2 style={{ fontSize: '24px', fontFamily: 'var(--font-display)', margin: 0 }}>Grand Total</h2>
-              <h2 style={{ fontSize: '32px', fontFamily: 'var(--font-display)', margin: 0 }}>৳{grandTotal.toLocaleString()}</h2>
+
+            <div style={{
+              padding: '20px 24px',
+              background: 'var(--accent-brown)',
+              color: 'white',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderRadius: '0 0 12px 12px'
+            }}>
+              <h2 style={{
+                fontSize: '20px',
+                fontFamily: 'var(--font-display)',
+                margin: 0,
+                fontWeight: 500
+              }}>
+                Grand Total — {months[month - 1]} {year}
+              </h2>
+              <h2 style={{
+                fontSize: '28px',
+                fontFamily: 'var(--font-display)',
+                margin: 0
+              }}>
+                ৳{grandTotal.toLocaleString()}
+              </h2>
             </div>
           </div>
         </main>
       </div>
 
-      {printData && <PaySlip data={printData} onClose={() => setPrintData(null)} />}
+      {printData && (
+        <PaySlip data={printData} onClose={() => setPrintData(null)} />
+      )}
     </>
   )
 }
