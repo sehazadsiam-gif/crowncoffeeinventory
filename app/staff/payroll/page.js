@@ -1,6 +1,5 @@
-
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
@@ -38,15 +37,24 @@ export default function PayrollPage() {
 
   async function fetchPayroll(m, y) {
     try {
-      const [staffRes, payRes, advRes] = await Promise.all([
+      const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0]
+      const endDate = new Date(y, m, 0).toISOString().split('T')[0]
+
+      const [staffRes, payRes, advRes, unpaidRes] = await Promise.all([
         supabase.from('staff').select('*').eq('is_active', true).order('name'),
         supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y),
-        supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y)
+        supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y),
+        supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate)
       ])
 
       const advancesMap = {}
         ; (advRes.data || []).forEach(a => {
           advancesMap[a.staff_id] = (advancesMap[a.staff_id] || 0) + Number(a.amount)
+        })
+
+      const unpaidMap = {}
+        ; (unpaidRes.data || []).forEach(a => {
+          unpaidMap[a.staff_id] = (unpaidMap[a.staff_id] || 0) + 1
         })
 
       const payMap = {}
@@ -59,6 +67,10 @@ export default function PayrollPage() {
 
       const activeStaff = staffRes.data || []
       for (const s of activeStaff) {
+        const unpaidDays = unpaidMap[s.id] || 0
+        const perDay = Math.round(Number(s.base_salary) / 30)
+        const unpaidDeduction = unpaidDays * perDay
+
         if (!payMap[s.id]) {
           payMap[s.id] = {
             staff_id: s.id, month: m, year: y,
@@ -67,8 +79,13 @@ export default function PayrollPage() {
             lunch_dinner: 0, morning_food: 0,
             advance_taken: advancesMap[s.id] || 0,
             others_taken: 0, miscellaneous: 0,
-            miscellaneous_note: '', is_paid: false
+            miscellaneous_note: '', is_paid: false,
+            unpaid_leave_days: unpaidDays,
+            unpaid_leave_deduction: unpaidDeduction
           }
+        } else {
+          payMap[s.id].unpaid_leave_days = unpaidDays
+          payMap[s.id].unpaid_leave_deduction = unpaidDeduction
         }
       }
 
@@ -106,7 +123,8 @@ export default function PayrollPage() {
     const misc = Number(p.miscellaneous) || 0
     const adv = Number(p.advance_taken) || 0
     const others = Number(p.others_taken) || 0
-    return Math.round(base + ot + sc + bonus + lunch + morn + misc - adv - others)
+    const unpaid = Number(p.unpaid_leave_deduction) || 0
+    return Math.round(base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaid)
   }
 
   function handleInput(staffId, field, value) {
@@ -254,6 +272,7 @@ export default function PayrollPage() {
     'Morning Food',
     'Advance',
     'Others',
+    'Unpaid Leave',
     'Miscellaneous',
     'Net Pay',
     'Payment'
@@ -295,6 +314,7 @@ export default function PayrollPage() {
             </div>
           </div>
 
+          {/* Summary cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             {[
               { label: 'Total Payroll', value: '৳' + grandTotal.toLocaleString(), color: '#5C4A36' },
@@ -303,10 +323,8 @@ export default function PayrollPage() {
               { label: 'Staff Count', value: staff.length + ' staff', color: '#5C4A36' },
             ].map(card => (
               <div key={card.label} style={{
-                background: 'white',
-                border: '1px solid #E8E0D4',
-                borderRadius: '10px',
-                padding: '16px 20px',
+                background: 'white', border: '1px solid #E8E0D4',
+                borderRadius: '10px', padding: '16px 20px',
                 boxShadow: '0 1px 4px rgba(28,20,16,0.06)'
               }}>
                 <p style={{ fontSize: '11px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '6px' }}>
@@ -319,11 +337,27 @@ export default function PayrollPage() {
             ))}
           </div>
 
+          {/* Unpaid leave info box */}
           <div style={{
-            background: 'white',
-            border: '1px solid #E8E0D4',
-            borderRadius: '12px',
-            boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
+            background: '#fef7e0',
+            border: '1px solid #f0d080',
+            borderLeft: '4px solid #B07830',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            marginBottom: '20px',
+            fontSize: '13px',
+            color: '#7A5010'
+          }}>
+            <strong>Unpaid Leave Deduction:</strong> When an attendance is marked as Absent with leave type Unpaid,
+            the system automatically calculates the deduction as:
+            <strong> Unpaid Days × (Base Salary / 30)</strong>.
+            This is shown in the Unpaid Leave column and deducted from Net Pay automatically.
+          </div>
+
+          {/* Table */}
+          <div style={{
+            background: 'white', border: '1px solid #E8E0D4',
+            borderRadius: '12px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
             overflow: 'hidden'
           }}>
             {loading ? (
@@ -345,7 +379,7 @@ export default function PayrollPage() {
                           fontSize: '11px',
                           textTransform: 'uppercase',
                           letterSpacing: '0.07em',
-                          color: '#9C8A76',
+                          color: h === 'Unpaid Leave' ? '#d93025' : '#9C8A76',
                           fontWeight: 700,
                           whiteSpace: 'nowrap'
                         }}>
@@ -364,6 +398,8 @@ export default function PayrollPage() {
                       const totalPaid = staffPayments.reduce((sum, p) => sum + Number(p.amount), 0)
                       const remaining = finalSalary - totalPaid
                       const isFullyPaid = remaining <= 0
+                      const unpaidDays = Number(row.unpaid_leave_days) || 0
+                      const unpaidDeduction = Number(row.unpaid_leave_deduction) || 0
 
                       return (
                         <tr key={s.id} style={{
@@ -372,18 +408,26 @@ export default function PayrollPage() {
                           verticalAlign: 'top'
                         }}>
 
+                          {/* Staff */}
                           <td style={{ padding: '14px', minWidth: '160px' }}>
                             <p style={{ fontWeight: 700, fontSize: '14px', color: '#1C1410' }}>{s.name}</p>
                             <p style={{ fontSize: '12px', color: '#9C8A76', marginTop: '2px' }}>{s.designation}</p>
                             <p style={{ fontSize: '11px', color: '#B07850', marginTop: '3px' }}>
                               OT: ৳{Math.round(s.base_salary / 30 / 10)}/hr
                             </p>
+                            {unpaidDays > 0 && (
+                              <p style={{ fontSize: '11px', color: '#d93025', marginTop: '3px', fontWeight: 600 }}>
+                                Unpaid leave: {unpaidDays} day{unpaidDays > 1 ? 's' : ''} (-৳{unpaidDeduction.toLocaleString()})
+                              </p>
+                            )}
                           </td>
 
+                          {/* Base Salary */}
                           <td style={{ padding: '14px', fontWeight: 700, color: '#8B5E3C', fontSize: '14px', whiteSpace: 'nowrap' }}>
                             ৳{Number(s.base_salary).toLocaleString()}
                           </td>
 
+                          {/* Overtime Hours */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.overtime_hours}
                               onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)}
@@ -395,48 +439,75 @@ export default function PayrollPage() {
                             )}
                           </td>
 
+                          {/* Service Charge */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.service_charge}
                               onChange={e => handleInput(s.id, 'service_charge', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
+                          {/* Bonus */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.bonus}
                               onChange={e => handleInput(s.id, 'bonus', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
+                          {/* Lunch + Dinner */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.lunch_dinner}
                               onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
+                          {/* Morning Food */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.morning_food}
                               onChange={e => handleInput(s.id, 'morning_food', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
+                          {/* Advance */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={{ ...inputStyle, color: '#d93025' }} value={row.advance_taken}
                               onChange={e => handleInput(s.id, 'advance_taken', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
+                          {/* Others */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.others_taken}
                               onChange={e => handleInput(s.id, 'others_taken', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
+                          {/* Unpaid Leave */}
+                          <td style={{ padding: '14px' }}>
+                            {unpaidDays > 0 ? (
+                              <div>
+                                <p style={{ fontSize: '13px', color: '#d93025', fontWeight: 700 }}>
+                                  {unpaidDays} day{unpaidDays > 1 ? 's' : ''}
+                                </p>
+                                <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600 }}>
+                                  -৳{unpaidDeduction.toLocaleString()}
+                                </p>
+                                <p style={{ fontSize: '10px', color: '#9C8A76', marginTop: '2px' }}>
+                                  ৳{Math.round(s.base_salary / 30)}/day
+                                </p>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '13px', color: '#9C8A76' }}>—</span>
+                            )}
+                          </td>
+
+                          {/* Miscellaneous */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={{ ...inputStyle, color: miscColor }} value={row.miscellaneous}
                               onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
+                          {/* Net Pay */}
                           <td style={{ padding: '14px', whiteSpace: 'nowrap' }}>
                             <p style={{ fontWeight: 700, fontSize: '16px', color: '#8B5E3C' }}>
                               ৳{finalSalary.toLocaleString()}
@@ -448,6 +519,7 @@ export default function PayrollPage() {
                             )}
                           </td>
 
+                          {/* Payment */}
                           <td style={{ padding: '14px', minWidth: '220px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
@@ -602,14 +674,9 @@ export default function PayrollPage() {
             )}
 
             <div style={{
-              padding: '20px 24px',
-              background: '#8B5E3C',
-              color: 'white',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '12px'
+              padding: '20px 24px', background: '#8B5E3C', color: 'white',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              flexWrap: 'wrap', gap: '12px'
             }}>
               <div>
                 <p style={{ fontSize: '13px', opacity: 0.8, margin: 0 }}>Grand Total — {months[month - 1]} {year}</p>
