@@ -27,7 +27,6 @@ export default function RootLayout({ children }) {
           <LoginGate>
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
               {children}
-              <HelpTooltip />
             </div>
           </LoginGate>
         </ToastProvider>
