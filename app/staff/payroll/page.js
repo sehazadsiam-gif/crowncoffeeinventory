@@ -1,6 +1,6 @@
 
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
@@ -25,20 +25,23 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(true)
   const [printData, setPrintData] = useState(null)
 
-  useEffect(() => { fetchAll() }, [month, year])
+  useEffect(() => {
+    fetchAll(month, year)
+  }, [month, year])
 
-  async function fetchAll() {
-    await fetchPayroll()
-    await fetchPayments()
+  async function fetchAll(m, y) {
+    setLoading(true)
+    await fetchPayroll(m, y)
+    await fetchPayments(m, y)
+    setLoading(false)
   }
 
-  async function fetchPayroll() {
+  async function fetchPayroll(m, y) {
     try {
-      setLoading(true)
       const [staffRes, payRes, advRes] = await Promise.all([
         supabase.from('staff').select('*').eq('is_active', true).order('name'),
-        supabase.from('payroll_entries').select('*').eq('month', month).eq('year', year),
-        supabase.from('advance_log').select('staff_id, amount').eq('month', month).eq('year', year)
+        supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y),
+        supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y)
       ])
 
       const advancesMap = {}
@@ -58,7 +61,7 @@ export default function PayrollPage() {
       for (const s of activeStaff) {
         if (!payMap[s.id]) {
           payMap[s.id] = {
-            staff_id: s.id, month, year,
+            staff_id: s.id, month: m, year: y,
             overtime_hours: 0, overtime_pay: 0,
             service_charge: 0, bonus: 0,
             lunch_dinner: 0, morning_food: 0,
@@ -73,17 +76,15 @@ export default function PayrollPage() {
       setPayroll(payMap)
     } catch (err) {
       addToast('Error loading payroll', 'error')
-    } finally {
-      setLoading(false)
     }
   }
 
-  async function fetchPayments() {
+  async function fetchPayments(m, y) {
     const { data } = await supabase
       .from('salary_payments')
       .select('*')
-      .eq('month', month)
-      .eq('year', year)
+      .eq('month', m)
+      .eq('year', y)
 
     const map = {}
       ; (data || []).forEach(p => {
@@ -127,11 +128,26 @@ export default function PayrollPage() {
     const finalSalary = calculateFinalSalary(s, row)
     try {
       const { error } = await supabase.from('payroll_entries').upsert({
-        ...row, final_salary: finalSalary
+        staff_id: row.staff_id,
+        month: row.month,
+        year: row.year,
+        overtime_hours: Number(row.overtime_hours) || 0,
+        overtime_pay: Number(row.overtime_pay) || 0,
+        service_charge: Number(row.service_charge) || 0,
+        bonus: Number(row.bonus) || 0,
+        lunch_dinner: Number(row.lunch_dinner) || 0,
+        morning_food: Number(row.morning_food) || 0,
+        advance_taken: Number(row.advance_taken) || 0,
+        others_taken: Number(row.others_taken) || 0,
+        miscellaneous: Number(row.miscellaneous) || 0,
+        miscellaneous_note: row.miscellaneous_note || '',
+        is_paid: row.is_paid || false,
+        final_salary: finalSalary
       }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
     } catch (err) {
-      addToast('Auto-save failed', 'error')
+      console.error('Auto-save error:', err)
+      addToast('Auto-save failed: ' + err.message, 'error')
     }
   }
 
@@ -166,7 +182,7 @@ export default function PayrollPage() {
       addToast('Payment confirmed for ' + s.name, 'success')
       setShowPaymentForm(null)
       setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], notes: '' })
-      fetchPayments()
+      await fetchPayments(month, year)
     } catch (err) {
       addToast(err.message || 'Error saving payment', 'error')
     }
@@ -180,9 +196,22 @@ export default function PayrollPage() {
     setPayroll(prev => ({ ...prev, [staffId]: row }))
     try {
       await supabase.from('payroll_entries').upsert({
-        ...row,
-        final_salary: finalSalary,
-        paid_date: isPaid ? new Date().toISOString() : null
+        staff_id: row.staff_id,
+        month: row.month,
+        year: row.year,
+        overtime_hours: Number(row.overtime_hours) || 0,
+        overtime_pay: Number(row.overtime_pay) || 0,
+        service_charge: Number(row.service_charge) || 0,
+        bonus: Number(row.bonus) || 0,
+        lunch_dinner: Number(row.lunch_dinner) || 0,
+        morning_food: Number(row.morning_food) || 0,
+        advance_taken: Number(row.advance_taken) || 0,
+        others_taken: Number(row.others_taken) || 0,
+        miscellaneous: Number(row.miscellaneous) || 0,
+        miscellaneous_note: row.miscellaneous_note || '',
+        is_paid: isPaid,
+        paid_date: isPaid ? new Date().toISOString() : null,
+        final_salary: finalSalary
       }, { onConflict: 'staff_id,month,year' })
       addToast(isPaid ? 'Marked as fully paid' : 'Marked as unpaid', 'success')
     } catch (err) {
@@ -236,7 +265,6 @@ export default function PayrollPage() {
         <Navbar />
         <main style={{ maxWidth: '1500px', margin: '0 auto', padding: '32px 24px 60px' }}>
 
-          {/* Header */}
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h1 style={{ fontSize: '28px', color: '#1C1410', fontWeight: 700, margin: 0 }}>
@@ -249,7 +277,7 @@ export default function PayrollPage() {
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <select
                 className="input"
-                style={{ width: '140px', fontFamily: 'system-ui, sans-serif' }}
+                style={{ width: '140px' }}
                 value={month}
                 onChange={e => setMonth(Number(e.target.value))}
               >
@@ -260,14 +288,13 @@ export default function PayrollPage() {
               <input
                 type="number"
                 className="input"
-                style={{ width: '90px', fontFamily: 'system-ui, sans-serif' }}
+                style={{ width: '90px' }}
                 value={year}
                 onChange={e => setYear(Number(e.target.value))}
               />
             </div>
           </div>
 
-          {/* Summary cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             {[
               { label: 'Total Payroll', value: '৳' + grandTotal.toLocaleString(), color: '#5C4A36' },
@@ -292,7 +319,6 @@ export default function PayrollPage() {
             ))}
           </div>
 
-          {/* Table */}
           <div style={{
             background: 'white',
             border: '1px solid #E8E0D4',
@@ -346,33 +372,22 @@ export default function PayrollPage() {
                           verticalAlign: 'top'
                         }}>
 
-                          {/* Staff */}
                           <td style={{ padding: '14px', minWidth: '160px' }}>
-                            <p style={{ fontWeight: 700, fontSize: '14px', color: '#1C1410' }}>
-                              {s.name}
-                            </p>
-                            <p style={{ fontSize: '12px', color: '#9C8A76', marginTop: '2px' }}>
-                              {s.designation}
-                            </p>
+                            <p style={{ fontWeight: 700, fontSize: '14px', color: '#1C1410' }}>{s.name}</p>
+                            <p style={{ fontSize: '12px', color: '#9C8A76', marginTop: '2px' }}>{s.designation}</p>
                             <p style={{ fontSize: '11px', color: '#B07850', marginTop: '3px' }}>
                               OT: ৳{Math.round(s.base_salary / 30 / 10)}/hr
                             </p>
                           </td>
 
-                          {/* Base Salary */}
                           <td style={{ padding: '14px', fontWeight: 700, color: '#8B5E3C', fontSize: '14px', whiteSpace: 'nowrap' }}>
                             ৳{Number(s.base_salary).toLocaleString()}
                           </td>
 
-                          {/* Overtime Hours */}
                           <td style={{ padding: '14px' }}>
-                            <input
-                              type="number"
-                              style={inputStyle}
-                              value={row.overtime_hours}
+                            <input type="number" style={inputStyle} value={row.overtime_hours}
                               onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)}
-                              onBlur={() => handleBlur(s.id)}
-                            />
+                              onBlur={() => handleBlur(s.id)} />
                             {Number(row.overtime_hours) > 0 && (
                               <p style={{ fontSize: '11px', color: '#1e8e3e', marginTop: '4px', fontWeight: 600 }}>
                                 +৳{Math.round(row.overtime_pay || 0)}
@@ -380,56 +395,48 @@ export default function PayrollPage() {
                             )}
                           </td>
 
-                          {/* Service Charge */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.service_charge}
                               onChange={e => handleInput(s.id, 'service_charge', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
-                          {/* Bonus */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.bonus}
                               onChange={e => handleInput(s.id, 'bonus', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
-                          {/* Lunch + Dinner */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.lunch_dinner}
                               onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
-                          {/* Morning Food */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.morning_food}
                               onChange={e => handleInput(s.id, 'morning_food', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
-                          {/* Advance */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={{ ...inputStyle, color: '#d93025' }} value={row.advance_taken}
                               onChange={e => handleInput(s.id, 'advance_taken', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
-                          {/* Others */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={inputStyle} value={row.others_taken}
                               onChange={e => handleInput(s.id, 'others_taken', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
-                          {/* Miscellaneous */}
                           <td style={{ padding: '14px' }}>
                             <input type="number" style={{ ...inputStyle, color: miscColor }} value={row.miscellaneous}
                               onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
 
-                          {/* Net Pay */}
                           <td style={{ padding: '14px', whiteSpace: 'nowrap' }}>
                             <p style={{ fontWeight: 700, fontSize: '16px', color: '#8B5E3C' }}>
                               ৳{finalSalary.toLocaleString()}
@@ -441,17 +448,10 @@ export default function PayrollPage() {
                             )}
                           </td>
 
-                          {/* Payment column */}
                           <td style={{ padding: '14px', minWidth: '220px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
-                              {/* Paid / Remaining summary */}
-                              <div style={{
-                                background: '#F5F0E8',
-                                borderRadius: '8px',
-                                padding: '8px 10px',
-                                fontSize: '12px'
-                              }}>
+                              <div style={{ background: '#F5F0E8', borderRadius: '8px', padding: '8px 10px', fontSize: '12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                                   <span style={{ color: '#9C8A76' }}>Paid so far</span>
                                   <span style={{ color: '#1e8e3e', fontWeight: 700 }}>৳{totalPaid.toLocaleString()}</span>
@@ -464,7 +464,6 @@ export default function PayrollPage() {
                                 </div>
                               </div>
 
-                              {/* Progress bar */}
                               <div style={{ height: '6px', background: '#E8E0D4', borderRadius: '3px', overflow: 'hidden' }}>
                                 <div style={{
                                   height: '100%',
@@ -475,7 +474,6 @@ export default function PayrollPage() {
                                 }} />
                               </div>
 
-                              {/* Confirm Payment button */}
                               {!isFullyPaid && (
                                 <button
                                   onClick={() => {
@@ -483,27 +481,19 @@ export default function PayrollPage() {
                                     setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], notes: '' })
                                   }}
                                   style={{
-                                    padding: '8px 12px',
-                                    fontSize: '12px',
-                                    borderRadius: '6px',
+                                    padding: '8px 12px', fontSize: '12px', borderRadius: '6px',
                                     border: 'none',
                                     background: showPaymentForm === s.id ? '#5C4A36' : '#8B5E3C',
-                                    color: 'white',
-                                    cursor: 'pointer',
-                                    fontWeight: 600,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    width: '100%',
-                                    justifyContent: 'center'
+                                    color: 'white', cursor: 'pointer', fontWeight: 600,
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    width: '100%', justifyContent: 'center'
                                   }}
                                 >
                                   <CheckCircle size={13} />
-                                  {showPaymentForm === s.id ? 'Cancel Payment' : 'Confirm Payment'}
+                                  {showPaymentForm === s.id ? 'Cancel' : 'Confirm Payment'}
                                 </button>
                               )}
 
-                              {/* Print payslip button */}
                               <button
                                 onClick={() => setPrintData({
                                   staff: s,
@@ -512,35 +502,21 @@ export default function PayrollPage() {
                                   year
                                 })}
                                 style={{
-                                  padding: '7px 12px',
-                                  fontSize: '12px',
-                                  borderRadius: '6px',
-                                  border: '1px solid #D4C8B8',
-                                  background: 'white',
-                                  color: '#5C4A36',
-                                  cursor: 'pointer',
-                                  fontWeight: 500,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  width: '100%',
-                                  justifyContent: 'center'
+                                  padding: '7px 12px', fontSize: '12px', borderRadius: '6px',
+                                  border: '1px solid #D4C8B8', background: 'white',
+                                  color: '#5C4A36', cursor: 'pointer', fontWeight: 500,
+                                  display: 'flex', alignItems: 'center', gap: '6px',
+                                  width: '100%', justifyContent: 'center'
                                 }}
                               >
-                                <Printer size={13} />
-                                Print Payslip
+                                <Printer size={13} /> Print Payslip
                               </button>
 
-                              {/* Payment form */}
                               {showPaymentForm === s.id && (
                                 <div style={{
-                                  background: 'white',
-                                  border: '2px solid #8B5E3C',
-                                  borderRadius: '8px',
-                                  padding: '12px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '8px'
+                                  background: 'white', border: '2px solid #8B5E3C',
+                                  borderRadius: '8px', padding: '12px',
+                                  display: 'flex', flexDirection: 'column', gap: '8px'
                                 }}>
                                   <p style={{ fontSize: '12px', fontWeight: 700, color: '#5C4A36', margin: 0 }}>
                                     Record Payment for {s.name}
@@ -583,18 +559,12 @@ export default function PayrollPage() {
                                   <button
                                     onClick={() => savePayment(s.id)}
                                     style={{
-                                      padding: '9px',
-                                      fontSize: '13px',
-                                      background: '#1e8e3e',
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '6px',
-                                      cursor: 'pointer',
-                                      fontWeight: 700,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '6px',
-                                      justifyContent: 'center'
+                                      padding: '9px', fontSize: '13px',
+                                      background: '#1e8e3e', color: 'white',
+                                      border: 'none', borderRadius: '6px',
+                                      cursor: 'pointer', fontWeight: 700,
+                                      display: 'flex', alignItems: 'center',
+                                      gap: '6px', justifyContent: 'center'
                                     }}
                                   >
                                     <CheckCircle size={14} /> Confirm Payment
@@ -602,15 +572,8 @@ export default function PayrollPage() {
                                 </div>
                               )}
 
-                              {/* Payment history */}
                               {staffPayments.length > 0 && (
-                                <div style={{
-                                  borderTop: '1px solid #F0EBE3',
-                                  paddingTop: '6px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '4px'
-                                }}>
+                                <div style={{ borderTop: '1px solid #F0EBE3', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                   <p style={{ fontSize: '10px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
                                     Payment History
                                   </p>
@@ -638,7 +601,6 @@ export default function PayrollPage() {
               </div>
             )}
 
-            {/* Grand Total */}
             <div style={{
               padding: '20px 24px',
               background: '#8B5E3C',
