@@ -86,6 +86,18 @@ export default function StaffDirectory() {
     }
   }
 
+  async function deleteStaff(id, name) {
+    if (!confirm(`Are you sure you want to permanently DELETE ${name}? This will remove all their records.`)) return
+    try {
+      const { error } = await supabase.from('staff').delete().eq('id', id)
+      if (error) throw error
+      addToast('Staff member deleted permanently', 'success')
+      fetchStaff()
+    } catch (err) {
+      addToast('Error deleting staff: ' + err.message, 'error')
+    }
+  }
+
   const filteredStaff = staff.filter(s => {
     if (filter === 'active') return s.is_active
     if (filter === 'inactive') return !s.is_active
@@ -280,6 +292,24 @@ export default function StaffDirectory() {
                       }}
                     >
                       {s.is_active ? <UserX size={16} /> : <UserCheck size={16} />}
+                    </button>
+                    <button
+                      onClick={() => deleteStaff(s.id, s.name)}
+                      title="Delete Permanently"
+                      style={{
+                        width: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'transparent',
+                        border: '1px solid #fce8e6',
+                        borderRadius: '6px',
+                        color: 'var(--danger)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>

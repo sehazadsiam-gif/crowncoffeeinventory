@@ -2,15 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
 import { 
-  TrendingUp, TrendingDown, Package, 
-  Trash2, Download, LogOut, ShieldCheck, 
-  Activity, FileText, AlertCircle, RefreshCw
+  TrendingUp, Package, Trash2, LogOut, ShieldCheck, 
+  Activity, FileText, AlertCircle, Database, Users, 
+  Coffee, ShoppingCart, Receipt, Eraser, AlertTriangle
 } from 'lucide-react'
 
 export default function AdminClient({ initialStats }) {
   const [isAuthorized, setIsAuthorized] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
+  const [loading, setLoading] = useState(false)
+  const [confirmText, setConfirmText] = useState('')
+  const [showConfirmModal, setShowConfirmModal] = useState(null) // table name or 'all'
   const router = useRouter()
   const { addToast } = useToast()
 
@@ -29,8 +34,54 @@ export default function AdminClient({ initialStats }) {
     router.push('/')
   }
 
-  const handleReset = async () => {
-    addToast('To clear entries, please run the factory-reset.sql script in your Supabase SQL Editor.', 'info')
+  const clearTable = async (tableName) => {
+    if (confirmText !== 'CLEAR') {
+      addToast('Please type CLEAR to confirm', 'error')
+      return
+    }
+
+    setLoading(true)
+    try {
+      // For Supabase, the easiest way to "wipe" without TRUNCATE privilege 
+      // is to delete all rows. Using a condition that is always true.
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000') // Assuming UUID or non-zero ID
+
+      if (error) throw error
+      
+      addToast(`Table ${tableName} cleared successfully`, 'success')
+      setShowConfirmModal(null)
+      setConfirmText('')
+    } catch (err) {
+      addToast(`Error clearing ${tableName}: ` + err.message, 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const wipeAllData = async () => {
+    if (confirmText !== 'WIPE ALL DATA') {
+      addToast('Please type "WIPE ALL DATA" to confirm', 'error')
+      return
+    }
+
+    setLoading(true)
+    const tables = ['sales', 'bazar', 'waste', 'attendance', 'payroll_entries', 'advance_log', 'salary_payments', 'ingredients', 'recipes']
+    
+    try {
+      for (const table of tables) {
+        await supabase.from(table).delete().neq('id', 0)
+      }
+      addToast('System reset complete. All transaction data cleared.', 'success')
+      setShowConfirmModal(null)
+      setConfirmText('')
+    } catch (err) {
+      addToast('Error during system wipe: ' + err.message, 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (!isAuthorized) return (
@@ -44,136 +95,222 @@ export default function AdminClient({ initialStats }) {
 
   const { stats } = initialStats
 
+  const tabStyle = (id) => ({
+    padding: '12px 20px',
+    cursor: 'pointer',
+    borderBottom: activeTab === id ? '2px solid var(--accent-brown)' : '2px solid transparent',
+    color: activeTab === id ? 'var(--accent-brown)' : 'var(--text-muted)',
+    fontWeight: activeTab === id ? 700 : 500,
+    fontSize: '14px',
+    transition: 'all 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  })
+
   return (
-    <div className="animate-in" style={{ display: 'grid', gap: '32px' }}>
+    <div className="animate-in" style={{ display: 'grid', gap: '24px' }}>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-light)', paddingBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '28px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <ShieldCheck size={28} style={{ color: 'var(--warning)' }} strokeWidth={1.5} /> 
-            Advanced Business Logic
+            <ShieldCheck size={28} style={{ color: 'var(--accent-brown)' }} strokeWidth={1.5} /> 
+            Super Admin Control
           </h2>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Full-system diagnostics and lifetime performance data.
+            System-wide management, data operations, and security overrides.
           </p>
         </div>
-        <button onClick={handleLogout} className="btn-secondary" style={{ padding: '10px 20px', fontSize: '11px' }}>
-          <LogOut size={14} /> Logout Admin
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button onClick={() => window.print()} className="btn-secondary" style={{ padding: '10px 20px', fontSize: '11px' }}>
+            <FileText size={14} /> System Report
+          </button>
+          <button onClick={handleLogout} className="btn-secondary" style={{ padding: '10px 20px', fontSize: '11px', color: 'var(--danger)', borderColor: 'var(--danger)' }}>
+            <LogOut size={14} /> Logout
+          </button>
+        </div>
       </div>
 
-      {/* Advanced Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-        <AdminStatCard 
-          label="Lifetime Gross Revenue" 
-          value={`৳${stats.totalRevenue.toLocaleString()}`} 
-          icon={TrendingUp} 
-          trend="+8% from last month"
-          color="var(--success)"
-        />
-        <AdminStatCard 
-          label="Total Inventory Value" 
-          value={`৳${stats.inventoryValue.toLocaleString()}`} 
-          icon={Package} 
-          trend="Value currently in-store"
-          color="var(--warning)"
-        />
-        <AdminStatCard 
-          label="Avg. Order Value" 
-          value={`৳${(stats.totalRevenue / (stats.totalSalesCount || 1)).toFixed(2)}`} 
-          icon={Activity} 
-          trend="Based on all transactions"
-          color="var(--primary)"
-        />
+      {/* Navigation Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-light)', overflowX: 'auto' }}>
+        <div onClick={() => setActiveTab('overview')} style={tabStyle('overview')}><Activity size={16} /> Overview</div>
+        <div onClick={() => setActiveTab('db')} style={tabStyle('db')}><Database size={16} /> Database Manager</div>
+        <div onClick={() => setActiveTab('entities')} style={tabStyle('entities')}><Users size={16} /> Management</div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px' }}>
-        {/* System Health */}
-        <div className="card-premium">
-          <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
-            <Activity size={18} style={{ color: 'var(--primary)' }} /> System Integrity
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', background: 'var(--bg-subtle)', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div style={{ background: 'var(--success-bg)', padding: '10px', borderRadius: '8px', color: 'var(--success)' }}>
-                  <ShieldCheck size={20} strokeWidth={1.5} />
-                </div>
-                <div>
-                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Database Connection</p>
-                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, color: 'var(--success)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '2px' }}>Operational • 100%</p>
-                </div>
-              </div>
-              <span className="badge badge-green">Stable</span>
-            </div>
+      {/* Tab Content: Overview */}
+      {activeTab === 'overview' && (
+        <div className="animate-in" style={{ display: 'grid', gap: '32px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+            <AdminStatCard label="Lifetime Revenue" value={`৳${stats.totalRevenue.toLocaleString()}`} icon={TrendingUp} trend="System-wide aggregation" color="var(--success)" />
+            <AdminStatCard label="Inventory Asset Value" value={`৳${stats.inventoryValue.toLocaleString()}`} icon={Package} trend="Live valuation" color="var(--warning)" />
+            <AdminStatCard label="Active Recipes" value={stats.totalRecipes} icon={Coffee} trend="Menu complexity" color="var(--primary)" />
+          </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div style={{ padding: '20px', background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
-                <p className="stat-label" style={{ marginTop: 0, marginBottom: '4px' }}>Total Recipes</p>
-                <p className="stat-value" style={{ fontSize: '28px' }}>{stats.totalRecipes}</p>
+          <div className="card-premium">
+            <h3 style={{ fontSize: '18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}><Activity size={18} /> System Diagnostics</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+                <p className="stat-label">Ingredients</p>
+                <p className="stat-value" style={{ fontSize: '24px' }}>{stats.totalIngredients}</p>
               </div>
-              <div style={{ padding: '20px', background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
-                <p className="stat-label" style={{ marginTop: 0, marginBottom: '4px' }}>Total Ingredients</p>
-                <p className="stat-value" style={{ fontSize: '28px' }}>{stats.totalIngredients}</p>
+              <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
+                <p className="stat-label">Sales Entries</p>
+                <p className="stat-value" style={{ fontSize: '24px' }}>{stats.totalSalesCount}</p>
               </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Data Management */}
-        <div className="card" style={{ borderStyle: 'dashed', borderWidth: '2px' }}>
-          <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <FileText size={18} style={{ color: 'var(--primary)' }} /> Data Operations
-          </h3>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: 1.5 }}>
-            Export or manage your database records. High-risk operations are marked in red.
-          </p>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-             <button className="btn-secondary" style={{ width: '100%', justifyContent: 'space-between', padding: '16px 20px', fontSize: '13px' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Download Sales Report (CSV)</span>
-              <Download size={18} />
-            </button>
-            <button 
-              onClick={() => {
-                if (confirm("DANGER: This will recommend wiping all data. Check factory-reset.sql. Continue?")) {
-                  handleReset();
-                }
-              }}
-              style={{ 
-                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '16px 20px', background: 'var(--bg-surface)', border: '1px solid var(--danger)',
-                borderRadius: '8px', cursor: 'pointer', transition: 'all 0.2s ease', color: 'var(--danger)',
-                fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em'
-              }}
-            >
-              <span>Factory Reset (Clear All)</span>
-              <Trash2 size={18} />
-            </button>
+      {/* Tab Content: Database Manager (The Powerful Part) */}
+      {activeTab === 'db' && (
+        <div className="animate-in" style={{ display: 'grid', gap: '24px' }}>
+          <div className="instruction-box" style={{ background: '#FFF5F5', borderLeftColor: 'var(--danger)' }}>
+            <p style={{ color: 'var(--danger)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertTriangle size={18} /> DANGER ZONE
+            </p>
+            <p style={{ marginTop: '8px' }}>
+              The operations below are destructive. Clearing a table will remove all its records permanently.
+            </p>
+          </div>
 
-            <div style={{ marginTop: '16px', padding: '16px', background: 'var(--warning-bg)', borderRadius: '10px', border: '1px solid rgba(176,120,48,0.2)', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-              <AlertCircle size={18} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: '2px' }} />
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, color: 'var(--warning)', lineHeight: 1.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Note: Resetting data is currently locked in development mode for safety.
-              </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
+            {/* Table Clearing Cards */}
+            <DbOperationCard 
+              title="Clear Sales & Orders" 
+              desc="Delete all lifetime sales records. Does not affect menu or inventory." 
+              onClear={() => setShowConfirmModal('sales')}
+              icon={Receipt}
+            />
+            <DbOperationCard 
+              title="Clear Bazar/Expense" 
+              desc="Wipe all purchase history and expense logs from bazar entries." 
+              onClear={() => setShowConfirmModal('bazar')}
+              icon={ShoppingCart}
+            />
+            <DbOperationCard 
+              title="Clear Attendance & Payroll" 
+              desc="Remove all history for attendance, payroll, and salary payments." 
+              onClear={() => setShowConfirmModal('attendance')}
+              icon={Users}
+            />
+            <DbOperationCard 
+              title="Full Factory Reset" 
+              desc="Wipe everything except staff list and menu structure. Complete clean slate." 
+              onClear={() => setShowConfirmModal('all')}
+              icon={Eraser}
+              danger
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Tab Content: Management */}
+      {activeTab === 'entities' && (
+        <div className="animate-in" style={{ display: 'grid', gap: '24px' }}>
+          <div className="card-premium">
+            <h3 style={{ fontSize: '18px', marginBottom: '16px' }}>Manage Project Access</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '20px' }}>
+              Add or remove core system entities. Use specific pages for detailed management.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+               <button onClick={() => router.push('/staff')} className="btn-primary"><Users size={16} /> Go to Staff Directory</button>
+               <button onClick={() => router.push('/menu')} className="btn-secondary"><Coffee size={16} /> Manage Menu</button>
+               <button onClick={() => router.push('/stock')} className="btn-secondary"><Package size={16} /> Inventory Control</button>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div className="card animate-in" style={{ maxWidth: '450px', width: '100%', background: 'white', padding: '32px' }}>
+            <div style={{ color: 'var(--danger)', marginBottom: '20px', textAlign: 'center' }}>
+              <AlertTriangle size={48} style={{ margin: '0 auto 12px' }} />
+              <h3 style={{ fontSize: '20px', fontWeight: 700 }}>Destructive Action</h3>
+            </div>
+            
+            <p style={{ fontSize: '14px', color: '#555', textAlign: 'center', marginBottom: '24px', lineHeight: 1.5 }}>
+              You are about to clear <strong>{showConfirmModal === 'all' ? 'THE ENTIRE SYSTEM' : `the ${showConfirmModal} table`}</strong>. 
+              This cannot be undone.
+            </p>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
+                Type <strong>{showConfirmModal === 'all' ? 'WIPE ALL DATA' : 'CLEAR'}</strong> to confirm
+              </label>
+              <input 
+                className="input"
+                placeholder="Type here..."
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value)}
+                style={{ borderColor: confirmText === (showConfirmModal === 'all' ? 'WIPE ALL DATA' : 'CLEAR') ? 'var(--success)' : 'var(--border-medium)' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                onClick={() => { setShowConfirmModal(null); setConfirmText(''); }}
+                className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+              <button 
+                disabled={loading || confirmText !== (showConfirmModal === 'all' ? 'WIPE ALL DATA' : 'CLEAR')}
+                onClick={() => showConfirmModal === 'all' ? wipeAllData() : clearTable(showConfirmModal)}
+                className="btn-primary" 
+                style={{ flex: 1, background: 'var(--danger)', color: 'white' }}>
+                {loading ? 'Processing...' : 'Confirm Wipe'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 function AdminStatCard({ label, value, icon: Icon, trend, color }) {
   return (
-    <div className="card" style={{ borderBottom: `4px solid var(--warning)`, padding: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <div style={{ background: 'var(--bg-subtle)', width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={22} style={{ color: 'var(--primary)' }} />
-        </div>
+    <div className="card" style={{ borderBottom: `4px solid var(--border-light)`, padding: '24px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', right: '-10px', top: '-10px', opacity: 0.05 }}>
+        <Icon size={100} />
       </div>
       <p style={{ fontFamily: 'var(--font-sans)', fontSize: '32px', fontWeight: 700, color: color, lineHeight: 1.1, marginBottom: '6px' }}>{value}</p>
       <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>{label}</p>
       <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontStyle: 'italic', color: 'var(--text-muted)' }}>{trend}</p>
+    </div>
+  )
+}
+
+function DbOperationCard({ title, desc, onClear, icon: Icon, danger }) {
+  return (
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', border: danger ? '1px solid #FFDADA' : '1px solid var(--border-light)', background: danger ? '#FFF9F9' : 'white' }}>
+      <div style={{ display: 'flex', gap: '16px' }}>
+        <div style={{ 
+          background: danger ? '#FFE5E5' : 'rgba(139,94,60,0.08)', 
+          padding: '12px', borderRadius: '10px', color: danger ? 'var(--danger)' : 'var(--accent-brown)' 
+        }}>
+          <Icon size={24} />
+        </div>
+        <div>
+          <h4 style={{ fontSize: '15px', fontWeight: 700, color: danger ? 'var(--danger)' : 'var(--text-primary)' }}>{title}</h4>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.4 }}>{desc}</p>
+        </div>
+      </div>
+      <button 
+        onClick={onClear}
+        className="btn-secondary" 
+        style={{ 
+          marginTop: 'auto', width: '100%', color: danger ? 'white' : 'var(--danger)', 
+          background: danger ? 'var(--danger)' : 'transparent', 
+          borderColor: 'var(--danger)', fontSize: '12px', fontWeight: 600 
+        }}>
+        {danger ? <Eraser size={14} /> : <Trash2 size={14} />} Clear This Data
+      </button>
     </div>
   )
 }

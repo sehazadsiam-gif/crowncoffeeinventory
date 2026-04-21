@@ -76,6 +76,14 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
     refreshData()
   }
 
+  async function deleteIngredient(id, name) {
+    if (!confirm(`Permanently delete ${name}? This will remove it from all recipes.`)) return
+    const { error } = await supabase.from('ingredients').delete().eq('id', id)
+    if (error) { addToast(error.message || 'Something went wrong', 'error'); return }
+    addToast('Ingredient deleted', 'success')
+    refreshData()
+  }
+
   async function deleteMenuItem(id) {
     const { error } = await supabase.from('menu_items').delete().eq('id', id)
     if (error) { addToast(error.message || 'Something went wrong', 'error'); return }
@@ -332,9 +340,19 @@ export default function MenuClient({ initialMenuItems, initialIngredients }) {
                       {ing.unit} &bull; min {ing.min_stock}
                     </p>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}>৳{ing.cost_per_unit || 0}</p>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>per {ing.unit}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 600, color: 'var(--primary)' }}>৳{ing.cost_per_unit || 0}</p>
+                      <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>per {ing.unit}</p>
+                    </div>
+                    <button 
+                      onClick={() => deleteIngredient(ing.id, ing.name)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', opacity: 0.3, padding: '4px' }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                      onMouseLeave={e => e.currentTarget.style.opacity = 0.3}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
               ))}

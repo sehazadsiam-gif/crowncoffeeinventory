@@ -7,7 +7,7 @@ import { useToast } from '../../components/Toast'
 import {
   Package, RefreshCcw, Info,
   ChevronDown, ChevronUp, History,
-  TrendingDown, TrendingUp, Settings2, Calendar, Search
+  TrendingDown, TrendingUp, Settings2, Calendar, Search, Trash2
 } from 'lucide-react'
 
 export default function StockPage() {
@@ -45,6 +45,18 @@ export default function StockPage() {
       .limit(50)
       
     setLogs(data || [])
+  }
+
+  async function deleteIngredient(id, name) {
+    if (!confirm(`Permanently delete ${name}? This will remove it from the system and all recipes.`)) return
+    try {
+      const { error } = await supabase.from('ingredients').delete().eq('id', id)
+      if (error) throw error
+      addToast('Ingredient deleted successfully', 'success')
+      fetchStock()
+    } catch (err) {
+      addToast('Error deleting: ' + err.message, 'error')
+    }
   }
 
   async function adjustStock(ingredientId) {
@@ -186,7 +198,15 @@ export default function StockPage() {
                               </p>
                               <span className={`badge ${status.badge}`} style={{ marginTop: '4px' }}>{status.label}</span>
                             </div>
-                            <div style={{ color: 'var(--text-muted)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteIngredient(item.id, item.name); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', opacity: 0.3, padding: '4px' }}
+                                onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                                onMouseLeave={e => e.currentTarget.style.opacity = 0.3}
+                              >
+                                <Trash2 size={16} />
+                              </button>
                               {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                             </div>
                           </div>

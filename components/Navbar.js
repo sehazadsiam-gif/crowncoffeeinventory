@@ -25,7 +25,7 @@ const navItems = [
       { href: '/staff/history', label: 'History' }
     ]
   },
-  { href: '/login', label: 'Admin' },
+  { href: '/admin', label: 'Admin' },
 ]
 
 export default function Navbar() {
