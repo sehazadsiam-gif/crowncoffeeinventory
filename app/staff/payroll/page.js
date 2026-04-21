@@ -114,7 +114,7 @@ export default function PayrollPage() {
   function calculateFinalSalary(s, p) {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
-    const perHourRate = base / 30 / 10
+    const perHourRate = Math.floor(base / 30 / 10)
     const ot = (Number(p.overtime_hours) || 0) * perHourRate
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
@@ -132,7 +132,7 @@ export default function PayrollPage() {
       const row = { ...prev[staffId], [field]: value }
       if (field === 'overtime_hours') {
         const s = staff.find(st => st.id === staffId)
-        const perHourRate = (Number(s?.base_salary) || 0) / 30 / 10
+        const perHourRate = Math.floor((Number(s?.base_salary) || 0) / 30 / 10)
         row.overtime_pay = (Number(value) || 0) * perHourRate
       }
       return { ...prev, [staffId]: row }
@@ -413,7 +413,7 @@ export default function PayrollPage() {
                             <p style={{ fontWeight: 700, fontSize: '14px', color: '#1C1410' }}>{s.name}</p>
                             <p style={{ fontSize: '12px', color: '#9C8A76', marginTop: '2px' }}>{s.designation}</p>
                             <p style={{ fontSize: '11px', color: '#B07850', marginTop: '3px' }}>
-                              OT: ৳{Math.round(s.base_salary / 30 / 10)}/hr
+                              OT: ৳{Math.floor(s.base_salary / 30 / 10)}/hr
                             </p>
                             {unpaidDays > 0 && (
                               <p style={{ fontSize: '11px', color: '#d93025', marginTop: '3px', fontWeight: 600 }}>
