@@ -369,11 +369,11 @@ export default function PayrollPage() {
                 No active staff found. Add staff members first.
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'system-ui, sans-serif' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', position: 'relative' }}>
+                <table style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'system-ui, sans-serif' }}>
                   <thead>
                     <tr style={{ background: '#F5F0E8', borderBottom: '2px solid #E8E0D4' }}>
-                      {colHeaders.map(h => (
+                      {colHeaders.map((h, i) => (
                         <th key={h} style={{
                           padding: '12px 14px',
                           fontSize: '11px',
@@ -381,7 +381,12 @@ export default function PayrollPage() {
                           letterSpacing: '0.07em',
                           color: h === 'Unpaid Leave' ? '#d93025' : '#9C8A76',
                           fontWeight: 700,
-                          whiteSpace: 'nowrap'
+                          whiteSpace: 'nowrap',
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: i === 0 ? 4 : 3,
+                          background: '#F5F0E8',
+                          ...(i === 0 ? { left: 0, boxShadow: '2px 0 6px rgba(28,20,16,0.07)' } : {})
                         }}>
                           {h}
                         </th>
@@ -409,7 +414,15 @@ export default function PayrollPage() {
                         }}>
 
                           {/* Staff */}
-                          <td style={{ padding: '14px', minWidth: '160px' }}>
+                          <td style={{
+                            padding: '14px',
+                            minWidth: '170px',
+                            position: 'sticky',
+                            left: 0,
+                            zIndex: 2,
+                            background: idx % 2 === 0 ? 'white' : '#FDFAF7',
+                            boxShadow: '2px 0 6px rgba(28,20,16,0.07)'
+                          }}>
                             <p style={{ fontWeight: 700, fontSize: '14px', color: '#1C1410' }}>{s.name}</p>
                             <p style={{ fontSize: '12px', color: '#9C8A76', marginTop: '2px' }}>{s.designation}</p>
                             <p style={{ fontSize: '11px', color: '#B07850', marginTop: '3px' }}>
