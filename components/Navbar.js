@@ -26,6 +26,7 @@ const navItems = [
     ]
   },
   { href: '/admin', label: 'Admin' },
+  { href: '/portal', label: 'Staff Portal' },
 ]
 
 export default function Navbar() {

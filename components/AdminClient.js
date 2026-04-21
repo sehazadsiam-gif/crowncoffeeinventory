@@ -214,10 +214,11 @@ export default function AdminClient({ initialStats }) {
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '20px' }}>
               Add or remove core system entities. Use specific pages for detailed management.
             </p>
-            <div style={{ display: 'flex', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                <button onClick={() => router.push('/staff')} className="btn-primary"><Users size={16} /> Go to Staff Directory</button>
                <button onClick={() => router.push('/menu')} className="btn-secondary"><Coffee size={16} /> Manage Menu</button>
                <button onClick={() => router.push('/stock')} className="btn-secondary"><Package size={16} /> Inventory Control</button>
+               <button onClick={() => router.push('/portal')} className="btn-secondary"><FileText size={16} /> Staff Portal View</button>
             </div>
           </div>
         </div>
