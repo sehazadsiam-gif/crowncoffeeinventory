@@ -6,7 +6,7 @@ import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
 import Link from 'next/link'
-import { Users, Plus, UserX, UserCheck } from 'lucide-react'
+import { Users, Plus, UserX, UserCheck, Trash2 } from 'lucide-react'
 
 export default function StaffDirectory() {
   const { addToast } = useToast()
@@ -133,8 +133,8 @@ export default function StaffDirectory() {
                 style={{
                   padding: '6px 16px',
                   borderRadius: '20px',
-                  border: '1px solid ' + (isActive ? 'var(--accent-brown)' : 'var(--border-medium)'),
-                  background: isActive ? 'var(--accent-brown)' : 'transparent',
+                  border: '1px solid ' + (isActive ? 'var(--accent-blue)' : 'var(--border-medium)'),
+                  background: isActive ? 'var(--accent-blue)' : 'transparent',
                   color: isActive ? '#ffffff' : 'var(--text-muted)',
                   cursor: 'pointer',
                   textTransform: 'capitalize',
@@ -171,7 +171,7 @@ export default function StaffDirectory() {
             gap: '20px'
           }}>
             {filteredStaff.map(s => {
-              const cardBorderColor = s.is_active ? 'var(--accent-brown)' : 'var(--text-muted)'
+              const cardBorderColor = s.is_active ? 'var(--accent-blue)' : 'var(--text-muted)'
               const cardOpacity = s.is_active ? 1 : 0.7
               const statusBg = s.is_active ? '#e6f4ea' : '#fce8e6'
               const statusColor = s.is_active ? '#1e8e3e' : '#d93025'
@@ -223,7 +223,7 @@ export default function StaffDirectory() {
                   <div style={{ margin: '16px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}>
                       <span style={{ color: 'var(--text-muted)' }}>Base Salary</span>
-                      <span style={{ fontWeight: 600, color: 'var(--accent-brown)' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>
                         ৳{s.base_salary?.toLocaleString()}
                       </span>
                     </div>
@@ -265,7 +265,7 @@ export default function StaffDirectory() {
                         padding: '8px',
                         background: 'var(--bg-subtle)',
                         borderRadius: '6px',
-                        color: 'var(--accent-brown)',
+                        color: 'var(--accent-blue)',
                         textDecoration: 'none',
                         fontSize: '13px',
                         fontWeight: 500,
