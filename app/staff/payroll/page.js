@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
-import { Printer, CheckCircle } from 'lucide-react'
+import { Printer, CheckCircle, Trash2, X } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../../components/PaySlip'), { ssr: false })
@@ -206,6 +206,18 @@ export default function PayrollPage() {
     }
   }
 
+  async function deletePayment(paymentId) {
+    if (!confirm('Are you sure you want to remove this payment record?')) return
+    try {
+      const { error } = await supabase.from('salary_payments').delete().eq('id', paymentId)
+      if (error) throw error
+      addToast('Payment record removed', 'success')
+      await fetchPayments(month, year)
+    } catch (err) {
+      addToast('Error removing payment: ' + err.message, 'error')
+    }
+  }
+
   async function togglePaid(staffId) {
     const isPaid = !payroll[staffId].is_paid
     const row = { ...payroll[staffId], is_paid: isPaid }
@@ -256,9 +268,9 @@ export default function PayrollPage() {
     borderRadius: '6px',
     border: '1px solid #e0d8cc',
     outline: 'none',
-    background: '#faf8f5',
-    color: '#1C1410',
-    fontFamily: 'system-ui, sans-serif',
+    background: 'var(--bg-subtle)',
+    color: 'var(--text-primary)',
+    fontFamily: 'var(--font-body)',
     textAlign: 'center'
   }
 
@@ -280,16 +292,16 @@ export default function PayrollPage() {
 
   return (
     <>
-      <div style={{ background: '#FAF7F2', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'var(--font-sans)' }}>
         <Navbar />
         <main style={{ maxWidth: '1500px', margin: '0 auto', padding: '32px 24px 60px' }}>
 
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
-              <h1 style={{ fontSize: '28px', color: '#1C1410', fontWeight: 700, margin: 0 }}>
+              <h1 style={{ fontSize: '28px', color: 'var(--text-primary)', fontWeight: 700, margin: 0 }}>
                 Monthly Payroll
               </h1>
-              <p style={{ color: '#9C8A76', marginTop: '4px', fontSize: '14px' }}>
+              <p style={{ color: 'var(--text-muted)', marginTop: '4px', fontSize: '14px' }}>
                 {months[month - 1]} {year} — {staff.length} active staff
               </p>
             </div>
@@ -323,9 +335,9 @@ export default function PayrollPage() {
               { label: 'Staff Count', value: staff.length + ' staff', color: '#5C4A36' },
             ].map(card => (
               <div key={card.label} style={{
-                background: 'white', border: '1px solid #E8E0D4',
+                background: 'white', border: '1px solid var(--border-light)',
                 borderRadius: '10px', padding: '16px 20px',
-                boxShadow: '0 1px 4px rgba(28,20,16,0.06)'
+                boxShadow: 'var(--shadow-sm)'
               }}>
                 <p style={{ fontSize: '11px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, marginBottom: '6px' }}>
                   {card.label}
@@ -356,8 +368,8 @@ export default function PayrollPage() {
 
           {/* Table */}
           <div style={{
-            background: 'white', border: '1px solid #E8E0D4',
-            borderRadius: '12px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
+            background: 'white', border: '1px solid var(--border-light)',
+            borderRadius: '12px', boxShadow: 'var(--shadow-sm)',
             overflow: 'hidden'
           }}>
             {loading ? (
@@ -365,28 +377,28 @@ export default function PayrollPage() {
                 <div className="loader"></div>
               </div>
             ) : staff.length === 0 ? (
-              <div style={{ padding: '60px', textAlign: 'center', color: '#9C8A76' }}>
+              <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
                 No active staff found. Add staff members first.
               </div>
             ) : (
               <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', position: 'relative' }}>
                 <table style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', textAlign: 'left', fontFamily: 'system-ui, sans-serif' }}>
                   <thead>
-                    <tr style={{ background: '#F5F0E8', borderBottom: '2px solid #E8E0D4' }}>
+                    <tr style={{ background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-light)' }}>
                       {colHeaders.map((h, i) => (
                         <th key={h} style={{
                           padding: '12px 14px',
                           fontSize: '11px',
                           textTransform: 'uppercase',
                           letterSpacing: '0.07em',
-                          color: h === 'Unpaid Leave' ? '#d93025' : '#9C8A76',
+                          color: h === 'Unpaid Leave' ? 'var(--danger)' : 'var(--text-muted)',
                           fontWeight: 700,
                           whiteSpace: 'nowrap',
                           position: 'sticky',
                           top: 0,
                           zIndex: i === 0 ? 4 : 3,
-                          background: '#F5F0E8',
-                          ...(i === 0 ? { left: 0, boxShadow: '2px 0 6px rgba(28,20,16,0.07)' } : {})
+                          background: 'var(--bg-subtle)',
+                          ...(i === 0 ? { left: 0, boxShadow: '2px 0 6px rgba(15,23,42,0.05)' } : {})
                         }}>
                           {h}
                         </th>
@@ -398,7 +410,7 @@ export default function PayrollPage() {
                       const row = payroll[s.id]
                       if (!row) return null
                       const finalSalary = calculateFinalSalary(s, row)
-                      const miscColor = Number(row.miscellaneous) < 0 ? '#d93025' : '#1e8e3e'
+                      const miscColor = Number(row.miscellaneous) < 0 ? 'var(--danger)' : 'var(--success)'
                       const staffPayments = payments[s.id] || []
                       const totalPaid = staffPayments.reduce((sum, p) => sum + Number(p.amount), 0)
                       const remaining = finalSalary - totalPaid
@@ -408,8 +420,8 @@ export default function PayrollPage() {
 
                       return (
                         <tr key={s.id} style={{
-                          borderBottom: '1px solid #F0EBE3',
-                          background: idx % 2 === 0 ? 'white' : '#FDFAF7',
+                          borderBottom: '1px solid var(--border-light)',
+                          background: idx % 2 === 0 ? 'white' : 'var(--bg-subtle)',
                           verticalAlign: 'top'
                         }}>
 
@@ -420,23 +432,23 @@ export default function PayrollPage() {
                             position: 'sticky',
                             left: 0,
                             zIndex: 2,
-                            background: idx % 2 === 0 ? 'white' : '#FDFAF7',
-                            boxShadow: '2px 0 6px rgba(28,20,16,0.07)'
+                            background: idx % 2 === 0 ? 'white' : 'var(--bg-subtle)',
+                            boxShadow: '2px 0 6px rgba(15,23,42,0.05)'
                           }}>
-                            <p style={{ fontWeight: 700, fontSize: '14px', color: '#1C1410' }}>{s.name}</p>
-                            <p style={{ fontSize: '12px', color: '#9C8A76', marginTop: '2px' }}>{s.designation}</p>
-                            <p style={{ fontSize: '11px', color: '#B07850', marginTop: '3px' }}>
+                            <p style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>{s.name}</p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{s.designation}</p>
+                            <p style={{ fontSize: '11px', color: 'var(--accent-blue)', marginTop: '3px' }}>
                               OT: ৳{Math.floor(s.base_salary / 30 / 10)}/hr
                             </p>
                             {unpaidDays > 0 && (
-                              <p style={{ fontSize: '11px', color: '#d93025', marginTop: '3px', fontWeight: 600 }}>
+                              <p style={{ fontSize: '11px', color: 'var(--danger)', marginTop: '3px', fontWeight: 600 }}>
                                 Unpaid leave: {unpaidDays} day{unpaidDays > 1 ? 's' : ''} (-৳{unpaidDeduction.toLocaleString()})
                               </p>
                             )}
                           </td>
 
                           {/* Base Salary */}
-                          <td style={{ padding: '14px', fontWeight: 700, color: '#8B5E3C', fontSize: '14px', whiteSpace: 'nowrap' }}>
+                          <td style={{ padding: '14px', fontWeight: 700, color: 'var(--accent-blue)', fontSize: '14px', whiteSpace: 'nowrap' }}>
                             ৳{Number(s.base_salary).toLocaleString()}
                           </td>
 
@@ -446,7 +458,7 @@ export default function PayrollPage() {
                               onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                             {Number(row.overtime_hours) > 0 && (
-                              <p style={{ fontSize: '11px', color: '#1e8e3e', marginTop: '4px', fontWeight: 600 }}>
+                              <p style={{ fontSize: '11px', color: 'var(--success)', marginTop: '4px', fontWeight: 600 }}>
                                 +৳{Math.round(row.overtime_pay || 0)}
                               </p>
                             )}
@@ -482,7 +494,7 @@ export default function PayrollPage() {
 
                           {/* Advance */}
                           <td style={{ padding: '14px' }}>
-                            <input type="number" style={{ ...inputStyle, color: '#d93025' }} value={row.advance_taken}
+                            <input type="number" style={{ ...inputStyle, color: 'var(--danger)' }} value={row.advance_taken}
                               onChange={e => handleInput(s.id, 'advance_taken', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </td>
@@ -498,18 +510,18 @@ export default function PayrollPage() {
                           <td style={{ padding: '14px' }}>
                             {unpaidDays > 0 ? (
                               <div>
-                                <p style={{ fontSize: '13px', color: '#d93025', fontWeight: 700 }}>
+                                <p style={{ fontSize: '13px', color: 'var(--danger)', fontWeight: 700 }}>
                                   {unpaidDays} day{unpaidDays > 1 ? 's' : ''}
                                 </p>
-                                <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600 }}>
+                                <p style={{ fontSize: '11px', color: 'var(--danger)', marginTop: '2px', fontWeight: 600 }}>
                                   -৳{unpaidDeduction.toLocaleString()}
                                 </p>
-                                <p style={{ fontSize: '10px', color: '#9C8A76', marginTop: '2px' }}>
+                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                                   ৳{Math.round(s.base_salary / 30)}/day
                                 </p>
                               </div>
                             ) : (
-                              <span style={{ fontSize: '13px', color: '#9C8A76' }}>—</span>
+                              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>—</span>
                             )}
                           </td>
 
@@ -522,11 +534,11 @@ export default function PayrollPage() {
 
                           {/* Net Pay */}
                           <td style={{ padding: '14px', whiteSpace: 'nowrap' }}>
-                            <p style={{ fontWeight: 700, fontSize: '16px', color: '#8B5E3C' }}>
+                            <p style={{ fontWeight: 700, fontSize: '16px', color: 'var(--accent-blue)' }}>
                               ৳{finalSalary.toLocaleString()}
                             </p>
                             {isFullyPaid && (
-                              <p style={{ fontSize: '11px', color: '#1e8e3e', fontWeight: 600, marginTop: '2px' }}>
+                              <p style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600, marginTop: '2px' }}>
                                 Fully Paid
                               </p>
                             )}
@@ -536,24 +548,24 @@ export default function PayrollPage() {
                           <td style={{ padding: '14px', minWidth: '220px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
-                              <div style={{ background: '#F5F0E8', borderRadius: '8px', padding: '8px 10px', fontSize: '12px' }}>
+                              <div style={{ background: 'var(--bg-subtle)', borderRadius: '8px', padding: '8px 10px', fontSize: '12px' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                  <span style={{ color: '#9C8A76' }}>Paid so far</span>
-                                  <span style={{ color: '#1e8e3e', fontWeight: 700 }}>৳{totalPaid.toLocaleString()}</span>
+                                  <span style={{ color: 'var(--text-muted)' }}>Paid so far</span>
+                                  <span style={{ color: 'var(--success)', fontWeight: 700 }}>৳{totalPaid.toLocaleString()}</span>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                  <span style={{ color: '#9C8A76' }}>Remaining</span>
-                                  <span style={{ color: remaining > 0 ? '#d93025' : '#1e8e3e', fontWeight: 700 }}>
+                                  <span style={{ color: 'var(--text-muted)' }}>Remaining</span>
+                                  <span style={{ color: remaining > 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 700 }}>
                                     ৳{remaining.toLocaleString()}
                                   </span>
                                 </div>
                               </div>
 
-                              <div style={{ height: '6px', background: '#E8E0D4', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ height: '6px', background: 'var(--border-light)', borderRadius: '3px', overflow: 'hidden' }}>
                                 <div style={{
                                   height: '100%',
                                   width: Math.min(100, finalSalary > 0 ? (totalPaid / finalSalary) * 100 : 0) + '%',
-                                  background: isFullyPaid ? '#1e8e3e' : '#8B5E3C',
+                                  background: isFullyPaid ? 'var(--success)' : 'var(--accent-blue)',
                                   borderRadius: '3px',
                                   transition: 'width 0.3s ease'
                                 }} />
@@ -663,14 +675,23 @@ export default function PayrollPage() {
                                     Payment History
                                   </p>
                                   {staffPayments.map(p => (
-                                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                                      <span style={{ color: '#9C8A76' }}>
+                                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
+                                      <span style={{ color: 'var(--text-muted)' }}>
                                         {new Date(p.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                                         {p.notes ? ' · ' + p.notes : ''}
                                       </span>
-                                      <span style={{ color: '#1e8e3e', fontWeight: 700 }}>
-                                        ৳{Number(p.amount).toLocaleString()}
-                                      </span>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ color: 'var(--success)', fontWeight: 700 }}>
+                                          ৳{Number(p.amount).toLocaleString()}
+                                        </span>
+                                        <button 
+                                          onClick={() => deletePayment(p.id)}
+                                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                          title="Delete Payment Record"
+                                        >
+                                          <X size={14} />
+                                        </button>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -687,7 +708,7 @@ export default function PayrollPage() {
             )}
 
             <div style={{
-              padding: '20px 24px', background: '#8B5E3C', color: 'white',
+              padding: '20px 24px', background: 'var(--accent-blue)', color: 'white',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               flexWrap: 'wrap', gap: '12px'
             }}>
