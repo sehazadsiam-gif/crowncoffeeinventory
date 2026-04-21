@@ -12,12 +12,24 @@ export default function PayrollPage() {
   const { addToast } = useToast()
   const [staff, setStaff] = useState([])
   const [payroll, setPayroll] = useState({})
+  const [payments, setPayments] = useState({})
+  const [showPaymentForm, setShowPaymentForm] = useState(null)
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    notes: ''
+  })
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [year, setYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
   const [printData, setPrintData] = useState(null)
 
-  useEffect(() => { fetchPayroll() }, [month, year])
+  useEffect(() => { fetchAll() }, [month, year])
+
+  async function fetchAll() {
+    await fetchPayroll()
+    await fetchPayments()
+  }
 
   async function fetchPayroll() {
     try {
@@ -65,11 +77,26 @@ export default function PayrollPage() {
     }
   }
 
+  async function fetchPayments() {
+    const { data } = await supabase
+      .from('salary_payments')
+      .select('*')
+      .eq('month', month)
+      .eq('year', year)
+
+    const map = {}
+      ; (data || []).forEach(p => {
+        if (!map[p.staff_id]) map[p.staff_id] = []
+        map[p.staff_id].push(p)
+      })
+    setPayments(map)
+  }
+
   function calculateFinalSalary(s, p) {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
-    const perHour = Number(s.per_hour_rate) || Math.round(base / 30 / 8)
-    const ot = (Number(p.overtime_hours) || 0) * perHour
+    const perHourRate = base / 30 / 10
+    const ot = (Number(p.overtime_hours) || 0) * perHourRate
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
     const lunch = Number(p.lunch_dinner) || 0
@@ -85,8 +112,8 @@ export default function PayrollPage() {
       const row = { ...prev[staffId], [field]: value }
       if (field === 'overtime_hours') {
         const s = staff.find(st => st.id === staffId)
-        const perHour = Number(s?.per_hour_rate) || Math.round((Number(s?.base_salary) || 0) / 30 / 8)
-        row.overtime_pay = (Number(value) || 0) * perHour
+        const perHourRate = (Number(s?.base_salary) || 0) / 30 / 10
+        row.overtime_pay = (Number(value) || 0) * perHourRate
       }
       return { ...prev, [staffId]: row }
     })
@@ -104,6 +131,43 @@ export default function PayrollPage() {
       if (error) throw error
     } catch (err) {
       addToast('Auto-save failed', 'error')
+    }
+  }
+
+  async function savePayment(staffId) {
+    const amount = parseFloat(paymentForm.amount)
+    if (!amount || amount <= 0) {
+      addToast('Enter a valid amount', 'error')
+      return
+    }
+
+    const s = staff.find(st => st.id === staffId)
+    const row = payroll[staffId]
+    const finalSalary = calculateFinalSalary(s, row)
+    const alreadyPaid = (payments[staffId] || []).reduce((sum, p) => sum + Number(p.amount), 0)
+    const remaining = finalSalary - alreadyPaid
+
+    if (amount > remaining) {
+      addToast('Amount exceeds remaining balance of ৳' + remaining.toLocaleString(), 'error')
+      return
+    }
+
+    try {
+      const { error } = await supabase.from('salary_payments').insert([{
+        staff_id: staffId,
+        month,
+        year,
+        amount,
+        payment_date: paymentForm.date,
+        notes: paymentForm.notes
+      }])
+      if (error) throw error
+      addToast('Payment recorded', 'success')
+      setShowPaymentForm(null)
+      setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], notes: '' })
+      fetchPayments()
+    } catch (err) {
+      addToast(err.message || 'Error saving payment', 'error')
     }
   }
 
@@ -202,7 +266,7 @@ export default function PayrollPage() {
                     letterSpacing: '0.08em',
                     color: 'var(--text-muted)'
                   }}>
-                    {['Staff', 'Base', 'OT Hrs', 'Srv Chg', 'Bonus', 'Lunch', 'Morn Food', 'Advance', 'Others', 'Misc', 'Net Pay', 'Action'].map(h => (
+                    {['Staff', 'Base', 'OT Hrs', 'Srv Chg', 'Bonus', 'Lunch', 'Morn Food', 'Advance', 'Others', 'Misc', 'Net Pay', 'Payments'].map(h => (
                       <th key={h} style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
@@ -213,11 +277,15 @@ export default function PayrollPage() {
                     if (!row) return null
                     const finalSalary = calculateFinalSalary(s, row)
                     const miscColor = Number(row.miscellaneous) < 0 ? '#d93025' : '#1e8e3e'
+                    const staffPayments = payments[s.id] || []
+                    const totalPaid = staffPayments.reduce((sum, p) => sum + Number(p.amount), 0)
+                    const remaining = finalSalary - totalPaid
 
                     return (
                       <tr key={s.id} style={{
                         borderBottom: '1px solid var(--border-light)',
-                        opacity: row.is_paid ? 0.75 : 1
+                        opacity: row.is_paid ? 0.75 : 1,
+                        verticalAlign: 'top'
                       }}>
                         <td style={{ padding: '12px 16px', minWidth: '140px' }}>
                           <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>
@@ -225,6 +293,9 @@ export default function PayrollPage() {
                           </p>
                           <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                             {s.designation}
+                          </p>
+                          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                            OT rate: ৳{Math.round(s.base_salary / 30 / 10)}/hr
                           </p>
                         </td>
                         <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--accent-brown)', whiteSpace: 'nowrap' }}>
@@ -238,6 +309,11 @@ export default function PayrollPage() {
                             onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)}
                             onBlur={() => handleBlur(s.id)}
                           />
+                          {Number(row.overtime_hours) > 0 && (
+                            <p style={{ fontSize: '10px', color: '#1e8e3e', marginTop: '3px' }}>
+                              +৳{Math.round(row.overtime_pay || 0)}
+                            </p>
+                          )}
                         </td>
                         <td style={{ padding: '12px 16px' }}>
                           <input
@@ -302,51 +378,137 @@ export default function PayrollPage() {
                             onBlur={() => handleBlur(s.id)}
                           />
                         </td>
-                        <td style={{
-                          padding: '12px 16px',
-                          fontWeight: 700,
-                          fontSize: '15px',
-                          color: 'var(--accent-brown)',
-                          whiteSpace: 'nowrap'
-                        }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 700, fontSize: '15px', color: 'var(--accent-brown)', whiteSpace: 'nowrap' }}>
                           ৳{finalSalary.toLocaleString()}
                         </td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <button
-                              onClick={() => togglePaid(s.id)}
-                              style={{
-                                padding: '5px 10px',
-                                fontSize: '11px',
-                                borderRadius: '4px',
-                                border: 'none',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                background: row.is_paid ? '#e6f4ea' : 'var(--bg-subtle)',
-                                color: row.is_paid ? '#1e8e3e' : 'var(--text-secondary)'
-                              }}
-                            >
-                              {row.is_paid ? 'Paid' : 'Mark Paid'}
-                            </button>
-                            <button
-                              onClick={() => setPrintData({
-                                staff: s,
-                                payroll: { ...row, final_salary: finalSalary },
-                                month: months[month - 1],
-                                year
-                              })}
-                              style={{
-                                padding: '5px',
-                                background: 'transparent',
-                                border: '1px solid var(--border-medium)',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
+
+                        {/* Payments column */}
+                        <td style={{ padding: '12px 16px', minWidth: '200px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+
+                            <div style={{ fontSize: '12px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Paid:</span>
+                                <span style={{ color: '#1e8e3e', fontWeight: 600 }}>
+                                  ৳{totalPaid.toLocaleString()}
+                                </span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                <span style={{ color: 'var(--text-muted)' }}>Remaining:</span>
+                                <span style={{ color: remaining > 0 ? '#d93025' : '#1e8e3e', fontWeight: 600 }}>
+                                  ৳{remaining.toLocaleString()}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button
+                                onClick={() => {
+                                  setShowPaymentForm(showPaymentForm === s.id ? null : s.id)
+                                  setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], notes: '' })
+                                }}
+                                style={{
+                                  padding: '5px 10px', fontSize: '11px', borderRadius: '4px',
+                                  border: '1px solid var(--accent-brown)', background: 'transparent',
+                                  color: 'var(--accent-brown)', cursor: 'pointer', fontWeight: 600
+                                }}
+                              >
+                                + Pay
+                              </button>
+                              <button
+                                onClick={() => setPrintData({
+                                  staff: s,
+                                  payroll: { ...row, final_salary: finalSalary },
+                                  month: months[month - 1],
+                                  year
+                                })}
+                                style={{
+                                  padding: '5px', background: 'transparent',
+                                  border: '1px solid var(--border-medium)',
+                                  borderRadius: '4px', cursor: 'pointer',
+                                  display: 'flex', alignItems: 'center'
+                                }}
+                              >
+                                <Printer size={14} color="var(--text-secondary)" />
+                              </button>
+                            </div>
+
+                            {showPaymentForm === s.id && (
+                              <div style={{
+                                background: 'var(--bg-subtle)',
+                                border: '1px solid var(--border-light)',
+                                borderRadius: '6px',
+                                padding: '10px',
                                 display: 'flex',
-                                alignItems: 'center'
-                              }}
-                            >
-                              <Printer size={14} color="var(--text-secondary)" />
-                            </button>
+                                flexDirection: 'column',
+                                gap: '6px'
+                              }}>
+                                <input
+                                  type="number"
+                                  className="input"
+                                  style={{ padding: '6px', fontSize: '13px' }}
+                                  placeholder={'Max ৳' + remaining.toLocaleString()}
+                                  value={paymentForm.amount}
+                                  onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                                />
+                                <input
+                                  type="date"
+                                  className="input"
+                                  style={{ padding: '6px', fontSize: '13px' }}
+                                  value={paymentForm.date}
+                                  onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })}
+                                />
+                                <input
+                                  className="input"
+                                  style={{ padding: '6px', fontSize: '13px' }}
+                                  placeholder="Notes (optional)"
+                                  value={paymentForm.notes}
+                                  onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                                />
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <button
+                                    onClick={() => savePayment(s.id)}
+                                    style={{
+                                      flex: 1, padding: '6px', fontSize: '12px',
+                                      background: 'var(--accent-brown)', color: 'white',
+                                      border: 'none', borderRadius: '4px',
+                                      cursor: 'pointer', fontWeight: 600
+                                    }}
+                                  >
+                                    Save
+                                  </button>
+                                  <button
+                                    onClick={() => setShowPaymentForm(null)}
+                                    style={{
+                                      padding: '6px 10px', fontSize: '12px',
+                                      background: 'transparent',
+                                      border: '1px solid var(--border-medium)',
+                                      borderRadius: '4px', cursor: 'pointer',
+                                      color: 'var(--text-muted)'
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {staffPayments.length > 0 && (
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)', borderTop: '1px solid var(--border-light)', paddingTop: '6px' }}>
+                                {staffPayments.map(p => (
+                                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
+                                    <span>
+                                      {new Date(p.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                      {p.notes ? ' · ' + p.notes : ''}
+                                    </span>
+                                    <span style={{ color: '#1e8e3e', fontWeight: 600 }}>
+                                      ৳{Number(p.amount).toLocaleString()}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
                           </div>
                         </td>
                       </tr>
@@ -365,19 +527,10 @@ export default function PayrollPage() {
               alignItems: 'center',
               borderRadius: '0 0 12px 12px'
             }}>
-              <h2 style={{
-                fontSize: '20px',
-                fontFamily: 'var(--font-display)',
-                margin: 0,
-                fontWeight: 500
-              }}>
+              <h2 style={{ fontSize: '20px', fontFamily: 'var(--font-display)', margin: 0, fontWeight: 500 }}>
                 Grand Total — {months[month - 1]} {year}
               </h2>
-              <h2 style={{
-                fontSize: '28px',
-                fontFamily: 'var(--font-display)',
-                margin: 0
-              }}>
+              <h2 style={{ fontSize: '28px', fontFamily: 'var(--font-display)', margin: 0 }}>
                 ৳{grandTotal.toLocaleString()}
               </h2>
             </div>

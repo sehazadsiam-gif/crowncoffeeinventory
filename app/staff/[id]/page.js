@@ -4,7 +4,7 @@ import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
 import { useParams } from 'next/navigation'
-import { User, Wallet, CalendarDays, Receipt, Clock, MessageSquare, Plus } from 'lucide-react'
+import { User, Wallet, CalendarDays, Receipt, Clock, MessageSquare, Plus, Download } from 'lucide-react'
 
 export default function StaffProfile() {
   const { id } = useParams()
@@ -67,6 +67,149 @@ export default function StaffProfile() {
     }
   }
 
+  function downloadProfilePDF() {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${staff.name} - Staff Profile</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Georgia, serif; color: #1C1410; padding: 40px; background: white; }
+          .header { text-align: center; border-bottom: 2px solid #8B5E3C; padding-bottom: 20px; margin-bottom: 30px; }
+          .header h1 { font-size: 28px; color: #8B5E3C; letter-spacing: 2px; text-transform: uppercase; }
+          .header h2 { font-size: 20px; font-weight: normal; margin-top: 6px; color: #1C1410; }
+          .header p { font-size: 13px; color: #9C8A76; margin-top: 4px; }
+          .section { margin-bottom: 24px; }
+          .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; color: #8B5E3C; border-bottom: 1px solid #E8E0D4; padding-bottom: 6px; margin-bottom: 12px; }
+          .row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #F5F0E8; font-size: 14px; }
+          .label { color: #9C8A76; }
+          .value { font-weight: 600; color: #1C1410; }
+          table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+          th { text-align: left; padding: 8px 10px; background: #F5F0E8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #9C8A76; font-weight: 600; }
+          td { padding: 9px 10px; border-bottom: 1px solid #E8E0D4; color: #5C4A36; }
+          .paid { color: #3A7D5C; font-weight: 600; }
+          .unpaid { color: #A63C3C; font-weight: 600; }
+          .footer { margin-top: 60px; text-align: center; font-size: 11px; color: #9C8A76; border-top: 1px dotted #E8E0D4; padding-top: 16px; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Crown Coffee</h1>
+          <h2>Staff Profile — ${staff.name}</h2>
+          <p>Generated on ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Personal Information</div>
+          <div class="row"><span class="label">Full Name</span><span class="value">${staff.name}</span></div>
+          <div class="row"><span class="label">Designation</span><span class="value">${staff.designation}</span></div>
+          <div class="row"><span class="label">Contract Type</span><span class="value">${staff.contract_type?.replace('_', ' ')}</span></div>
+          <div class="row"><span class="label">Join Date</span><span class="value">${staff.join_date ? new Date(staff.join_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}</span></div>
+          <div class="row"><span class="label">Status</span><span class="value">${staff.is_active ? 'Active' : 'Inactive'}</span></div>
+          ${staff.emergency_contact ? '<div class="row"><span class="label">Emergency Contact</span><span class="value">' + staff.emergency_contact + '</span></div>' : ''}
+          ${staff.emergency_phone ? '<div class="row"><span class="label">Emergency Phone</span><span class="value">' + staff.emergency_phone + '</span></div>' : ''}
+          ${staff.notes ? '<div class="row"><span class="label">Notes</span><span class="value">' + staff.notes + '</span></div>' : ''}
+        </div>
+
+        <div class="section">
+          <div class="section-title">Salary Information</div>
+          <div class="row"><span class="label">Base Salary</span><span class="value">৳${Number(staff.base_salary).toLocaleString()}</span></div>
+          <div class="row"><span class="label">Per Day Rate (Base / 30)</span><span class="value">৳${Math.round(staff.base_salary / 30).toLocaleString()}</span></div>
+          <div class="row"><span class="label">Per Hour Rate (Base / 30 / 10)</span><span class="value">৳${Math.round(staff.base_salary / 30 / 10).toLocaleString()}</span></div>
+        </div>
+
+        ${leave ? `
+        <div class="section">
+          <div class="section-title">Leave Balance (${new Date().getFullYear()})</div>
+          <div class="row"><span class="label">Sick Leave</span><span class="value">${leave.sick_used} used / ${leave.sick_total} total</span></div>
+          <div class="row"><span class="label">Casual Leave</span><span class="value">${leave.casual_used} used / ${leave.casual_total} total</span></div>
+          <div class="row"><span class="label">Annual Leave</span><span class="value">${leave.annual_used} used / ${leave.annual_total} total</span></div>
+        </div>
+        ` : ''}
+
+        ${advances.length > 0 ? `
+        <div class="section">
+          <div class="section-title">Advance History</div>
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Month</th><th>Amount</th><th>Reason</th></tr>
+            </thead>
+            <tbody>
+              ${advances.map(a => `
+                <tr>
+                  <td>${new Date(a.date).toLocaleDateString('en-GB')}</td>
+                  <td>${monthNames[(a.month || 1) - 1]} ${a.year || ''}</td>
+                  <td>৳${Number(a.amount).toLocaleString()}</td>
+                  <td>${a.reason || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        ` : ''}
+
+        ${payroll.length > 0 ? `
+        <div class="section">
+          <div class="section-title">Payroll History</div>
+          <table>
+            <thead>
+              <tr><th>Month</th><th>Base</th><th>OT Pay</th><th>Bonus</th><th>Advance</th><th>Final</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              ${payroll.map(p => `
+                <tr>
+                  <td>${monthNames[p.month - 1]} ${p.year}</td>
+                  <td>৳${Number(staff.base_salary).toLocaleString()}</td>
+                  <td>৳${Number(p.overtime_pay || 0).toLocaleString()}</td>
+                  <td>৳${Number(p.bonus || 0).toLocaleString()}</td>
+                  <td>৳${Number(p.advance_taken || 0).toLocaleString()}</td>
+                  <td>৳${Number(p.final_salary).toLocaleString()}</td>
+                  <td class="${p.is_paid ? 'paid' : 'unpaid'}">${p.is_paid ? 'Paid' : 'Unpaid'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        ` : ''}
+
+        ${notes.length > 0 ? `
+        <div class="section">
+          <div class="section-title">Notes and Remarks</div>
+          <table>
+            <thead>
+              <tr><th>Date</th><th>Type</th><th>Note</th></tr>
+            </thead>
+            <tbody>
+              ${notes.map(n => `
+                <tr>
+                  <td>${new Date(n.created_at).toLocaleDateString('en-GB')}</td>
+                  <td style="text-transform:capitalize">${n.note_type}</td>
+                  <td>${n.note}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        ` : ''}
+
+        <div class="footer">
+          Crown Coffee Inventory and Stock Management &bull; ${staff.name} &bull; Generated ${new Date().toLocaleString()}
+        </div>
+      </body>
+      </html>
+    `
+
+    const win = window.open('', '_blank')
+    win.document.write(html)
+    win.document.close()
+    win.focus()
+    setTimeout(() => { win.print() }, 500)
+  }
+
   if (loading) return (
     <div><Navbar /><div style={{ padding: '100px', textAlign: 'center' }}><div className="loader"></div></div></div>
   )
@@ -89,12 +232,13 @@ export default function StaffProfile() {
           <div style={{
             width: '80px', height: '80px', borderRadius: '50%',
             background: 'var(--accent-brown)', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0
           }}>
             <User size={40} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               <h1 style={{ fontSize: '32px', margin: 0, fontFamily: 'var(--font-display)' }}>{staff.name}</h1>
               <span style={{
                 fontSize: '12px', padding: '4px 10px', borderRadius: '20px',
@@ -115,6 +259,27 @@ export default function StaffProfile() {
               Joined: {staff.join_date ? new Date(staff.join_date).toLocaleDateString() : 'N/A'}
             </p>
           </div>
+          <button
+            onClick={downloadProfilePDF}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              background: 'var(--accent-brown)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 600,
+              fontFamily: 'var(--font-body)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
+            }}
+          >
+            <Download size={15} /> Download PDF
+          </button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' }}>
@@ -128,11 +293,11 @@ export default function StaffProfile() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {[
                   { label: 'Base Salary', value: '৳' + staff.base_salary?.toLocaleString(), highlight: true },
-                  { label: 'Per Day Rate', value: '৳' + Math.round(staff.per_day_rate || staff.base_salary / 30) },
-                  { label: 'Per Hour Rate', value: '৳' + Math.round(staff.per_hour_rate || staff.base_salary / 30 / 8) },
+                  { label: 'Per Day Rate (Base / 30)', value: '৳' + Math.round(staff.base_salary / 30) },
+                  { label: 'Per Hour Rate (Base / 30 / 10)', value: '৳' + Math.round(staff.base_salary / 30 / 10) },
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-subtle)', borderRadius: '8px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>{item.label}</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{item.label}</span>
                     <span style={{ fontWeight: item.highlight ? 700 : 600, color: item.highlight ? 'var(--accent-brown)' : 'var(--text-primary)', fontSize: item.highlight ? '16px' : '14px' }}>
                       {item.value}
                     </span>

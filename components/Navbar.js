@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, Users, ChevronDown, Trash2 } from 'lucide-react'
+import { Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, Users, ChevronDown, Trash2, BookOpen } from 'lucide-react'
 import { useState } from 'react'
 import Calculator from './Calculator'
 
@@ -12,6 +12,7 @@ const navItems = [
   { href: '/sales', label: 'Sales' },
   { href: '/stock', label: 'Stock' },
   { href: '/waste', label: 'Wastage' },
+  { href: '/balance-sheet', label: 'Balance Sheet' },
   {
     label: 'Staff',
     icon: Users,
@@ -138,6 +139,7 @@ export default function Navbar() {
                     }}
                   >
                     {item.label === 'Wastage' && <Trash2 size={14} />}
+                    {item.label === 'Balance Sheet' && <BookOpen size={14} />}
                     {item.label}
                   </Link>
                 )
@@ -235,6 +237,7 @@ export default function Navbar() {
                   }}
                 >
                   {item.label === 'Wastage' && <Trash2 size={14} />}
+                  {item.label === 'Balance Sheet' && <BookOpen size={14} />}
                   {item.label}
                 </Link>
               )
