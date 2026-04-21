@@ -83,9 +83,20 @@ export default function LoginPage() {
             </button>
           </form>
           
-          <p className="mt-8 text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+          <p className="mt-8 text-[10px] text-gray-400 font-bold uppercase tracking-tighter mb-4">
             Crown Coffee Management System v2.0
           </p>
+
+          <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '20px', marginTop: '10px' }}>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>Are you a staff member?</p>
+            <button 
+              onClick={() => router.push('/portal')}
+              className="btn-secondary w-full py-3 text-[10px] font-bold uppercase tracking-widest"
+              style={{ borderColor: 'var(--accent-brown)', color: 'var(--accent-brown)' }}
+            >
+              <Users size={14} /> Go to Staff Portal
+            </button>
+          </div>
         </div>
       </main>
     </div>
