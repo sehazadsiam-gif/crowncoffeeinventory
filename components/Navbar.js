@@ -1,38 +1,67 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, Users, ChevronDown, Trash2, BookOpen } from 'lucide-react'
-import { useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
+import { 
+  Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, 
+  Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard 
+} from 'lucide-react'
+import { useState, useEffect } from 'react'
 import Calculator from './Calculator'
-
-const navItems = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/menu', label: 'Menu' },
-  { href: '/bazar', label: 'Bazar' },
-  { href: '/sales', label: 'Sales' },
-  { href: '/stock', label: 'Stock' },
-  { href: '/waste', label: 'Wastage' },
-  { href: '/balance-sheet', label: 'Balance Sheet' },
-  {
-    label: 'Staff',
-    icon: Users,
-    subItems: [
-      { href: '/staff', label: 'Directory' },
-      { href: '/staff/attendance', label: 'Attendance' },
-      { href: '/staff/payroll', label: 'Payroll' },
-      { href: '/staff/advances', label: 'Advances' },
-      { href: '/staff/service-charge', label: 'Service Charge' },
-      { href: '/staff/history', label: 'History' }
-    ]
-  },
-  { href: '/admin', label: 'Admin' },
-  { href: '/portal', label: 'Staff Portal' },
-]
 
 export default function Navbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isCalcOpen, setIsCalcOpen] = useState(false)
+  const [userRole, setUserRole] = useState(null) // 'admin', 'staff', or null
+
+  useEffect(() => {
+    const isAdmin = localStorage.getItem('isAdmin') === 'true'
+    const staffId = localStorage.getItem('staffPortalId')
+    if (isAdmin) setUserRole('admin')
+    else if (staffId) setUserRole('staff')
+    else setUserRole(null)
+  }, [pathname])
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAdmin')
+    localStorage.removeItem('staffPortalId')
+    router.push('/login')
+  }
+
+  // Filter nav items based on role
+  const adminItems = [
+    { href: '/', label: 'Dashboard' },
+    { href: '/menu', label: 'Menu' },
+    { href: '/bazar', label: 'Bazar' },
+    { href: '/sales', label: 'Sales' },
+    { href: '/stock', label: 'Stock' },
+    { href: '/waste', label: 'Wastage' },
+    { href: '/balance-sheet', label: 'Balance Sheet' },
+    {
+      label: 'Staff',
+      icon: Users,
+      subItems: [
+        { href: '/staff', label: 'Directory' },
+        { href: '/staff/attendance', label: 'Attendance' },
+        { href: '/staff/payroll', label: 'Payroll' },
+        { href: '/staff/advances', label: 'Advances' },
+        { href: '/staff/service-charge', label: 'Service Charge' },
+        { href: '/staff/history', label: 'History' }
+      ]
+    },
+    { href: '/admin', label: 'Admin' },
+  ]
+
+  const staffItems = [
+    { href: '/portal/dashboard', label: 'My Dashboard' },
+    { href: '/portal', label: 'Switch Account' },
+  ]
+
+  const navItems = userRole === 'admin' ? adminItems : (userRole === 'staff' ? staffItems : [])
+
+  // Don't show navbar on gateway page
+  if (pathname === '/login') return null
 
   return (
     <>
@@ -60,7 +89,7 @@ export default function Navbar() {
               {navItems.map((item) => {
                 const isActive = item.href
                   ? pathname === item.href
-                  : item.subItems?.some(sub => pathname === sub.href) || pathname.startsWith('/staff')
+                  : item.subItems?.some(sub => pathname === sub.href) || (item.label === 'Staff' && pathname.startsWith('/staff'))
 
                 if (item.subItems) {
                   return (
@@ -141,6 +170,7 @@ export default function Navbar() {
                   >
                     {item.label === 'Wastage' && <Trash2 size={14} />}
                     {item.label === 'Balance Sheet' && <BookOpen size={14} />}
+                    {item.label === 'My Dashboard' && <LayoutDashboard size={14} />}
                     {item.label}
                   </Link>
                 )
@@ -148,12 +178,22 @@ export default function Navbar() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {userRole === 'admin' && (
+                <button
+                  onClick={() => setIsCalcOpen(!isCalcOpen)}
+                  className="btn-secondary hide-mobile"
+                  style={{ padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <CalcIcon size={15} /> Calculator
+                </button>
+              )}
+
               <button
-                onClick={() => setIsCalcOpen(!isCalcOpen)}
-                className="btn-secondary hide-mobile"
-                style={{ padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                onClick={handleLogout}
+                className="btn-secondary"
+                style={{ padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
               >
-                <CalcIcon size={15} /> Calculator
+                <LogOut size={15} /> Logout
               </button>
 
               <button
@@ -239,6 +279,7 @@ export default function Navbar() {
                 >
                   {item.label === 'Wastage' && <Trash2 size={14} />}
                   {item.label === 'Balance Sheet' && <BookOpen size={14} />}
+                  {item.label === 'My Dashboard' && <LayoutDashboard size={14} />}
                   {item.label}
                 </Link>
               )
@@ -262,7 +303,7 @@ export default function Navbar() {
         }
         .dropdown-item:hover {
           background: var(--bg-subtle) !important;
-          color: var(--accent-brown) !important;
+          color: var(--accent-blue) !important;
         }
       `}</style>
     </>
