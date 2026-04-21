@@ -64,7 +64,7 @@ export default function StaffPortalDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('staffPortalId')
-    router.push('/portal')
+    router.push('/login')
   }
 
   if (loading) return (
@@ -104,7 +104,7 @@ export default function StaffPortalDashboard() {
             </div>
           </div>
           <button onClick={handleLogout} className="btn-secondary" style={{ fontSize: '12px', color: 'var(--danger)', borderColor: 'var(--danger)' }}>
-            <LogOut size={14} /> Exit Portal
+            <LogOut size={14} /> Logout
           </button>
         </div>
 

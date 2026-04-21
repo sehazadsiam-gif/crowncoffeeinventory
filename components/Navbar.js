@@ -54,8 +54,7 @@ export default function Navbar() {
   ]
 
   const staffItems = [
-    { href: '/portal/dashboard', label: 'My Dashboard' },
-    { href: '/portal', label: 'Switch Account' },
+    { href: '/portal/dashboard', label: 'My Dashboard' }
   ]
 
   const navItems = userRole === 'admin' ? adminItems : (userRole === 'staff' ? staffItems : [])
