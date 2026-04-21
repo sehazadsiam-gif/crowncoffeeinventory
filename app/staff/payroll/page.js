@@ -493,108 +493,103 @@ export default function PayrollPage() {
                           </td>
 
                           {/* Payment */}
-                                })}
-                                style={{
-                                  padding: '7px 12px', fontSize: '12px', borderRadius: '6px',
-                                  border: '1px solid #D4C8B8', background: 'white',
-                                  color: '#5C4A36', cursor: 'pointer', fontWeight: 500,
-                                  display: 'flex', alignItems: 'center', gap: '6px',
-                                  width: '100%', justifyContent: 'center'
-                                }}
-                              >
-                                <Printer size={13} /> Print Payslip
-                              </button>
+                           <td style={{ padding: '8px', minWidth: '120px' }}>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+                               <div style={{ textAlign: 'right', minWidth: '60px' }}>
+                                 <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--success)', margin: 0 }}>৳{totalPaid}</p>
+                                 <p style={{ fontSize: '10px', color: remaining > 0 ? 'var(--danger)' : 'var(--success)', margin: 0 }}>Rem: {remaining}</p>
+                               </div>
+                               
+                               <div style={{ display: 'flex', gap: '4px' }}>
+                                 {!isFullyPaid && (
+                                   <button
+                                     onClick={() => {
+                                       setShowPaymentForm(showPaymentForm === s.id ? null : s.id)
+                                       setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], notes: '' })
+                                     }}
+                                     title="Confirm Payment"
+                                     style={{
+                                       padding: '6px', borderRadius: '4px', border: 'none',
+                                       background: showPaymentForm === s.id ? 'var(--text-muted)' : 'var(--accent-blue)',
+                                       color: 'white', cursor: 'pointer'
+                                     }}
+                                   >
+                                     <CheckCircle size={14} />
+                                   </button>
+                                 )}
+                                 <button
+                                   onClick={() => setPrintData({
+                                     staff: s,
+                                     payroll: { ...row, final_salary: finalSalary },
+                                     month: months[month - 1],
+                                     year
+                                   })}
+                                   title="Print Payslip"
+                                   style={{
+                                     padding: '6px', borderRadius: '4px', border: '1px solid var(--border-light)',
+                                     background: 'white', color: 'var(--accent-blue)', cursor: 'pointer'
+                                   }}
+                                 >
+                                   <Printer size={14} />
+                                 </button>
+                               </div>
+                             </div>
 
-                              {showPaymentForm === s.id && (
-                                <div style={{
-                                  background: 'white', border: '2px solid #8B5E3C',
-                                  borderRadius: '8px', padding: '12px',
-                                  display: 'flex', flexDirection: 'column', gap: '8px'
-                                }}>
-                                  <p style={{ fontSize: '12px', fontWeight: 700, color: '#5C4A36', margin: 0 }}>
-                                    Record Payment for {s.name}
-                                  </p>
-                                  <div>
-                                    <label style={{ fontSize: '11px', color: '#9C8A76', display: 'block', marginBottom: '3px' }}>
-                                      Amount (max ৳{remaining.toLocaleString()})
-                                    </label>
-                                    <input
-                                      type="number"
-                                      className="input"
-                                      style={{ fontSize: '14px', fontWeight: 600 }}
-                                      placeholder="Enter amount"
-                                      value={paymentForm.amount}
-                                      onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ fontSize: '11px', color: '#9C8A76', display: 'block', marginBottom: '3px' }}>
-                                      Payment Date
-                                    </label>
-                                    <input
-                                      type="date"
-                                      className="input"
-                                      value={paymentForm.date}
-                                      onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ fontSize: '11px', color: '#9C8A76', display: 'block', marginBottom: '3px' }}>
-                                      Notes (optional)
-                                    </label>
-                                    <input
-                                      className="input"
-                                      placeholder="e.g. Cash payment"
-                                      value={paymentForm.notes}
-                                      onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })}
-                                    />
-                                  </div>
-                                  <button
-                                    onClick={() => savePayment(s.id)}
-                                    style={{
-                                      padding: '9px', fontSize: '13px',
-                                      background: '#1e8e3e', color: 'white',
-                                      border: 'none', borderRadius: '6px',
-                                      cursor: 'pointer', fontWeight: 700,
-                                      display: 'flex', alignItems: 'center',
-                                      gap: '6px', justifyContent: 'center'
-                                    }}
-                                  >
-                                    <CheckCircle size={14} /> Confirm Payment
-                                  </button>
-                                </div>
-                              )}
+                             {showPaymentForm === s.id && (
+                               <div style={{
+                                 position: 'absolute', right: '100%', top: '0', zIndex: 50,
+                                 background: 'white', border: '1px solid var(--border-light)',
+                                 borderRadius: '8px', padding: '12px', boxShadow: 'var(--shadow-md)',
+                                 display: 'flex', flexDirection: 'column', gap: '8px', width: '200px'
+                               }}>
+                                 <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                                   Record Payment
+                                 </p>
+                                 <input
+                                   type="number"
+                                   className="input"
+                                   style={{ fontSize: '14px', height: '32px' }}
+                                   placeholder="Amount"
+                                   value={paymentForm.amount}
+                                   onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                                 />
+                                 <input
+                                   type="date"
+                                   className="input"
+                                   style={{ fontSize: '12px', height: '32px' }}
+                                   value={paymentForm.date}
+                                   onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })}
+                                 />
+                                 <button
+                                   onClick={() => savePayment(s.id)}
+                                   style={{
+                                     padding: '6px', fontSize: '12px',
+                                     background: 'var(--success)', color: 'white',
+                                     border: 'none', borderRadius: '4px',
+                                     cursor: 'pointer', fontWeight: 700
+                                   }}
+                                 >
+                                   Confirm
+                                 </button>
+                               </div>
+                             )}
 
-                              {staffPayments.length > 0 && (
-                                <div style={{ borderTop: '1px solid #F0EBE3', paddingTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                  <p style={{ fontSize: '10px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                                    Payment History
-                                  </p>
-                                  {staffPayments.map(p => (
-                                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
-                                      <span style={{ color: 'var(--text-muted)' }}>
-                                        {new Date(p.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                                        {p.notes ? ' · ' + p.notes : ''}
-                                      </span>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ color: 'var(--success)', fontWeight: 700 }}>
-                                          ৳{Number(p.amount).toLocaleString()}
-                                        </span>
-                                        <button 
-                                          onClick={() => deletePayment(p.id)}
-                                          style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                                          title="Delete Payment Record"
-                                        >
-                                          <X size={14} />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                            </div>
-                          </td>
+                             {staffPayments.length > 0 && (
+                               <div style={{ marginTop: '4px', borderTop: '1px solid var(--border-light)', paddingTop: '4px' }}>
+                                 {staffPayments.map(p => (
+                                   <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '9px' }}>
+                                     <span style={{ color: 'var(--text-muted)' }}>{new Date(p.payment_date).toLocaleDateString()}</span>
+                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                       <span style={{ fontWeight: 600 }}>৳{p.amount}</span>
+                                       <button onClick={() => deletePayment(p.id)} style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                         <X size={10} />
+                                       </button>
+                                     </div>
+                                   </div>
+                                 ))}
+                               </div>
+                             )}
+                           </td>
                         </tr>
                       )
                     })}
