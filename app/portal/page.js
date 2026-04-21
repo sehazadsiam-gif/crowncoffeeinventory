@@ -51,7 +51,7 @@ export default function StaffPortalLogin() {
   return (
     <div style={{ 
       minHeight: '100vh', 
-      background: '#FAF7F2', 
+      background: 'var(--bg-base)', 
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
@@ -60,7 +60,7 @@ export default function StaffPortalLogin() {
     }}>
       <div className="card animate-in" style={{ maxWidth: '400px', width: '100%', padding: '40px', textAlign: 'center' }}>
         <div style={{ 
-          background: 'var(--accent-gold-dim)', 
+          background: 'var(--accent-blue-dim)', 
           width: '64px', 
           height: '64px', 
           borderRadius: '16px', 
@@ -68,7 +68,7 @@ export default function StaffPortalLogin() {
           alignItems: 'center', 
           justifyContent: 'center',
           margin: '0 auto 24px',
-          color: 'var(--accent-brown)'
+          color: 'var(--accent-blue)'
         }}>
           <Coffee size={32} />
         </div>

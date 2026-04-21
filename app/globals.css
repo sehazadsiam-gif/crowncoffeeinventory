@@ -1,50 +1,49 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-base: #FAF7F2;
+  --bg-base: #F8FAFC;
   --bg-surface: #FFFFFF;
-  --bg-subtle: #F5F0E8;
-  --bg-hover: #EDE8DF;
+  --bg-subtle: #F1F5F9;
+  --bg-hover: #E2E8F0;
 
-  --accent-brown: #8B5E3C;
-  --accent-brown-light: #B07850;
-  --accent-gold: #C9A84C;
-  --accent-gold-dim: rgba(201, 168, 76, 0.12);
+  --accent-blue: #2563EB;
+  --accent-blue-light: #60A5FA;
+  --accent-blue-dim: rgba(37, 99, 235, 0.08);
 
-  --primary: #8B5E3C;
-  --primary-hover: #7A5235;
-  --primary-light: rgba(139, 94, 60, 0.08);
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-light: rgba(37, 99, 235, 0.08);
 
-  --text-primary: #1C1410;
-  --text-secondary: #5C4A36;
-  --text-muted: #9C8A76;
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
 
-  --border-light: #E8E0D4;
-  --border-medium: #D4C8B8;
-  --border-gold: rgba(201, 168, 76, 0.3);
+  --border-light: #E2E8F0;
+  --border-medium: #CBD5E1;
+  --border-accent: rgba(37, 99, 235, 0.15);
 
-  --success: #3A7D5C;
-  --success-bg: rgba(58, 125, 92, 0.08);
-  --danger: #A63C3C;
-  --danger-bg: rgba(166, 60, 60, 0.08);
-  --warning: #B07830;
-  --warning-bg: rgba(176, 120, 48, 0.08);
+  --success: #10B981;
+  --success-bg: rgba(16, 185, 129, 0.08);
+  --danger: #EF4444;
+  --danger-bg: rgba(239, 68, 68, 0.08);
+  --warning: #F59E0B;
+  --warning-bg: rgba(245, 158, 11, 0.08);
 
-  --shadow-sm: 0 1px 4px rgba(28, 20, 16, 0.06);
-  --shadow-md: 0 4px 16px rgba(28, 20, 16, 0.08);
-  --shadow-lg: 0 8px 32px rgba(28, 20, 16, 0.10);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 12px 24px rgba(15, 23, 42, 0.1);
 
   --font-display: 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 
-  --hr-bg: #FAF7F2;
+  --hr-bg: #F8FAFC;
   --hr-surface: #FFFFFF;
-  --hr-primary: #8B5E3C;
-  --hr-warning: #C9A84C;
-  --hr-text-primary: #1C1410;
-  --hr-text-secondary: #5C4A36;
-  --hr-text-muted: #9C8A76;
+  --hr-primary: #2563EB;
+  --hr-warning: #F59E0B;
+  --hr-text-primary: #0F172A;
+  --hr-text-secondary: #334155;
+  --hr-text-muted: #64748B;
 }
 
 * {
@@ -116,8 +115,8 @@ a {
 }
 
 .input:focus {
-  border-color: var(--accent-brown);
-  box-shadow: 0 0 0 3px rgba(139, 94, 60, 0.08);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
 .input::placeholder {
@@ -143,7 +142,7 @@ select.input {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--accent-brown);
+  background: var(--accent-blue);
   color: #FFFFFF;
   border: none;
   border-radius: 6px;
@@ -190,8 +189,8 @@ select.input {
 
 .btn-secondary:hover {
   background: var(--bg-subtle);
-  border-color: var(--accent-brown);
-  color: var(--accent-brown);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
 }
 
 /* ========= BADGES ========= */
@@ -206,8 +205,8 @@ select.input {
 }
 
 .badge-blue {
-  background: rgba(139, 94, 60, 0.08);
-  color: var(--accent-brown);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--accent-blue);
 }
 
 .badge-green {
@@ -236,8 +235,8 @@ select.input {
 }
 
 .badge-brown {
-  background: rgba(139, 94, 60, 0.08);
-  color: var(--accent-brown);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--accent-blue);
 }
 
 /* ========= DIVIDERS ========= */
@@ -305,7 +304,7 @@ select.input {
 .instruction-box {
   background: var(--bg-subtle);
   border: 1px solid var(--border-light);
-  border-left: 3px solid var(--accent-brown);
+  border-left: 3px solid var(--accent-blue);
   border-radius: 6px;
   padding: 14px 16px;
   color: var(--text-secondary);
@@ -330,7 +329,7 @@ select.input {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-brown);
+  background: var(--accent-blue);
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -373,7 +372,7 @@ select.input {
   width: 20px;
   height: 20px;
   border: 2px solid var(--border-light);
-  border-top-color: var(--accent-brown);
+  border-top-color: var(--accent-blue);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
   display: inline-block;
@@ -404,7 +403,7 @@ select.input {
 }
 
 .hr-theme .btn-primary {
-  background: var(--accent-brown);
+  background: var(--accent-blue);
   color: white;
   border: none;
   padding: 9px 18px;
@@ -434,8 +433,8 @@ select.input {
 }
 
 .hr-theme .input:focus {
-  border-color: var(--accent-brown);
-  box-shadow: 0 0 0 3px rgba(139, 94, 60, 0.08);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
 /* ========= TABLE ========= */

@@ -68,7 +68,7 @@ export default function StaffPortalDashboard() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#FAF7F2' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       <Navbar />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '100px' }}>
         <div className="loader"></div>
@@ -83,7 +83,7 @@ export default function StaffPortalDashboard() {
   const isFullyPaid = netPay > 0 && remaining === 0
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FAF7F2', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', fontFamily: 'system-ui, sans-serif' }}>
       <Navbar />
       
       <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 24px 80px' }}>
@@ -93,7 +93,7 @@ export default function StaffPortalDashboard() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <div style={{ 
               width: '60px', height: '60px', borderRadius: '50%', 
-              background: 'var(--accent-brown)', color: 'white',
+              background: 'var(--accent-blue)', color: 'white',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               <User size={30} />
@@ -117,7 +117,7 @@ export default function StaffPortalDashboard() {
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {currentMonthName} Net Earnings
               </p>
-              <Wallet size={18} style={{ color: 'var(--accent-brown)' }} />
+              <Wallet size={18} style={{ color: 'var(--accent-blue)' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
               <p style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)' }}>৳{netPay.toLocaleString()}</p>
@@ -127,7 +127,7 @@ export default function StaffPortalDashboard() {
               <div style={{ 
                 height: '100%', 
                 width: netPay > 0 ? (totalPaid / netPay * 100) + '%' : '0%', 
-                background: isFullyPaid ? 'var(--success)' : 'var(--accent-brown)', 
+                background: isFullyPaid ? 'var(--success)' : 'var(--accent-blue)', 
                 borderRadius: '3px',
                 transition: 'width 0.5s ease'
               }} />
@@ -143,7 +143,7 @@ export default function StaffPortalDashboard() {
           {/* Detailed Breakdown Card */}
           <div className="card-premium" style={{ background: 'white' }}>
             <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <TrendingUp size={16} color="var(--accent-brown)" /> Salary Breakdown
+              <TrendingUp size={16} color="var(--accent-blue)" /> Salary Breakdown
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <BreakdownItem icon={<Timer size={14} />} label="Overtime" value={`৳${(payroll?.overtime_pay || 0).toLocaleString()}`} />
@@ -160,7 +160,7 @@ export default function StaffPortalDashboard() {
           {/* Attendance History */}
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <CalendarDays size={18} style={{ color: 'var(--accent-brown)' }} /> Attendance Progress
+              <CalendarDays size={18} style={{ color: 'var(--accent-blue)' }} /> Attendance Progress
             </h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
               {attendance.map(a => {
@@ -185,7 +185,7 @@ export default function StaffPortalDashboard() {
           {/* Payment History */}
           <div className="card">
             <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Receipt size={18} style={{ color: 'var(--accent-brown)' }} /> Recent Payments
+              <Receipt size={18} style={{ color: 'var(--accent-blue)' }} /> Recent Payments
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {payments.map(p => (
@@ -204,7 +204,7 @@ export default function StaffPortalDashboard() {
 
         {/* Payslip Section */}
         {payroll && (
-          <div className="card-premium" style={{ marginTop: '24px', background: 'var(--accent-brown)', color: 'white' }}>
+          <div className="card-premium" style={{ marginTop: '24px', background: 'var(--accent-blue)', color: 'white' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '4px' }}>Monthly Statement</h3>
@@ -218,7 +218,7 @@ export default function StaffPortalDashboard() {
                   year: new Date().getFullYear()
                 })}
                 className="btn-secondary" 
-                style={{ background: 'white', border: 'none', color: 'var(--accent-brown)', fontWeight: 700 }}
+                style={{ background: 'white', border: 'none', color: 'var(--accent-blue)', fontWeight: 700 }}
               >
                 <Download size={16} /> Print Statement
               </button>

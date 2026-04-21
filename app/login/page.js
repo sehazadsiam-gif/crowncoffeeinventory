@@ -29,16 +29,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--cream)]">
+    <div className="min-h-screen bg-[var(--bg-base)]">
       <Navbar />
       
       <main className="max-w-md mx-auto px-4 py-20 flex flex-col items-center">
-        <div className="bg-[var(--brown)] p-4 rounded-3xl shadow-xl mb-8 animate-bounce">
-          <Coffee size={40} className="text-[var(--gold)]" />
+        <div className="bg-[var(--accent-blue)] p-4 rounded-3xl shadow-xl mb-8 animate-bounce">
+          <Coffee size={40} className="text-white" />
         </div>
         
         <div className="card-premium w-full text-center">
-          <h2 className="text-2xl font-black text-[var(--brown)] mb-2">Admin Portal</h2>
+          <h2 className="text-2xl font-black text-[var(--accent-blue)] mb-2">Admin Portal</h2>
           <p className="text-gray-400 text-xs uppercase tracking-widest mb-8">Secure Access Only</p>
           
           <form onSubmit={handleLogin} className="space-y-6 text-left">

@@ -48,8 +48,8 @@ export default function Navbar() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
 
             <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-              <div style={{ background: 'var(--accent-gold-dim)', padding: '6px', borderRadius: '6px' }}>
-                <Coffee size={20} style={{ color: 'var(--accent-brown)' }} strokeWidth={2} />
+              <div style={{ background: 'var(--accent-blue-dim)', padding: '6px', borderRadius: '6px' }}>
+                <Coffee size={20} style={{ color: 'var(--accent-blue)' }} strokeWidth={2} />
               </div>
               <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
                 Crown Coffee
@@ -70,8 +70,8 @@ export default function Navbar() {
                         fontWeight: 500,
                         padding: '8px 12px',
                         borderRadius: '6px',
-                        color: isActive ? 'var(--accent-brown)' : 'var(--text-secondary)',
-                        background: isActive ? 'rgba(139,94,60,0.08)' : 'transparent',
+                        color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        background: isActive ? 'rgba(37,99,235,0.08)' : 'transparent',
                         transition: 'all 0.15s ease',
                         cursor: 'pointer',
                         display: 'flex',
@@ -105,7 +105,7 @@ export default function Navbar() {
                             style={{
                               padding: '10px 16px',
                               fontSize: '14px',
-                              color: pathname === sub.href ? 'var(--accent-brown)' : 'var(--text-primary)',
+                              color: pathname === sub.href ? 'var(--accent-blue)' : 'var(--text-primary)',
                               background: pathname === sub.href ? 'var(--bg-subtle)' : 'transparent',
                               textDecoration: 'none',
                               transition: 'background 0.15s ease',
@@ -129,8 +129,8 @@ export default function Navbar() {
                       fontWeight: 500,
                       padding: '8px 12px',
                       borderRadius: '6px',
-                      color: pathname === item.href ? 'var(--accent-brown)' : 'var(--text-secondary)',
-                      background: pathname === item.href ? 'rgba(139,94,60,0.08)' : 'transparent',
+                      color: pathname === item.href ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                      background: pathname === item.href ? 'rgba(37,99,235,0.08)' : 'transparent',
                       transition: 'all 0.15s ease',
                       textDecoration: 'none',
                       fontFamily: 'var(--font-body)',
@@ -204,8 +204,8 @@ export default function Navbar() {
                           fontWeight: 500,
                           padding: '10px 16px 10px 32px',
                           borderRadius: '6px',
-                          color: pathname === sub.href ? 'var(--accent-brown)' : 'var(--text-secondary)',
-                          background: pathname === sub.href ? 'rgba(139,94,60,0.08)' : 'transparent',
+                          color: pathname === sub.href ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                          background: pathname === sub.href ? 'rgba(37,99,235,0.08)' : 'transparent',
                           textDecoration: 'none',
                           fontFamily: 'var(--font-body)'
                         }}
@@ -228,8 +228,8 @@ export default function Navbar() {
                     fontWeight: 500,
                     padding: '10px 16px',
                     borderRadius: '6px',
-                    color: isActive ? 'var(--accent-brown)' : 'var(--text-secondary)',
-                    background: isActive ? 'rgba(139,94,60,0.08)' : 'transparent',
+                    color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                    background: isActive ? 'rgba(37,99,235,0.08)' : 'transparent',
                     textDecoration: 'none',
                     fontFamily: 'var(--font-body)',
                     display: 'flex',

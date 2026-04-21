@@ -98,8 +98,8 @@ export default function AdminClient({ initialStats }) {
   const tabStyle = (id) => ({
     padding: '12px 20px',
     cursor: 'pointer',
-    borderBottom: activeTab === id ? '2px solid var(--accent-brown)' : '2px solid transparent',
-    color: activeTab === id ? 'var(--accent-brown)' : 'var(--text-muted)',
+    borderBottom: activeTab === id ? '2px solid var(--accent-blue)' : '2px solid transparent',
+    color: activeTab === id ? 'var(--accent-blue)' : 'var(--text-muted)',
     fontWeight: activeTab === id ? 700 : 500,
     fontSize: '14px',
     transition: 'all 0.2s ease',
@@ -114,7 +114,7 @@ export default function AdminClient({ initialStats }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-light)', paddingBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '28px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <ShieldCheck size={28} style={{ color: 'var(--accent-brown)' }} strokeWidth={1.5} /> 
+            <ShieldCheck size={28} style={{ color: 'var(--accent-blue)' }} strokeWidth={1.5} /> 
             Super Admin Control
           </h2>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -292,8 +292,8 @@ function DbOperationCard({ title, desc, onClear, icon: Icon, danger }) {
     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', border: danger ? '1px solid #FFDADA' : '1px solid var(--border-light)', background: danger ? '#FFF9F9' : 'white' }}>
       <div style={{ display: 'flex', gap: '16px' }}>
         <div style={{ 
-          background: danger ? '#FFE5E5' : 'rgba(139,94,60,0.08)', 
-          padding: '12px', borderRadius: '10px', color: danger ? 'var(--danger)' : 'var(--accent-brown)' 
+          background: 'rgba(37,99,235,0.08)', 
+          padding: '12px', borderRadius: '10px', color: danger ? 'var(--danger)' : 'var(--accent-blue)' 
         }}>
           <Icon size={24} />
         </div>
