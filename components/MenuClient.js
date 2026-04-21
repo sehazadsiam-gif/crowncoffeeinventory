@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
 import Modal from '../components/Modal'
@@ -11,7 +12,17 @@ import {
 } from 'lucide-react'
 
 export default function MenuClient({ initialMenuItems, initialIngredients }) {
+  const router = useRouter()
   const { addToast } = useToast()
+  
+  useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+    }
+  }, [router])
+
   const [menuItems, setMenuItems] = useState(initialMenuItems)
   const [ingredients, setIngredients] = useState(initialIngredients)
   const [expanded, setExpanded] = useState(null)

@@ -73,39 +73,38 @@ export default function PaySlip({ data, onClose }) {
             <p style={{ fontSize: '16px', margin: '10px 0 0 0', fontWeight: 'bold' }}>{month} {year}</p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginBottom: '40px', fontSize: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px', background: '#fcfcfc', padding: '15px', border: '1px solid #eee', fontSize: '12px' }}>
             <div>
               <p style={{ margin: '5px 0' }}><strong>Employee Name:</strong> {staff.name}</p>
               <p style={{ margin: '5px 0' }}><strong>Designation:</strong> {staff.designation}</p>
             </div>
             <div>
-              <p style={{ margin: '5px 0' }}>
-                <strong>Date of Joining:</strong> {staff.join_date ? new Date(staff.join_date).toLocaleDateString() : 'N/A'}
-              </p>
-              <p style={{ margin: '5px 0' }}>
-                <strong>Contract Type:</strong> {staff.contract_type?.replace('_', ' ')}
-              </p>
+              <p style={{ margin: '5px 0' }}><strong>Base Salary:</strong> ৳{Number(staff.base_salary).toLocaleString()}</p>
+              <p style={{ margin: '5px 0' }}><strong>Rate (Per Day):</strong> ৳{Math.round(staff.base_salary / 30).toLocaleString()}</p>
+            </div>
+            <div>
+              <p style={{ margin: '5px 0' }}><strong>Rate (Per Hour):</strong> ৳{Math.floor(staff.base_salary / 30 / 10).toLocaleString()}</p>
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '40px' }}>
 
             <div style={{ flex: 1 }}>
-              <h3 style={{ borderBottom: '1px solid black', paddingBottom: '5px', marginBottom: '15px' }}>Earnings</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+              <h3 style={{ borderBottom: '2px solid black', paddingBottom: '5px', marginBottom: '15px', fontSize: '16px' }}>Earnings</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <tbody>
                   {earnings.map((e, i) => e.amount > 0 ? (
                     <tr key={i}>
                       <td style={{ padding: '8px 0' }}>{e.label}</td>
-                      <td style={{ padding: '8px 0', textAlign: 'right' }}>
-                        {'\u09F3'}{e.amount.toLocaleString()}
+                      <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 'bold' }}>
+                        ৳{e.amount.toLocaleString()}
                       </td>
                     </tr>
                   ) : null)}
-                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
-                    <td style={{ padding: '12px 0' }}>Total Earnings</td>
-                    <td style={{ padding: '12px 0', textAlign: 'right' }}>
-                      {'\u09F3'}{totalEarnings.toLocaleString()}
+                  <tr style={{ borderTop: '2px solid black', fontWeight: 'bold' }}>
+                    <td style={{ padding: '12px 0', fontSize: '14px' }}>Total Earnings</td>
+                    <td style={{ padding: '12px 0', textAlign: 'right', fontSize: '14px' }}>
+                      ৳{totalEarnings.toLocaleString()}
                     </td>
                   </tr>
                 </tbody>
@@ -113,14 +112,14 @@ export default function PaySlip({ data, onClose }) {
             </div>
 
             <div style={{ flex: 1 }}>
-              <h3 style={{ borderBottom: '1px solid black', paddingBottom: '5px', marginBottom: '15px' }}>Deductions</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+              <h3 style={{ borderBottom: '2px solid black', paddingBottom: '5px', marginBottom: '15px', fontSize: '16px' }}>Deductions</h3>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <tbody>
                   {deductions.map((d, i) => d.amount > 0 ? (
                     <tr key={i}>
                       <td style={{ padding: '8px 0' }}>{d.label}</td>
-                      <td style={{ padding: '8px 0', textAlign: 'right' }}>
-                        {'\u09F3'}{d.amount.toLocaleString()}
+                      <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 'bold', color: '#d93025' }}>
+                        ৳{d.amount.toLocaleString()}
                       </td>
                     </tr>
                   ) : null)}
@@ -130,10 +129,10 @@ export default function PaySlip({ data, onClose }) {
                       <td style={{ padding: '8px 0', textAlign: 'right' }}>-</td>
                     </tr>
                   )}
-                  <tr style={{ borderTop: '1px solid black', fontWeight: 'bold' }}>
-                    <td style={{ padding: '12px 0' }}>Total Deductions</td>
-                    <td style={{ padding: '12px 0', textAlign: 'right' }}>
-                      {'\u09F3'}{totalDeductions.toLocaleString()}
+                  <tr style={{ borderTop: '2px solid black', fontWeight: 'bold' }}>
+                    <td style={{ padding: '12px 0', fontSize: '14px' }}>Total Deductions</td>
+                    <td style={{ padding: '12px 0', textAlign: 'right', fontSize: '14px', color: '#d93025' }}>
+                      ৳{totalDeductions.toLocaleString()}
                     </td>
                   </tr>
                 </tbody>

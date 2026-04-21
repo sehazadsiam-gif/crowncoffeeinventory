@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react'
 
 export default function StockPage() {
+  const router = useRouter()
   const { addToast } = useToast()
   const [stock, setStock] = useState([])
   const [logs, setLogs] = useState([])
@@ -21,7 +23,14 @@ export default function StockPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0])
 
-  useEffect(() => { fetchStock(); }, [])
+    useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+     fetchStock(); }, [])
   useEffect(() => { fetchLogs(logDate) }, [logDate])
 
   async function fetchStock() {

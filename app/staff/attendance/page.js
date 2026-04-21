@@ -1,11 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
 import { Calendar, Save, CheckCircle } from 'lucide-react'
 
 export default function AttendancePage() {
+  const router = useRouter()
   const { addToast } = useToast()
   const [staff, setStaff] = useState([])
   const [attendance, setAttendance] = useState({})
@@ -13,7 +15,14 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { fetchStaffAndAttendance() }, [date])
+    useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+     fetchStaffAndAttendance() }, [date])
 
   async function fetchStaffAndAttendance() {
     try {

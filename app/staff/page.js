@@ -1,6 +1,7 @@
 
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
@@ -9,6 +10,7 @@ import Link from 'next/link'
 import { Users, Plus, UserX, UserCheck, Trash2 } from 'lucide-react'
 
 export default function StaffDirectory() {
+  const router = useRouter()
   const { addToast } = useToast()
   const [staff, setStaff] = useState([])
   const [filter, setFilter] = useState('all')
@@ -20,7 +22,14 @@ export default function StaffDirectory() {
     emergency_contact: '', emergency_phone: '', notes: ''
   })
 
-  useEffect(() => { fetchStaff() }, [])
+    useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+     fetchStaff() }, [])
 
   async function fetchStaff() {
     try {

@@ -1,11 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import { useToast } from '../../components/Toast'
 import { Plus, Trash2, Download, FileText } from 'lucide-react'
 
 export default function BalanceSheetPage() {
+  const router = useRouter()
     const { addToast } = useToast()
     const [sheets, setSheets] = useState([])
     const [selectedSheet, setSelectedSheet] = useState(null)
@@ -19,7 +21,14 @@ export default function BalanceSheetPage() {
         { category: '', description: '', amount: '', item_type: 'expense' }
     ])
 
-    useEffect(() => { fetchSheets() }, [month, year])
+      useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+     fetchSheets() }, [month, year])
 
     async function fetchSheets() {
         setLoading(true)

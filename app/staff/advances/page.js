@@ -1,11 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
 import { Wallet, Plus, Trash2, Calendar } from 'lucide-react'
 
 export default function AdvancesPage() {
+  const router = useRouter()
   const { addToast } = useToast()
   const [staff, setStaff] = useState([])
   const [advances, setAdvances] = useState([])
@@ -15,7 +17,14 @@ export default function AdvancesPage() {
 
   const [form, setForm] = useState({ staff_id: '', amount: '', date: new Date().toISOString().split('T')[0], reason: '' })
 
-  useEffect(() => { fetchData() }, [month, year])
+    useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+     fetchData() }, [month, year])
 
   async function fetchData() {
     try {

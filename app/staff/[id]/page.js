@@ -3,10 +3,11 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { User, Wallet, CalendarDays, Receipt, Clock, MessageSquare, Plus, Download } from 'lucide-react'
 
 export default function StaffProfile() {
+  const router = useRouter()
   const { id } = useParams()
   const { addToast } = useToast()
   const [staff, setStaff] = useState(null)
@@ -17,10 +18,16 @@ export default function StaffProfile() {
   const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(true)
   const [newNote, setNewNote] = useState({ text: '', type: 'general' })
-
+  
   useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
     if (id) fetchProfileData()
-  }, [id])
+  }, [id, router])
 
   async function fetchProfileData() {
     try {

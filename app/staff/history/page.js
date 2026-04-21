@@ -1,11 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
 import { TrendingUp, Award, CalendarDays } from 'lucide-react'
 
 export default function PayrollHistoryPage() {
+  const router = useRouter()
   const { addToast } = useToast()
   const [history, setHistory] = useState([])
   const [staffList, setStaffList] = useState([])
@@ -13,7 +15,14 @@ export default function PayrollHistoryPage() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchData() }, [staffId, year])
+    useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+     fetchData() }, [staffId, year])
 
   async function fetchData() {
     try {

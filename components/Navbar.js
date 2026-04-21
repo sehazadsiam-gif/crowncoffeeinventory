@@ -1,310 +1,240 @@
 'use client'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { 
   Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, 
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard 
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import Calculator from './Calculator'
 
 export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isCalcOpen, setIsCalcOpen] = useState(false)
-  const [userRole, setUserRole] = useState(null) // 'admin', 'staff', or null
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [activeDropdown, setActiveDropdown] = useState(null)
+  const [userRole, setUserRole] = useState(null)
+  const [username, setUsername] = useState('')
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('isAdmin') === 'true'
-    const staffId = localStorage.getItem('staffPortalId')
-    if (isAdmin) setUserRole('admin')
-    else if (staffId) setUserRole('staff')
-    else setUserRole(null)
-  }, [pathname])
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    const user = localStorage.getItem('cc_username') || localStorage.getItem('cc_staff_name')
+    
+    if (!token && !['/', '/admin/login', '/staff/login'].includes(pathname)) {
+      router.replace('/')
+      return
+    }
+    
+    setUserRole(role)
+    setUsername(user)
+  }, [pathname, router])
 
-  const handleLogout = () => {
-    localStorage.removeItem('isAdmin')
-    localStorage.removeItem('staffPortalId')
-    router.push('/login')
+  async function handleLogout() {
+    const token = localStorage.getItem('cc_token')
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      })
+    } catch (e) {}
+    
+    localStorage.removeItem('cc_token')
+    localStorage.removeItem('cc_role')
+    localStorage.removeItem('cc_staff_id')
+    localStorage.removeItem('cc_staff_name')
+    localStorage.removeItem('cc_username')
+    router.replace('/')
   }
 
-  // Filter nav items based on role
   const adminItems = [
-    { href: '/', label: 'Dashboard' },
-    { href: '/menu', label: 'Menu' },
-    { href: '/bazar', label: 'Bazar' },
-    { href: '/sales', label: 'Sales' },
-    { href: '/stock', label: 'Stock' },
-    { href: '/waste', label: 'Wastage' },
-    { href: '/balance-sheet', label: 'Balance Sheet' },
-    {
-      label: 'Staff',
-      icon: Users,
-      subItems: [
+    { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+    { href: '/sales', label: 'Sales', icon: <CalcIcon size={18} /> },
+    { href: '/bazar', label: 'Bazar', icon: <CalcIcon size={18} /> },
+    { href: '/stock', label: 'Stock', icon: <Users size={18} /> },
+    { href: '/menu', label: 'Menu', icon: <BookOpen size={18} /> },
+    { 
+      label: 'Staff Management', 
+      icon: <Users size={18} />,
+      children: [
         { href: '/staff', label: 'Directory' },
         { href: '/staff/attendance', label: 'Attendance' },
         { href: '/staff/payroll', label: 'Payroll' },
         { href: '/staff/advances', label: 'Advances' },
         { href: '/staff/service-charge', label: 'Service Charge' },
-        { href: '/staff/history', label: 'History' }
+        { href: '/staff/history', label: 'Payment History' },
       ]
     },
-    { href: '/admin', label: 'Admin' },
+    { href: '/waste', label: 'Waste', icon: <Trash2 size={18} /> },
+    { href: '/balance-sheet', label: 'Balance Sheet', icon: <Calculator size={18} /> },
   ]
 
-  const staffItems = [
-    { href: '/portal/dashboard', label: 'My Dashboard' }
-  ]
+  const navItems = userRole === 'admin' ? adminItems : []
 
-  const navItems = userRole === 'admin' ? adminItems : (userRole === 'staff' ? staffItems : [])
-
-  // Don't show navbar on gateway page
-  if (pathname === '/login') return null
+  if (!userRole && !['/', '/admin/login', '/staff/login'].includes(pathname)) return null
 
   return (
-    <>
-      <nav style={{
-        background: 'var(--bg-surface)',
-        borderBottom: '1px solid var(--border-light)',
-        boxShadow: 'var(--shadow-sm)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-      }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
+    <nav style={{ background: 'white', borderBottom: '1px solid var(--border-light)', position: 'sticky', top: 0, zIndex: 1000 }}>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        
+        {/* Brand */}
+        <Link href={userRole === 'admin' ? '/dashboard' : '/'} style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+          <div style={{ background: 'var(--accent-blue)', padding: '8px', borderRadius: '10px', color: 'white', display: 'flex' }}>
+            <Coffee size={20} />
+          </div>
+          <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>CROWN COFFEE</span>
+        </Link>
 
-            <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-              <div style={{ background: 'var(--accent-blue-dim)', padding: '6px', borderRadius: '6px' }}>
-                <Coffee size={20} style={{ color: 'var(--accent-blue)' }} strokeWidth={2} />
-              </div>
-              <span style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
-                Crown Coffee
-              </span>
-            </Link>
+        {/* Desktop Nav */}
+        <div style={{ display: 'none', alignItems: 'center', gap: '4px' }} className="desktop-nav">
+          {navItems.map((item, idx) => {
+            const hasChildren = item.children && item.children.length > 0
+            const isActive = activeDropdown === idx
 
-            <div className="desktop-nav" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {navItems.map((item) => {
-                const isActive = item.href
-                  ? pathname === item.href
-                  : item.subItems?.some(sub => pathname === sub.href) || (item.label === 'Staff' && pathname.startsWith('/staff'))
-
-                if (item.subItems) {
-                  return (
-                    <div key={item.label} className="nav-dropdown" style={{ position: 'relative' }}>
-                      <div style={{
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                        background: isActive ? 'rgba(37,99,235,0.08)' : 'transparent',
-                        transition: 'all 0.15s ease',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontFamily: 'var(--font-body)'
-                      }}>
-                        {item.icon && <item.icon size={15} />}
-                        {item.label}
-                        <ChevronDown size={13} />
-                      </div>
-                      <div className="nav-dropdown-content" style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        background: 'var(--bg-surface)',
-                        border: '1px solid var(--border-light)',
-                        borderRadius: '8px',
-                        boxShadow: 'var(--shadow-md)',
-                        minWidth: '200px',
-                        display: 'none',
-                        flexDirection: 'column',
-                        padding: '8px 0',
-                        zIndex: 1000
-                      }}>
-                        {item.subItems.map(sub => (
-                          <Link
-                            key={sub.href}
-                            href={sub.href}
-                            className="dropdown-item"
-                            style={{
-                              padding: '10px 16px',
-                              fontSize: '14px',
-                              color: pathname === sub.href ? 'var(--accent-blue)' : 'var(--text-primary)',
-                              background: pathname === sub.href ? 'var(--bg-subtle)' : 'transparent',
-                              textDecoration: 'none',
-                              transition: 'background 0.15s ease',
-                              fontFamily: 'var(--font-body)'
-                            }}
-                          >
-                            {sub.label}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                }
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
+            return (
+              <div 
+                key={idx} 
+                style={{ position: 'relative' }} 
+                onMouseEnter={() => hasChildren && setActiveDropdown(idx)} 
+                onMouseLeave={() => setActiveDropdown(null)}
+              >
+                {item.href ? (
+                  <Link href={item.href} style={{
+                    display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '8px',
+                    textDecoration: 'none', color: pathname === item.href ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                    fontWeight: pathname === item.href ? 700 : 600, fontSize: '14px', transition: 'all 0.2s ease',
+                    background: pathname === item.href ? 'var(--bg-subtle)' : 'transparent'
+                  }}>
+                    {item.icon} {item.label}
+                  </Link>
+                ) : (
+                  <button 
+                    onClick={() => setActiveDropdown(isActive ? null : idx)}
                     style={{
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      color: pathname === item.href ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                      background: pathname === item.href ? 'rgba(37,99,235,0.08)' : 'transparent',
-                      transition: 'all 0.15s ease',
-                      textDecoration: 'none',
-                      fontFamily: 'var(--font-body)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
+                      display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '8px',
+                      border: 'none', background: isActive ? 'var(--bg-subtle)' : 'transparent',
+                      color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                      fontWeight: 600, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s ease'
                     }}
                   >
-                    {item.label === 'Wastage' && <Trash2 size={14} />}
-                    {item.label === 'Balance Sheet' && <BookOpen size={14} />}
-                    {item.label === 'My Dashboard' && <LayoutDashboard size={14} />}
-                    {item.label}
-                  </Link>
-                )
-              })}
-            </div>
+                    {item.icon} {item.label} <ChevronDown size={14} style={{ transform: isActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                  </button>
+                )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {userRole === 'admin' && (
-                <button
-                  onClick={() => setIsCalcOpen(!isCalcOpen)}
-                  className="btn-secondary hide-mobile"
-                  style={{ padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <CalcIcon size={15} /> Calculator
-                </button>
-              )}
-
-              <button
-                onClick={handleLogout}
-                className="btn-secondary"
-                style={{ padding: '6px 12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
-              >
-                <LogOut size={15} /> Logout
-              </button>
-
-              <button
-                className="show-mobile"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}
-              >
-                {isMobileMenuOpen ? <X size={24} /> : <MenuIcon size={24} />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {isMobileMenuOpen && (
-          <div style={{
-            background: 'var(--bg-surface)',
-            borderTop: '1px solid var(--border-light)',
-            padding: '16px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-          }}>
-            {navItems.map((item) => {
-              if (item.subItems) {
-                return (
-                  <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: '2px', padding: '4px 0' }}>
-                    <div style={{
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: 'var(--text-muted)',
-                      padding: '8px 16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      fontFamily: 'var(--font-body)'
-                    }}>
-                      {item.icon && <item.icon size={13} />} {item.label}
-                    </div>
-                    {item.subItems.map(sub => (
-                      <Link
-                        key={sub.href}
-                        href={sub.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
+                {hasChildren && isActive && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, width: '220px', background: 'white',
+                    borderRadius: '12px', border: '1px solid var(--border-light)', padding: '8px',
+                    boxShadow: '0 10px 30px rgba(15,23,42,0.12)', marginTop: '2px',
+                    zIndex: 1001, pointerEvents: 'auto',
+                    animation: 'dropdownFadeIn 0.2s ease-out forwards'
+                  }}>
+                    {/* Hover Bridge to prevent closing on gap */}
+                    <div style={{ position: 'absolute', top: '-10px', left: 0, right: 0, height: '10px' }} />
+                    
+                    {item.children.map((child, cIdx) => (
+                      <Link 
+                        key={cIdx} 
+                        href={child.href} 
+                        onClick={() => setActiveDropdown(null)}
                         style={{
-                          fontSize: '14px',
-                          fontWeight: 500,
-                          padding: '10px 16px 10px 32px',
-                          borderRadius: '6px',
-                          color: pathname === sub.href ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                          background: pathname === sub.href ? 'rgba(37,99,235,0.08)' : 'transparent',
-                          textDecoration: 'none',
-                          fontFamily: 'var(--font-body)'
+                          display: 'block', padding: '10px 12px', borderRadius: '8px', textDecoration: 'none',
+                          color: pathname === child.href ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                          fontSize: '13px', fontWeight: pathname === child.href ? 700 : 500,
+                          background: pathname === child.href ? 'var(--bg-subtle)' : 'transparent',
+                          transition: 'all 0.15s ease'
                         }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                        onMouseLeave={e => e.currentTarget.style.background = pathname === child.href ? 'var(--bg-subtle)' : 'transparent'}
                       >
-                        {sub.label}
+                        {child.label}
                       </Link>
                     ))}
                   </div>
-                )
-              }
+                )}
+              </div>
+            )
+          })}
 
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    padding: '10px 16px',
-                    borderRadius: '6px',
-                    color: isActive ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                    background: isActive ? 'rgba(37,99,235,0.08)' : 'transparent',
-                    textDecoration: 'none',
-                    fontFamily: 'var(--font-body)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  {item.label === 'Wastage' && <Trash2 size={14} />}
-                  {item.label === 'Balance Sheet' && <BookOpen size={14} />}
-                  {item.label === 'My Dashboard' && <LayoutDashboard size={14} />}
-                  {item.label}
+          {userRole && (
+            <div style={{ marginLeft: '12px', paddingLeft: '12px', borderLeft: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ textAlign: 'right' }}>
+                <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{username}</p>
+                <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase' }}>{userRole}</p>
+              </div>
+              <button onClick={handleLogout} style={{
+                padding: '8px', borderRadius: '8px', border: 'none', background: 'var(--danger-bg)',
+                color: 'var(--danger)', cursor: 'pointer', display: 'flex', transition: 'all 0.2s ease'
+              }} onMouseEnter={e => e.currentTarget.style.background = '#fce8e6'} onMouseLeave={e => e.currentTarget.style.background = 'var(--danger-bg)'}>
+                <LogOut size={18} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Menu Toggle */}
+        <button onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ display: 'none', background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }} className="mobile-toggle">
+          {isMenuOpen ? <X size={24} /> : <MenuIcon size={24} />}
+        </button>
+      </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div style={{ display: 'none', background: 'white', borderTop: '1px solid var(--border-light)', padding: '16px' }} className="mobile-menu">
+          {navItems.map((item, idx) => (
+            <div key={idx}>
+              {item.href ? (
+                <Link href={item.href} onClick={() => setIsMenuOpen(false)} style={{
+                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', textDecoration: 'none',
+                  color: pathname === item.href ? 'var(--accent-blue)' : 'var(--text-primary)', fontWeight: 600
+                }}>
+                  {item.icon} {item.label}
                 </Link>
-              )
-            })}
-          </div>
-        )}
-      </nav>
-
-      <Calculator isOpen={isCalcOpen} onClose={() => setIsCalcOpen(false)} />
+              ) : (
+                <div style={{ padding: '12px' }}>
+                  <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>{item.label}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '12px' }}>
+                    {item.children.map((child, cIdx) => (
+                      <Link key={cIdx} href={child.href} onClick={() => setIsMenuOpen(false)} style={{
+                        textDecoration: 'none', color: pathname === child.href ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        fontSize: '14px', fontWeight: 500
+                      }}>
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {userRole && (
+            <button onClick={handleLogout} style={{
+              width: '100%', marginTop: '16px', padding: '12px', borderRadius: '8px', border: 'none',
+              background: 'var(--danger-bg)', color: 'var(--danger)', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+            }}>
+              <LogOut size={18} /> Logout
+            </button>
+          )}
+        </div>
+      )}
 
       <style>{`
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
-          .hide-mobile { display: none !important; }
+        @keyframes dropdownFadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
-        @media (min-width: 769px) {
-          .show-mobile { display: none !important; }
+        @media (min-width: 1024px) {
+          .desktop-nav { display: flex !important; }
         }
-        .nav-dropdown:hover .nav-dropdown-content {
-          display: flex !important;
-        }
-        .dropdown-item:hover {
-          background: var(--bg-subtle) !important;
-          color: var(--accent-blue) !important;
+        @media (max-width: 1023px) {
+          .mobile-toggle { display: block !important; }
+          .mobile-menu { display: block !important; }
         }
       `}</style>
-    </>
+    </nav>
   )
+}
+
+function Calculator(props) {
+  return <CalcIcon {...props} />
 }

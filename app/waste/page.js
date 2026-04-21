@@ -1,11 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import { useToast } from '../../components/Toast'
 import { Trash2, Plus, AlertTriangle } from 'lucide-react'
 
 export default function WastePage() {
+  const router = useRouter()
     const { addToast } = useToast()
     const [ingredients, setIngredients] = useState([])
     const [history, setHistory] = useState([])
@@ -16,7 +18,14 @@ export default function WastePage() {
         { ingredient_id: '', quantity: '', reason: 'expired', notes: '' }
     ])
 
-    useEffect(() => {
+      useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+    
         fetchIngredients()
         fetchHistory()
     }, [date])

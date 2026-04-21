@@ -1,3 +1,4 @@
+import { useRouter } from 'next/navigation'
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
@@ -14,6 +15,7 @@ import {
 import { convertUnit } from '../../lib/convert'
 
 export default function SalesPage() {
+  const router = useRouter()
   const { addToast } = useToast()
   const [menuItems, setMenuItems] = useState([])
   const [sales, setSales] = useState([])
@@ -28,7 +30,14 @@ export default function SalesPage() {
 
   const menuGridRef = useRef(null)
 
-  useEffect(() => { fetchMenu() }, [])
+    useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+     fetchMenu() }, [])
   useEffect(() => { fetchSales() }, [selectedDate])
   useEffect(() => { computePreview() }, [cart])
 

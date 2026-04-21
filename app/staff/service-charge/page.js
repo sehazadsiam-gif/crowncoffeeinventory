@@ -1,11 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
 import { Percent, CheckCircle2 } from 'lucide-react'
 
 export default function ServiceChargePage() {
+  const router = useRouter()
   const { addToast } = useToast()
   const [staff, setStaff] = useState([])
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -16,7 +18,14 @@ export default function ServiceChargePage() {
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { fetchData() }, [])
+    useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+     fetchData() }, [])
 
   async function fetchData() {
     try {
@@ -50,6 +59,7 @@ export default function ServiceChargePage() {
     if (!isValidPct) return addToast('Percentages must total 100%', 'error')
 
     try {
+      const staffPool = amountToDistribute * 0.4
       const { error: poolErr } = await supabase.from('service_charge_pool').upsert({
         month, year, total_amount: amountToDistribute,
         distribution_type: distType, is_distributed: true
@@ -58,8 +68,8 @@ export default function ServiceChargePage() {
 
       const updates = staff.map(s => {
         const share = distType === 'equal'
-          ? amountToDistribute / staff.length
-          : amountToDistribute * (Number(percentages[s.id] || 0) / 100)
+          ? staffPool / staff.length
+          : staffPool * (Number(percentages[s.id] || 0) / 100)
         return supabase.from('payroll_entries').upsert({
           staff_id: s.id, month, year, service_charge: Math.round(share)
         }, { onConflict: 'staff_id,month,year' })
@@ -95,17 +105,28 @@ export default function ServiceChargePage() {
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
 
           <div className="card">
+            <div style={{ background: '#E0F2FE', border: '1px solid #BAE6FD', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', fontSize: '13px', color: '#0369A1' }}>
+              <strong>40% Rule:</strong> According to the system policy, staff members receive <strong>40%</strong> of the total service charge collection. 
+              The remaining 60% is retained by the management.
+            </div>
+
             <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', marginBottom: '24px', flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: '180px' }}>
-                <label className="label">Total Amount to Distribute (৳)</label>
+                <label className="label">Total Collection (৳)</label>
                 <input
                   type="number"
                   className="input"
                   style={{ fontSize: '18px', fontWeight: 600, color: 'var(--accent-brown)' }}
                   value={totalAmount}
                   onChange={e => setTotalAmount(e.target.value)}
-                  placeholder="e.g. 50000"
+                  placeholder="e.g. 100"
                 />
+              </div>
+              <div style={{ flex: 1, minWidth: '180px' }}>
+                <div style={{ padding: '10px 14px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                  <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, margin: '0 0 4px 0' }}>Staff Pool (40%)</p>
+                  <p style={{ fontSize: '18px', fontWeight: 800, color: '#10B981', margin: 0 }}>৳{Math.round(amountToDistribute * 0.4).toLocaleString()}</p>
+                </div>
               </div>
               <div style={{ flex: 1, minWidth: '180px' }}>
                 <label className="label">Distribution Method</label>
@@ -129,8 +150,9 @@ export default function ServiceChargePage() {
                 </thead>
                 <tbody>
                   {staff.map(s => {
+                    const staffPool = amountToDistribute * 0.4
                     const sharePct = distType === 'equal' ? (100 / staff.length) : Number(percentages[s.id] || 0)
-                    const shareAmt = Math.round(amountToDistribute * (sharePct / 100))
+                    const shareAmt = Math.round(staffPool * (sharePct / 100))
                     return (
                       <tr key={s.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
                         <td style={{ padding: '12px 16px' }}>
@@ -153,7 +175,7 @@ export default function ServiceChargePage() {
                             </div>
                           )}
                         </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '15px', color: 'var(--accent-brown)' }}>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, fontSize: '15px', color: '#10B981' }}>
                           ৳{shareAmt.toLocaleString()}
                         </td>
                       </tr>

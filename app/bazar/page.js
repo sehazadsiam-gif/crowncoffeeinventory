@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
@@ -10,6 +11,7 @@ import {
 import { convertUnit } from '../../lib/convert'
 
 export default function BazarPage() {
+  const router = useRouter()
   const { addToast } = useToast()
   const [ingredients, setIngredients] = useState([])
   const [entries, setEntries] = useState([])
@@ -23,7 +25,14 @@ export default function BazarPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [modalConfig, setModalConfig] = useState({})
 
-  useEffect(() => { fetchIngredients() }, [])
+    useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/')
+      return
+    }
+     fetchIngredients() }, [])
   useEffect(() => { fetchEntries() }, [selectedDate])
 
   async function fetchIngredients() {
