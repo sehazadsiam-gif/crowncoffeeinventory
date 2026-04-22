@@ -3,11 +3,11 @@ import { verifyPassword, createSession } from '../../../../lib/auth'
 
 export async function POST(request) {
   try {
-    const { mobile_number, password } = await request.json()
+    const { username, password } = await request.json()
 
-    if (!mobile_number || !password) {
+    if (!username || !password) {
       return Response.json(
-        { error: 'Mobile number and password are required' },
+        { error: 'Username and password are required' },
         { status: 400 }
       )
     }
@@ -15,12 +15,12 @@ export async function POST(request) {
     const { data: account, error } = await supabase
       .from('staff_accounts')
       .select('*, staff(*)')
-      .eq('mobile_number', mobile_number)
+      .eq('username', username.toLowerCase().trim())
       .single()
 
     if (error || !account) {
       return Response.json(
-        { error: 'Invalid mobile number or password' },
+        { error: 'Invalid username or password' },
         { status: 401 }
       )
     }
@@ -35,7 +35,7 @@ export async function POST(request) {
     const valid = await verifyPassword(password, account.password_hash)
     if (!valid) {
       return Response.json(
-        { error: 'Invalid mobile number or password' },
+        { error: 'Invalid username or password' },
         { status: 401 }
       )
     }
