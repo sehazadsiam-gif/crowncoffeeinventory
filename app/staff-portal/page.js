@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { Coffee, LogOut, User, Wallet, Calendar, MessageSquare, Clock } from 'lucide-react'
+import { Coffee, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function StaffPortalPage() {
   const router = useRouter()
@@ -15,12 +15,13 @@ export default function StaffPortalPage() {
   const [leave, setLeave] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
     const staffId = localStorage.getItem('cc_staff_id')
-
     if (!token || role !== 'staff' || !staffId) {
       router.replace('/staff/login')
       return
@@ -32,17 +33,15 @@ export default function StaffPortalPage() {
     try {
       setLoading(true)
       const currentYear = new Date().getFullYear()
-
       const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes] = await Promise.all([
         supabase.from('staff').select('*').eq('id', staffId).single(),
-        supabase.from('payroll_entries').select('*').eq('staff_id', staffId).order('year', { ascending: false }).order('month', { ascending: false }).limit(12),
+        supabase.from('payroll_entries').select('*').eq('staff_id', staffId).order('year', { ascending: false }).order('month', { ascending: false }).limit(24),
         supabase.from('salary_payments').select('*').eq('staff_id', staffId).order('payment_date', { ascending: false }),
-        supabase.from('attendance').select('*').eq('staff_id', staffId).order('date', { ascending: false }).limit(60),
+        supabase.from('attendance').select('*').eq('staff_id', staffId).order('date', { ascending: false }).limit(365),
         supabase.from('advance_log').select('*').eq('staff_id', staffId).order('date', { ascending: false }),
         supabase.from('staff_notes').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
         supabase.from('leave_balance').select('*').eq('staff_id', staffId).eq('year', currentYear).single()
       ])
-
       setStaff(staffRes.data)
       setPayroll(payRes.data || [])
       setPayments(paymentRes.data || [])
@@ -71,15 +70,54 @@ export default function StaffPortalPage() {
     router.replace('/')
   }
 
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  function prevMonth() {
+    if (selectedMonth === 1) {
+      setSelectedMonth(12)
+      setSelectedYear(selectedYear - 1)
+    } else {
+      setSelectedMonth(selectedMonth - 1)
+    }
+  }
 
-  const totalEarned = payroll.reduce((s, p) => s + Number(p.final_salary || 0), 0)
-  const totalReceived = payments.reduce((s, p) => s + Number(p.amount || 0), 0)
-  const totalAdvance = advances.reduce((s, a) => s + Number(a.amount || 0), 0)
+  function nextMonth() {
+    const now = new Date()
+    if (selectedYear === now.getFullYear() && selectedMonth === now.getMonth() + 1) return
+    if (selectedMonth === 12) {
+      setSelectedMonth(1)
+      setSelectedYear(selectedYear + 1)
+    } else {
+      setSelectedMonth(selectedMonth + 1)
+    }
+  }
 
-  const presentDays = attendance.filter(a => a.status === 'present').length
-  const absentDays = attendance.filter(a => a.status === 'absent').length
-  const lateDays = attendance.filter(a => a.status === 'late').length
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December']
+  const monthShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+  // Filter all data by selected month/year
+  const monthPayroll = payroll.find(p => p.month === selectedMonth && p.year === selectedYear)
+  const monthPayments = payments.filter(p => {
+    const d = new Date(p.payment_date)
+    return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear
+  })
+  const monthAttendance = attendance.filter(a => {
+    const d = new Date(a.date)
+    return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear
+  })
+  const monthAdvances = advances.filter(a => a.month === selectedMonth && a.year === selectedYear)
+
+  const totalPaidThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0)
+  const finalSalary = Number(monthPayroll?.final_salary || 0)
+  const remaining = finalSalary - totalPaidThisMonth
+  const monthAdvanceTotal = monthAdvances.reduce((s, a) => s + Number(a.amount), 0)
+
+  const presentDays = monthAttendance.filter(a => a.status === 'present').length
+  const absentDays = monthAttendance.filter(a => a.status === 'absent').length
+  const lateDays = monthAttendance.filter(a => a.status === 'late').length
+  const halfDays = monthAttendance.filter(a => a.status === 'half_day').length
+  const unpaidDays = monthAttendance.filter(a => a.leave_type === 'unpaid').length
+
+  const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
 
   const tabs = ['overview', 'salary', 'attendance', 'advances', 'remarks']
 
@@ -92,6 +130,7 @@ export default function StaffPortalPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FAF7F2', fontFamily: 'system-ui, sans-serif' }}>
 
+      {/* Navbar */}
       <nav style={{ background: 'white', borderBottom: '1px solid #E8E0D4', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ background: '#8B5E3C', padding: '6px', borderRadius: '8px' }}>
@@ -115,7 +154,77 @@ export default function StaffPortalPage() {
 
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 16px 60px' }}>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px' }}>
+        {/* Month Selector */}
+        <div style={{ background: '#6B3A2A', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            onClick={prevMonth}
+            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'white' }}
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: '22px', fontWeight: 800, color: 'white', margin: 0 }}>
+              {monthNames[selectedMonth - 1]} {selectedYear}
+            </p>
+            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '4px 0 0 0' }}>
+              {isCurrentMonth ? 'Current Month' : 'Past Month'}
+            </p>
+          </div>
+          <button
+            onClick={nextMonth}
+            disabled={isCurrentMonth}
+            style={{ background: isCurrentMonth ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '8px', cursor: isCurrentMonth ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', color: isCurrentMonth ? 'rgba(255,255,255,0.3)' : 'white' }}
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+
+        {/* Monthly Overview Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+          {[
+            { label: 'Net Salary', value: '৳' + finalSalary.toLocaleString(), color: '#8B5E3C', bg: 'white' },
+            { label: 'Received', value: '৳' + totalPaidThisMonth.toLocaleString(), color: '#1e8e3e', bg: 'white' },
+            { label: 'Remaining', value: '৳' + remaining.toLocaleString(), color: remaining > 0 ? '#d93025' : '#1e8e3e', bg: 'white' },
+            { label: 'Advance', value: '৳' + monthAdvanceTotal.toLocaleString(), color: '#d93025', bg: 'white' },
+            { label: 'Present', value: presentDays + ' days', color: '#1e8e3e', bg: 'white' },
+            { label: 'Absent', value: absentDays + ' days', color: '#d93025', bg: 'white' },
+            { label: 'Late', value: lateDays + ' days', color: '#B07830', bg: 'white' },
+            { label: 'Unpaid Leave', value: unpaidDays + ' days', color: '#d93025', bg: 'white' },
+          ].map(card => (
+            <div key={card.label} style={{ background: card.bg, border: '1px solid #E8E0D4', borderRadius: '10px', padding: '14px 16px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+              <p style={{ fontSize: '10px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600, marginBottom: '6px' }}>{card.label}</p>
+              <p style={{ fontSize: '18px', fontWeight: 700, color: card.color, margin: 0 }}>{card.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Salary progress bar */}
+        {finalSalary > 0 && (
+          <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '16px 20px', marginBottom: '24px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px' }}>
+              <span style={{ color: '#9C8A76', fontWeight: 600 }}>Salary Payment Progress</span>
+              <span style={{ color: '#1C1410', fontWeight: 700 }}>
+                {Math.round((totalPaidThisMonth / finalSalary) * 100)}%
+              </span>
+            </div>
+            <div style={{ height: '8px', background: '#F5F0E8', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: Math.min(100, finalSalary > 0 ? (totalPaidThisMonth / finalSalary) * 100 : 0) + '%',
+                background: remaining <= 0 ? '#1e8e3e' : '#8B5E3C',
+                borderRadius: '4px',
+                transition: 'width 0.5s ease'
+              }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', fontSize: '12px', color: '#9C8A76' }}>
+              <span>Received: ৳{totalPaidThisMonth.toLocaleString()}</span>
+              <span>Total: ৳{finalSalary.toLocaleString()}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
           {tabs.map(t => (
             <button
               key={t}
@@ -135,45 +244,75 @@ export default function StaffPortalPage() {
           ))}
         </div>
 
+        {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
-              {[
-                { label: 'Base Salary', value: '৳' + Number(staff?.base_salary || 0).toLocaleString(), color: '#8B5E3C' },
-                { label: 'Total Earned', value: '৳' + totalEarned.toLocaleString(), color: '#1e8e3e' },
-                { label: 'Total Received', value: '৳' + totalReceived.toLocaleString(), color: '#1e8e3e' },
-                { label: 'Total Advance', value: '৳' + totalAdvance.toLocaleString(), color: '#d93025' },
-              ].map(card => (
-                <div key={card.label} style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
-                  <p style={{ fontSize: '11px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: '6px' }}>{card.label}</p>
-                  <p style={{ fontSize: '20px', fontWeight: 700, color: card.color }}>{card.value}</p>
-                </div>
-              ))}
-            </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px' }}>
-              {[
-                { label: 'Present Days', value: presentDays, color: '#1e8e3e' },
-                { label: 'Absent Days', value: absentDays, color: '#d93025' },
-                { label: 'Late Days', value: lateDays, color: '#B07830' },
-              ].map(card => (
-                <div key={card.label} style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '16px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
-                  <p style={{ fontSize: '11px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: '6px' }}>{card.label}</p>
-                  <p style={{ fontSize: '20px', fontWeight: 700, color: card.color }}>{card.value}</p>
+            {/* Salary breakdown for selected month */}
+            {monthPayroll ? (
+              <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>
+                  Salary Breakdown — {monthNames[selectedMonth - 1]} {selectedYear}
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
+                  {[
+                    { label: 'Base Salary', value: staff?.base_salary, neutral: true },
+                    { label: 'Overtime', value: monthPayroll.overtime_pay, positive: true },
+                    { label: 'Service Charge', value: monthPayroll.service_charge, positive: true },
+                    { label: 'Bonus', value: monthPayroll.bonus, positive: true },
+                    { label: 'Lunch + Dinner', value: monthPayroll.lunch_dinner, positive: true },
+                    { label: 'Morning Food', value: monthPayroll.morning_food, positive: true },
+                    { label: 'Advance', value: monthPayroll.advance_taken, negative: true },
+                    { label: 'Others', value: monthPayroll.others_taken, negative: true },
+                    { label: 'Unpaid Leave', value: monthPayroll.unpaid_leave_deduction, negative: true },
+                    { label: 'Miscellaneous', value: monthPayroll.miscellaneous },
+                  ].filter(item => Number(item.value) !== 0).map(item => (
+                    <div key={item.label} style={{ background: '#F5F0E8', borderRadius: '6px', padding: '10px' }}>
+                      <p style={{ fontSize: '10px', color: '#9C8A76', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</p>
+                      <p style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: item.negative ? '#d93025' : item.positive ? '#1e8e3e' : '#1C1410' }}>
+                        {item.negative ? '-' : item.positive ? '+' : ''}৳{Math.abs(Number(item.value || 0)).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '32px', textAlign: 'center', color: '#9C8A76' }}>
+                No salary record for {monthNames[selectedMonth - 1]} {selectedYear}
+              </div>
+            )}
 
+            {/* Payment history for selected month */}
+            {monthPayments.length > 0 && (
+              <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '12px' }}>
+                  Payment Records — {monthNames[selectedMonth - 1]} {selectedYear}
+                </h3>
+                {monthPayments.map(p => (
+                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F5F0E8', fontSize: '13px' }}>
+                    <span style={{ color: '#5C4A36' }}>
+                      {new Date(p.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {p.notes ? ' · ' + p.notes : ''}
+                    </span>
+                    <span style={{ color: '#1e8e3e', fontWeight: 700 }}>৳{Number(p.amount).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Leave balance */}
             {leave && (
               <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
-                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>Leave Balance {new Date().getFullYear()}</h3>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>
+                  Leave Balance {selectedYear}
+                </h3>
                 {[
                   { label: 'Sick Leave', used: leave.sick_used, total: leave.sick_total },
                   { label: 'Casual Leave', used: leave.casual_used, total: leave.casual_total },
                   { label: 'Annual Leave', used: leave.annual_used, total: leave.annual_total },
                 ].map(l => (
-                  <div key={l.label} style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
+                  <div key={l.label} style={{ marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '6px' }}>
                       <span style={{ color: '#5C4A36' }}>{l.label}</span>
                       <span style={{ fontWeight: 600, color: '#1C1410' }}>{l.used} / {l.total} used</span>
                     </div>
@@ -187,6 +326,7 @@ export default function StaffPortalPage() {
           </div>
         )}
 
+        {/* Salary Tab */}
         {activeTab === 'salary' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {payroll.length === 0 ? (
@@ -194,22 +334,24 @@ export default function StaffPortalPage() {
                 No salary records found.
               </div>
             ) : payroll.map(p => {
-              const monthPayments = payments.filter(pay => {
+              const mPayments = payments.filter(pay => {
                 const d = new Date(pay.payment_date)
                 return d.getMonth() + 1 === p.month && d.getFullYear() === p.year
               })
-              const totalPaid = monthPayments.reduce((s, pay) => s + Number(pay.amount), 0)
-              const remaining = Number(p.final_salary) - totalPaid
+              const tPaid = mPayments.reduce((s, pay) => s + Number(pay.amount), 0)
+              const rem = Number(p.final_salary) - tPaid
+              const isSelected = p.month === selectedMonth && p.year === selectedYear
 
               return (
-                <div key={p.id} style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+                <div key={p.id} style={{ background: 'white', border: isSelected ? '2px solid #8B5E3C' : '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                     <div>
                       <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1C1410', margin: 0 }}>
-                        {months[p.month - 1]} {p.year}
+                        {monthShort[p.month - 1]} {p.year}
+                        {isSelected && <span style={{ fontSize: '10px', background: '#8B5E3C', color: 'white', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px', fontWeight: 600 }}>Selected</span>}
                       </h3>
                       <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: p.is_paid ? '#e6f4ea' : '#fce8e6', color: p.is_paid ? '#1e8e3e' : '#d93025', fontWeight: 600, marginTop: '4px', display: 'inline-block' }}>
-                        {p.is_paid ? 'Fully Paid' : 'Pending'}
+                        {rem <= 0 ? 'Fully Paid' : 'Pending'}
                       </span>
                     </div>
                     <p style={{ fontSize: '22px', fontWeight: 800, color: '#8B5E3C', margin: 0 }}>
@@ -217,7 +359,7 @@ export default function StaffPortalPage() {
                     </p>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px', fontSize: '12px', marginBottom: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', fontSize: '12px', marginBottom: '16px' }}>
                     {[
                       { label: 'Base', value: staff?.base_salary },
                       { label: 'Overtime', value: p.overtime_pay, positive: true },
@@ -227,6 +369,7 @@ export default function StaffPortalPage() {
                       { label: 'Morning Food', value: p.morning_food, positive: true },
                       { label: 'Advance', value: p.advance_taken, negative: true },
                       { label: 'Others', value: p.others_taken, negative: true },
+                      { label: 'Unpaid Leave', value: p.unpaid_leave_deduction, negative: true },
                       { label: 'Miscellaneous', value: p.miscellaneous },
                     ].filter(item => Number(item.value) !== 0).map(item => (
                       <div key={item.label} style={{ background: '#F5F0E8', borderRadius: '6px', padding: '8px' }}>
@@ -241,17 +384,16 @@ export default function StaffPortalPage() {
                   <div style={{ borderTop: '1px solid #F0EBE3', paddingTop: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' }}>
                       <span style={{ color: '#9C8A76' }}>Amount received</span>
-                      <span style={{ color: '#1e8e3e', fontWeight: 700 }}>৳{totalPaid.toLocaleString()}</span>
+                      <span style={{ color: '#1e8e3e', fontWeight: 700 }}>৳{tPaid.toLocaleString()}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                       <span style={{ color: '#9C8A76' }}>Remaining</span>
-                      <span style={{ color: remaining > 0 ? '#d93025' : '#1e8e3e', fontWeight: 700 }}>৳{remaining.toLocaleString()}</span>
+                      <span style={{ color: rem > 0 ? '#d93025' : '#1e8e3e', fontWeight: 700 }}>৳{rem.toLocaleString()}</span>
                     </div>
-
-                    {monthPayments.length > 0 && (
+                    {mPayments.length > 0 && (
                       <div style={{ marginTop: '10px' }}>
                         <p style={{ fontSize: '11px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: '6px' }}>Payment History</p>
-                        {monthPayments.map(pay => (
+                        {mPayments.map(pay => (
                           <div key={pay.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid #F5F0E8' }}>
                             <span style={{ color: '#9C8A76' }}>
                               {new Date(pay.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -269,18 +411,34 @@ export default function StaffPortalPage() {
           </div>
         )}
 
+        {/* Attendance Tab */}
         {activeTab === 'attendance' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {attendance.length === 0 ? (
-              <div style={{ background: 'white', borderRadius: '10px', padding: '40px', textAlign: 'center', color: '#9C8A76' }}>No attendance records found.</div>
-            ) : attendance.map(a => {
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
+              {[
+                { label: 'Present', value: presentDays, color: '#1e8e3e' },
+                { label: 'Absent', value: absentDays, color: '#d93025' },
+                { label: 'Half Day', value: halfDays, color: '#B07830' },
+                { label: 'Late', value: lateDays, color: '#fa7b17' },
+              ].map(c => (
+                <div key={c.label} style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '22px', fontWeight: 800, color: c.color, margin: 0 }}>{c.value}</p>
+                  <p style={{ fontSize: '11px', color: '#9C8A76', margin: '4px 0 0 0' }}>{c.label}</p>
+                </div>
+              ))}
+            </div>
+            {monthAttendance.length === 0 ? (
+              <div style={{ background: 'white', borderRadius: '10px', padding: '40px', textAlign: 'center', color: '#9C8A76' }}>
+                No attendance for {monthNames[selectedMonth - 1]} {selectedYear}
+              </div>
+            ) : monthAttendance.map(a => {
               const statusColors = { present: '#1e8e3e', absent: '#d93025', half_day: '#B07830', late: '#fa7b17' }
               const color = statusColors[a.status] || '#9C8A76'
               return (
                 <div key={a.id} style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '8px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <p style={{ fontSize: '14px', fontWeight: 600, color: '#1C1410', margin: 0 }}>
-                      {new Date(a.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                      {new Date(a.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
                     </p>
                     {a.note && <p style={{ fontSize: '12px', color: '#9C8A76', margin: '2px 0 0 0' }}>{a.note}</p>}
                   </div>
@@ -298,15 +456,20 @@ export default function StaffPortalPage() {
           </div>
         )}
 
+        {/* Advances Tab */}
         {activeTab === 'advances' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div style={{ background: '#fce8e6', border: '1px solid #f0c0c0', borderRadius: '10px', padding: '16px', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '13px', color: '#d93025', fontWeight: 600 }}>Total Advances Taken</span>
-              <span style={{ fontSize: '18px', fontWeight: 800, color: '#d93025' }}>৳{totalAdvance.toLocaleString()}</span>
+              <span style={{ fontSize: '13px', color: '#d93025', fontWeight: 600 }}>
+                Advances in {monthNames[selectedMonth - 1]} {selectedYear}
+              </span>
+              <span style={{ fontSize: '18px', fontWeight: 800, color: '#d93025' }}>৳{monthAdvanceTotal.toLocaleString()}</span>
             </div>
-            {advances.length === 0 ? (
-              <div style={{ background: 'white', borderRadius: '10px', padding: '40px', textAlign: 'center', color: '#9C8A76' }}>No advance records found.</div>
-            ) : advances.map(a => (
+            {monthAdvances.length === 0 ? (
+              <div style={{ background: 'white', borderRadius: '10px', padding: '40px', textAlign: 'center', color: '#9C8A76' }}>
+                No advances in {monthNames[selectedMonth - 1]} {selectedYear}
+              </div>
+            ) : monthAdvances.map(a => (
               <div key={a.id} style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '8px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <p style={{ fontSize: '14px', fontWeight: 600, color: '#1C1410', margin: 0 }}>
@@ -320,6 +483,7 @@ export default function StaffPortalPage() {
           </div>
         )}
 
+        {/* Remarks Tab */}
         {activeTab === 'remarks' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {notes.length === 0 ? (
