@@ -17,14 +17,15 @@ export default function AdvancesPage() {
 
   const [form, setForm] = useState({ staff_id: '', amount: '', date: new Date().toISOString().split('T')[0], reason: '' })
 
-    useEffect(() => {
+  useEffect(() => {
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
     if (!token || role !== 'admin') {
       router.replace('/')
       return
     }
-     fetchData() }, [month, year])
+    fetchData()
+  }, [month, year])
 
   async function fetchData() {
     try {
@@ -43,13 +44,37 @@ export default function AdvancesPage() {
     }
   }
 
+  async function updatePayrollAdvance(staffId, m, y) {
+    const { data } = await supabase
+      .from('advance_log')
+      .select('amount')
+      .eq('staff_id', staffId)
+      .eq('month', m)
+      .eq('year', y)
+
+    const totalAdvance = (data || []).reduce(
+      (sum, a) => sum + Number(a.amount), 0
+    )
+
+    const { error } = await supabase
+      .from('payroll_entries')
+      .upsert({
+        staff_id: staffId,
+        month: Number(m),
+        year: Number(y),
+        advance_taken: totalAdvance
+      }, { onConflict: 'staff_id,month,year' })
+
+    if (error) console.error('Error updating payroll advance:', error)
+  }
+
   async function logAdvance() {
     if (!form.staff_id || !form.amount) return addToast('Please select staff and enter amount', 'error')
-    
+
     const d = new Date(form.date)
     const m = d.getMonth() + 1
     const y = d.getFullYear()
-    
+
     try {
       const { error } = await supabase.from('advance_log').insert([{
         staff_id: form.staff_id,
@@ -61,19 +86,7 @@ export default function AdvancesPage() {
       }])
       if (error) throw error
 
-      // Update payroll entries advance_taken
-      const { data: existingPay } = await supabase.from('payroll_entries').select('id, advance_taken, final_salary').eq('staff_id', form.staff_id).eq('month', m).eq('year', y).single()
-      
-      if (existingPay) {
-        await supabase.from('payroll_entries').update({
-          advance_taken: Number(existingPay.advance_taken) + parseFloat(form.amount),
-          final_salary: Number(existingPay.final_salary) - parseFloat(form.amount)
-        }).eq('id', existingPay.id)
-      } else {
-        await supabase.from('payroll_entries').insert([{
-          staff_id: form.staff_id, month: m, year: y, advance_taken: parseFloat(form.amount)
-        }])
-      }
+      await updatePayrollAdvance(form.staff_id, m, y)
 
       addToast('Advance logged successfully', 'success')
       setForm({ staff_id: '', amount: '', date: new Date().toISOString().split('T')[0], reason: '' })
@@ -83,16 +96,10 @@ export default function AdvancesPage() {
     }
   }
 
-  async function deleteAdvance(id, staffId, amount, m, y) {
+  async function deleteAdvance(id, staffId, m, y) {
     try {
       await supabase.from('advance_log').delete().eq('id', id)
-      const { data: existingPay } = await supabase.from('payroll_entries').select('id, advance_taken, final_salary').eq('staff_id', staffId).eq('month', m).eq('year', y).single()
-      if (existingPay) {
-        await supabase.from('payroll_entries').update({
-          advance_taken: Math.max(0, Number(existingPay.advance_taken) - amount),
-          final_salary: Number(existingPay.final_salary) + amount
-        }).eq('id', existingPay.id)
-      }
+      await updatePayrollAdvance(staffId, m, y)
       addToast('Advance deleted', 'success')
       fetchData()
     } catch (err) {
@@ -101,7 +108,7 @@ export default function AdvancesPage() {
   }
 
   const totalThisMonth = advances.reduce((s, a) => s + Number(a.amount), 0)
-  
+
   const perStaff = advances.reduce((acc, a) => {
     if (!acc[a.staff_id]) acc[a.staff_id] = { name: a.staff?.name, total: 0 }
     acc[a.staff_id].total += Number(a.amount)
@@ -126,7 +133,7 @@ export default function AdvancesPage() {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', alignItems: 'start' }} className="advance-grid">
-          
+
           {/* Left Col: Form & Summary */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div className="card">
@@ -158,7 +165,7 @@ export default function AdvancesPage() {
             <div className="card" style={{ borderLeft: '4px solid #d93025' }}>
               <p style={{ fontSize: '12px', color: 'var(--hr-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 600 }}>Total This Month</p>
               <p style={{ fontSize: '32px', fontWeight: 700, color: '#d93025', margin: '8px 0' }}>৳{totalThisMonth.toLocaleString()}</p>
-              
+
               <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {Object.values(perStaff).map(s => (
                   <div key={s.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'var(--bg-subtle)', borderRadius: '6px' }}>
@@ -202,7 +209,7 @@ export default function AdvancesPage() {
                       <td style={{ padding: '16px 20px', fontWeight: 600, color: '#d93025' }}>৳{a.amount.toLocaleString()}</td>
                       <td style={{ padding: '16px 20px', fontSize: '13px', color: 'var(--hr-text-secondary)' }}>{a.reason || '-'}</td>
                       <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                        <button onClick={() => deleteAdvance(a.id, a.staff_id, a.amount, a.month, a.year)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--hr-text-muted)' }}>
+                        <button onClick={() => deleteAdvance(a.id, a.staff_id, a.month, a.year)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--hr-text-muted)' }}>
                           <Trash2 size={16} />
                         </button>
                       </td>

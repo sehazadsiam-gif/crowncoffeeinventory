@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
-import { Printer, Plus, Trash2, X, History } from 'lucide-react'
+import { Printer, Plus, Trash2, X, History, ChevronUp, ChevronDown } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../../components/PaySlip'), { ssr: false })
@@ -26,6 +26,7 @@ export default function PayrollPage() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
   const [printData, setPrintData] = useState(null)
+  const [nameSort, setNameSort] = useState('asc') // 'asc' | 'desc'
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -49,11 +50,12 @@ export default function PayrollPage() {
       const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0]
       const endDate = new Date(y, m, 0).toISOString().split('T')[0]
 
-      const [staffRes, payRes, advRes, unpaidRes] = await Promise.all([
+      const [staffRes, payRes, advRes, unpaidRes, lateRes] = await Promise.all([
         supabase.from('staff').select('*').eq('is_active', true).order('name'),
         supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y),
         supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y),
-        supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate)
+        supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate),
+        supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate)
       ])
 
       const advancesMap = {}
@@ -64,6 +66,11 @@ export default function PayrollPage() {
       const unpaidMap = {}
       ;(unpaidRes.data || []).forEach(a => {
         unpaidMap[a.staff_id] = (unpaidMap[a.staff_id] || 0) + 1
+      })
+
+      const lateMap = {}
+      ;(lateRes.data || []).forEach(a => {
+        lateMap[a.staff_id] = (lateMap[a.staff_id] || 0) + 1
       })
 
       const payMap = {}
@@ -80,6 +87,10 @@ export default function PayrollPage() {
         const perDay = Math.round(Number(s.base_salary) / 30)
         const unpaidDeduction = unpaidDays * perDay
 
+        const lateDays = lateMap[s.id] || 0
+        const lateDeductionDays = Math.floor(lateDays / 3)
+        const lateDeduction = lateDeductionDays * perDay
+
         if (!payMap[s.id]) {
           payMap[s.id] = {
             staff_id: s.id, month: m, year: y,
@@ -90,11 +101,17 @@ export default function PayrollPage() {
             others_taken: 0, miscellaneous: 0,
             miscellaneous_note: '', is_paid: false,
             unpaid_leave_days: unpaidDays,
-            unpaid_leave_deduction: unpaidDeduction
+            unpaid_leave_deduction: unpaidDeduction,
+            late_days: lateDays,
+            late_deduction_days: lateDeductionDays,
+            late_deduction: lateDeduction
           }
         } else {
           payMap[s.id].unpaid_leave_days = unpaidDays
           payMap[s.id].unpaid_leave_deduction = unpaidDeduction
+          payMap[s.id].late_days = lateDays
+          payMap[s.id].late_deduction_days = lateDeductionDays
+          payMap[s.id].late_deduction = lateDeduction
         }
       }
 
@@ -123,8 +140,7 @@ export default function PayrollPage() {
   function calculateFinalSalary(s, p) {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
-    const perDay = Math.round(base / 30)
-    const perHourRate = Math.floor(perDay / 10)
+    const perHourRate = base / 30 / 10
     const ot = (Number(p.overtime_hours) || 0) * perHourRate
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
@@ -134,7 +150,11 @@ export default function PayrollPage() {
     const adv = Number(p.advance_taken) || 0
     const others = Number(p.others_taken) || 0
     const unpaid = Number(p.unpaid_leave_deduction) || 0
-    return Math.round(base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaid)
+    const late = Number(p.late_deduction) || 0
+    return Math.round(
+      base + ot + sc + bonus + lunch + morn + misc
+      - adv - others - unpaid - late
+    )
   }
 
   function handleInput(staffId, field, value) {
@@ -231,6 +251,13 @@ export default function PayrollPage() {
   }
 
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+  const sortedStaff = [...staff].sort((a, b) =>
+    nameSort === 'asc'
+      ? a.name.localeCompare(b.name)
+      : b.name.localeCompare(a.name)
+  )
+
   const grandTotal = staff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id] || {}), 0)
   const totalPaidAll = Object.values(payments).flat().reduce((s, p) => s + Number(p.amount), 0)
   const totalRemainingAll = grandTotal - totalPaidAll
@@ -240,10 +267,21 @@ export default function PayrollPage() {
     outline: 'none', background: '#F8FAFC', color: '#1E293B', textAlign: 'center'
   }
 
-  const headers = [
-    'Name', 'Designation', 'Base Salary(tk)', 'Per Day(tk)', 'Per Hour(tk)', 
-    'Overtime(Hours)', 'Overtime(tk)', 'Advance Taken', 'Others Taken', 'Service Charge', 
-    'Lunch+Dinner', 'Morning Food', 'Final Salary', 'Paid/Due', 'Actions'
+  const colHeaders = [
+    'Staff',
+    'Base Salary',
+    'Overtime Hours',
+    'Service Charge',
+    'Bonus',
+    'Lunch + Dinner',
+    'Morning Food',
+    'Advance',
+    'Others',
+    'Unpaid Leave',
+    'Late Deduction',
+    'Miscellaneous',
+    'Net Pay',
+    'Payment'
   ]
 
   return (
@@ -251,7 +289,7 @@ export default function PayrollPage() {
       <Navbar />
       <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px' }}>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Payroll Center</h1>
             <p style={{ color: '#64748B', fontSize: '14px', margin: '4px 0 0 0' }}>{months[month - 1]} {year}</p>
@@ -264,79 +302,191 @@ export default function PayrollPage() {
           </div>
         </div>
 
+        <div style={{
+          background: '#fef7e0',
+          border: '1px solid #f0d080',
+          borderLeft: '4px solid #B07830',
+          borderRadius: '8px',
+          padding: '12px 16px',
+          marginBottom: '20px',
+          fontSize: '13px',
+          color: '#7A5010',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px'
+        }}>
+          <p style={{ margin: 0, fontWeight: 700 }}>Automatic Deduction Rules:</p>
+          <p style={{ margin: 0 }}>
+            1. Unpaid Leave: Each unpaid absent day deducts Base Salary / 30 from final salary.
+          </p>
+          <p style={{ margin: 0 }}>
+            2. Late Attendance: Every 3 late days in a month counts as 1 unpaid absent day.
+            Deduction = (Late Days / 3, rounded down) x (Base Salary / 30)
+          </p>
+          <p style={{ margin: 0 }}>
+            3. Advance: Total advance taken in the month is automatically deducted from final salary.
+          </p>
+        </div>
+
         <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '1500px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '1400px' }}>
               <thead>
                 <tr style={{ background: '#F1F5F9', borderBottom: '1px solid #E2E8F0' }}>
-                  {headers.map(h => (
-                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>{h}</th>
+                  {colHeaders.map(h => h === 'Staff' ? (
+                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'left', cursor: 'pointer', userSelect: 'none' }}
+                      onClick={() => setNameSort(nameSort === 'asc' ? 'desc' : 'asc')}
+                    >
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        Staff
+                        {nameSort === 'asc'
+                          ? <ChevronUp size={12} style={{ opacity: 0.7 }} />
+                          : <ChevronDown size={12} style={{ opacity: 0.7 }} />}
+                      </span>
+                    </th>
+                  ) : (
+                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {staff.map(s => {
+                {sortedStaff.map(s => {
                   const row = payroll[s.id]; if (!row) return null
                   const finalSalary = calculateFinalSalary(s, row)
                   const sPayments = payments[s.id] || []
                   const paid = sPayments.reduce((acc, p) => acc + Number(p.amount), 0)
                   const rem = finalSalary - paid
-                  
+
                   const base = Number(s.base_salary) || 0
                   const perDay = Math.round(base / 30)
                   const perHour = Math.floor(perDay / 10)
 
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                      <td style={{ padding: '12px 8px', textAlign: 'left', fontWeight: 700, fontSize: '13px' }}>{s.name}</td>
-                      <td style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B' }}>{s.designation}</td>
-                      <td style={{ padding: '12px 8px', fontWeight: 600 }}>৳{base}</td>
-                      <td style={{ padding: '12px 8px', color: '#64748B' }}>৳{perDay}</td>
-                      <td style={{ padding: '12px 8px', color: '#64748B' }}>৳{perHour}</td>
-                      
+
+                      {/* Staff name column */}
+                      <td style={{ padding: '12px 8px', textAlign: 'left' }}>
+                        <p style={{ fontWeight: 700, fontSize: '13px', margin: 0 }}>{s.name}</p>
+                        <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0' }}>{s.designation}</p>
+                        {Number(row.unpaid_leave_days) > 0 && (
+                          <p style={{ fontSize: '11px', color: '#d93025', marginTop: '3px', fontWeight: 600 }}>
+                            Unpaid: {row.unpaid_leave_days} day{row.unpaid_leave_days > 1 ? 's' : ''}
+                          </p>
+                        )}
+                        {Number(row.late_days) > 0 && (
+                          <p style={{ fontSize: '11px', color: '#fa7b17', marginTop: '3px', fontWeight: 600 }}>
+                            Late: {row.late_days} days
+                            {Number(row.late_deduction_days) > 0 &&
+                              ' (-৳' + Number(row.late_deduction).toLocaleString() + ')'
+                            }
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Base Salary */}
+                      <td style={{ padding: '12px 8px', fontWeight: 600 }}>৳{base.toLocaleString()}</td>
+
+                      {/* Overtime Hours */}
                       <td style={{ padding: '12px 8px' }}>
                         <input type="number" style={inputStyle} value={row.overtime_hours} onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)} onBlur={() => handleBlur(s.id)} />
+                        {Number(row.overtime_pay) > 0 && (
+                          <p style={{ fontSize: '10px', color: '#10B981', margin: '2px 0 0 0', fontWeight: 700 }}>+৳{row.overtime_pay}</p>
+                        )}
                       </td>
-                      <td style={{ padding: '12px 8px', color: '#10B981', fontWeight: 700 }}>৳{row.overtime_pay}</td>
-                      
-                      <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                      </td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                      </td>
+
+                      {/* Service Charge */}
                       <td style={{ padding: '12px 8px' }}>
                         <input type="number" style={inputStyle} value={row.service_charge} onChange={e => handleInput(s.id, 'service_charge', e.target.value)} onBlur={() => handleBlur(s.id)} />
                       </td>
+
+                      {/* Bonus */}
+                      <td style={{ padding: '12px 8px' }}>
+                        <input type="number" style={inputStyle} value={row.bonus} onChange={e => handleInput(s.id, 'bonus', e.target.value)} onBlur={() => handleBlur(s.id)} />
+                      </td>
+
+                      {/* Lunch + Dinner */}
                       <td style={{ padding: '12px 8px' }}>
                         <input type="number" style={inputStyle} value={row.lunch_dinner} onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)} onBlur={() => handleBlur(s.id)} />
                       </td>
+
+                      {/* Morning Food */}
                       <td style={{ padding: '12px 8px' }}>
                         <input type="number" style={inputStyle} value={row.morning_food} onChange={e => handleInput(s.id, 'morning_food', e.target.value)} onBlur={() => handleBlur(s.id)} />
                       </td>
-                      
-                      <td style={{ padding: '12px 8px', fontWeight: 800, color: '#3B82F6', fontSize: '14px' }}>৳{finalSalary.toLocaleString()}</td>
-                      
+
+                      {/* Advance */}
                       <td style={{ padding: '12px 8px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#10B981' }}>Paid: ৳{paid}</span>
-                          {rem > 0 && <span style={{ fontSize: '10px', fontWeight: 600, color: '#EF4444' }}>Due: ৳{rem}</span>}
-                        </div>
+                        <input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} />
                       </td>
-                      
+
+                      {/* Others */}
                       <td style={{ padding: '12px 8px' }}>
+                        <input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} />
+                      </td>
+
+                      {/* Unpaid Leave */}
+                      <td style={{ padding: '14px 8px' }}>
+                        {Number(row.unpaid_leave_days) > 0 ? (
+                          <div>
+                            <p style={{ fontSize: '13px', color: '#d93025', fontWeight: 700, margin: 0 }}>
+                              {row.unpaid_leave_days} day{row.unpaid_leave_days > 1 ? 's' : ''}
+                            </p>
+                            <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600 }}>
+                              -৳{Number(row.unpaid_leave_deduction).toLocaleString()}
+                            </p>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '13px', color: '#9C8A76' }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Late Deduction */}
+                      <td style={{ padding: '14px 8px' }}>
+                        {Number(row.late_days) > 0 ? (
+                          <div>
+                            <p style={{ fontSize: '13px', color: '#fa7b17', fontWeight: 700, margin: 0 }}>
+                              {row.late_days} late
+                            </p>
+                            <p style={{ fontSize: '11px', color: '#fa7b17', marginTop: '2px' }}>
+                              = {row.late_deduction_days} day{row.late_deduction_days > 1 ? 's' : ''} unpaid
+                            </p>
+                            {Number(row.late_deduction_days) > 0 && (
+                              <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600 }}>
+                                -৳{Number(row.late_deduction).toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '13px', color: '#9C8A76' }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Miscellaneous */}
+                      <td style={{ padding: '12px 8px' }}>
+                        <input type="number" style={inputStyle} value={row.miscellaneous} onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)} onBlur={() => handleBlur(s.id)} />
+                      </td>
+
+                      {/* Net Pay */}
+                      <td style={{ padding: '12px 8px', fontWeight: 800, color: '#3B82F6', fontSize: '14px' }}>৳{finalSalary.toLocaleString()}</td>
+
+                      {/* Payment */}
+                      <td style={{ padding: '12px 8px', position: 'relative' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#10B981' }}>Paid: ৳{paid.toLocaleString()}</span>
+                          {rem > 0 && <span style={{ fontSize: '10px', fontWeight: 600, color: '#EF4444' }}>Due: ৳{rem.toLocaleString()}</span>}
+                        </div>
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                           <button onClick={() => setShowPaymentForm(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#3B82F6', color: 'white', border: 'none', cursor: 'pointer' }}><Plus size={14} /></button>
                           <button onClick={() => setShowHistory(showHistory === s.id ? null : s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><History size={14} /></button>
-                          <button onClick={() => setPrintData({ 
-                            staff: s, 
-                            payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary }, 
-                            month: months[month - 1], 
-                            year 
+                          <button onClick={() => setPrintData({
+                            staff: s,
+                            payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary },
+                            month: months[month - 1],
+                            year
                           })} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><Printer size={14} /></button>
                           <button onClick={() => deletePayrollEntry(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#FEF2F2', color: '#EF4444', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
                         </div>
-                        
+
                         {showPaymentForm === s.id && (
                           <div style={{ position: 'absolute', right: '100px', background: 'white', border: '1px solid #E2E8F0', padding: '12px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, width: '200px', textAlign: 'left' }}>
                             <input type="number" className="input" placeholder="Amount" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} style={{ marginBottom: '8px' }} />
@@ -344,7 +494,7 @@ export default function PayrollPage() {
                             <button onClick={() => savePayment(s.id)} style={{ width: '100%', padding: '8px', background: '#10B981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}>Confirm</button>
                           </div>
                         )}
-                        
+
                         {showHistory === s.id && sPayments.length > 0 && (
                           <div style={{ position: 'absolute', right: '100px', background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '10px', borderRadius: '8px', zIndex: 90, width: '220px', marginTop: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
                             {sPayments.map(p => (

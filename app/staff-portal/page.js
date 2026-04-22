@@ -94,12 +94,10 @@ export default function StaffPortalPage() {
     'July', 'August', 'September', 'October', 'November', 'December']
   const monthShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-  // Filter all data by selected month/year
   const monthPayroll = payroll.find(p => p.month === selectedMonth && p.year === selectedYear)
-  const monthPayments = payments.filter(p => {
-    const d = new Date(p.payment_date)
-    return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear
-  })
+  const monthPayments = payments.filter(p =>
+    Number(p.month) === selectedMonth && Number(p.year) === selectedYear
+  )
   const monthAttendance = attendance.filter(a => {
     const d = new Date(a.date)
     return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear
@@ -107,8 +105,6 @@ export default function StaffPortalPage() {
   const monthAdvances = advances.filter(a => a.month === selectedMonth && a.year === selectedYear)
 
   const totalPaidThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0)
-  const finalSalary = Number(monthPayroll?.final_salary || 0)
-  const remaining = finalSalary - totalPaidThisMonth
   const monthAdvanceTotal = monthAdvances.reduce((s, a) => s + Number(a.amount), 0)
 
   const presentDays = monthAttendance.filter(a => a.status === 'present').length
@@ -117,8 +113,28 @@ export default function StaffPortalPage() {
   const halfDays = monthAttendance.filter(a => a.status === 'half_day').length
   const unpaidDays = monthAttendance.filter(a => a.leave_type === 'unpaid').length
 
-  const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
+  const lateDeductionDays = Math.floor(lateDays / 3)
+  const perDay = Math.round(Number(staff?.base_salary || 0) / 30)
+  const lateDeduction = lateDeductionDays * perDay
 
+  // Final salary calculation
+  const base = Number(staff?.base_salary || 0)
+  const perHourRate = base / 30 / 10
+  const ot = (Number(monthPayroll?.overtime_hours) || 0) * perHourRate
+  const sc = Number(monthPayroll?.service_charge || 0)
+  const bonus = Number(monthPayroll?.bonus || 0)
+  const lunch = Number(monthPayroll?.lunch_dinner || 0)
+  const morn = Number(monthPayroll?.morning_food || 0)
+  const misc = Number(monthPayroll?.miscellaneous || 0)
+  const adv = Number(monthPayroll?.advance_taken || 0)
+  const others = Number(monthPayroll?.others_taken || 0)
+  const unpaid = Number(monthPayroll?.unpaid_leave_deduction || 0)
+  const finalSalary = monthPayroll ? Math.round(
+    base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaid - lateDeduction
+  ) : 0
+
+  const remaining = finalSalary - totalPaidThisMonth
+  const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
   const tabs = ['overview', 'salary', 'attendance', 'advances', 'remarks']
 
   if (loading) return (
@@ -130,7 +146,6 @@ export default function StaffPortalPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FAF7F2', fontFamily: 'system-ui, sans-serif' }}>
 
-      {/* Navbar */}
       <nav style={{ background: 'white', borderBottom: '1px solid #E8E0D4', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ background: '#8B5E3C', padding: '6px', borderRadius: '8px' }}>
@@ -156,10 +171,7 @@ export default function StaffPortalPage() {
 
         {/* Month Selector */}
         <div style={{ background: '#6B3A2A', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button
-            onClick={prevMonth}
-            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'white' }}
-          >
+          <button onClick={prevMonth} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'white' }}>
             <ChevronLeft size={18} />
           </button>
           <div style={{ textAlign: 'center' }}>
@@ -182,20 +194,28 @@ export default function StaffPortalPage() {
         {/* Monthly Overview Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
           {[
-            { label: 'Net Salary', value: '৳' + finalSalary.toLocaleString(), color: '#8B5E3C', bg: 'white' },
-            { label: 'Received', value: '৳' + totalPaidThisMonth.toLocaleString(), color: '#1e8e3e', bg: 'white' },
-            { label: 'Remaining', value: '৳' + remaining.toLocaleString(), color: remaining > 0 ? '#d93025' : '#1e8e3e', bg: 'white' },
-            { label: 'Advance', value: '৳' + monthAdvanceTotal.toLocaleString(), color: '#d93025', bg: 'white' },
-            { label: 'Present', value: presentDays + ' days', color: '#1e8e3e', bg: 'white' },
-            { label: 'Absent', value: absentDays + ' days', color: '#d93025', bg: 'white' },
-            { label: 'Late', value: lateDays + ' days', color: '#B07830', bg: 'white' },
-            { label: 'Unpaid Leave', value: unpaidDays + ' days', color: '#d93025', bg: 'white' },
+            { label: 'Final Salary', value: '৳' + finalSalary.toLocaleString(), color: '#8B5E3C' },
+            { label: 'Received', value: '৳' + totalPaidThisMonth.toLocaleString(), color: '#1e8e3e' },
+            { label: 'Remaining', value: '৳' + remaining.toLocaleString(), color: remaining > 0 ? '#d93025' : '#1e8e3e' },
+            { label: 'Advance', value: '৳' + monthAdvanceTotal.toLocaleString(), color: '#d93025' },
+            { label: 'Present', value: presentDays + ' days', color: '#1e8e3e' },
+            { label: 'Absent', value: absentDays + ' days', color: '#d93025' },
+            { label: 'Unpaid Leave', value: unpaidDays + ' days', color: '#d93025' },
           ].map(card => (
-            <div key={card.label} style={{ background: card.bg, border: '1px solid #E8E0D4', borderRadius: '10px', padding: '14px 16px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <div key={card.label} style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '14px 16px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
               <p style={{ fontSize: '10px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600, marginBottom: '6px' }}>{card.label}</p>
               <p style={{ fontSize: '18px', fontWeight: 700, color: card.color, margin: 0 }}>{card.value}</p>
             </div>
           ))}
+          <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '14px 16px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+            <p style={{ fontSize: '10px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600, marginBottom: '6px' }}>Late</p>
+            <p style={{ fontSize: '18px', fontWeight: 700, color: '#fa7b17', margin: 0 }}>{lateDays} days</p>
+            {lateDeductionDays > 0 && (
+              <p style={{ fontSize: '11px', color: '#d93025', marginTop: '4px', fontWeight: 600 }}>
+                = {lateDeductionDays} unpaid day{lateDeductionDays > 1 ? 's' : ''} (-৳{lateDeduction.toLocaleString()})
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Salary progress bar */}
@@ -247,8 +267,6 @@ export default function StaffPortalPage() {
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-            {/* Salary breakdown for selected month */}
             {monthPayroll ? (
               <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>
@@ -265,6 +283,7 @@ export default function StaffPortalPage() {
                     { label: 'Advance', value: monthPayroll.advance_taken, negative: true },
                     { label: 'Others', value: monthPayroll.others_taken, negative: true },
                     { label: 'Unpaid Leave', value: monthPayroll.unpaid_leave_deduction, negative: true },
+                    { label: 'Late Deduction', value: lateDeduction, negative: true },
                     { label: 'Miscellaneous', value: monthPayroll.miscellaneous },
                   ].filter(item => Number(item.value) !== 0).map(item => (
                     <div key={item.label} style={{ background: '#F5F0E8', borderRadius: '6px', padding: '10px' }}>
@@ -275,6 +294,10 @@ export default function StaffPortalPage() {
                     </div>
                   ))}
                 </div>
+                <div style={{ marginTop: '16px', padding: '12px 16px', background: '#8B5E3C', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: 'white', fontWeight: 600, fontSize: '14px' }}>Final Salary</span>
+                  <span style={{ color: 'white', fontWeight: 800, fontSize: '20px' }}>৳{finalSalary.toLocaleString()}</span>
+                </div>
               </div>
             ) : (
               <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '32px', textAlign: 'center', color: '#9C8A76' }}>
@@ -282,7 +305,6 @@ export default function StaffPortalPage() {
               </div>
             )}
 
-            {/* Payment history for selected month */}
             {monthPayments.length > 0 && (
               <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '12px' }}>
@@ -300,7 +322,6 @@ export default function StaffPortalPage() {
               </div>
             )}
 
-            {/* Leave balance */}
             {leave && (
               <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
                 <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>
@@ -334,12 +355,24 @@ export default function StaffPortalPage() {
                 No salary records found.
               </div>
             ) : payroll.map(p => {
-              const mPayments = payments.filter(pay => {
-                const d = new Date(pay.payment_date)
-                return d.getMonth() + 1 === p.month && d.getFullYear() === p.year
-              })
+              const mPayments = payments.filter(pay =>
+                Number(pay.month) === p.month && Number(pay.year) === p.year
+              )
               const tPaid = mPayments.reduce((s, pay) => s + Number(pay.amount), 0)
-              const rem = Number(p.final_salary) - tPaid
+
+              const pBase = Number(staff?.base_salary || 0)
+              const pOt = (Number(p.overtime_hours) || 0) * (pBase / 30 / 10)
+              const pMisc = Number(p.miscellaneous || 0)
+              const pAdv = Number(p.advance_taken || 0)
+              const pOthers = Number(p.others_taken || 0)
+              const pUnpaid = Number(p.unpaid_leave_deduction || 0)
+              const pLateDeduct = p.month === selectedMonth && p.year === selectedYear ? lateDeduction : 0
+              const pFinal = Math.round(
+                pBase + pOt + Number(p.service_charge || 0) + Number(p.bonus || 0) +
+                Number(p.lunch_dinner || 0) + Number(p.morning_food || 0) + pMisc
+                - pAdv - pOthers - pUnpaid - pLateDeduct
+              )
+              const rem = pFinal - tPaid
               const isSelected = p.month === selectedMonth && p.year === selectedYear
 
               return (
@@ -350,18 +383,18 @@ export default function StaffPortalPage() {
                         {monthShort[p.month - 1]} {p.year}
                         {isSelected && <span style={{ fontSize: '10px', background: '#8B5E3C', color: 'white', padding: '2px 6px', borderRadius: '4px', marginLeft: '8px', fontWeight: 600 }}>Selected</span>}
                       </h3>
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: p.is_paid ? '#e6f4ea' : '#fce8e6', color: p.is_paid ? '#1e8e3e' : '#d93025', fontWeight: 600, marginTop: '4px', display: 'inline-block' }}>
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: rem <= 0 ? '#e6f4ea' : '#fce8e6', color: rem <= 0 ? '#1e8e3e' : '#d93025', fontWeight: 600, marginTop: '4px', display: 'inline-block' }}>
                         {rem <= 0 ? 'Fully Paid' : 'Pending'}
                       </span>
                     </div>
                     <p style={{ fontSize: '22px', fontWeight: 800, color: '#8B5E3C', margin: 0 }}>
-                      ৳{Number(p.final_salary).toLocaleString()}
+                      ৳{pFinal.toLocaleString()}
                     </p>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', fontSize: '12px', marginBottom: '16px' }}>
                     {[
-                      { label: 'Base', value: staff?.base_salary },
+                      { label: 'Base', value: pBase },
                       { label: 'Overtime', value: p.overtime_pay, positive: true },
                       { label: 'Service Charge', value: p.service_charge, positive: true },
                       { label: 'Bonus', value: p.bonus, positive: true },
@@ -370,6 +403,7 @@ export default function StaffPortalPage() {
                       { label: 'Advance', value: p.advance_taken, negative: true },
                       { label: 'Others', value: p.others_taken, negative: true },
                       { label: 'Unpaid Leave', value: p.unpaid_leave_deduction, negative: true },
+                      { label: 'Late Deduction', value: pLateDeduct, negative: true },
                       { label: 'Miscellaneous', value: p.miscellaneous },
                     ].filter(item => Number(item.value) !== 0).map(item => (
                       <div key={item.label} style={{ background: '#F5F0E8', borderRadius: '6px', padding: '8px' }}>
