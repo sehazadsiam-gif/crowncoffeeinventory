@@ -27,6 +27,8 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(true)
   const [printData, setPrintData] = useState(null)
   const [nameSort, setNameSort] = useState('asc') // 'asc' | 'desc'
+  const [waivedStaff, setWaivedStaff] = useState({})
+  const [waivedUnpaidStaff, setWaivedUnpaidStaff] = useState({})
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -50,13 +52,20 @@ export default function PayrollPage() {
       const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0]
       const endDate = new Date(y, m, 0).toISOString().split('T')[0]
 
-      const [staffRes, payRes, advRes, unpaidRes, lateRes] = await Promise.all([
+      const [staffRes, payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes] = await Promise.all([
         supabase.from('staff').select('*').eq('is_active', true).order('name'),
         supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y),
         supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y),
         supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate),
-        supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate)
+        supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate),
+        supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate),
+        supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y)
       ])
+
+      const summaryMap = {}
+      ;(summaryRes.data || []).forEach(s => {
+        summaryMap[s.staff_id] = s
+      })
 
       const advancesMap = {}
       ;(advRes.data || []).forEach(a => {
@@ -73,6 +82,11 @@ export default function PayrollPage() {
         lateMap[a.staff_id] = (lateMap[a.staff_id] || 0) + 1
       })
 
+      const presentMap = {}
+      ;(presentRes.data || []).forEach(a => {
+        presentMap[a.staff_id] = (presentMap[a.staff_id] || 0) + 1
+      })
+
       const payMap = {}
       ;(payRes.data || []).forEach(p => {
         payMap[p.staff_id] = {
@@ -83,11 +97,15 @@ export default function PayrollPage() {
 
       const activeStaff = staffRes.data || []
       for (const s of activeStaff) {
-        const unpaidDays = unpaidMap[s.id] || 0
+        const summary = summaryMap[s.id]
+        
+        const unpaidDays = summary ? summary.absent_days : (unpaidMap[s.id] || 0)
+        const lateDays = summary ? summary.late_days : (lateMap[s.id] || 0)
+        const presentCount = summary ? summary.present_days : (presentMap[s.id] || 0)
+        const absentCount = summary ? summary.absent_days : (unpaidMap[s.id] || 0)
+
         const perDay = Math.round(Number(s.base_salary) / 30)
         const unpaidDeduction = unpaidDays * perDay
-
-        const lateDays = lateMap[s.id] || 0
         const lateDeductionDays = Math.floor(lateDays / 3)
         const lateDeduction = lateDeductionDays * perDay
 
@@ -104,7 +122,9 @@ export default function PayrollPage() {
             unpaid_leave_deduction: unpaidDeduction,
             late_days: lateDays,
             late_deduction_days: lateDeductionDays,
-            late_deduction: lateDeduction
+            late_deduction: lateDeduction,
+            present_days: presentCount,
+            absent_days: absentCount
           }
         } else {
           payMap[s.id].unpaid_leave_days = unpaidDays
@@ -112,6 +132,8 @@ export default function PayrollPage() {
           payMap[s.id].late_days = lateDays
           payMap[s.id].late_deduction_days = lateDeductionDays
           payMap[s.id].late_deduction = lateDeduction
+          payMap[s.id].present_days = presentCount
+          payMap[s.id].absent_days = absentCount
         }
       }
 
@@ -137,7 +159,7 @@ export default function PayrollPage() {
     setPayments(map)
   }
 
-  function calculateFinalSalary(s, p) {
+  function calculateFinalSalary(s, p, isLateWaived, isUnpaidWaived) {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
     const perHourRate = base / 30 / 10
@@ -149,8 +171,8 @@ export default function PayrollPage() {
     const misc = Number(p.miscellaneous) || 0
     const adv = Number(p.advance_taken) || 0
     const others = Number(p.others_taken) || 0
-    const unpaid = Number(p.unpaid_leave_deduction) || 0
-    const late = Number(p.late_deduction) || 0
+    const unpaid = isUnpaidWaived ? 0 : (Number(p.unpaid_leave_deduction) || 0)
+    const late = isLateWaived ? 0 : (Number(p.late_deduction) || 0)
     return Math.round(
       base + ot + sc + bonus + lunch + morn + misc
       - adv - others - unpaid - late
@@ -174,7 +196,7 @@ export default function PayrollPage() {
     const row = payroll[staffId]
     const s = staff.find(st => st.id === staffId)
     if (!s || !row) return
-    const finalSalary = calculateFinalSalary(s, row)
+    const finalSalary = calculateFinalSalary(s, row, waivedStaff[staffId], waivedUnpaidStaff[staffId])
     try {
       const { error } = await supabase.from('payroll_entries').upsert({
         staff_id: row.staff_id,
@@ -205,7 +227,7 @@ export default function PayrollPage() {
 
     const s = staff.find(st => st.id === staffId)
     const row = payroll[staffId]
-    const finalSalary = calculateFinalSalary(s, row)
+    const finalSalary = calculateFinalSalary(s, row, waivedStaff[staffId], waivedUnpaidStaff[staffId])
     const alreadyPaid = (payments[staffId] || []).reduce((sum, p) => sum + Number(p.amount), 0)
     const remaining = finalSalary - alreadyPaid
 
@@ -258,7 +280,7 @@ export default function PayrollPage() {
       : b.name.localeCompare(a.name)
   )
 
-  const grandTotal = staff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id] || {}), 0)
+  const grandTotal = staff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id] || {}, waivedStaff[s.id], waivedUnpaidStaff[s.id]), 0)
   const totalPaidAll = Object.values(payments).flat().reduce((s, p) => s + Number(p.amount), 0)
   const totalRemainingAll = grandTotal - totalPaidAll
 
@@ -352,7 +374,7 @@ export default function PayrollPage() {
               <tbody>
                 {sortedStaff.map(s => {
                   const row = payroll[s.id]; if (!row) return null
-                  const finalSalary = calculateFinalSalary(s, row)
+                  const finalSalary = calculateFinalSalary(s, row, waivedStaff[s.id], waivedUnpaidStaff[s.id])
                   const sPayments = payments[s.id] || []
                   const paid = sPayments.reduce((acc, p) => acc + Number(p.amount), 0)
                   const rem = finalSalary - paid
@@ -368,9 +390,14 @@ export default function PayrollPage() {
                       <td style={{ padding: '12px 8px', textAlign: 'left' }}>
                         <p style={{ fontWeight: 700, fontSize: '13px', margin: 0 }}>{s.name}</p>
                         <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0' }}>{s.designation}</p>
-                        {Number(row.unpaid_leave_days) > 0 && (
-                          <p style={{ fontSize: '11px', color: '#d93025', marginTop: '3px', fontWeight: 600 }}>
-                            Unpaid: {row.unpaid_leave_days} day{row.unpaid_leave_days > 1 ? 's' : ''}
+                        {Number(row.present_days) > 0 && (
+                          <p style={{ fontSize: '11px', color: '#10B981', marginTop: '3px', fontWeight: 600 }}>
+                            Present: {row.present_days} days
+                          </p>
+                        )}
+                        {Number(row.absent_days) > 0 && (
+                          <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '3px', fontWeight: 600 }}>
+                            Absent: {row.absent_days} days
                           </p>
                         )}
                         {Number(row.late_days) > 0 && (
@@ -431,9 +458,29 @@ export default function PayrollPage() {
                             <p style={{ fontSize: '13px', color: '#d93025', fontWeight: 700, margin: 0 }}>
                               {row.unpaid_leave_days} day{row.unpaid_leave_days > 1 ? 's' : ''}
                             </p>
-                            <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600 }}>
+                            <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600, textDecoration: waivedUnpaidStaff[s.id] ? 'line-through' : 'none' }}>
                               -৳{Number(row.unpaid_leave_deduction).toLocaleString()}
                             </p>
+                            <div style={{ marginTop: '6px' }}>
+                              <button
+                                onClick={() => setWaivedUnpaidStaff(prev => ({
+                                  ...prev,
+                                  [s.id]: !prev[s.id]
+                                }))}
+                                style={{
+                                  padding: '3px 8px',
+                                  fontSize: '11px',
+                                  borderRadius: '4px',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  fontWeight: 600,
+                                  background: waivedUnpaidStaff[s.id] ? '#e6f4ea' : '#fef7e0',
+                                  color: waivedUnpaidStaff[s.id] ? '#1e8e3e' : '#B07830'
+                                }}
+                              >
+                                {waivedUnpaidStaff[s.id] ? 'Waived' : 'Waive'}
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <span style={{ fontSize: '13px', color: '#9C8A76' }}>—</span>
@@ -451,10 +498,30 @@ export default function PayrollPage() {
                               = {row.late_deduction_days} day{row.late_deduction_days > 1 ? 's' : ''} unpaid
                             </p>
                             {Number(row.late_deduction_days) > 0 && (
-                              <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600 }}>
+                              <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600, textDecoration: waivedStaff[s.id] ? 'line-through' : 'none' }}>
                                 -৳{Number(row.late_deduction).toLocaleString()}
                               </p>
                             )}
+                            <div style={{ marginTop: '6px' }}>
+                              <button
+                                onClick={() => setWaivedStaff(prev => ({
+                                  ...prev,
+                                  [s.id]: !prev[s.id]
+                                }))}
+                                style={{
+                                  padding: '3px 8px',
+                                  fontSize: '11px',
+                                  borderRadius: '4px',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  fontWeight: 600,
+                                  background: waivedStaff[s.id] ? '#e6f4ea' : '#fef7e0',
+                                  color: waivedStaff[s.id] ? '#1e8e3e' : '#B07830'
+                                }}
+                              >
+                                {waivedStaff[s.id] ? 'Waived' : 'Waive'}
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <span style={{ fontSize: '13px', color: '#9C8A76' }}>—</span>
@@ -480,7 +547,7 @@ export default function PayrollPage() {
                           <button onClick={() => setShowHistory(showHistory === s.id ? null : s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><History size={14} /></button>
                           <button onClick={() => setPrintData({
                             staff: s,
-                            payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary },
+                            payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary, is_waived: waivedStaff[s.id], is_unpaid_waived: waivedUnpaidStaff[s.id] },
                             month: months[month - 1],
                             year
                           })} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><Printer size={14} /></button>

@@ -4,7 +4,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { 
   Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, 
-  Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard 
+  Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
+  Upload
 } from 'lucide-react'
 
 export default function Navbar() {
@@ -59,6 +60,7 @@ export default function Navbar() {
       children: [
         { href: '/staff', label: 'Directory' },
         { href: '/staff/attendance', label: 'Attendance' },
+        { href: '/attendance-import', label: 'Attendance Import', icon: <Upload size={14} /> },
         { href: '/staff/payroll', label: 'Payroll' },
         { href: '/staff/advances', label: 'Advances' },
         { href: '/staff/service-charge', label: 'Service Charge' },

@@ -18,6 +18,8 @@ export default function StaffPortalPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
+  const [summary, setSummary] = useState(null)
+
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
@@ -33,14 +35,15 @@ export default function StaffPortalPage() {
     try {
       setLoading(true)
       const currentYear = new Date().getFullYear()
-      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes] = await Promise.all([
+      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes] = await Promise.all([
         supabase.from('staff').select('*').eq('id', staffId).single(),
         supabase.from('payroll_entries').select('*').eq('staff_id', staffId).order('year', { ascending: false }).order('month', { ascending: false }).limit(24),
         supabase.from('salary_payments').select('*').eq('staff_id', staffId).order('payment_date', { ascending: false }),
         supabase.from('attendance').select('*').eq('staff_id', staffId).order('date', { ascending: false }).limit(365),
         supabase.from('advance_log').select('*').eq('staff_id', staffId).order('date', { ascending: false }),
         supabase.from('staff_notes').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
-        supabase.from('leave_balance').select('*').eq('staff_id', staffId).eq('year', currentYear).single()
+        supabase.from('leave_balance').select('*').eq('staff_id', staffId).eq('year', currentYear).single(),
+        supabase.from('monthly_attendance_summary').select('*').eq('staff_id', staffId)
       ])
       setStaff(staffRes.data)
       setPayroll(payRes.data || [])
@@ -49,6 +52,7 @@ export default function StaffPortalPage() {
       setAdvances(advRes.data || [])
       setNotes(notesRes.data || [])
       setLeave(leaveRes.data)
+      setSummary(summaryRes.data || [])
     } catch (err) {
       console.error('Error fetching staff data:', err)
     } finally {
@@ -56,13 +60,7 @@ export default function StaffPortalPage() {
     }
   }
 
-  async function handleLogout() {
-    const token = localStorage.getItem('cc_token')
-    await fetch('/api/auth/logout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token })
-    })
+  function handleLogout() {
     localStorage.removeItem('cc_token')
     localStorage.removeItem('cc_role')
     localStorage.removeItem('cc_staff_id')
@@ -95,6 +93,8 @@ export default function StaffPortalPage() {
   const monthShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
   const monthPayroll = payroll.find(p => p.month === selectedMonth && p.year === selectedYear)
+  const monthSummary = (summary || []).find(s => s.month === selectedMonth && s.year === selectedYear)
+  
   const monthPayments = payments.filter(p =>
     Number(p.month) === selectedMonth && Number(p.year) === selectedYear
   )
@@ -107,11 +107,11 @@ export default function StaffPortalPage() {
   const totalPaidThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0)
   const monthAdvanceTotal = monthAdvances.reduce((s, a) => s + Number(a.amount), 0)
 
-  const presentDays = monthAttendance.filter(a => a.status === 'present').length
-  const absentDays = monthAttendance.filter(a => a.status === 'absent').length
-  const lateDays = monthAttendance.filter(a => a.status === 'late').length
+  const presentDays = monthSummary ? monthSummary.present_days : monthAttendance.filter(a => a.status === 'present').length
+  const absentDays = monthSummary ? monthSummary.absent_days : monthAttendance.filter(a => a.status === 'absent').length
+  const lateDays = monthSummary ? monthSummary.late_days : monthAttendance.filter(a => a.status === 'late').length
   const halfDays = monthAttendance.filter(a => a.status === 'half_day').length
-  const unpaidDays = monthAttendance.filter(a => a.leave_type === 'unpaid').length
+  const unpaidDays = monthSummary ? monthSummary.absent_days : monthAttendance.filter(a => a.leave_type === 'unpaid').length
 
   const lateDeductionDays = Math.floor(lateDays / 3)
   const perDay = Math.round(Number(staff?.base_salary || 0) / 30)
@@ -178,9 +178,16 @@ export default function StaffPortalPage() {
             <p style={{ fontSize: '22px', fontWeight: 800, color: 'white', margin: 0 }}>
               {monthNames[selectedMonth - 1]} {selectedYear}
             </p>
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: '4px 0 0 0' }}>
-              {isCurrentMonth ? 'Current Month' : 'Past Month'}
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: 0 }}>
+                {isCurrentMonth ? 'Current Month' : 'Past Month'}
+              </p>
+              {monthSummary?.source === 'rysenova' && (
+                <span style={{ fontSize: '10px', background: '#10B981', color: 'white', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                  Data from Rysenova
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={nextMonth}
