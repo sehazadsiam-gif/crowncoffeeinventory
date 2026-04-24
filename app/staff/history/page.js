@@ -28,7 +28,7 @@ export default function PayrollHistoryPage() {
     try {
       setLoading(true)
       const [staffRes, histRes] = await Promise.all([
-        supabase.from('staff').select('id, name, designation').order('name'),
+        supabase.from('staff').select('id, name, designation, serial').order('serial', { ascending: true }).order('name', { ascending: true }),
         supabase.from('payroll_entries')
           .select('*, staff(name, designation)')
           .eq('year', year)

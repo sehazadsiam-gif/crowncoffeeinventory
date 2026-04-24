@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { 
   Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, 
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
-  Upload
+  Upload, FileSpreadsheet
 } from 'lucide-react'
 
 export default function Navbar() {
@@ -53,7 +53,14 @@ export default function Navbar() {
     { href: '/sales', label: 'Sales', icon: <CalcIcon size={18} /> },
     { href: '/bazar', label: 'Bazar', icon: <CalcIcon size={18} /> },
     { href: '/stock', label: 'Stock', icon: <Users size={18} /> },
-    { href: '/menu', label: 'Menu', icon: <BookOpen size={18} /> },
+    { 
+      label: 'Menu', 
+      icon: <BookOpen size={18} />,
+      children: [
+        { href: '/menu', label: 'Menu List' },
+        { href: '/menu-import', label: 'Menu Import', icon: <FileSpreadsheet size={14} /> },
+      ]
+    },
     { 
       label: 'Staff Management', 
       icon: <Users size={18} />,

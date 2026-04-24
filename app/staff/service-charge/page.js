@@ -31,7 +31,7 @@ export default function ServiceChargePage() {
     try {
       setLoading(true)
       const [staffRes, histRes] = await Promise.all([
-        supabase.from('staff').select('id, name, designation').eq('is_active', true).order('name'),
+        supabase.from('staff').select('id, name, designation, serial').eq('is_active', true).order('serial', { ascending: true }).order('name', { ascending: true }),
         supabase.from('service_charge_pool').select('*').order('year', { ascending: false }).order('month', { ascending: false })
       ])
       if (staffRes.error) throw staffRes.error

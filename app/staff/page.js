@@ -19,8 +19,11 @@ export default function StaffDirectory() {
   const [form, setForm] = useState({
     name: '', designation: '', contract_type: 'full_time',
     base_salary: '', join_date: new Date().toISOString().split('T')[0],
-    emergency_contact: '', emergency_phone: '', notes: ''
+    emergency_contact: '', emergency_phone: '', notes: '',
+    serial: 999
   })
+  const [isSorting, setIsSorting] = useState(false)
+  const [tempSerials, setTempSerials] = useState({})
 
     useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -34,7 +37,7 @@ export default function StaffDirectory() {
   async function fetchStaff() {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from('staff').select('*').order('name')
+      const { data, error } = await supabase.from('staff').select('*').order('serial', { ascending: true }).order('name', { ascending: true })
       if (error) throw error
       setStaff(data || [])
     } catch (err) {
@@ -57,7 +60,8 @@ export default function StaffDirectory() {
         join_date: form.join_date,
         emergency_contact: form.emergency_contact,
         emergency_phone: form.emergency_phone,
-        notes: form.notes
+        notes: form.notes,
+        serial: parseInt(form.serial) || 999
       }]).select()
 
       if (error) throw error
@@ -74,7 +78,8 @@ export default function StaffDirectory() {
       setForm({
         name: '', designation: '', contract_type: 'full_time',
         base_salary: '', join_date: new Date().toISOString().split('T')[0],
-        emergency_contact: '', emergency_phone: '', notes: ''
+        emergency_contact: '', emergency_phone: '', notes: '',
+        serial: 999
       })
       fetchStaff()
     } catch (err) {
@@ -107,6 +112,33 @@ export default function StaffDirectory() {
     }
   }
 
+  async function handleSaveSerials() {
+    try {
+      setLoading(true)
+      const updates = Object.entries(tempSerials).map(([id, serial]) => ({
+        id,
+        serial: parseInt(serial) || 999
+      }))
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('staff')
+          .update({ serial: update.serial })
+          .eq('id', update.id)
+        if (error) throw error
+      }
+
+      addToast('Staff ordering updated', 'success')
+      setIsSorting(false)
+      setTempSerials({})
+      fetchStaff()
+    } catch (err) {
+      addToast('Error updating order: ' + err.message, 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const filteredStaff = staff.filter(s => {
     if (filter === 'active') return s.is_active
     if (filter === 'inactive') return !s.is_active
@@ -123,13 +155,42 @@ export default function StaffDirectory() {
             <h1 style={{ fontSize: '32px', color: 'var(--text-primary)' }}>Staff Directory</h1>
             <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>Manage your Crown Coffee team</p>
           </div>
-          <button
-            className="btn-primary"
-            onClick={() => setShowAddForm(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <Plus size={16} /> Add Staff Member
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                if (isSorting) {
+                  handleSaveSerials()
+                } else {
+                  const initial = {}
+                  staff.forEach(s => initial[s.id] = s.serial || 999)
+                  setTempSerials(initial)
+                  setIsSorting(true)
+                }
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', background: isSorting ? 'var(--accent-green)' : 'transparent', color: isSorting ? 'white' : 'var(--text-secondary)' }}
+            >
+              {isSorting ? 'Save Ordering' : 'Adjust Serials'}
+            </button>
+            {isSorting && (
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  setIsSorting(false)
+                  setTempSerials({})
+                }}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              className="btn-primary"
+              onClick={() => setShowAddForm(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Plus size={16} /> Add Staff Member
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
@@ -204,16 +265,29 @@ export default function StaffDirectory() {
                       }}>
                         {s.name}
                       </h2>
-                      <p style={{
-                        fontSize: '11px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.1em',
-                        color: 'var(--text-muted)',
-                        fontWeight: 600,
-                        fontFamily: 'var(--font-body)'
-                      }}>
-                        {s.designation}
-                      </p>
+                      {isSorting ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>Serial:</span>
+                          <input
+                            type="number"
+                            className="input"
+                            style={{ padding: '2px 8px', width: '70px', fontSize: '12px', height: '28px' }}
+                            value={tempSerials[s.id] ?? s.serial ?? 999}
+                            onChange={e => setTempSerials({ ...tempSerials, [s.id]: e.target.value })}
+                          />
+                        </div>
+                      ) : (
+                        <p style={{
+                          fontSize: '11px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.1em',
+                          color: 'var(--text-muted)',
+                          fontWeight: 600,
+                          fontFamily: 'var(--font-body)'
+                        }}>
+                          {s.designation} {s.serial !== 999 && <span style={{ marginLeft: '8px', opacity: 0.6 }}>#{s.serial}</span>}
+                        </p>
+                      )}
                     </div>
                     <span style={{
                       fontSize: '11px',
@@ -343,6 +417,17 @@ export default function StaffDirectory() {
               placeholder="e.g. Shahadat Hossain"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="label" style={{ color: 'var(--text-secondary)' }}>Display Serial (for sorting)</label>
+            <input
+              className="input"
+              type="number"
+              placeholder="e.g. 1, 2, 3... (999 for default)"
+              value={form.serial}
+              onChange={e => setForm({ ...form, serial: e.target.value })}
             />
           </div>
 

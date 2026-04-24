@@ -43,7 +43,8 @@ export default function AttendancePage() {
         .select('*, staff(name, designation)')
         .eq('month', selectedMonth)
         .eq('year', selectedYear)
-        .order('staff_id')
+        .order('serial', { foreignTable: 'staff', ascending: true })
+        .order('name', { foreignTable: 'staff', ascending: true })
       if (error) throw error
       setMonthlySummary(data || [])
     } catch (err) {
@@ -82,7 +83,7 @@ export default function AttendancePage() {
     try {
       setLoading(true)
       const [staffRes, attRes] = await Promise.all([
-        supabase.from('staff').select('*').eq('is_active', true).order('name'),
+        supabase.from('staff').select('*').eq('is_active', true).order('serial', { ascending: true }).order('name', { ascending: true }),
         supabase.from('attendance').select('*').eq('date', date)
       ])
       if (staffRes.error) throw staffRes.error

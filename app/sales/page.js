@@ -10,8 +10,9 @@ import Link from 'next/link'
 import {
   ShoppingCart, CheckCircle2, Trash2, Info,
   Plus, Minus, Receipt, ArrowRight, Package,
-  TrendingUp, Layers, X, Calendar, Search
+  TrendingUp, Layers, X, Calendar, Search, FileSpreadsheet, Upload, Download
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { convertUnit } from '../../lib/convert'
 
 export default function SalesPage() {
@@ -27,6 +28,9 @@ export default function SalesPage() {
   const [preview, setPreview] = useState([])
   const [modalOpen, setModalOpen] = useState(false)
   const [modalConfig, setModalConfig] = useState({})
+  const [importFile, setImportFile] = useState(null)
+  const [importPreview, setImportPreview] = useState(null)
+  const [importDate, setImportDate] = useState(new Date().toISOString().split('T')[0])
 
   const menuGridRef = useRef(null)
 
@@ -164,6 +168,74 @@ export default function SalesPage() {
     }
   }
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) processSalesFile(file)
+  }
+
+  async function processSalesFile(file) {
+    if (file.size > 5 * 1024 * 1024) {
+      return addToast('File too large (max 5MB)', 'error')
+    }
+    setImportFile(file)
+    try {
+      const bytes = await file.arrayBuffer()
+      const workbook = XLSX.read(bytes, { type: 'buffer' })
+      const sheet = workbook.Sheets[workbook.SheetNames[0]]
+      const rows = XLSX.utils.sheet_to_json(sheet)
+
+      const preview = rows.map(row => {
+        const itemName = row['Item Name'] || row['item_name'] || row['Item']
+        const qty = parseInt(row['Quantity'] || row['quantity'] || 0)
+        
+        // Find best match
+        const match = menuItems.find(m => 
+          m.name.toLowerCase() === itemName?.toString().toLowerCase() ||
+          m.name.toLowerCase().includes(itemName?.toString().toLowerCase())
+        )
+
+        return {
+          originalName: itemName,
+          matchedId: match?.id || '',
+          qty,
+          price: match?.selling_price || 0,
+          status: match ? 'matched' : 'unmatched'
+        }
+      }).filter(r => r.originalName && r.qty > 0)
+
+      setImportPreview(preview)
+    } catch (err) {
+      addToast('Error reading file', 'error')
+    }
+  }
+
+  async function confirmImport() {
+    if (!importPreview || importPreview.length === 0) return
+    setSaving(true)
+    try {
+      const toInsert = importPreview.map(row => ({
+        date: importDate,
+        menu_item_id: row.matchedId,
+        quantity: row.qty,
+        total_revenue: row.qty * row.price
+      })).filter(r => r.menu_item_id)
+
+      if (toInsert.length === 0) throw new Error('No matched items to import')
+
+      const { error } = await supabase.from('sales').insert(toInsert)
+      if (error) throw error
+
+      addToast(`Imported ${toInsert.length} records successfully`, 'success')
+      setImportFile(null)
+      setImportPreview(null)
+      fetchSales()
+    } catch (err) {
+      addToast(err.message || 'Import failed', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const totalRevenue = (sales || []).reduce((s, e) => s + (e?.total_revenue || 0), 0)
   const totalQty = (sales || []).reduce((s, e) => s + (e?.quantity || 0), 0)
   const cartTotal = Object.entries(cart || {}).reduce((s, [id, data]) => s + ((data?.qty || 0) * (data?.price || 0)), 0)
@@ -235,11 +307,80 @@ export default function SalesPage() {
                     />
                   </div>
 
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <a href="/api/sales/template" className="btn-secondary" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', textDecoration: 'none' }}>
+                      <Download size={14} /> Template
+                    </a>
+                    <button 
+                      onClick={() => document.getElementById('salesFile').click()}
+                      className="btn-primary" 
+                      style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+                    >
+                      <Upload size={14} /> Import File
+                    </button>
+                    <input id="salesFile" type="file" hidden accept=".xlsx,.xls,.csv" onChange={handleFileChange} />
+                  </div>
+
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>Current Total</p>
                     <p style={{ fontSize: '28px', fontWeight: 700, color: 'var(--primary)' }}>৳{cartTotal.toLocaleString()}</p>
                   </div>
                 </div>
+
+                {importPreview && (
+                  <div className="card" style={{ border: '2px solid var(--primary)', background: '#F0F9FF' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <div>
+                        <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Import Preview</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>Import for:</span>
+                          <input type="date" value={importDate} onChange={e => setImportDate(e.target.value)} style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '12px' }} />
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="btn-secondary" onClick={() => setImportPreview(null)} style={{ padding: '6px 12px', fontSize: '13px' }}>Cancel</button>
+                        <button className="btn-primary" onClick={confirmImport} style={{ padding: '6px 12px', fontSize: '13px' }}>Confirm Import</button>
+                      </div>
+                    </div>
+                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                        <thead>
+                          <tr style={{ textAlign: 'left', borderBottom: '1px solid #CBD5E1' }}>
+                            <th style={{ padding: '8px' }}>File Item</th>
+                            <th style={{ padding: '8px' }}>Matched To</th>
+                            <th style={{ padding: '8px' }}>Qty</th>
+                            <th style={{ padding: '8px' }}>Revenue</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importPreview.map((row, idx) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0', background: row.status === 'unmatched' ? '#FEF2F2' : 'transparent' }}>
+                              <td style={{ padding: '8px' }}>{row.originalName}</td>
+                              <td style={{ padding: '8px' }}>
+                                <select 
+                                  value={row.matchedId} 
+                                  onChange={(e) => {
+                                    const newId = e.target.value
+                                    const item = menuItems.find(m => m.id === newId)
+                                    const next = [...importPreview]
+                                    next[idx] = { ...next[idx], matchedId: newId, price: item?.selling_price || 0, status: newId ? 'matched' : 'unmatched' }
+                                    setImportPreview(next)
+                                  }}
+                                  style={{ width: '100%', padding: '4px', borderRadius: '4px', border: '1px solid #CBD5E1' }}
+                                >
+                                  <option value="">Select menu item...</option>
+                                  {menuItems.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
+                              </td>
+                              <td style={{ padding: '8px' }}>{row.qty}</td>
+                              <td style={{ padding: '8px' }}>৳{(row.qty * row.price).toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
                 {/* Menu Grid by Category */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>

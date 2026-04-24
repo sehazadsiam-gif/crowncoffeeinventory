@@ -53,7 +53,7 @@ export default function PayrollPage() {
       const endDate = new Date(y, m, 0).toISOString().split('T')[0]
 
       const [staffRes, payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes] = await Promise.all([
-        supabase.from('staff').select('*').eq('is_active', true).order('name'),
+        supabase.from('staff').select('*').eq('is_active', true).order('serial', { ascending: true }).order('name', { ascending: true }),
         supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y),
         supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y),
         supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate),
@@ -274,11 +274,16 @@ export default function PayrollPage() {
 
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-  const sortedStaff = [...staff].sort((a, b) =>
-    nameSort === 'asc'
+  const sortedStaff = [...staff].sort((a, b) => {
+    // Primary sort by serial
+    if ((a.serial || 999) !== (b.serial || 999)) {
+      return (a.serial || 999) - (b.serial || 999)
+    }
+    // Secondary sort by name based on nameSort state
+    return nameSort === 'asc'
       ? a.name.localeCompare(b.name)
       : b.name.localeCompare(a.name)
-  )
+  })
 
   const grandTotal = staff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id] || {}, waivedStaff[s.id], waivedUnpaidStaff[s.id]), 0)
   const totalPaidAll = Object.values(payments).flat().reduce((s, p) => s + Number(p.amount), 0)
