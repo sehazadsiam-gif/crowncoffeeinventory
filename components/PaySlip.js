@@ -41,9 +41,22 @@ export default function PaySlip({ data, onClose }) {
     earnings.push({ label: miscLabel, amount: Number(payroll.miscellaneous) })
   }
 
+  const perDay = Math.round(Number(staff.base_salary) / 30)
+  const absentDays = Number(payroll.absent_days) || 0
+  const freeDays = 4
+  const autoUnpaid = Math.max(0, absentDays - freeDays)
+  const waivedUnpaid = Number(payroll.waived_unpaid_days) || 0
+
+  const unpaidDays = payroll.manual_unpaid_days !== null && payroll.manual_unpaid_days !== undefined
+    ? Number(payroll.manual_unpaid_days)
+    : Math.max(0, autoUnpaid - waivedUnpaid)
+  const unpaidDeduction = unpaidDays * perDay
+
   const deductions = [
     { label: 'Advance Taken', amount: Number(payroll.advance_taken) },
-    { label: 'Others Taken', amount: Number(payroll.others_taken) }
+    { label: 'Others Taken', amount: Number(payroll.others_taken) },
+    { label: `Unpaid Leave (${unpaidDays} days)`, amount: unpaidDeduction },
+    { label: `Late Deduction (${payroll.late_deduction_days || 0} days)`, amount: payroll.is_waived ? 0 : Number(payroll.late_deduction || 0) }
   ]
 
   if (Number(payroll.miscellaneous) < 0) {

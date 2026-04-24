@@ -234,6 +234,55 @@ export default function StaffLoginPage() {
               Your username and password have been provided by admin.
               Contact admin if you have trouble signing in.
             </div>
+
+            <div style={{
+              marginTop: '12px',
+              borderTop: '1px solid #F5F0E8',
+              paddingTop: '20px'
+            }}>
+              <h3 style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#6B3A2A',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <div style={{ width: '12px', height: '2px', background: '#C9943A' }} />
+                Recent Updates
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '10px',
+                  padding: '12px'
+                }}>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#1C1410', margin: '0 0 4px 0' }}>
+                    New Payroll Rules
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: '1.5' }}>
+                    First 4 absent days per month are now FREE (paid). Unpaid deductions only start from the 5th absent day.
+                  </p>
+                </div>
+                <div style={{
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '10px',
+                  padding: '12px'
+                }}>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#1C1410', margin: '0 0 4px 0' }}>
+                    Portal Enhancements
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: '1.5' }}>
+                    View detailed salary breakdowns and attendance history in your personal dashboard.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

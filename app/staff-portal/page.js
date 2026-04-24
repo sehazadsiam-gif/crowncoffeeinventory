@@ -111,7 +111,6 @@ export default function StaffPortalPage() {
   const absentDays = monthSummary ? monthSummary.absent_days : monthAttendance.filter(a => a.status === 'absent').length
   const lateDays = monthSummary ? monthSummary.late_days : monthAttendance.filter(a => a.status === 'late').length
   const halfDays = monthAttendance.filter(a => a.status === 'half_day').length
-  const unpaidDays = monthSummary ? monthSummary.absent_days : monthAttendance.filter(a => a.leave_type === 'unpaid').length
 
   const lateDeductionDays = Math.floor(lateDays / 3)
   const perDay = Math.round(Number(staff?.base_salary || 0) / 30)
@@ -128,9 +127,19 @@ export default function StaffPortalPage() {
   const misc = Number(monthPayroll?.miscellaneous || 0)
   const adv = Number(monthPayroll?.advance_taken || 0)
   const others = Number(monthPayroll?.others_taken || 0)
-  const unpaid = Number(monthPayroll?.unpaid_leave_deduction || 0)
+
+  const autoUnpaidDays = Math.max(0, absentDays - 4)
+  const waivedDays = Number(monthPayroll?.waived_unpaid_days) || 0
+  const calculatedUnpaidDays = Math.max(0, autoUnpaidDays - waivedDays)
+
+  const unpaidDeductionDays = monthPayroll?.manual_unpaid_days !== null
+    && monthPayroll?.manual_unpaid_days !== undefined
+    ? Number(monthPayroll.manual_unpaid_days)
+    : calculatedUnpaidDays
+  const unpaidDeductionAmount = unpaidDeductionDays * perDay
+
   const finalSalary = monthPayroll ? Math.round(
-    base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaid - lateDeduction
+    base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaidDeductionAmount - lateDeduction
   ) : 0
 
   const remaining = finalSalary - totalPaidThisMonth
@@ -206,9 +215,11 @@ export default function StaffPortalPage() {
             { label: 'Remaining', value: '৳' + remaining.toLocaleString(), color: remaining > 0 ? '#d93025' : '#1e8e3e' },
             { label: 'Advance', value: '৳' + monthAdvanceTotal.toLocaleString(), color: '#d93025' },
             { label: 'Present', value: presentDays + ' days', color: '#1e8e3e' },
-            { label: 'Absent', value: absentDays + ' days', color: '#d93025' },
-            { label: 'Unpaid Leave', value: unpaidDays + ' days', color: '#d93025' },
-          ].map(card => (
+            { label: 'Absent Days', value: absentDays, color: '#d93025' },
+            { label: 'Free Days (4)', value: Math.min(4, absentDays), color: '#1e8e3e' },
+            { label: 'Waived Days', value: waivedDays, color: '#1e8e3e', hide: waivedDays === 0 },
+            { label: 'Unpaid Days', value: unpaidDeductionDays, color: '#d93025' },
+          ].filter(c => !c.hide).map(card => (
             <div key={card.label} style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '14px 16px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
               <p style={{ fontSize: '10px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600, marginBottom: '6px' }}>{card.label}</p>
               <p style={{ fontSize: '18px', fontWeight: 700, color: card.color, margin: 0 }}>{card.value}</p>
@@ -281,17 +292,17 @@ export default function StaffPortalPage() {
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
                   {[
-                    { label: 'Base Salary', value: staff?.base_salary, neutral: true },
-                    { label: 'Overtime', value: monthPayroll.overtime_pay, positive: true },
-                    { label: 'Service Charge', value: monthPayroll.service_charge, positive: true },
-                    { label: 'Bonus', value: monthPayroll.bonus, positive: true },
-                    { label: 'Lunch + Dinner', value: monthPayroll.lunch_dinner, positive: true },
-                    { label: 'Morning Food', value: monthPayroll.morning_food, positive: true },
-                    { label: 'Advance', value: monthPayroll.advance_taken, negative: true },
-                    { label: 'Others', value: monthPayroll.others_taken, negative: true },
-                    { label: 'Unpaid Leave', value: monthPayroll.unpaid_leave_deduction, negative: true },
+                    { label: 'Base Salary', value: base, neutral: true },
+                    { label: 'Overtime', value: ot, positive: true },
+                    { label: 'Service Charge', value: sc, positive: true },
+                    { label: 'Bonus', value: bonus, positive: true },
+                    { label: 'Lunch + Dinner', value: lunch, positive: true },
+                    { label: 'Morning Food', value: morn, positive: true },
+                    { label: 'Advance', value: adv, negative: true },
+                    { label: 'Others', value: others, negative: true },
+                    { label: 'Unpaid Deduction', value: unpaidDeductionAmount, negative: true },
                     { label: 'Late Deduction', value: lateDeduction, negative: true },
-                    { label: 'Miscellaneous', value: monthPayroll.miscellaneous },
+                    { label: 'Miscellaneous', value: misc },
                   ].filter(item => Number(item.value) !== 0).map(item => (
                     <div key={item.label} style={{ background: '#F5F0E8', borderRadius: '6px', padding: '10px' }}>
                       <p style={{ fontSize: '10px', color: '#9C8A76', margin: '0 0 4px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{item.label}</p>

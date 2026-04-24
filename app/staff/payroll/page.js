@@ -28,7 +28,6 @@ export default function PayrollPage() {
   const [printData, setPrintData] = useState(null)
   const [nameSort, setNameSort] = useState('asc') // 'asc' | 'desc'
   const [waivedStaff, setWaivedStaff] = useState({})
-  const [waivedUnpaidStaff, setWaivedUnpaidStaff] = useState({})
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -91,7 +90,9 @@ export default function PayrollPage() {
       ;(payRes.data || []).forEach(p => {
         payMap[p.staff_id] = {
           ...p,
-          advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0)
+          advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0),
+          manual_unpaid_days: p.manual_unpaid_days ?? null,
+          waived_unpaid_days: p.waived_unpaid_days || 0
         }
       })
 
@@ -99,13 +100,11 @@ export default function PayrollPage() {
       for (const s of activeStaff) {
         const summary = summaryMap[s.id]
         
-        const unpaidDays = summary ? summary.absent_days : (unpaidMap[s.id] || 0)
         const lateDays = summary ? summary.late_days : (lateMap[s.id] || 0)
         const presentCount = summary ? summary.present_days : (presentMap[s.id] || 0)
         const absentCount = summary ? summary.absent_days : (unpaidMap[s.id] || 0)
 
         const perDay = Math.round(Number(s.base_salary) / 30)
-        const unpaidDeduction = unpaidDays * perDay
         const lateDeductionDays = Math.floor(lateDays / 3)
         const lateDeduction = lateDeductionDays * perDay
 
@@ -118,8 +117,8 @@ export default function PayrollPage() {
             advance_taken: advancesMap[s.id] || 0,
             others_taken: 0, miscellaneous: 0,
             miscellaneous_note: '', is_paid: false,
-            unpaid_leave_days: unpaidDays,
-            unpaid_leave_deduction: unpaidDeduction,
+            manual_unpaid_days: null,
+            waived_unpaid_days: 0,
             late_days: lateDays,
             late_deduction_days: lateDeductionDays,
             late_deduction: lateDeduction,
@@ -127,8 +126,6 @@ export default function PayrollPage() {
             absent_days: absentCount
           }
         } else {
-          payMap[s.id].unpaid_leave_days = unpaidDays
-          payMap[s.id].unpaid_leave_deduction = unpaidDeduction
           payMap[s.id].late_days = lateDays
           payMap[s.id].late_deduction_days = lateDeductionDays
           payMap[s.id].late_deduction = lateDeduction
@@ -159,7 +156,7 @@ export default function PayrollPage() {
     setPayments(map)
   }
 
-  function calculateFinalSalary(s, p, isLateWaived, isUnpaidWaived) {
+  function calculateFinalSalary(s, p, isLateWaived) {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
     const perHourRate = base / 30 / 10
@@ -171,11 +168,27 @@ export default function PayrollPage() {
     const misc = Number(p.miscellaneous) || 0
     const adv = Number(p.advance_taken) || 0
     const others = Number(p.others_taken) || 0
-    const unpaid = isUnpaidWaived ? 0 : (Number(p.unpaid_leave_deduction) || 0)
+    const perDay = Math.round(base / 30)
+
+    // Absent days from summary or payroll
+    const absentDays = Number(p.absent_days) || 0
+    const freeAbsentDays = 4
+    const autoUnpaidDays = Math.max(0, absentDays - freeAbsentDays)
+    const waivedDays = Number(p.waived_unpaid_days) || 0
+    const finalUnpaidDays = Math.max(0, autoUnpaidDays - waivedDays)
+    const unpaidDeduction = finalUnpaidDays * perDay
+
+    // Manual override takes priority if set
+    const manualUnpaid = p.manual_unpaid_days !== undefined
+      && p.manual_unpaid_days !== null
+      ? Number(p.manual_unpaid_days) * perDay
+      : unpaidDeduction
+
     const late = isLateWaived ? 0 : (Number(p.late_deduction) || 0)
+
     return Math.round(
       base + ot + sc + bonus + lunch + morn + misc
-      - adv - others - unpaid - late
+      - adv - others - manualUnpaid - late
     )
   }
 
@@ -196,12 +209,12 @@ export default function PayrollPage() {
     const row = payroll[staffId]
     const s = staff.find(st => st.id === staffId)
     if (!s || !row) return
-    const finalSalary = calculateFinalSalary(s, row, waivedStaff[staffId], waivedUnpaidStaff[staffId])
+    const finalSalary = calculateFinalSalary(s, row, waivedStaff[staffId])
     try {
       const { error } = await supabase.from('payroll_entries').upsert({
         staff_id: row.staff_id,
-        month: row.month,
-        year: row.year,
+        month: Number(row.month),
+        year: Number(row.year),
         overtime_hours: Number(row.overtime_hours) || 0,
         overtime_pay: Number(row.overtime_pay) || 0,
         service_charge: Number(row.service_charge) || 0,
@@ -213,11 +226,16 @@ export default function PayrollPage() {
         miscellaneous: Number(row.miscellaneous) || 0,
         miscellaneous_note: row.miscellaneous_note || '',
         is_paid: row.is_paid || false,
+        manual_unpaid_days: row.manual_unpaid_days === null ? null : Number(row.manual_unpaid_days),
+        waived_unpaid_days: Number(row.waived_unpaid_days) || 0,
+        absent_days: Number(row.absent_days) || 0,
         final_salary: finalSalary
       }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
+      console.log('Saved payroll for', s.name)
     } catch (err) {
-      addToast('Save failed', 'error')
+      console.error('Save error:', err)
+      addToast('Save failed: ' + err.message, 'error')
     }
   }
 
@@ -227,7 +245,7 @@ export default function PayrollPage() {
 
     const s = staff.find(st => st.id === staffId)
     const row = payroll[staffId]
-    const finalSalary = calculateFinalSalary(s, row, waivedStaff[staffId], waivedUnpaidStaff[staffId])
+    const finalSalary = calculateFinalSalary(s, row, waivedStaff[staffId])
     const alreadyPaid = (payments[staffId] || []).reduce((sum, p) => sum + Number(p.amount), 0)
     const remaining = finalSalary - alreadyPaid
 
@@ -275,17 +293,15 @@ export default function PayrollPage() {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
   const sortedStaff = [...staff].sort((a, b) => {
-    // Primary sort by serial
     if ((a.serial || 999) !== (b.serial || 999)) {
       return (a.serial || 999) - (b.serial || 999)
     }
-    // Secondary sort by name based on nameSort state
     return nameSort === 'asc'
       ? a.name.localeCompare(b.name)
       : b.name.localeCompare(a.name)
   })
 
-  const grandTotal = staff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id] || {}, waivedStaff[s.id], waivedUnpaidStaff[s.id]), 0)
+  const grandTotal = staff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id] || {}, waivedStaff[s.id]), 0)
   const totalPaidAll = Object.values(payments).flat().reduce((s, p) => s + Number(p.amount), 0)
   const totalRemainingAll = grandTotal - totalPaidAll
 
@@ -344,14 +360,13 @@ export default function PayrollPage() {
         }}>
           <p style={{ margin: 0, fontWeight: 700 }}>Automatic Deduction Rules:</p>
           <p style={{ margin: 0 }}>
-            1. Unpaid Leave: Each unpaid absent day deducts Base Salary / 30 from final salary.
+            1. Unpaid Leave: First 4 absent days are free. From the 5th absent day, each day deducts Base Salary / 30 from final salary. You can waive days or override manually.
           </p>
           <p style={{ margin: 0 }}>
             2. Late Attendance: Every 3 late days in a month counts as 1 unpaid absent day.
-            Deduction = (Late Days / 3, rounded down) x (Base Salary / 30)
           </p>
           <p style={{ margin: 0 }}>
-            3. Advance: Total advance taken in the month is automatically deducted from final salary.
+            3. Advance: Total advance taken in the month is automatically deducted.
           </p>
         </div>
 
@@ -379,170 +394,76 @@ export default function PayrollPage() {
               <tbody>
                 {sortedStaff.map(s => {
                   const row = payroll[s.id]; if (!row) return null
-                  const finalSalary = calculateFinalSalary(s, row, waivedStaff[s.id], waivedUnpaidStaff[s.id])
+                  const finalSalary = calculateFinalSalary(s, row, waivedStaff[s.id])
                   const sPayments = payments[s.id] || []
                   const paid = sPayments.reduce((acc, p) => acc + Number(p.amount), 0)
                   const rem = finalSalary - paid
 
                   const base = Number(s.base_salary) || 0
                   const perDay = Math.round(base / 30)
-                  const perHour = Math.floor(perDay / 10)
+
+                  const autoUnpaid = Math.max(0, (Number(row.absent_days) || 0) - 4)
+                  const waived = Number(row.waived_unpaid_days) || 0
+                  const finalUnpaidDays = Math.max(0, autoUnpaid - waived)
 
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-
-                      {/* Staff name column */}
                       <td style={{ padding: '12px 8px', textAlign: 'left' }}>
                         <p style={{ fontWeight: 700, fontSize: '13px', margin: 0 }}>{s.name}</p>
                         <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0' }}>{s.designation}</p>
-                        {Number(row.present_days) > 0 && (
-                          <p style={{ fontSize: '11px', color: '#10B981', marginTop: '3px', fontWeight: 600 }}>
-                            Present: {row.present_days} days
-                          </p>
-                        )}
-                        {Number(row.absent_days) > 0 && (
-                          <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '3px', fontWeight: 600 }}>
-                            Absent: {row.absent_days} days
-                          </p>
-                        )}
-                        {Number(row.late_days) > 0 && (
-                          <p style={{ fontSize: '11px', color: '#fa7b17', marginTop: '3px', fontWeight: 600 }}>
-                            Late: {row.late_days} days
-                            {Number(row.late_deduction_days) > 0 &&
-                              ' (-৳' + Number(row.late_deduction).toLocaleString() + ')'
-                            }
-                          </p>
-                        )}
+                        {Number(row.present_days) > 0 && <p style={{ fontSize: '11px', color: '#10B981', marginTop: '3px', fontWeight: 600 }}>Present: {row.present_days}d</p>}
+                        {Number(row.absent_days) > 0 && <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '3px', fontWeight: 600 }}>Absent: {row.absent_days}d</p>}
                       </td>
-
-                      {/* Base Salary */}
                       <td style={{ padding: '12px 8px', fontWeight: 600 }}>৳{base.toLocaleString()}</td>
-
-                      {/* Overtime Hours */}
                       <td style={{ padding: '12px 8px' }}>
                         <input type="number" style={inputStyle} value={row.overtime_hours} onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                        {Number(row.overtime_pay) > 0 && (
-                          <p style={{ fontSize: '10px', color: '#10B981', margin: '2px 0 0 0', fontWeight: 700 }}>+৳{row.overtime_pay}</p>
-                        )}
+                        {Number(row.overtime_pay) > 0 && <p style={{ fontSize: '10px', color: '#10B981', margin: '2px 0 0 0', fontWeight: 700 }}>+৳{row.overtime_pay}</p>}
                       </td>
-
-                      {/* Service Charge */}
-                      <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={inputStyle} value={row.service_charge} onChange={e => handleInput(s.id, 'service_charge', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                      </td>
-
-                      {/* Bonus */}
-                      <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={inputStyle} value={row.bonus} onChange={e => handleInput(s.id, 'bonus', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                      </td>
-
-                      {/* Lunch + Dinner */}
-                      <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={inputStyle} value={row.lunch_dinner} onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                      </td>
-
-                      {/* Morning Food */}
-                      <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={inputStyle} value={row.morning_food} onChange={e => handleInput(s.id, 'morning_food', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                      </td>
-
-                      {/* Advance */}
-                      <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                      </td>
-
-                      {/* Others */}
-                      <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                      </td>
-
-                      {/* Unpaid Leave */}
+                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.service_charge} onChange={e => handleInput(s.id, 'service_charge', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.bonus} onChange={e => handleInput(s.id, 'bonus', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.lunch_dinner} onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.morning_food} onChange={e => handleInput(s.id, 'morning_food', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      
+                      {/* Unpaid Leave Column */}
                       <td style={{ padding: '14px 8px' }}>
-                        {Number(row.unpaid_leave_days) > 0 ? (
-                          <div>
-                            <p style={{ fontSize: '13px', color: '#d93025', fontWeight: 700, margin: 0 }}>
-                              {row.unpaid_leave_days} day{row.unpaid_leave_days > 1 ? 's' : ''}
-                            </p>
-                            <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600, textDecoration: waivedUnpaidStaff[s.id] ? 'line-through' : 'none' }}>
-                              -৳{Number(row.unpaid_leave_deduction).toLocaleString()}
-                            </p>
-                            <div style={{ marginTop: '6px' }}>
-                              <button
-                                onClick={() => setWaivedUnpaidStaff(prev => ({
-                                  ...prev,
-                                  [s.id]: !prev[s.id]
-                                }))}
-                                style={{
-                                  padding: '3px 8px',
-                                  fontSize: '11px',
-                                  borderRadius: '4px',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  fontWeight: 600,
-                                  background: waivedUnpaidStaff[s.id] ? '#e6f4ea' : '#fef7e0',
-                                  color: waivedUnpaidStaff[s.id] ? '#1e8e3e' : '#B07830'
-                                }}
-                              >
-                                {waivedUnpaidStaff[s.id] ? 'Waived' : 'Waive'}
-                              </button>
+                        <div style={{ fontSize: '11px', color: '#64748B' }}>
+                          <p style={{ margin: 0 }}>Auto: {autoUnpaid}d (-৳{(autoUnpaid * perDay).toLocaleString()})</p>
+                          
+                          <div style={{ marginTop: '8px', borderTop: '1px dashed #E8E0D4', paddingTop: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '10px' }}>Waive:</label>
+                            <input type="number" min="0" style={{ width: '50px', padding: '3px', fontSize: '11px', border: '1px solid #e0d8cc', borderRadius: '4px' }}
+                              value={row.waived_unpaid_days || ''} placeholder="0"
+                              onChange={e => handleInput(s.id, 'waived_unpaid_days', e.target.value)}
+                              onBlur={() => handleBlur(s.id)} />
+                          </div>
+
+                          <div style={{ marginTop: '8px' }}>
+                            <label style={{ display: 'block', fontSize: '10px' }}>Override Result:</label>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                              <input type="number" min="0" style={{ width: '50px', padding: '3px', fontSize: '11px', border: '1px solid #e0d8cc', borderRadius: '4px' }}
+                                placeholder="Auto" value={row.manual_unpaid_days ?? ''}
+                                onChange={e => handleInput(s.id, 'manual_unpaid_days', e.target.value === '' ? null : Number(e.target.value))}
+                                onBlur={() => handleBlur(s.id)} />
+                              {row.manual_unpaid_days !== null && <button onClick={() => { handleInput(s.id, 'manual_unpaid_days', null); setTimeout(() => handleBlur(s.id), 100) }} style={{ fontSize: '9px', color: '#d93025', background: 'none', border: 'none', cursor: 'pointer' }}>Reset</button>}
                             </div>
                           </div>
-                        ) : (
-                          <span style={{ fontSize: '13px', color: '#9C8A76' }}>—</span>
-                        )}
+                        </div>
                       </td>
 
-                      {/* Late Deduction */}
                       <td style={{ padding: '14px 8px' }}>
                         {Number(row.late_days) > 0 ? (
                           <div>
-                            <p style={{ fontSize: '13px', color: '#fa7b17', fontWeight: 700, margin: 0 }}>
-                              {row.late_days} late
-                            </p>
-                            <p style={{ fontSize: '11px', color: '#fa7b17', marginTop: '2px' }}>
-                              = {row.late_deduction_days} day{row.late_deduction_days > 1 ? 's' : ''} unpaid
-                            </p>
-                            {Number(row.late_deduction_days) > 0 && (
-                              <p style={{ fontSize: '11px', color: '#d93025', marginTop: '2px', fontWeight: 600, textDecoration: waivedStaff[s.id] ? 'line-through' : 'none' }}>
-                                -৳{Number(row.late_deduction).toLocaleString()}
-                              </p>
-                            )}
-                            <div style={{ marginTop: '6px' }}>
-                              <button
-                                onClick={() => setWaivedStaff(prev => ({
-                                  ...prev,
-                                  [s.id]: !prev[s.id]
-                                }))}
-                                style={{
-                                  padding: '3px 8px',
-                                  fontSize: '11px',
-                                  borderRadius: '4px',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  fontWeight: 600,
-                                  background: waivedStaff[s.id] ? '#e6f4ea' : '#fef7e0',
-                                  color: waivedStaff[s.id] ? '#1e8e3e' : '#B07830'
-                                }}
-                              >
-                                {waivedStaff[s.id] ? 'Waived' : 'Waive'}
-                              </button>
-                            </div>
+                            <p style={{ fontSize: '12px', color: '#fa7b17', fontWeight: 700, margin: 0 }}>{row.late_days} late</p>
+                            <p style={{ fontSize: '10px', color: '#d93025', marginTop: '2px', textDecoration: waivedStaff[s.id] ? 'line-through' : 'none' }}>-৳{Number(row.late_deduction).toLocaleString()}</p>
+                            <button onClick={() => setWaivedStaff(prev => ({ ...prev, [s.id]: !prev[s.id] }))} style={{ padding: '2px 6px', fontSize: '10px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: waivedStaff[s.id] ? '#e6f4ea' : '#fef7e0', color: waivedStaff[s.id] ? '#1e8e3e' : '#B07830' }}>{waivedStaff[s.id] ? 'Waived' : 'Waive'}</button>
                           </div>
-                        ) : (
-                          <span style={{ fontSize: '13px', color: '#9C8A76' }}>—</span>
-                        )}
+                        ) : '—'}
                       </td>
-
-                      {/* Miscellaneous */}
-                      <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={inputStyle} value={row.miscellaneous} onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)} onBlur={() => handleBlur(s.id)} />
-                      </td>
-
-                      {/* Net Pay */}
+                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.miscellaneous} onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px', fontWeight: 800, color: '#3B82F6', fontSize: '14px' }}>৳{finalSalary.toLocaleString()}</td>
-
-                      {/* Payment */}
-                      <td style={{ padding: '12px 8px', position: 'relative' }}>
+                      <td style={{ padding: '12px 8px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '6px' }}>
                           <span style={{ fontSize: '11px', fontWeight: 700, color: '#10B981' }}>Paid: ৳{paid.toLocaleString()}</span>
                           {rem > 0 && <span style={{ fontSize: '10px', fontWeight: 600, color: '#EF4444' }}>Due: ৳{rem.toLocaleString()}</span>}
@@ -550,31 +471,14 @@ export default function PayrollPage() {
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                           <button onClick={() => setShowPaymentForm(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#3B82F6', color: 'white', border: 'none', cursor: 'pointer' }}><Plus size={14} /></button>
                           <button onClick={() => setShowHistory(showHistory === s.id ? null : s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><History size={14} /></button>
-                          <button onClick={() => setPrintData({
-                            staff: s,
-                            payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary, is_waived: waivedStaff[s.id], is_unpaid_waived: waivedUnpaidStaff[s.id] },
-                            month: months[month - 1],
-                            year
-                          })} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><Printer size={14} /></button>
+                          <button onClick={() => setPrintData({ staff: s, payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary, is_waived: waivedStaff[s.id] }, month: months[month - 1], year })} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><Printer size={14} /></button>
                           <button onClick={() => deletePayrollEntry(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#FEF2F2', color: '#EF4444', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
                         </div>
-
                         {showPaymentForm === s.id && (
                           <div style={{ position: 'absolute', right: '100px', background: 'white', border: '1px solid #E2E8F0', padding: '12px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, width: '200px', textAlign: 'left' }}>
                             <input type="number" className="input" placeholder="Amount" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} style={{ marginBottom: '8px' }} />
                             <input type="date" className="input" value={paymentForm.date} onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })} style={{ marginBottom: '10px' }} />
                             <button onClick={() => savePayment(s.id)} style={{ width: '100%', padding: '8px', background: '#10B981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}>Confirm</button>
-                          </div>
-                        )}
-
-                        {showHistory === s.id && sPayments.length > 0 && (
-                          <div style={{ position: 'absolute', right: '100px', background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '10px', borderRadius: '8px', zIndex: 90, width: '220px', marginTop: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                            {sPayments.map(p => (
-                              <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #E2E8F0' }}>
-                                <span style={{ fontSize: '11px' }}>৳{p.amount} ({new Date(p.payment_date).toLocaleDateString()})</span>
-                                <X size={12} onClick={() => deletePayment(p.id)} style={{ cursor: 'pointer', color: '#EF4444' }} />
-                              </div>
-                            ))}
                           </div>
                         )}
                       </td>
