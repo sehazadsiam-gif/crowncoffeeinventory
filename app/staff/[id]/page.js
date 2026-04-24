@@ -18,7 +18,7 @@ export default function StaffProfile() {
   const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(true)
   const [newNote, setNewNote] = useState({ text: '', type: 'general' })
-  
+
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
@@ -126,7 +126,7 @@ export default function StaffProfile() {
           <div class="section-title">Salary Information</div>
           <div class="row"><span class="label">Base Salary</span><span class="value">৳${Number(staff.base_salary).toLocaleString()}</span></div>
           <div class="row"><span class="label">Per Day Rate (Base / 30)</span><span class="value">৳${Math.round(staff.base_salary / 30).toLocaleString()}</span></div>
-          <div class="row"><span class="label">Per Hour Rate (Base / 30 / 10)</span><span class="value">৳${Math.round(staff.base_salary / 30 / 10).toLocaleString()}</span></div>
+          <div class="row"><span class="label">Per Hour Rate (Base / 30 / 10)</span><span class="value">৳${Math.floor(Math.floor(staff.base_salary / 30) / 10).toLocaleString()}</span></div>
         </div>
 
         ${leave ? `
@@ -301,7 +301,7 @@ export default function StaffProfile() {
                 {[
                   { label: 'Base Salary', value: '৳' + staff.base_salary?.toLocaleString(), highlight: true },
                   { label: 'Per Day Rate (Base / 30)', value: '৳' + Math.round(staff.base_salary / 30) },
-                  { label: 'Per Hour Rate (Base / 30 / 10)', value: '৳' + Math.round(staff.base_salary / 30 / 10) },
+                  { label: 'Per Hour Rate (Base / 30 / 10)', value: '৳' + Math.floor(Math.floor(staff.base_salary / 30) / 10) },
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: 'var(--bg-subtle)', borderRadius: '8px' }}>
                     <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>{item.label}</span>

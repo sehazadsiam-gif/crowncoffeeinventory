@@ -62,44 +62,44 @@ export default function PayrollPage() {
       ])
 
       const summaryMap = {}
-      ;(summaryRes.data || []).forEach(s => {
-        summaryMap[s.staff_id] = s
-      })
+        ; (summaryRes.data || []).forEach(s => {
+          summaryMap[s.staff_id] = s
+        })
 
       const advancesMap = {}
-      ;(advRes.data || []).forEach(a => {
-        advancesMap[a.staff_id] = (advancesMap[a.staff_id] || 0) + Number(a.amount)
-      })
+        ; (advRes.data || []).forEach(a => {
+          advancesMap[a.staff_id] = (advancesMap[a.staff_id] || 0) + Number(a.amount)
+        })
 
       const unpaidMap = {}
-      ;(unpaidRes.data || []).forEach(a => {
-        unpaidMap[a.staff_id] = (unpaidMap[a.staff_id] || 0) + 1
-      })
+        ; (unpaidRes.data || []).forEach(a => {
+          unpaidMap[a.staff_id] = (unpaidMap[a.staff_id] || 0) + 1
+        })
 
       const lateMap = {}
-      ;(lateRes.data || []).forEach(a => {
-        lateMap[a.staff_id] = (lateMap[a.staff_id] || 0) + 1
-      })
+        ; (lateRes.data || []).forEach(a => {
+          lateMap[a.staff_id] = (lateMap[a.staff_id] || 0) + 1
+        })
 
       const presentMap = {}
-      ;(presentRes.data || []).forEach(a => {
-        presentMap[a.staff_id] = (presentMap[a.staff_id] || 0) + 1
-      })
+        ; (presentRes.data || []).forEach(a => {
+          presentMap[a.staff_id] = (presentMap[a.staff_id] || 0) + 1
+        })
 
       const payMap = {}
-      ;(payRes.data || []).forEach(p => {
-        payMap[p.staff_id] = {
-          ...p,
-          advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0),
-          manual_unpaid_days: p.manual_unpaid_days ?? null,
-          waived_unpaid_days: p.waived_unpaid_days || 0
-        }
-      })
+        ; (payRes.data || []).forEach(p => {
+          payMap[p.staff_id] = {
+            ...p,
+            advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0),
+            manual_unpaid_days: p.manual_unpaid_days ?? null,
+            waived_unpaid_days: p.waived_unpaid_days || 0
+          }
+        })
 
       const activeStaff = staffRes.data || []
       for (const s of activeStaff) {
         const summary = summaryMap[s.id]
-        
+
         const lateDays = summary ? summary.late_days : (lateMap[s.id] || 0)
         const presentCount = summary ? summary.present_days : (presentMap[s.id] || 0)
         const absentCount = summary ? summary.absent_days : (unpaidMap[s.id] || 0)
@@ -149,17 +149,17 @@ export default function PayrollPage() {
       .eq('year', y)
 
     const map = {}
-    ;(data || []).forEach(p => {
-      if (!map[p.staff_id]) map[p.staff_id] = []
-      map[p.staff_id].push(p)
-    })
+      ; (data || []).forEach(p => {
+        if (!map[p.staff_id]) map[p.staff_id] = []
+        map[p.staff_id].push(p)
+      })
     setPayments(map)
   }
 
   function calculateFinalSalary(s, p, isLateWaived) {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
-    const perHourRate = base / 30 / 10
+    const perHourRate = Math.floor(Math.floor(base / 30) / 10)
     const ot = (Number(p.overtime_hours) || 0) * perHourRate
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
@@ -425,12 +425,12 @@ export default function PayrollPage() {
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.morning_food} onChange={e => handleInput(s.id, 'morning_food', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
-                      
+
                       {/* Unpaid Leave Column */}
                       <td style={{ padding: '14px 8px' }}>
                         <div style={{ fontSize: '11px', color: '#64748B' }}>
                           <p style={{ margin: 0 }}>Auto: {autoUnpaid}d (-৳{(autoUnpaid * perDay).toLocaleString()})</p>
-                          
+
                           <div style={{ marginTop: '8px', borderTop: '1px dashed #E8E0D4', paddingTop: '8px' }}>
                             <label style={{ display: 'block', fontSize: '10px' }}>Waive:</label>
                             <input type="number" min="0" style={{ width: '50px', padding: '3px', fontSize: '11px', border: '1px solid #e0d8cc', borderRadius: '4px' }}

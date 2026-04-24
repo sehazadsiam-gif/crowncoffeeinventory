@@ -94,7 +94,7 @@ export default function StaffPortalPage() {
 
   const monthPayroll = payroll.find(p => p.month === selectedMonth && p.year === selectedYear)
   const monthSummary = (summary || []).find(s => s.month === selectedMonth && s.year === selectedYear)
-  
+
   const monthPayments = payments.filter(p =>
     Number(p.month) === selectedMonth && Number(p.year) === selectedYear
   )
@@ -118,7 +118,7 @@ export default function StaffPortalPage() {
 
   // Final salary calculation
   const base = Number(staff?.base_salary || 0)
-  const perHourRate = base / 30 / 10
+  const perHourRate = Math.floor(Math.floor(base / 30) / 10)
   const ot = (Number(monthPayroll?.overtime_hours) || 0) * perHourRate
   const sc = Number(monthPayroll?.service_charge || 0)
   const bonus = Number(monthPayroll?.bonus || 0)
@@ -379,7 +379,7 @@ export default function StaffPortalPage() {
               const tPaid = mPayments.reduce((s, pay) => s + Number(pay.amount), 0)
 
               const pBase = Number(staff?.base_salary || 0)
-              const pOt = (Number(p.overtime_hours) || 0) * (pBase / 30 / 10)
+              const pOt = (Number(p.overtime_hours) || 0) * Math.floor(Math.floor(pBase / 30) / 10)
               const pMisc = Number(p.miscellaneous || 0)
               const pAdv = Number(p.advance_taken || 0)
               const pOthers = Number(p.others_taken || 0)
