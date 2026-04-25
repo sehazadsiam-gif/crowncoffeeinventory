@@ -147,12 +147,11 @@ export default function PayrollPage() {
       .select('*')
       .eq('month', m)
       .eq('year', y)
-
     const map = {}
-      ; (data || []).forEach(p => {
-        if (!map[p.staff_id]) map[p.staff_id] = []
-        map[p.staff_id].push(p)
-      })
+    ;(data || []).forEach(p => {
+      if (!map[p.staff_id]) map[p.staff_id] = []
+      map[p.staff_id].push(p)
+    })
     setPayments(map)
   }
 
@@ -395,8 +394,8 @@ export default function PayrollPage() {
                 {sortedStaff.map(s => {
                   const row = payroll[s.id]; if (!row) return null
                   const finalSalary = calculateFinalSalary(s, row, waivedStaff[s.id])
-                  const sPayments = payments[s.id] || []
-                  const paid = sPayments.reduce((acc, p) => acc + Number(p.amount), 0)
+                  const staffPayments = (payments[s.id] || [])
+                  const paid = staffPayments.reduce((acc, p) => acc + Number(p.amount), 0)
                   const rem = finalSalary - paid
 
                   const base = Number(s.base_salary) || 0
@@ -470,12 +469,48 @@ export default function PayrollPage() {
                         </div>
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                           <button onClick={() => setShowPaymentForm(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#3B82F6', color: 'white', border: 'none', cursor: 'pointer' }}><Plus size={14} /></button>
-                          <button onClick={() => setShowHistory(showHistory === s.id ? null : s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><History size={14} /></button>
+                          <button onClick={() => setShowHistory(showHistory === s.id ? null : s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }} title="Payment History"><History size={14} /></button>
                           <button onClick={() => setPrintData({ staff: s, payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary, is_waived: waivedStaff[s.id] }, month: months[month - 1], year })} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><Printer size={14} /></button>
                           <button onClick={() => deletePayrollEntry(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#FEF2F2', color: '#EF4444', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
                         </div>
+
+                        {/* Payment History Popover */}
+                        {staffPayments.length > 0 && (
+                          <div style={{ 
+                            display: showHistory === s.id ? 'block' : 'none',
+                            position: 'absolute', 
+                            right: '60px', 
+                            background: 'white', 
+                            border: '1px solid #E2E8F0', 
+                            padding: '12px', 
+                            borderRadius: '10px', 
+                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+                            zIndex: 101, 
+                            width: '240px', 
+                            textAlign: 'left' 
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>Payment History</h4>
+                              <button onClick={() => setShowHistory(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={14} /></button>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxH: '200px', overflowY: 'auto' }}>
+                              {staffPayments.map(p => (
+                                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', padding: '8px', background: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                  <div>
+                                    <div style={{ fontWeight: 700, color: '#0F172A' }}>৳{Number(p.amount).toLocaleString()}</div>
+                                    <div style={{ color: '#64748B', fontSize: '10px' }}>{new Date(p.payment_date).toLocaleDateString()}</div>
+                                    {p.notes && <div style={{ color: '#94A3B8', fontSize: '9px', marginTop: '2px' }}>{p.notes}</div>}
+                                  </div>
+                                  <button onClick={() => deletePayment(p.id)} style={{ color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={12} /></button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {showPaymentForm === s.id && (
                           <div style={{ position: 'absolute', right: '100px', background: 'white', border: '1px solid #E2E8F0', padding: '12px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, width: '200px', textAlign: 'left' }}>
+                            <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 700 }}>Record Payment</h4>
                             <input type="number" className="input" placeholder="Amount" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} style={{ marginBottom: '8px' }} />
                             <input type="date" className="input" value={paymentForm.date} onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })} style={{ marginBottom: '10px' }} />
                             <button onClick={() => savePayment(s.id)} style={{ width: '100%', padding: '8px', background: '#10B981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}>Confirm</button>
