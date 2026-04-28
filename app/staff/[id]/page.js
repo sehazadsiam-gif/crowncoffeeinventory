@@ -66,6 +66,30 @@ export default function StaffProfile() {
         note_type: newNote.type
       }])
       if (error) throw error
+
+      // Email Notification
+      try {
+        const staffEmail = staff?.email
+        if (staffEmail) {
+          await fetch('/api/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'remark',
+              to: staffEmail,
+              name: staff.name,
+              note_type: newNote.type,
+              note: newNote.text,
+              date: new Date().toLocaleDateString('en-GB', {
+                day: 'numeric', month: 'long', year: 'numeric'
+              })
+            })
+          })
+        }
+      } catch (emailErr) {
+        console.error('Email notification failed:', emailErr)
+      }
+
       setNewNote({ text: '', type: 'general' })
       fetchProfileData()
       addToast('Note added', 'success')

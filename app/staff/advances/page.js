@@ -31,7 +31,7 @@ export default function AdvancesPage() {
     try {
       setLoading(true)
       const [staffRes, advRes] = await Promise.all([
-        supabase.from('staff').select('id, name, designation, serial').eq('is_active', true).order('serial', { ascending: true }).order('name', { ascending: true }),
+        supabase.from('staff').select('id, name, designation, serial, email').eq('is_active', true).order('serial', { ascending: true }).order('name', { ascending: true }),
         supabase.from('advance_log').select('*, staff(name, designation)').eq('month', month).eq('year', year).order('date', { ascending: false })
       ])
       if (staffRes.error) throw staffRes.error
@@ -87,6 +87,27 @@ export default function AdvancesPage() {
       if (error) throw error
 
       await updatePayrollAdvance(form.staff_id, m, y)
+
+      // Email Notification for Advance
+      try {
+        const staffMember = staff.find(s => s.id === form.staff_id)
+        if (staffMember?.email) {
+          await fetch('/api/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'advance',
+              to: staffMember.email,
+              name: staffMember.name,
+              amount: Number(form.amount).toLocaleString(),
+              reason: form.reason,
+              date: form.date
+            })
+          })
+        }
+      } catch (emailErr) {
+        console.error('Email notification failed:', emailErr)
+      }
 
       addToast('Advance logged successfully', 'success')
       setForm({ staff_id: '', amount: '', date: new Date().toISOString().split('T')[0], reason: '' })

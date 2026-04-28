@@ -116,14 +116,15 @@ export default function PayrollPage() {
             lunch_dinner: 0, morning_food: 0,
             advance_taken: advancesMap[s.id] || 0,
             others_taken: 0, miscellaneous: 0,
-            miscellaneous_note: '', is_paid: false,
+            is_paid: false,
             manual_unpaid_days: null,
             waived_unpaid_days: 0,
             late_days: lateDays,
             late_deduction_days: lateDeductionDays,
             late_deduction: lateDeduction,
             present_days: presentCount,
-            absent_days: absentCount
+            absent_days: absentCount,
+            isNew: true
           }
         } else {
           payMap[s.id].late_days = lateDays
@@ -232,6 +233,41 @@ export default function PayrollPage() {
       }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
       console.log('Saved payroll for', s.name)
+
+      // Email Notification for Payroll (First time set)
+      if (row.isNew && finalSalary > 0) {
+        try {
+          const staffEmail = s?.email
+          if (staffEmail) {
+            await fetch('/api/email/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'payroll',
+                to: staffEmail,
+                name: s.name,
+                month: months[month - 1],
+                year,
+                breakdown: {
+                  base: s.base_salary,
+                  overtime: row.overtime_pay,
+                  service_charge: row.service_charge,
+                  bonus: row.bonus,
+                  lunch_dinner: row.lunch_dinner,
+                  morning_food: row.morning_food,
+                  advance: row.advance_taken,
+                  others: row.others_taken,
+                  final: finalSalary
+                }
+              })
+            })
+            // Mark as not new anymore to avoid duplicate emails
+            setPayroll(prev => ({ ...prev, [staffId]: { ...prev[staffId], isNew: false } }))
+          }
+        } catch (emailErr) {
+          console.error('Email notification failed:', emailErr)
+        }
+      }
     } catch (err) {
       console.error('Save error:', err)
       addToast('Save failed: ' + err.message, 'error')
@@ -256,6 +292,32 @@ export default function PayrollPage() {
         payment_date: paymentForm.date, notes: paymentForm.notes
       }])
       if (error) throw error
+
+      // Email Notification for Payment
+      try {
+        const staffEmail = s?.email
+        if (staffEmail) {
+          const alreadyPaid = (payments[staffId] || [])
+            .reduce((sum, p) => sum + Number(p.amount), 0)
+          const newRemaining = finalSalary - alreadyPaid - amount
+          await fetch('/api/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'payment',
+              to: staffEmail,
+              name: s.name,
+              month: months[month - 1],
+              year,
+              amount: amount.toLocaleString(),
+              remaining: Math.max(0, newRemaining).toLocaleString()
+            })
+          })
+        }
+      } catch (emailErr) {
+        console.error('Email notification failed:', emailErr)
+      }
+
       addToast('Payment recorded', 'success')
       setShowPaymentForm(null)
       setPaymentForm({ amount: '', date: new Date().toISOString().split('T')[0], notes: '' })
