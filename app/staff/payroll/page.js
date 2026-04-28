@@ -236,16 +236,21 @@ export default function PayrollPage() {
 
       // Email Notification for Payroll (First time set)
       if (row.isNew && finalSalary > 0) {
-        try {
-          const staffEmail = s?.email
-          if (staffEmail) {
+        const { data: staffData } = await supabase
+          .from('staff')
+          .select('email, name')
+          .eq('id', staffId)
+          .single()
+
+        if (staffData?.email) {
+          try {
             await fetch('/api/email/send', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 type: 'payroll',
-                to: staffEmail,
-                name: s.name,
+                to: staffData.email,
+                name: staffData.name,
                 month: months[month - 1],
                 year,
                 breakdown: {
@@ -263,9 +268,9 @@ export default function PayrollPage() {
             })
             // Mark as not new anymore to avoid duplicate emails
             setPayroll(prev => ({ ...prev, [staffId]: { ...prev[staffId], isNew: false } }))
+          } catch (emailErr) {
+            console.error('Email send failed:', emailErr)
           }
-        } catch (emailErr) {
-          console.error('Email notification failed:', emailErr)
         }
       }
     } catch (err) {
@@ -294,28 +299,30 @@ export default function PayrollPage() {
       if (error) throw error
 
       // Email Notification for Payment
-      try {
-        const staffEmail = s?.email
-        if (staffEmail) {
-          const alreadyPaid = (payments[staffId] || [])
-            .reduce((sum, p) => sum + Number(p.amount), 0)
-          const newRemaining = finalSalary - alreadyPaid - amount
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('email, name')
+        .eq('id', staffId)
+        .single()
+
+      if (staffData?.email) {
+        try {
           await fetch('/api/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               type: 'payment',
-              to: staffEmail,
-              name: s.name,
+              to: staffData.email,
+              name: staffData.name,
               month: months[month - 1],
               year,
               amount: amount.toLocaleString(),
-              remaining: Math.max(0, newRemaining).toLocaleString()
+              remaining: Math.max(0, remaining - amount).toLocaleString()
             })
           })
+        } catch (emailErr) {
+          console.error('Email send failed:', emailErr)
         }
-      } catch (emailErr) {
-        console.error('Email notification failed:', emailErr)
       }
 
       addToast('Payment recorded', 'success')

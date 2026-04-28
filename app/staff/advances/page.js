@@ -89,24 +89,29 @@ export default function AdvancesPage() {
       await updatePayrollAdvance(form.staff_id, m, y)
 
       // Email Notification for Advance
-      try {
-        const staffMember = staff.find(s => s.id === form.staff_id)
-        if (staffMember?.email) {
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('email, name')
+        .eq('id', form.staff_id)
+        .single()
+
+      if (staffData?.email) {
+        try {
           await fetch('/api/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               type: 'advance',
-              to: staffMember.email,
-              name: staffMember.name,
+              to: staffData.email,
+              name: staffData.name,
               amount: Number(form.amount).toLocaleString(),
-              reason: form.reason,
+              reason: form.reason || 'উল্লেখ নেই',
               date: form.date
             })
           })
+        } catch (emailErr) {
+          console.error('Email send failed:', emailErr)
         }
-      } catch (emailErr) {
-        console.error('Email notification failed:', emailErr)
       }
 
       addToast('Advance logged successfully', 'success')

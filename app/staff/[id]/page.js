@@ -68,16 +68,21 @@ export default function StaffProfile() {
       if (error) throw error
 
       // Email Notification
-      try {
-        const staffEmail = staff?.email
-        if (staffEmail) {
+      const { data: staffData } = await supabase
+        .from('staff')
+        .select('email, name')
+        .eq('id', id)
+        .single()
+
+      if (staffData?.email) {
+        try {
           await fetch('/api/email/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               type: 'remark',
-              to: staffEmail,
-              name: staff.name,
+              to: staffData.email,
+              name: staffData.name,
               note_type: newNote.type,
               note: newNote.text,
               date: new Date().toLocaleDateString('en-GB', {
@@ -85,9 +90,9 @@ export default function StaffProfile() {
               })
             })
           })
+        } catch (emailErr) {
+          console.error('Email send failed:', emailErr)
         }
-      } catch (emailErr) {
-        console.error('Email notification failed:', emailErr)
       }
 
       setNewNote({ text: '', type: 'general' })

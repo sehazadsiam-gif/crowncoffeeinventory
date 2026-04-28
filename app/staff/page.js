@@ -20,7 +20,7 @@ export default function StaffDirectory() {
     name: '', designation: '', contract_type: 'full_time',
     base_salary: '', join_date: new Date().toISOString().split('T')[0],
     emergency_contact: '', emergency_phone: '', notes: '',
-    serial: 999
+    serial: 999, email: ''
   })
   const [isSorting, setIsSorting] = useState(false)
   const [tempSerials, setTempSerials] = useState({})
@@ -61,7 +61,8 @@ export default function StaffDirectory() {
         emergency_contact: form.emergency_contact,
         emergency_phone: form.emergency_phone,
         notes: form.notes,
-        serial: parseInt(form.serial) || 999
+        serial: parseInt(form.serial) || 999,
+        email: form.email
       }]).select()
 
       if (error) throw error
@@ -79,7 +80,7 @@ export default function StaffDirectory() {
         name: '', designation: '', contract_type: 'full_time',
         base_salary: '', join_date: new Date().toISOString().split('T')[0],
         emergency_contact: '', emergency_phone: '', notes: '',
-        serial: 999
+        serial: 999, email: ''
       })
       fetchStaff()
     } catch (err) {
@@ -417,6 +418,17 @@ export default function StaffDirectory() {
               placeholder="e.g. Shahadat Hossain"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="label" style={{ color: 'var(--text-secondary)' }}>Email Address (for notifications)</label>
+            <input
+              className="input"
+              type="email"
+              placeholder="e.g. staff@example.com"
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
             />
           </div>
 
