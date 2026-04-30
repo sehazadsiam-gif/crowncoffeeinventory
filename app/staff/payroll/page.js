@@ -442,9 +442,9 @@ export default function PayrollPage() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '1400px' }}>
               <thead>
-                <tr style={{ background: '#F1F5F9', borderBottom: '1px solid #E2E8F0' }}>
+                <tr style={{ position: 'sticky', top: '64px', zIndex: 20, background: '#F1F5F9', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
                   {colHeaders.map(h => h === 'Staff' ? (
-                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'left', cursor: 'pointer', userSelect: 'none' }}
+                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'left', cursor: 'pointer', userSelect: 'none', background: '#F1F5F9', borderBottom: '1px solid #E2E8F0' }}
                       onClick={() => setNameSort(nameSort === 'asc' ? 'desc' : 'asc')}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -455,7 +455,7 @@ export default function PayrollPage() {
                       </span>
                     </th>
                   ) : (
-                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', background: '#F1F5F9', borderBottom: '1px solid #E2E8F0' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
