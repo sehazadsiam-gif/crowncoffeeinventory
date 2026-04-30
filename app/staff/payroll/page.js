@@ -137,6 +137,14 @@ export default function PayrollPage() {
 
       setStaff(activeStaff)
       setPayroll(payMap)
+
+      const initialWaived = {}
+      for (const s of activeStaff) {
+        if (payMap[s.id]?.late_waived) {
+          initialWaived[s.id] = true
+        }
+      }
+      setWaivedStaff(initialWaived)
     } catch (err) {
       addToast('Error loading payroll', 'error')
     }
@@ -229,6 +237,7 @@ export default function PayrollPage() {
         manual_unpaid_days: row.manual_unpaid_days === null ? null : Number(row.manual_unpaid_days),
         waived_unpaid_days: Number(row.waived_unpaid_days) || 0,
         absent_days: Number(row.absent_days) || 0,
+        late_waived: waivedStaff[staffId] || false,
         final_salary: finalSalary
       }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
@@ -525,7 +534,29 @@ export default function PayrollPage() {
                           <div>
                             <p style={{ fontSize: '12px', color: '#fa7b17', fontWeight: 700, margin: 0 }}>{row.late_days} late</p>
                             <p style={{ fontSize: '10px', color: '#d93025', marginTop: '2px', textDecoration: waivedStaff[s.id] ? 'line-through' : 'none' }}>-৳{Number(row.late_deduction).toLocaleString()}</p>
-                            <button onClick={() => setWaivedStaff(prev => ({ ...prev, [s.id]: !prev[s.id] }))} style={{ padding: '2px 6px', fontSize: '10px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: waivedStaff[s.id] ? '#e6f4ea' : '#fef7e0', color: waivedStaff[s.id] ? '#1e8e3e' : '#B07830' }}>{waivedStaff[s.id] ? 'Waived' : 'Waive'}</button>
+                            <button onClick={async () => {
+                               const newWaived = !waivedStaff[s.id]
+                               setWaivedStaff(prev => ({ ...prev, [s.id]: newWaived }))
+                               
+                               const row = payroll[s.id]
+                               if (!row) return
+                               
+                               try {
+                                 const { error } = await supabase
+                                   .from('payroll_entries')
+                                   .upsert({
+                                     staff_id: row.staff_id,
+                                     month: row.month,
+                                     year: row.year,
+                                     late_waived: newWaived
+                                   }, { onConflict: 'staff_id,month,year' })
+                                 if (error) throw error
+                                 addToast(newWaived ? 'Late deduction waived' : 'Late deduction restored', 'success')
+                               } catch (err) {
+                                 addToast('Failed to save waiver', 'error')
+                                 setWaivedStaff(prev => ({ ...prev, [s.id]: !newWaived }))
+                               }
+                             }} style={{ padding: '2px 6px', fontSize: '10px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: waivedStaff[s.id] ? '#e6f4ea' : '#fef7e0', color: waivedStaff[s.id] ? '#1e8e3e' : '#B07830' }}>{waivedStaff[s.id] ? 'Waived' : 'Waive'}</button>
                           </div>
                         ) : '—'}
                       </td>
