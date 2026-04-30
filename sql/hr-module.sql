@@ -41,6 +41,7 @@ CREATE TABLE payroll_entries (
   final_salary NUMERIC DEFAULT 0,
   is_paid BOOLEAN DEFAULT FALSE,
   paid_date DATE,
+  lunch_dinner_manual BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(staff_id, month, year)
 );

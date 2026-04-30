@@ -133,6 +133,14 @@ export default function PayrollPage() {
           payMap[s.id].present_days = presentCount
           payMap[s.id].absent_days = absentCount
         }
+
+        // Auto calculate lunch dinner if not manually set
+        if (!payMap[s.id].lunch_dinner_manual) {
+          payMap[s.id].lunch_dinner = presentCount * 140
+          payMap[s.id].lunch_dinner_auto = presentCount * 140
+        } else {
+          payMap[s.id].lunch_dinner_auto = presentCount * 140
+        }
       }
 
       setStaff(activeStaff)
@@ -209,6 +217,10 @@ export default function PayrollPage() {
         const perHourRate = Math.floor(perDay / 10)
         row.overtime_pay = (Number(value) || 0) * perHourRate
       }
+      if (field === 'lunch_dinner') {
+        const autoVal = row.lunch_dinner_auto || 0
+        row.lunch_dinner_manual = Number(value) !== autoVal
+      }
       return { ...prev, [staffId]: row }
     })
   }
@@ -238,6 +250,7 @@ export default function PayrollPage() {
         waived_unpaid_days: Number(row.waived_unpaid_days) || 0,
         absent_days: Number(row.absent_days) || 0,
         late_waived: waivedStaff[staffId] || false,
+        lunch_dinner_manual: row.lunch_dinner_manual || false,
         final_salary: finalSalary
       }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
@@ -498,7 +511,50 @@ export default function PayrollPage() {
                       </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.service_charge} onChange={e => handleInput(s.id, 'service_charge', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.bonus} onChange={e => handleInput(s.id, 'bonus', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.lunch_dinner} onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '14px' }}>
+                        <input
+                          type="number"
+                          style={inputStyle}
+                          value={row.lunch_dinner}
+                          onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)}
+                          onBlur={() => handleBlur(s.id)}
+                        />
+                        {/* Show auto calculated amount */}
+                        <p style={{ fontSize: '10px', color: '#9C8A76', marginTop: '3px' }}>
+                          Auto: ৳{row.lunch_dinner_auto || 0}
+                        </p>
+                        {/* Show manual override indicator */}
+                        {row.lunch_dinner_manual && (
+                          <p style={{ fontSize: '10px', color: '#fa7b17', marginTop: '2px', fontWeight: 600 }}>
+                            Manual
+                          </p>
+                        )}
+                        {/* Reset to auto button */}
+                        {row.lunch_dinner_manual && (
+                          <button
+                            onClick={() => {
+                              handleInput(s.id, 'lunch_dinner', row.lunch_dinner_auto || 0)
+                              setPayroll(prev => ({
+                                ...prev,
+                                [s.id]: {
+                                  ...prev[s.id],
+                                  lunch_dinner: row.lunch_dinner_auto || 0,
+                                  lunch_dinner_manual: false
+                                }
+                              }))
+                              setTimeout(() => handleBlur(s.id), 100)
+                            }}
+                            style={{
+                              fontSize: '10px', color: '#8B5E3C',
+                              background: 'none', border: 'none',
+                              cursor: 'pointer', padding: 0,
+                              marginTop: '2px', textDecoration: 'underline'
+                            }}
+                          >
+                            Reset
+                          </button>
+                        )}
+                      </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.morning_food} onChange={e => handleInput(s.id, 'morning_food', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
