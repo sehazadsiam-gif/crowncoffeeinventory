@@ -439,12 +439,12 @@ export default function PayrollPage() {
         </div>
 
         <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
+          <div style={{ overflowX: 'auto', position: 'relative' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '1400px' }}>
               <thead>
-                <tr style={{ position: 'sticky', top: '64px', zIndex: 20, background: '#F1F5F9', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                <tr style={{ background: '#F5F0E8', borderBottom: '2px solid #E8E0D4' }}>
                   {colHeaders.map(h => h === 'Staff' ? (
-                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'left', cursor: 'pointer', userSelect: 'none', background: '#F1F5F9', borderBottom: '1px solid #E2E8F0' }}
+                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'left', cursor: 'pointer', userSelect: 'none', position: 'sticky', top: 0, zIndex: 10, background: '#F5F0E8', borderBottom: '2px solid #E8E0D4' }}
                       onClick={() => setNameSort(nameSort === 'asc' ? 'desc' : 'asc')}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -455,7 +455,7 @@ export default function PayrollPage() {
                       </span>
                     </th>
                   ) : (
-                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', background: '#F1F5F9', borderBottom: '1px solid #E2E8F0' }}>{h}</th>
+                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 10, background: '#F5F0E8', borderBottom: '2px solid #E8E0D4' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
