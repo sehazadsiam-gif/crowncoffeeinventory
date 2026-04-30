@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { 
   Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, 
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
-  Upload, FileSpreadsheet
+  Upload, FileSpreadsheet, Clock
 } from 'lucide-react'
 
 export default function Navbar() {
@@ -72,6 +72,7 @@ export default function Navbar() {
         { href: '/staff/advances', label: 'Advances' },
         { href: '/staff/service-charge', label: 'Service Charge' },
         { href: '/staff/history', label: 'Payment History' },
+        { href: '/admin/punch-log', label: 'Punch Log', icon: <Clock size={14} /> },
       ]
     },
     { href: '/waste', label: 'Waste', icon: <Trash2 size={18} /> },
