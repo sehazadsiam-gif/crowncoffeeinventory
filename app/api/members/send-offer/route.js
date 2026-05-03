@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '../../../lib/supabase'
-import { validateSession } from '../../../lib/auth'
-import { sendMemberOffer } from '../../../lib/email'
+import { supabase } from '../../../../lib/supabase'
+import { validateSession } from '../../../../lib/auth'
+import { sendMemberOffer } from '../../../../lib/email'
 
 export async function POST(request) {
   try {

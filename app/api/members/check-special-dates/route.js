@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '../../../lib/supabase'
-import { sendSpecialDateEmail, sendAnniversaryEmail } from '../../../lib/email'
+import { supabase } from '../../../../lib/supabase'
+import { sendSpecialDateEmail, sendAnniversaryEmail } from '../../../../lib/email'
 
 /**
  * Set up daily cron at cron-job.org:
