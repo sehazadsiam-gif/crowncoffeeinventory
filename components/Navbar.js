@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { 
   Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, 
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
-  Upload, FileSpreadsheet
+  Upload, FileSpreadsheet, UserCheck
 } from 'lucide-react'
 
 export default function Navbar() {
@@ -21,7 +21,7 @@ export default function Navbar() {
     const role = localStorage.getItem('cc_role')
     const user = localStorage.getItem('cc_username') || localStorage.getItem('cc_staff_name')
     
-    if (!token && !['/', '/admin/login', '/staff/login'].includes(pathname)) {
+    if (!token && !['/', '/admin/login', '/staff/login'].includes(pathname) && !pathname.startsWith('/membership')) {
       router.replace('/')
       return
     }
@@ -74,13 +74,14 @@ export default function Navbar() {
         { href: '/staff/history', label: 'Payment History' },
       ]
     },
+    { href: '/admin/members', label: 'Members', icon: <Users size={18} /> },
     { href: '/waste', label: 'Waste', icon: <Trash2 size={18} /> },
     { href: '/balance-sheet', label: 'Balance Sheet', icon: <Calculator size={18} /> },
   ]
 
   const navItems = userRole === 'admin' ? adminItems : []
 
-  if (!userRole && !['/', '/admin/login', '/staff/login'].includes(pathname)) return null
+  if (!userRole && !['/', '/admin/login', '/staff/login'].includes(pathname) && !pathname.startsWith('/membership')) return null
 
   return (
     <nav style={{ background: 'white', borderBottom: '1px solid var(--border-light)', position: 'sticky', top: 0, zIndex: 1000 }}>
