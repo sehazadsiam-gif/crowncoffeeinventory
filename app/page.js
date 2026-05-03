@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, User, ChevronRight } from 'lucide-react'
+import { Shield, User, Users, ChevronRight } from 'lucide-react'
 
 export default function LandingPage() {
   const router = useRouter()
