@@ -1,10 +1,12 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import { useToast } from '../../components/Toast'
-import { Plus, Trash2, Download, FileText } from 'lucide-react'
+import { Plus, Trash2, Download, FileText, Send } from 'lucide-react'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 export default function BalanceSheetPage() {
   const router = useRouter()
@@ -20,6 +22,12 @@ export default function BalanceSheetPage() {
     const [rows, setRows] = useState([
         { category: '', description: '', amount: '', item_type: 'expense' }
     ])
+    const balanceSheetRef = useRef(null)
+    const [aiAnalysis, setAiAnalysis] = useState(null)
+    const [aiLoading, setAiLoading] = useState(false)
+    const [chatMessages, setChatMessages] = useState([])
+    const [chatInput, setChatInput] = useState('')
+    const [chatLoading, setChatLoading] = useState(false)
 
       useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -228,6 +236,141 @@ export default function BalanceSheetPage() {
         setTimeout(() => { win.print() }, 500)
     }
 
+    async function downloadPDF() {
+        const element = balanceSheetRef.current
+        if (!element) return
+        try {
+            addToast('Generating PDF...', 'success')
+            const canvas = await html2canvas(element, {
+                scale: 2, useCORS: true, backgroundColor: '#ffffff'
+            })
+            const imgData = canvas.toDataURL('image/png')
+            const pdf = new jsPDF('p', 'mm', 'a4')
+            const pdfWidth = pdf.internal.pageSize.getWidth()
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+            pdf.save(`CrownCoffee-BalanceSheet-${months[month - 1]}-${year}.pdf`)
+            addToast('PDF downloaded', 'success')
+        } catch (err) {
+            addToast('PDF generation failed', 'error')
+        }
+    }
+
+    async function downloadJPG() {
+        const element = balanceSheetRef.current
+        if (!element) return
+        try {
+            addToast('Generating image...', 'success')
+            const canvas = await html2canvas(element, {
+                scale: 2, useCORS: true, backgroundColor: '#ffffff'
+            })
+            const link = document.createElement('a')
+            link.download = `CrownCoffee-BalanceSheet-${months[month - 1]}-${year}.jpg`
+            link.href = canvas.toDataURL('image/jpeg', 0.95)
+            link.click()
+            addToast('Image downloaded', 'success')
+        } catch (err) {
+            addToast('Image generation failed', 'error')
+        }
+    }
+
+    function getSheetTotals() {
+        if (!items || items.length === 0) return { totalIncome: 0, totalExpense: 0, incomeItems: [], expenseItems: [] }
+        const incomeItems = items.filter(i => i.item_type === 'income')
+        const expenseItems = items.filter(i => i.item_type === 'expense')
+        const totalIncome = incomeItems.reduce((s, i) => s + Number(i.amount), 0)
+        const totalExpense = expenseItems.reduce((s, i) => s + Number(i.amount), 0)
+        return { totalIncome, totalExpense, incomeItems, expenseItems }
+    }
+
+    async function analyzeWithAI() {
+        const { totalIncome, totalExpense, incomeItems, expenseItems } = getSheetTotals()
+        if (totalIncome === 0 && totalExpense === 0) {
+            return addToast('Open a sheet with items first', 'error')
+        }
+        setAiLoading(true)
+        try {
+            const balanceData = {
+                month: months[month - 1], year, totalIncome, totalExpense,
+                netProfit: totalIncome - totalExpense,
+                profitMargin: totalIncome > 0 ? (((totalIncome - totalExpense) / totalIncome) * 100).toFixed(1) : 0,
+                incomeItems, expenseItems
+            }
+            const response = await fetch('/api/ai-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [{
+                        role: 'user',
+                        content: `You are a cafe business analyst for Crown Coffee in Bangladesh.
+Analyze this balance sheet data and provide:
+1. Overall profit/loss summary with percentage
+2. Top 3 areas to improve
+3. Key observations about income vs expenses
+4. Specific actionable recommendations
+
+Balance Sheet Data for ${balanceData.month} ${balanceData.year}:
+Total Income: TK${balanceData.totalIncome}
+Total Expense: TK${balanceData.totalExpense}
+Net Profit/Loss: TK${balanceData.netProfit}
+Profit Margin: ${balanceData.profitMargin}%
+
+Income breakdown: ${JSON.stringify(balanceData.incomeItems)}
+Expense breakdown: ${JSON.stringify(balanceData.expenseItems)}
+
+Respond in a clear, structured format.
+Use Bangladeshi Taka (TK) for all amounts.
+Keep response concise and practical.
+Do not use markdown headers with #.
+Use plain text with clear sections.`
+                    }]
+                })
+            })
+            const data = await response.json()
+            const text = data.content?.[0]?.text || 'Analysis failed'
+            setAiAnalysis(text)
+            setChatMessages([{ role: 'assistant', content: text }])
+        } catch (err) {
+            addToast('AI analysis failed', 'error')
+        } finally {
+            setAiLoading(false)
+        }
+    }
+
+    async function sendChatMessage() {
+        if (!chatInput.trim()) return
+        const userMessage = chatInput.trim()
+        setChatInput('')
+        setChatLoading(true)
+        const newMessages = [...chatMessages, { role: 'user', content: userMessage }]
+        setChatMessages(newMessages)
+        try {
+            const { totalIncome, totalExpense, incomeItems, expenseItems } = getSheetTotals()
+            const balanceData = {
+                month: months[month - 1], year, totalIncome, totalExpense,
+                netProfit: totalIncome - totalExpense, incomeItems, expenseItems
+            }
+            const response = await fetch('/api/ai-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    system: `You are a cafe business analyst for Crown Coffee in Bangladesh.
+Current balance sheet: ${JSON.stringify(balanceData)}
+Answer questions about the business finances concisely.
+Use TK for currency. Be practical and specific.`,
+                    messages: newMessages.map(m => ({ role: m.role, content: m.content }))
+                })
+            })
+            const data = await response.json()
+            const text = data.content?.[0]?.text || 'No response'
+            setChatMessages([...newMessages, { role: 'assistant', content: text }])
+        } catch (err) {
+            addToast('Chat failed', 'error')
+        } finally {
+            setChatLoading(false)
+        }
+    }
+
     const months = ['January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -242,7 +385,7 @@ export default function BalanceSheetPage() {
             <Navbar />
             <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '32px 24px 60px' }}>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
                     <div>
                         <h1 style={{ fontSize: '32px', fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
                             Balance Sheet
@@ -251,7 +394,7 @@ export default function BalanceSheetPage() {
                             Record and download monthly expenditure reports
                         </p>
                     </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                         <select className="input" value={month} onChange={e => setMonth(Number(e.target.value))}>
                             {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
                         </select>
@@ -262,9 +405,26 @@ export default function BalanceSheetPage() {
                             value={year}
                             onChange={e => setYear(Number(e.target.value))}
                         />
+                        <button onClick={downloadPDF} style={{
+                            padding: '8px 16px', background: '#d93025',
+                            color: 'white', border: 'none', borderRadius: '8px',
+                            fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                            <Download size={14} /> PDF
+                        </button>
+                        <button onClick={downloadJPG} style={{
+                            padding: '8px 16px', background: '#1e8e3e',
+                            color: 'white', border: 'none', borderRadius: '8px',
+                            fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: '6px'
+                        }}>
+                            <Download size={14} /> JPG
+                        </button>
                     </div>
                 </div>
 
+                <div ref={balanceSheetRef}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
 
                     <div className="card">
@@ -534,6 +694,139 @@ export default function BalanceSheetPage() {
                         )}
                     </div>
                 </div>
+                </div>
+
+                {/* Business Analysis Assistant */}
+                <div style={{
+                    background: 'white', border: '1px solid #E8E0D4',
+                    borderRadius: '12px', padding: '24px', marginTop: '24px',
+                    boxShadow: '0 1px 4px rgba(28,20,16,0.06)'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                        <div>
+                            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#1C1410', margin: 0 }}>
+                                Business Analysis Assistant
+                            </h2>
+                            <p style={{ fontSize: '13px', color: '#9C8A76', marginTop: '4px' }}>
+                                AI-powered profit/loss analysis and recommendations
+                            </p>
+                        </div>
+                        <button
+                            onClick={analyzeWithAI}
+                            disabled={aiLoading}
+                            style={{
+                                padding: '10px 20px', background: aiLoading ? '#D4C8B8' : '#8B5E3C',
+                                color: 'white', border: 'none', borderRadius: '8px',
+                                fontSize: '13px', fontWeight: 700,
+                                cursor: aiLoading ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {aiLoading ? 'Analyzing...' : 'Analyze Business'}
+                        </button>
+                    </div>
+
+                    {/* Profit/Loss summary cards */}
+                    {selectedSheet && items.length > 0 && (() => {
+                        const { totalIncome, totalExpense } = getSheetTotals()
+                        return (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                                {[
+                                    { label: 'Total Income', value: 'TK' + totalIncome.toLocaleString(), color: '#1e8e3e' },
+                                    { label: 'Total Expense', value: 'TK' + totalExpense.toLocaleString(), color: '#d93025' },
+                                    { label: 'Net Profit', value: 'TK' + (totalIncome - totalExpense).toLocaleString(), color: totalIncome >= totalExpense ? '#1e8e3e' : '#d93025' },
+                                    { label: 'Profit Margin', value: totalIncome > 0 ? (((totalIncome - totalExpense) / totalIncome) * 100).toFixed(1) + '%' : '0%', color: totalIncome >= totalExpense ? '#1e8e3e' : '#d93025' },
+                                ].map(card => (
+                                    <div key={card.label} style={{ background: '#F5F0E8', borderRadius: '10px', padding: '14px 16px' }}>
+                                        <p style={{ fontSize: '11px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: '6px' }}>
+                                            {card.label}
+                                        </p>
+                                        <p style={{ fontSize: '20px', fontWeight: 700, color: card.color, margin: 0 }}>
+                                            {card.value}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    })()}
+
+                    {/* AI Analysis result */}
+                    {aiAnalysis && (
+                        <div style={{
+                            background: '#F5F0E8', borderRadius: '10px',
+                            padding: '20px', marginBottom: '20px',
+                            whiteSpace: 'pre-wrap', fontSize: '14px',
+                            color: '#1C1410', lineHeight: '1.7'
+                        }}>
+                            {aiAnalysis}
+                        </div>
+                    )}
+
+                    {/* Chat messages */}
+                    {chatMessages.length > 1 && (
+                        <div style={{
+                            border: '1px solid #E8E0D4', borderRadius: '10px',
+                            padding: '16px', marginBottom: '16px',
+                            maxHeight: '300px', overflowY: 'auto',
+                            display: 'flex', flexDirection: 'column', gap: '12px'
+                        }}>
+                            {chatMessages.slice(1).map((msg, idx) => (
+                                <div key={idx} style={{
+                                    display: 'flex',
+                                    justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start'
+                                }}>
+                                    <div style={{
+                                        maxWidth: '80%', padding: '10px 14px',
+                                        borderRadius: msg.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                                        background: msg.role === 'user' ? '#8B5E3C' : '#F5F0E8',
+                                        color: msg.role === 'user' ? 'white' : '#1C1410',
+                                        fontSize: '13px', lineHeight: '1.6',
+                                        whiteSpace: 'pre-wrap'
+                                    }}>
+                                        {msg.content}
+                                    </div>
+                                </div>
+                            ))}
+                            {chatLoading && (
+                                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                                    <div style={{
+                                        padding: '10px 14px', borderRadius: '12px 12px 12px 4px',
+                                        background: '#F5F0E8', color: '#9C8A76', fontSize: '13px'
+                                    }}>
+                                        Analyzing...
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Chat input */}
+                    {aiAnalysis && (
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <input
+                                className="input"
+                                placeholder="Ask about your business finances..."
+                                value={chatInput}
+                                onChange={e => setChatInput(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && !chatLoading && sendChatMessage()}
+                                style={{ flex: 1 }}
+                            />
+                            <button
+                                onClick={sendChatMessage}
+                                disabled={chatLoading || !chatInput.trim()}
+                                style={{
+                                    padding: '10px 20px', background: '#8B5E3C',
+                                    color: 'white', border: 'none', borderRadius: '8px',
+                                    fontSize: '13px', fontWeight: 700,
+                                    cursor: chatLoading ? 'not-allowed' : 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '6px'
+                                }}
+                            >
+                                <Send size={14} /> Send
+                            </button>
+                        </div>
+                    )}
+                </div>
+
             </main>
         </div>
     )
