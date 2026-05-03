@@ -219,6 +219,10 @@ export default function AdminLoginPage() {
             >
               {loading ? 'Signing in...' : 'SIGN IN'}
             </button>
+            <p style={{ marginTop: '16px', fontSize: '11px', color: '#9C8A76', textAlign: 'center' }}>
+              For membership verification, use the<br/>
+              Membership Portal at the home page.
+            </p>
           </div>
         </div>
       </div>

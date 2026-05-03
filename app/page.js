@@ -107,83 +107,130 @@ export default function LandingPage() {
             Choose your access level to continue
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
             {/* ADMIN CARD */}
-            <button
-              onClick={() => router.push('/admin/login')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                padding: '20px 24px',
-                background: 'white',
-                border: '2px solid #6B3A2A',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'all 0.2s ease',
-                width: '100%',
-                outline: 'none'
-              }}
-              className="option-card admin-card"
-            >
-              <div style={{
-                width: '40px',
-                height: '40px',
-                background: '#6B3A2A',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <Shield size={18} color="white" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: 0 }}>Admin Portal</p>
-                <p style={{ fontSize: '12px', color: '#9C8A76', margin: '2px 0 0 0' }}>Full system access</p>
-              </div>
-              <ChevronRight size={20} color="#9C8A76" />
-            </button>
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={() => router.push('/admin/login')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '20px 24px',
+                  background: 'white',
+                  border: '2px solid #6B3A2A',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease',
+                  width: '100%',
+                  outline: 'none'
+                }}
+                className="option-card admin-card"
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#6B3A2A',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Shield size={18} color="white" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: 0 }}>Admin Portal</p>
+                  <p style={{ fontSize: '12px', color: '#9C8A76', margin: '2px 0 0 0' }}>Full system access</p>
+                </div>
+                <ChevronRight size={20} color="#9C8A76" />
+              </button>
+              <p style={{ fontSize: '11px', color: '#9C8A76', marginTop: '6px' }}>Full system access</p>
+            </div>
 
             {/* STAFF CARD */}
-            <button
-              onClick={() => router.push('/staff/login')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                padding: '20px 24px',
-                background: 'white',
-                border: '1px solid #E8E0D4',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'all 0.2s ease',
-                width: '100%',
-                outline: 'none'
-              }}
-              className="option-card staff-card"
-            >
-              <div style={{
-                width: '40px',
-                height: '40px',
-                background: '#F5F0E8',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <User size={18} color="#6B3A2A" />
-              </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: 0 }}>Staff Portal</p>
-                <p style={{ fontSize: '12px', color: '#9C8A76', margin: '2px 0 0 0' }}>View your records</p>
-              </div>
-              <ChevronRight size={20} color="#9C8A76" />
-            </button>
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={() => router.push('/staff/login')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '20px 24px',
+                  background: 'white',
+                  border: '1px solid #E8E0D4',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease',
+                  width: '100%',
+                  outline: 'none'
+                }}
+                className="option-card staff-card"
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#F5F0E8',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <User size={18} color="#6B3A2A" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: 0 }}>Staff Portal</p>
+                  <p style={{ fontSize: '12px', color: '#9C8A76', margin: '2px 0 0 0' }}>View your records</p>
+                </div>
+                <ChevronRight size={20} color="#9C8A76" />
+              </button>
+              <p style={{ fontSize: '11px', color: '#9C8A76', marginTop: '6px' }}>View your records</p>
+            </div>
+
+            {/* MEMBERSHIP PORTAL CARD */}
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={() => router.push('/manager/login')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '20px 24px',
+                  background: 'white',
+                  border: '1px solid #E8E0D4',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease',
+                  width: '100%',
+                  outline: 'none'
+                }}
+                className="option-card membership-card"
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  background: '#fef7e0',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Users size={18} color="#C9943A" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: 0 }}>Membership Portal</p>
+                  <p style={{ fontSize: '12px', color: '#9C8A76', margin: '2px 0 0 0' }}>Manager access to verify and record member visits</p>
+                </div>
+                <ChevronRight size={20} color="#9C8A76" />
+              </button>
+              <p style={{ fontSize: '11px', color: '#9C8A76', marginTop: '6px' }}>Verify member cards</p>
+            </div>
 
           </div>
 
@@ -211,6 +258,11 @@ export default function LandingPage() {
           border-color: #6B3A2A !important;
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .membership-card:hover {
+          border-color: #C9943A !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(201,148,58,0.1);
         }
       `}</style>
     </div>

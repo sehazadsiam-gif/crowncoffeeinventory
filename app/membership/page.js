@@ -32,10 +32,7 @@ export default function MembershipPage() {
   const [agreeAccuracy, setAgreeAccuracy] = useState(false)
 
   useEffect(() => {
-    fetch('/api/members/count')
-      .then(r => r.json())
-      .then(d => setMemberCount(d.count || 0))
-      .catch(() => {})
+    // Member count fetch removed as per requirement
   }, [])
 
   function handleFormChange(field, value) {
@@ -76,8 +73,13 @@ export default function MembershipPage() {
       return
     }
 
-    if (!agreePromo || !agreeAccuracy) {
-      setError('Please agree to both checkboxes to continue.')
+    if (!agreePromo) {
+      setError('You must agree to receive emails to join')
+      return
+    }
+
+    if (!agreeAccuracy) {
+      setError('Please confirm the accuracy of your information')
       return
     }
 
@@ -146,15 +148,9 @@ export default function MembershipPage() {
             Join our family. Enjoy lifetime rewards.
           </p>
 
-          {/* Member counter */}
-          <div style={{
-            background: 'rgba(201,148,58,0.15)', border: '1px solid rgba(201,148,58,0.3)',
-            borderRadius: 12, padding: '14px 24px', display: 'inline-block'
-          }}>
-            <p style={{ color: '#C9943A', fontSize: 15, fontWeight: 600, margin: 0 }}>
-              Join {memberCount}+ happy members
-            </p>
-          </div>
+          <p style={{ color: '#C9943A', fontSize: 15, fontWeight: 600, margin: 0 }}>
+            Show your card number for instant discount
+          </p>
         </div>
       </div>
 
@@ -365,7 +361,7 @@ export default function MembershipPage() {
                 style={{ marginTop: 3, accentColor: '#6B3A2A', width: 16, height: 16 }}
                 id="membership-agree-promo"
               />
-              I agree to receive promotional emails from Crown Coffee
+              I agree to receive promotional emails from Crown Coffee <span style={{ color: '#EF4444' }}>*</span>
             </label>
 
             <label style={{

@@ -54,7 +54,7 @@ export default function ManagerLoginPage() {
         </div>
         <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '0.1em', marginBottom: 8 }}>CROWN COFFEE</h1>
         <div style={{ width: 40, height: 2, background: '#C9943A', marginBottom: 24 }} />
-        <p style={{ fontSize: 18, fontWeight: 500, color: 'rgba(255,255,255,0.8)' }}>Manager Portal</p>
+        <p style={{ fontSize: 18, fontWeight: 500, color: 'rgba(255,255,255,0.8)' }}>Membership Portal</p>
       </div>
 
       {/* Right Panel */}
@@ -120,6 +120,11 @@ export default function ManagerLoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          <p style={{ marginTop: '24px', fontSize: '12px', color: '#9C8A76', textAlign: 'center' }}>
+            For managers to verify member cards and record visits.<br/>
+            Admin login is separate at /admin/login
+          </p>
         </div>
       </div>
 
