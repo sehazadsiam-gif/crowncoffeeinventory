@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Trash2, Eye, Edit2, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Search, Trash2, Eye } from 'lucide-react'
 
 export default function MembersPage() {
   const router = useRouter()
@@ -110,16 +110,6 @@ export default function MembersPage() {
     }
   }
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'active': return <CheckCircle size={16} />
-      case 'pending': return <Clock size={16} />
-      case 'deactivated': return <XCircle size={16} />
-      case 'deleted': return <Trash2 size={16} />
-      default: return null
-    }
-  }
-
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#9C8A76' }}>Loading members...</div>
   }
@@ -133,7 +123,6 @@ export default function MembersPage() {
         View, manage, and delete members
       </p>
 
-      {/* Search & Filter */}
       <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#9C8A76' }} />
@@ -142,7 +131,7 @@ export default function MembersPage() {
             placeholder="Search by name, email, or phone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ width: '100%', paddingLeft: '40px', padding: '12px 12px 12px 40px', border: '1px solid #E0E0E0', borderRadius: '8px' }}
+            style={{ width: '100%', paddingLeft: '40px', padding: '12px 12px 12px 40px', border: '1px solid #E0E0E0', borderRadius: '8px', boxSizing: 'border-box' }}
           />
         </div>
 
@@ -159,7 +148,6 @@ export default function MembersPage() {
         </select>
       </div>
 
-      {/* Members Table */}
       <div style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: '12px', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -188,8 +176,7 @@ export default function MembersPage() {
                     <td style={{ padding: '12px', fontSize: '13px', color: '#5C4A36' }}>{member.email}</td>
                     <td style={{ padding: '12px', fontSize: '13px', color: '#5C4A36' }}>{member.phone}</td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
-                      <span style={{ padding: '4px 10px', borderRadius: '12px', background: statusColor.bg, color: statusColor.text, fontSize: '11px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {getStatusIcon(member.status)}
+                      <span style={{ padding: '4px 10px', borderRadius: '12px', background: statusColor.bg, color: statusColor.text, fontSize: '11px', fontWeight: 700 }}>
                         {statusColor.label}
                       </span>
                     </td>
@@ -197,7 +184,7 @@ export default function MembersPage() {
                     <td style={{ padding: '12px', textAlign: 'center', display: 'flex', justifyContent: 'center', gap: '8px' }}>
                       <button
                         onClick={() => router.push(`/admin/members/${member.id}`)}
-                        style={{ padding: '6px 12px', background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                        style={{ padding: '6px 12px', background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
                       >
                         View
                       </button>
@@ -205,7 +192,7 @@ export default function MembersPage() {
                       {member.status === 'active' && (
                         <button
                           onClick={() => setDeactivateConfirm(member.id)}
-                          style={{ padding: '6px 12px', background: '#F57C00', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                          style={{ padding: '6px 12px', background: '#F57C00', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
                         >
                           Deactivate
                         </button>
@@ -214,9 +201,8 @@ export default function MembersPage() {
                       {member.status === 'deactivated' && (
                         <button
                           onClick={() => setDeleteConfirm(member.id)}
-                          style={{ padding: '6px 12px', background: '#D32F2F', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          style={{ padding: '6px 12px', background: '#D32F2F', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}
                         >
-                          <Trash2 size={14} />
                           Delete
                         </button>
                       )}
@@ -229,7 +215,6 @@ export default function MembersPage() {
         </table>
       </div>
 
-      {/* Deactivate Confirmation Modal */}
       {deactivateConfirm && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '400px', textAlign: 'center' }}>
@@ -255,11 +240,10 @@ export default function MembersPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
       {deleteConfirm && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '400px', textAlign: 'center' }}>
-            <h2 style={{ color: '#D32F2F', fontSize: '18px', fontWeight: 700', marginBottom: '12px' }}>Delete Member Permanently?</h2>
+            <h2 style={{ color: '#D32F2F', fontSize: '18px', fontWeight: 700, marginBottom: '12px' }}>Delete Member Permanently?</h2>
             <p style={{ color: '#9C8A76', marginBottom: '24px' }}>
               This action cannot be undone. The member record will be marked as deleted.
             </p>
