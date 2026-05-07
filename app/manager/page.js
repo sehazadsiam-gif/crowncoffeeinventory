@@ -79,12 +79,25 @@ export default function ManagerDashboard() {
       const res = await fetch('/api/manager/record-visit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ member_id: memberId })
+        body: JSON.stringify({ 
+          member_id: memberId,
+          recorded_by: username
+        })
       })
+      
       const data = await res.json()
+
+      if (res.status === 400 && data.already_visited) {
+        alert('Member already visited today. Can only record 1 visit per day.')
+        return
+      }
+
       if (res.ok) {
-        let msg = `Visit Recorded for ${name}`
-        if (data.free_coffee_earned) msg += " — Free Coffee Earned!"
+        let msg = `Visit Recorded for ${name}. Total visits: ${data.visits}`
+        if (data.free_coffee_earned) {
+          msg += " — Free Coffee Earned!"
+          alert('Free coffee earned! Offer sent via email.')
+        }
         setSuccessMessage(msg)
         
         // Refresh data

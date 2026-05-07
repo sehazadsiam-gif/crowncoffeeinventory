@@ -1,7 +1,9 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
-import { sendFreeCoffeeEmail, sendFeedbackRequest } from '../../../../lib/email'
+import { sendVisitConfirmationEmail } from '../../../../lib/email'
 
 export async function POST(request) {
   try {
@@ -13,91 +15,87 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { member_id } = await request.json()
-    if (!member_id) return NextResponse.json({ error: 'member_id required' }, { status: 400 })
+    const { member_id, recorded_by } = await request.json()
 
-    // 1. Check no visit today
+    // Check if already visited today
     const today = new Date().toISOString().split('T')[0]
-    const { data: existingVisit } = await supabase
+    
+    const { data: todayVisits, error: checkError } = await supabase
       .from('member_visits')
       .select('id')
       .eq('member_id', member_id)
       .gte('visited_at', today + 'T00:00:00')
       .lte('visited_at', today + 'T23:59:59')
-      .single()
+    
+    if (checkError) throw checkError
 
-    if (existingVisit) {
-      return NextResponse.json({ error: 'Visit already recorded for today' }, { status: 400 })
+    if (todayVisits && todayVisits.length > 0) {
+      return NextResponse.json({ 
+        error: 'Member already visited today. Can only record 1 visit per day.',
+        already_visited: true
+      }, { status: 400 })
     }
 
-    // 2. Insert visit
-    const { data: visit, error: visitError } = await supabase
+    // Record visit
+    const { error: visitError } = await supabase
       .from('member_visits')
-      .insert([{ member_id, recorded_by: 'manager' }])
-      .select()
-      .single()
+      .insert([{
+        member_id,
+        visited_at: new Date().toISOString(),
+        recorded_by: recorded_by || 'manager'
+      }])
 
     if (visitError) throw visitError
 
-    // 3. Update member stats
-    const { data: member, error: memberError } = await supabase
+    // Update member stats
+    const { data: member } = await supabase
       .from('members')
       .select('*')
       .eq('id', member_id)
       .single()
 
-    if (memberError) throw memberError
+    if (!member) throw new Error('Member not found')
 
-    const newTotalVisits = (member.total_visits || 0) + 1
-    const newPunchCount = (member.punch_count || 0) + 1
-    let newTier = member.tier
-    let tierUpgraded = false
-
-    if (newTotalVisits >= 25 && member.tier === 'silver') {
-      newTier = 'gold'
-      tierUpgraded = true
-    }
+    const newVisits = (member.total_visits || 0) + 1
+    const newPunches = (member.punch_count || 0) + 1
+    const newTier = newVisits >= 25 ? 'gold' : 'silver'
 
     const { error: updateError } = await supabase
       .from('members')
       .update({
-        total_visits: newTotalVisits,
-        punch_count: newPunchCount,
+        total_visits: newVisits,
+        punch_count: newPunches,
         tier: newTier
       })
       .eq('id', member_id)
 
     if (updateError) throw updateError
 
-    // 4. Free coffee check
-    let freeCoffeeEarned = false
-    if (newPunchCount % 10 === 0) {
-      freeCoffeeEarned = true
-      sendFreeCoffeeEmail({
-        to: member.email,
-        name: member.full_name,
-        card_number: member.card_number
-      }).catch(e => console.error('Free coffee email error:', e))
+    // Send confirmation email
+    const freeCoffeeProgress = {
+      current_punch: newPunches % 10,
+      total_earned: Math.floor(newPunches / 10)
     }
 
-    // 5. Feedback request
-    sendFeedbackRequest({
-      to: member.email,
-      name: member.full_name,
-      visit_id: visit.id
-    }).catch(e => console.error('Feedback request email error:', e))
+    await sendVisitConfirmationEmail(
+      { 
+        ...member, 
+        total_visits: newVisits,
+        email: member.email 
+      },
+      freeCoffeeProgress,
+      newVisits >= 25
+    )
 
-    return NextResponse.json({
-      success: true,
-      total_visits: newTotalVisits,
-      punch_count: newPunchCount,
+    return NextResponse.json({ 
+      success: true, 
+      visits: newVisits,
+      punch_count: newPunches,
       tier: newTier,
-      free_coffee_earned: freeCoffeeEarned,
-      tier_upgraded: tierUpgraded
-    })
-
+      free_coffee_earned: newPunches % 10 === 0
+    }, { status: 200 })
   } catch (error) {
-    console.error('Record visit error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error('Visit error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
