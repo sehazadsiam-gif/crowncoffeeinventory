@@ -33,21 +33,32 @@ export async function POST(request) {
       .update({
         status: 'active',
         card_number: cardNumber,
-        member_since: new Date().toISOString(),
+        member_since: new Date().toISOString().split('T')[0],
         tier: 'silver'
       })
       .eq('id', member_id)
       .select()
       .single()
 
-    if (updateError) throw updateError
+    if (updateError) {
+      console.error('Update error:', updateError)
+      throw new Error(`Failed to update member: ${updateError.message}`)
+    }
+
+    if (!member) {
+      throw new Error('Member not found after update')
+    }
 
     // Send approval notifications (Email + WhatsApp)
-    await sendMemberApproved(member, cardNumber)
+    try {
+      await sendMemberApproved(member, cardNumber)
+    } catch (notifError) {
+      console.error('Notification error (non-blocking):', notifError)
+    }
 
     return NextResponse.json({ success: true, card_number: cardNumber }, { status: 200 })
   } catch (error) {
     console.error('Approval error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }

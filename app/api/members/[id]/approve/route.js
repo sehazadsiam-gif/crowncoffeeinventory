@@ -16,15 +16,22 @@ export async function PATCH(request, { params }) {
     }
 
     const { id } = params
+    console.log('Approving member:', id)
 
     // Generate card number
     const year = new Date().getFullYear()
-    const { count } = await supabase
+    const { count, error: countError } = await supabase
       .from('members')
-      .select('id', { count: 'exact', head: true })
+      .select('*', { count: 'exact', head: true })
       .eq('status', 'active')
 
+    if (countError) {
+      console.error('Count error:', countError)
+      throw new Error(`Failed to count active members: ${countError.message}`)
+    }
+
     const cardNumber = `CC-${year}-${String((count || 0) + 1).padStart(4, '0')}`
+    console.log('Generated card number:', cardNumber)
 
     // Update member to active
     const { data: member, error: updateError } = await supabase
@@ -32,20 +39,27 @@ export async function PATCH(request, { params }) {
       .update({
         status: 'active',
         card_number: cardNumber,
-        member_since: new Date().toISOString(),
+        member_since: new Date().toISOString().split('T')[0],
         tier: 'silver'
       })
       .eq('id', id)
       .select()
       .single()
 
-    if (updateError) throw updateError
+    if (updateError) {
+      console.error('Update error:', updateError)
+      throw new Error(`Failed to update member: ${updateError.message}`)
+    }
+
+    if (!member) {
+      throw new Error('Member not found after update')
+    }
 
     // Send approval email + WhatsApp
     try {
       await sendMemberApproved(member, cardNumber)
     } catch (emailError) {
-      console.log('Email send error:', emailError)
+      console.error('Email send error (non-blocking):', emailError)
     }
 
     return NextResponse.json(
@@ -55,7 +69,7 @@ export async function PATCH(request, { params }) {
   } catch (error) {
     console.error('Approve error:', error)
     return NextResponse.json(
-      { error: error.message },
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }

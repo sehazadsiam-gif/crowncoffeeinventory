@@ -47,7 +47,8 @@ export default function PendingMembersPage() {
         alert('Member approved successfully!')
         fetchPendingMembers()
       } else {
-        alert('Error approving member')
+        const data = await res.json()
+        alert(`Error: ${data.error || 'Failed to approve member'}`)
       }
     } catch (error) {
       alert('Error approving member')
