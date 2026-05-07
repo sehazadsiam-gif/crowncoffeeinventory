@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
 import { sendMemberApproved, sendMembershipCardEmail } from '../../../../lib/email'
+import { sendWhatsAppMembershipApproval } from '../../../../lib/whatsapp'
 
 export async function POST(request) {
   try {
@@ -59,6 +60,11 @@ export async function POST(request) {
       tier: 'silver',
       special_dates: specialDates || []
     })
+
+    // Send WhatsApp approval
+    if (member.phone) {
+      await sendWhatsAppMembershipApproval(member.phone, member, cardNumber)
+    }
 
     return NextResponse.json({ success: true, card_number: cardNumber }, { status: 200 })
   } catch (error) {
