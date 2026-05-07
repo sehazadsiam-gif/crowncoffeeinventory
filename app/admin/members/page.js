@@ -145,12 +145,22 @@ export default function MembersPage() {
 
   return (
     <div style={{ padding: '32px' }}>
-      <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#1F1F1F', marginBottom: '8px' }}>
-        Members Management
-      </h1>
-      <p style={{ color: '#9C8A76', marginBottom: '32px' }}>
-        View, manage, and delete members
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+        <div>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#1F1F1F', margin: 0 }}>
+            Members Management
+          </h1>
+          <p style={{ color: '#9C8A76', margin: '4px 0 0 0' }}>
+            View, manage, and delete members
+          </p>
+        </div>
+        <button
+          onClick={() => router.push('/admin/members/pending')}
+          style={{ padding: '12px 20px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 700, boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)' }}
+        >
+          View Pending Approvals
+        </button>
+      </div>
 
       <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
