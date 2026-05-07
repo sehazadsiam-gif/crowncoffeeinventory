@@ -1,4 +1,5 @@
 'use client'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -9,12 +10,19 @@ const MONTHS = [
   'July','August','September','October','November','December'
 ]
 
+const COUNTRIES = [
+  { code: '+880', name: 'Bangladesh (BD)', key: 'bd' },
+  { code: '+1', name: 'USA (+1)', key: 'us' },
+  { code: '+44', name: 'UK (+44)', key: 'uk' },
+  { code: '+91', name: 'India (+91)', key: 'in' },
+  { code: '+92', name: 'Pakistan (+92)', key: 'pk' },
+]
+
 export default function MembershipPage() {
   const router = useRouter()
-  const [memberCount, setMemberCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-
+  const [countryCode, setCountryCode] = useState('+880')
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -23,17 +31,11 @@ export default function MembershipPage() {
     address: '',
     occupation: ''
   })
-
   const [specialDates, setSpecialDates] = useState([
     { occasion_name: '', month: '', day: '' }
   ])
-
   const [agreePromo, setAgreePromo] = useState(false)
   const [agreeAccuracy, setAgreeAccuracy] = useState(false)
-
-  useEffect(() => {
-    // Member count fetch removed as per requirement
-  }, [])
 
   function handleFormChange(field, value) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -61,17 +63,22 @@ export default function MembershipPage() {
       return
     }
 
+    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(form.email)) {
       setError('Please enter a valid email address.')
       return
     }
 
-    const phoneDigits = form.phone.replace(/\D/g, '')
-    if (phoneDigits.length < 10) {
-      setError('Phone number must have at least 10 digits.')
+    // Phone validation - remove spaces and dashes, keep only digits
+    const phoneDigits = form.phone.replace(/[\s\-()]/g, '')
+    if (phoneDigits.length < 9) {
+      setError('Please enter a valid phone number (at least 9 digits after country code).')
       return
     }
+
+    // Format phone with country code
+    const fullPhone = countryCode + phoneDigits
 
     if (!agreePromo) {
       setError('You must agree to receive emails to join')
@@ -84,7 +91,6 @@ export default function MembershipPage() {
     }
 
     setLoading(true)
-
     const filteredDates = specialDates.filter(d => d.occasion_name && d.month && d.day)
 
     try {
@@ -93,315 +99,237 @@ export default function MembershipPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          phone: fullPhone,
           special_dates: filteredDates
         })
       })
 
       const data = await res.json()
 
-      if (!res.ok) {
-        setError(data.error || 'Something went wrong. Please try again.')
-        setLoading(false)
-        return
+      if (res.ok) {
+        router.push('/membership/success')
+      } else {
+        setError(data.error || 'Error submitting form')
       }
-
-      router.push(`/membership/success?name=${encodeURIComponent(form.full_name)}&email=${encodeURIComponent(form.email)}`)
     } catch (err) {
-      setError('Network error. Please try again.')
+      setError('Error submitting form. Please try again.')
+    } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* LEFT PANEL */}
-      <div className="membership-left" style={{
-        width: '42%', background: '#6B3A2A', position: 'relative', overflow: 'hidden',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '60px 40px'
-      }}>
-        {/* Dot grid background */}
-        <div style={{
-          position: 'absolute', inset: 0, opacity: 0.06,
-          backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)',
-          backgroundSize: '24px 24px'
-        }} />
-
-        <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-          {/* CC Monogram */}
-          <div style={{
-            width: 100, height: 100, borderRadius: '50%',
-            border: '3px solid #C9943A', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', margin: '0 auto 24px'
-          }}>
-            <span style={{ fontSize: 40, fontWeight: 800, color: '#C9943A', fontFamily: 'Georgia, serif', letterSpacing: '-2px' }}>CC</span>
-          </div>
-
-          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#FFFFFF', letterSpacing: '0.12em', marginBottom: 8 }}>
-            CROWN COFFEE
+    <div style={{ background: '#FAFAFA', minHeight: '100vh', paddingTop: '40px', paddingBottom: '40px' }}>
+      <div style={{ maxWidth: '700px', margin: '0 auto', paddingLeft: '20px', paddingRight: '20px' }}>
+        
+        {/* Header */}
+        <div style={{ marginBottom: '40px' }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6B3A2A', textDecoration: 'none', fontSize: '14px', fontWeight: 600, marginBottom: '20px' }}>
+            <ArrowLeft size={18} />
+            Back
+          </Link>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#1F1F1F', margin: '0 0 8px 0' }}>
+            Membership Application
           </h1>
-
-          {/* Gold divider */}
-          <div style={{ width: 60, height: 2, background: '#C9943A', margin: '0 auto 24px' }} />
-
-          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 16, lineHeight: 1.7, maxWidth: 280, margin: '0 auto 32px' }}>
-            Join our family. Enjoy lifetime rewards.
-          </p>
-
-          <p style={{ color: '#C9943A', fontSize: 15, fontWeight: 600, margin: 0 }}>
-            Show your card number for instant discount
+          <p style={{ color: '#9C8A76', margin: '0', fontSize: '14px' }}>
+            Join Crown Coffee family and get exclusive benefits
           </p>
         </div>
-      </div>
 
-      {/* RIGHT PANEL */}
-      <div className="membership-right" style={{
-        width: '58%', background: '#FFFFFF', overflowY: 'auto',
-        padding: '40px 48px'
-      }}>
-        {/* Back link */}
-        <Link href="/" style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          color: '#64748B', fontSize: 14, fontWeight: 500,
-          textDecoration: 'none', marginBottom: 32
-        }}>
-          <ArrowLeft size={18} />
-          Back to Home
-        </Link>
+        {error && (
+          <div style={{ background: '#FFEBEE', border: '1px solid #FFCDD2', borderRadius: '8px', padding: '16px', marginBottom: '24px', color: '#C62828', fontSize: '14px' }}>
+            {error}
+          </div>
+        )}
 
-        <h2 style={{ fontSize: 28, fontWeight: 800, color: '#0F172A', marginBottom: 8, letterSpacing: '-0.02em' }}>
-          Apply for Membership
-        </h2>
-        <p style={{ color: '#64748B', fontSize: 15, marginBottom: 36, lineHeight: 1.6 }}>
-          Get 5% discount instantly. Upgrade to Gold for 10% after 25 visits.
-        </p>
+        <form onSubmit={handleSubmit} style={{ background: 'white', borderRadius: '16px', padding: '32px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+          
+          {/* Full Name */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Full Name *
+            </label>
+            <input
+              type="text"
+              value={form.full_name}
+              onChange={(e) => handleFormChange('full_name', e.target.value)}
+              placeholder="Enter your full name"
+              style={{ width: '100%', padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* SECTION 1: Personal Information */}
-          <div style={{ marginBottom: 32 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#6B3A2A', marginBottom: 20, paddingBottom: 8, borderBottom: '1px solid #E2E8F0' }}>
-              Personal Information
-            </h3>
+          {/* Email */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Email *
+            </label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => handleFormChange('email', e.target.value)}
+              placeholder="your@email.com"
+              style={{ width: '100%', padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Full Name <span style={{ color: '#EF4444' }}>*</span></label>
-                <input
-                  type="text"
-                  value={form.full_name}
-                  onChange={e => handleFormChange('full_name', e.target.value)}
-                  placeholder="Enter your full name"
-                  style={inputStyle}
-                  required
-                  id="membership-fullname"
-                />
-              </div>
+          {/* Phone Number with Country Code */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Phone Number *
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '12px' }}>
+              {/* Country Code Dropdown */}
+              <select
+                value={countryCode}
+                onChange={(e) => setCountryCode(e.target.value)}
+                style={{ padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit' }}
+              >
+                {COUNTRIES.map(country => (
+                  <option key={country.key} value={country.code}>
+                    {country.code} {country.name}
+                  </option>
+                ))}
+              </select>
 
-              <div>
-                <label style={labelStyle}>Email Address <span style={{ color: '#EF4444' }}>*</span></label>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={e => handleFormChange('email', e.target.value)}
-                  placeholder="your@email.com"
-                  style={inputStyle}
-                  required
-                  id="membership-email"
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Phone Number <span style={{ color: '#EF4444' }}>*</span></label>
-                <input
-                  type="tel"
-                  value={form.phone}
-                  onChange={e => handleFormChange('phone', e.target.value)}
-                  placeholder="+880 1XXX-XXXXXX"
-                  style={inputStyle}
-                  required
-                  id="membership-phone"
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Date of Birth</label>
-                <input
-                  type="date"
-                  value={form.date_of_birth}
-                  onChange={e => handleFormChange('date_of_birth', e.target.value)}
-                  style={inputStyle}
-                  id="membership-dob"
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Occupation</label>
-                <input
-                  type="text"
-                  value={form.occupation}
-                  onChange={e => handleFormChange('occupation', e.target.value)}
-                  placeholder="e.g. Engineer, Student"
-                  style={inputStyle}
-                  id="membership-occupation"
-                />
-              </div>
-
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Address</label>
-                <textarea
-                  value={form.address}
-                  onChange={e => handleFormChange('address', e.target.value)}
-                  placeholder="Your address (optional)"
-                  rows={2}
-                  style={{ ...inputStyle, resize: 'vertical', minHeight: 56 }}
-                  id="membership-address"
-                />
-              </div>
+              {/* Phone Number Input */}
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => handleFormChange('phone', e.target.value)}
+                placeholder="17XXXXXXXX"
+                style={{ padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit' }}
+              />
+            </div>
+            <div style={{ fontSize: '12px', color: '#9C8A76', marginTop: '6px' }}>
+              Example: {countryCode} 17XXXXXXXX
             </div>
           </div>
 
-          {/* SECTION 2: Special Dates */}
-          <div style={{ marginBottom: 32 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#6B3A2A', marginBottom: 4, paddingBottom: 8, borderBottom: '1px solid #E2E8F0' }}>
-              Your Special Dates (Optional)
-            </h3>
-            <p style={{ color: '#64748B', fontSize: 13, marginBottom: 16 }}>
-              We will send you special offers on these dates
-            </p>
+          {/* Date of Birth */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Date of Birth
+            </label>
+            <input
+              type="date"
+              value={form.date_of_birth}
+              onChange={(e) => handleFormChange('date_of_birth', e.target.value)}
+              style={{ width: '100%', padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
 
-            {specialDates.map((sd, idx) => (
-              <div key={idx} style={{
-                display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 12,
-                background: '#FAF7F2', padding: '12px 14px', borderRadius: 10, border: '1px solid #E2E8F0'
-              }}>
-                <div style={{ flex: 2 }}>
-                  <label style={{ ...labelStyle, fontSize: 11 }}>Occasion</label>
+          {/* Address */}
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Address
+            </label>
+            <textarea
+              value={form.address}
+              onChange={(e) => handleFormChange('address', e.target.value)}
+              placeholder="Street address, city, country"
+              rows={3}
+              style={{ width: '100%', padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'none' }}
+            />
+          </div>
+
+          {/* Occupation */}
+          <div style={{ marginBottom: '32px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Occupation
+            </label>
+            <input
+              type="text"
+              value={form.occupation}
+              onChange={(e) => handleFormChange('occupation', e.target.value)}
+              placeholder="Your occupation"
+              style={{ width: '100%', padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Special Dates Section */}
+          <div style={{ marginBottom: '32px', paddingBottom: '32px', borderBottom: '1px solid #E0E0E0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#1F1F1F', margin: '0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Special Dates (up to 10)
+              </h3>
+              {specialDates.length < 10 && (
+                <button
+                  type="button"
+                  onClick={addSpecialDate}
+                  style={{ background: 'none', border: 'none', color: '#6B3A2A', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700 }}
+                >
+                  <Plus size={16} />
+                  Add Date
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {specialDates.map((date, idx) => (
+                <div key={idx} style={{ background: '#FDF8F4', padding: '16px', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 80px 1fr', gap: '12px', alignItems: 'end' }}>
                   <input
                     type="text"
-                    value={sd.occasion_name}
-                    onChange={e => updateSpecialDate(idx, 'occasion_name', e.target.value)}
-                    placeholder="e.g. Birthday, Anniversary"
-                    style={{ ...inputStyle, fontSize: 13 }}
+                    placeholder="Occasion (e.g., Birthday)"
+                    value={date.occasion_name}
+                    onChange={(e) => updateSpecialDate(idx, 'occasion_name', e.target.value)}
+                    style={{ padding: '10px 12px', border: '1px solid #E0E0E0', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit' }}
                   />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ ...labelStyle, fontSize: 11 }}>Month</label>
                   <select
-                    value={sd.month}
-                    onChange={e => updateSpecialDate(idx, 'month', e.target.value)}
-                    style={{ ...inputStyle, fontSize: 13 }}
+                    value={date.month}
+                    onChange={(e) => updateSpecialDate(idx, 'month', e.target.value)}
+                    style={{ padding: '10px 12px', border: '1px solid #E0E0E0', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit' }}
                   >
                     <option value="">Month</option>
-                    {MONTHS.map((m, i) => (
-                      <option key={m} value={i + 1}>{m}</option>
-                    ))}
+                    {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
                   </select>
-                </div>
-                <div style={{ flex: 0.6 }}>
-                  <label style={{ ...labelStyle, fontSize: 11 }}>Day</label>
-                  <select
-                    value={sd.day}
-                    onChange={e => updateSpecialDate(idx, 'day', e.target.value)}
-                    style={{ ...inputStyle, fontSize: 13 }}
-                  >
-                    <option value="">Day</option>
-                    {Array.from({ length: 31 }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>{i + 1}</option>
-                    ))}
-                  </select>
-                </div>
-                {(specialDates.length > 1) && (
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    placeholder="Day"
+                    value={date.day}
+                    onChange={(e) => updateSpecialDate(idx, 'day', e.target.value)}
+                    style={{ padding: '10px 12px', border: '1px solid #E0E0E0', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit' }}
+                  />
                   <button
                     type="button"
                     onClick={() => removeSpecialDate(idx)}
-                    style={{
-                      background: 'rgba(239,68,68,0.08)', border: 'none', borderRadius: 8,
-                      width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', color: '#EF4444', flexShrink: 0
-                    }}
+                    style={{ background: 'none', border: 'none', color: '#D32F2F', cursor: 'pointer', justifySelf: 'center', fontSize: '18px' }}
                   >
-                    <X size={16} />
+                    <X size={20} />
                   </button>
-                )}
-              </div>
-            ))}
-
-            {specialDates.length < 10 && (
-              <button
-                type="button"
-                onClick={addSpecialDate}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  background: 'transparent', border: '1px dashed #C9943A',
-                  borderRadius: 8, padding: '8px 16px', color: '#C9943A',
-                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <Plus size={15} />
-                Add Another Date
-              </button>
-            )}
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* SECTION 3: Agreement */}
-          <div style={{ marginBottom: 32 }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#6B3A2A', marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid #E2E8F0' }}>
-              Agreement
-            </h3>
-
-            <label style={{
-              display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12,
-              cursor: 'pointer', fontSize: 14, color: '#334155', lineHeight: 1.5
-            }}>
+          {/* Checkboxes */}
+          <div style={{ marginBottom: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <label style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer', fontSize: '13px', color: '#5C4A36' }}>
               <input
                 type="checkbox"
                 checked={agreePromo}
-                onChange={e => setAgreePromo(e.target.checked)}
-                style={{ marginTop: 3, accentColor: '#6B3A2A', width: 16, height: 16 }}
-                id="membership-agree-promo"
+                onChange={(e) => setAgreePromo(e.target.checked)}
+                style={{ marginTop: '2px', cursor: 'pointer' }}
               />
-              I agree to receive promotional emails from Crown Coffee <span style={{ color: '#EF4444' }}>*</span>
+              I agree to receive promotional emails and updates from Crown Coffee
             </label>
-
-            <label style={{
-              display: 'flex', alignItems: 'flex-start', gap: 10,
-              cursor: 'pointer', fontSize: 14, color: '#334155', lineHeight: 1.5
-            }}>
+            <label style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer', fontSize: '13px', color: '#5C4A36' }}>
               <input
                 type="checkbox"
                 checked={agreeAccuracy}
-                onChange={e => setAgreeAccuracy(e.target.checked)}
-                style={{ marginTop: 3, accentColor: '#6B3A2A', width: 16, height: 16 }}
-                id="membership-agree-accuracy"
+                onChange={(e) => setAgreeAccuracy(e.target.checked)}
+                style={{ marginTop: '2px', cursor: 'pointer' }}
               />
-              I confirm the information provided is accurate
+              I confirm that all the information provided is accurate and correct
             </label>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div style={{
-              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-              borderRadius: 8, padding: '12px 16px', color: '#DC2626',
-              fontSize: 14, marginBottom: 16
-            }}>
-              {error}
-            </div>
-          )}
-
-          {/* Submit */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            style={{
-              width: '100%', padding: '14px 24px', background: loading ? '#9B8B7A' : '#6B3A2A',
-              color: '#FFFFFF', border: 'none', borderRadius: 10, fontSize: 16,
-              fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              transition: 'all 0.2s ease', fontFamily: 'var(--font-sans)'
-            }}
-            id="membership-submit"
+            style={{ width: '100%', padding: '14px', background: loading ? '#9C8A76' : '#6B3A2A', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.2s' }}
           >
             {loading && <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />}
             {loading ? 'Submitting...' : 'Apply for Membership'}
@@ -409,53 +337,12 @@ export default function MembershipPage() {
         </form>
       </div>
 
-      <style>{`
+      <style jsx>{`
         @keyframes spin {
+          from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
-        }
-        @media (max-width: 768px) {
-          .membership-left {
-            width: 100% !important;
-            min-height: 180px !important;
-            height: 180px !important;
-            padding: 24px 20px !important;
-          }
-          .membership-right {
-            width: 100% !important;
-            padding: 24px 20px !important;
-          }
-          div[style*="display: flex"][style*="minHeight: 100vh"] {
-            flex-direction: column !important;
-          }
-        }
-        @media (max-width: 768px) {
-          div:first-child {
-            flex-direction: column;
-          }
         }
       `}</style>
     </div>
   )
-}
-
-const labelStyle = {
-  display: 'block',
-  fontSize: 13,
-  fontWeight: 600,
-  color: '#334155',
-  marginBottom: 6,
-  fontFamily: 'var(--font-sans)'
-}
-
-const inputStyle = {
-  width: '100%',
-  padding: '10px 14px',
-  border: '1px solid #CBD5E1',
-  borderRadius: 8,
-  fontSize: 14,
-  color: '#0F172A',
-  background: '#FFFFFF',
-  outline: 'none',
-  fontFamily: 'var(--font-sans)',
-  transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
 }
