@@ -1,6 +1,7 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
-import { sendMemberApplicationConfirm, sendAdminMemberAlert } from '../../../../lib/email'
 
 export async function POST(request) {
   try {
@@ -23,6 +24,7 @@ export async function POST(request) {
       )
     }
 
+    // Phone format: should start with + and have country code
     const phoneDigits = phone.replace(/\D/g, '')
     if (phoneDigits.length < 10) {
       return NextResponse.json(
@@ -42,12 +44,26 @@ export async function POST(request) {
     const { data: existing } = await supabase
       .from('members')
       .select('id')
-      .eq('email', email)
+      .eq('email', email.toLowerCase())
       .single()
 
     if (existing) {
       return NextResponse.json(
         { error: 'This email is already registered.' },
+        { status: 409 }
+      )
+    }
+
+    // Check phone uniqueness
+    const { data: existingPhone } = await supabase
+      .from('members')
+      .select('id')
+      .eq('phone', phone.trim())
+      .single()
+
+    if (existingPhone) {
+      return NextResponse.json(
+        { error: 'This phone number is already registered.' },
         { status: 409 }
       )
     }
@@ -58,7 +74,9 @@ export async function POST(request) {
       email: email.trim().toLowerCase(),
       phone: phone.trim(),
       status: 'pending',
-      tier: 'silver'
+      tier: 'silver',
+      total_visits: 0,
+      punch_count: 0
     }
 
     if (date_of_birth) memberData.date_of_birth = date_of_birth
@@ -79,52 +97,39 @@ export async function POST(request) {
       )
     }
 
-    // Insert special dates
+    // Insert special dates if provided
     if (special_dates && special_dates.length > 0) {
-      const datesToInsert = special_dates
-        .filter(d => d.occasion_name && d.month && d.day)
-        .map(d => ({
-          member_id: member.id,
-          occasion_name: d.occasion_name.trim(),
-          month: parseInt(d.month),
-          day: parseInt(d.day)
-        }))
-
-      if (datesToInsert.length > 0) {
-        const { error: datesError } = await supabase
+      const validDates = special_dates.filter(d => d.occasion_name && d.month && d.day)
+      
+      if (validDates.length > 0) {
+        const { error: dateError } = await supabase
           .from('member_special_dates')
-          .insert(datesToInsert)
+          .insert(validDates.map(d => ({
+            member_id: member.id,
+            occasion_name: d.occasion_name,
+            month: parseInt(d.month),
+            day: parseInt(d.day)
+          })))
 
-        if (datesError) {
-          console.error('Special dates insert error:', datesError)
+        if (dateError) {
+          console.error('Special dates error:', dateError)
+          // Don't block if special dates fail
         }
       }
     }
 
-    // Send confirmation email to customer (non-blocking)
-    sendMemberApplicationConfirm({
-      to: email,
-      name: full_name
-    }).catch(err => console.error('Member confirmation email failed:', err))
-
-    // Send admin notification (non-blocking)
-    sendAdminMemberAlert({
-      name: full_name,
-      email,
-      phone,
-      occupation: occupation || 'Not provided',
-      special_dates_count: special_dates ? special_dates.filter(d => d.occasion_name).length : 0
-    }).catch(err => console.error('Admin alert email failed:', err))
-
-    return NextResponse.json({
-      success: true,
-      name: full_name
-    })
-
-  } catch (error) {
-    console.error('Membership apply error:', error)
     return NextResponse.json(
-      { error: 'Internal server error.' },
+      { 
+        success: true,
+        member_id: member.id,
+        message: 'Application submitted successfully'
+      },
+      { status: 200 }
+    )
+  } catch (error) {
+    console.error('Apply error:', error)
+    return NextResponse.json(
+      { error: error.message || 'Internal server error' },
       { status: 500 }
     )
   }
