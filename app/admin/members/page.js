@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Search, Trash2, Eye } from 'lucide-react'
+import { Search, Trash2, Download } from 'lucide-react'
 
 export default function MembersPage() {
   const router = useRouter()
@@ -100,6 +100,35 @@ export default function MembersPage() {
     setDeleteConfirm(null)
   }
 
+  const handleExportMembers = () => {
+    if (filteredMembers.length === 0) {
+      alert('No members to export')
+      return
+    }
+
+    const headers = ['Full Name', 'Email', 'Phone', 'Status', 'Visits', 'Tier']
+    const rows = filteredMembers.map(m => [
+      m.full_name,
+      m.email,
+      m.phone,
+      m.status,
+      m.total_visits || 0,
+      m.tier || 'silver'
+    ])
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `members_${new Date().toISOString().split('T')[0]}.csv`)
+    link.click()
+  }
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return { bg: '#E8F5E9', text: '#2E7D32', label: 'Active' }
@@ -123,7 +152,7 @@ export default function MembersPage() {
         View, manage, and delete members
       </p>
 
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
           <Search size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#9C8A76' }} />
           <input
@@ -146,6 +175,14 @@ export default function MembersPage() {
           <option value="deactivated">Deactivated</option>
           <option value="deleted">Deleted</option>
         </select>
+
+        <button
+          onClick={handleExportMembers}
+          style={{ padding: '12px 16px', background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          <Download size={16} />
+          Export CSV
+        </button>
       </div>
 
       <div style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: '12px', overflow: 'hidden' }}>
