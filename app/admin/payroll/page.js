@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import * as XLSX from 'xlsx'
-import { exportPayrollToExcel } from '../../../lib/export'
+import { exportPayrollToExcel } from '../../../../lib/export'
 
 const PaySlip = dynamic(() => import('../../../components/PaySlip'), { ssr: false })
 
