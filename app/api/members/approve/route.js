@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
-import { sendMemberApproved, sendMembershipCardEmail } from '../../../../lib/email'
+import { sendMemberApproved } from '../../../../lib/email'
 import { sendWhatsAppMembershipApproval } from '../../../../lib/whatsapp'
 
 export async function POST(request) {
@@ -42,29 +42,8 @@ export async function POST(request) {
 
     if (updateError) throw updateError
 
-    // Send card email
-    await sendMembershipCardEmail(member, cardNumber)
-
-    // Fetch special dates for the approval email
-    const { data: specialDates } = await supabase
-      .from('member_special_dates')
-      .select('*')
-      .eq('member_id', member_id)
-
-    // Also send approval email for record
-    await sendMemberApproved({
-      to: member.email,
-      name: member.full_name,
-      card_number: cardNumber,
-      member_since: member.member_since,
-      tier: 'silver',
-      special_dates: specialDates || []
-    })
-
-    // Send WhatsApp approval
-    if (member.phone) {
-      await sendWhatsAppMembershipApproval(member.phone, member, cardNumber)
-    }
+    // Send approval notifications (Email + WhatsApp)
+    await sendMemberApproved(member, cardNumber)
 
     return NextResponse.json({ success: true, card_number: cardNumber }, { status: 200 })
   } catch (error) {
