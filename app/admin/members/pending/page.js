@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { CheckCircle, XCircle, Mail, Phone } from 'lucide-react'
+import { CheckCircle, XCircle, Mail, Phone, RefreshCw } from 'lucide-react'
 
 export default function PendingMembersPage() {
   const [members, setMembers] = useState([])
@@ -10,20 +10,20 @@ export default function PendingMembersPage() {
   const [rejecting, setRejecting] = useState(null)
   const [approveConfirm, setApproveConfirm] = useState(null)
   const [rejectConfirm, setRejectConfirm] = useState(null)
-  const [refreshKey, setRefreshKey] = useState(0)
-
-  useEffect(() => {
-    fetchPendingMembers()
-  }, [refreshKey])
 
   const fetchPendingMembers = async () => {
     try {
       setLoading(true)
       const token = localStorage.getItem('cc_token')
-      const res = await fetch(`/api/members/pending?t=${Date.now()}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await fetch(`/api/members/pending?_t=${Date.now()}`, {
+        method: 'GET',
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Cache-Control': 'no-cache'
+        }
       })
       const data = await res.json()
+      console.log('Fetched pending members:', data)
       setMembers(data.members || [])
     } catch (error) {
       console.error('Error:', error)
@@ -32,6 +32,10 @@ export default function PendingMembersPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchPendingMembers()
+  }, [])
 
   const handleApprove = async (memberId) => {
     try {
@@ -49,10 +53,12 @@ export default function PendingMembersPage() {
       const data = await res.json()
 
       if (res.ok) {
-        alert(`✓ Member approved! Card: ${data.card_number}`)
+        alert(`✓ Approved! Card: ${data.card_number}`)
         setApproveConfirm(null)
-        // Refresh the list
-        setRefreshKey(prev => prev + 1)
+        // Wait 1 second then refresh
+        setTimeout(() => {
+          fetchPendingMembers()
+        }, 1000)
       } else {
         alert(`Error: ${data.error}`)
       }
@@ -79,8 +85,10 @@ export default function PendingMembersPage() {
       if (res.ok) {
         alert('Member rejected')
         setRejectConfirm(null)
-        // Refresh the list
-        setRefreshKey(prev => prev + 1)
+        // Wait 1 second then refresh
+        setTimeout(() => {
+          fetchPendingMembers()
+        }, 1000)
       } else {
         alert('Error rejecting member')
       }
@@ -98,12 +106,23 @@ export default function PendingMembersPage() {
 
   return (
     <div style={{ padding: '32px' }}>
-      <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#1F1F1F', marginBottom: '8px' }}>
-        Pending Approvals
-      </h1>
-      <p style={{ color: '#9C8A76', marginBottom: '32px' }}>
-        {members.length} member{members.length !== 1 ? 's' : ''} waiting for approval
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '32px' }}>
+        <div>
+          <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#1F1F1F', marginBottom: '8px' }}>
+            Pending Approvals
+          </h1>
+          <p style={{ color: '#9C8A76', marginBottom: '0' }}>
+            {members.length} member{members.length !== 1 ? 's' : ''} waiting for approval
+          </p>
+        </div>
+        <button
+          onClick={fetchPendingMembers}
+          style={{ padding: '10px 16px', background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <RefreshCw size={14} />
+          Refresh
+        </button>
+      </div>
 
       {members.length === 0 ? (
         <div style={{ background: 'white', border: '1px solid #E0E0E0', borderRadius: '12px', padding: '40px', textAlign: 'center', color: '#9C8A76' }}>
