@@ -3,9 +3,9 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const { data, error } = await supabase
+    const { data: members, error } = await supabase
       .from('members')
       .select('*')
       .eq('status', 'pending')
@@ -15,7 +15,11 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, members: data || [] }, { status: 200 })
+    return NextResponse.json({
+      success: true,
+      members: members || []
+    }, { status: 200 })
+
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
