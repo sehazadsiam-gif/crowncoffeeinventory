@@ -16,22 +16,14 @@ export async function PATCH(request, { params }) {
     }
 
     const { id } = params
-    console.log('Approving member:', id)
 
-    // Generate card number
+    // Generate unique card number with timestamp to avoid duplicates
     const year = new Date().getFullYear()
-    const { count, error: countError } = await supabase
-      .from('members')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'active')
-
-    if (countError) {
-      console.error('Count error:', countError)
-      throw new Error(`Failed to count active members: ${countError.message}`)
-    }
-
-    const cardNumber = `CC-${year}-${String((count || 0) + 1).padStart(4, '0')}`
-    console.log('Generated card number:', cardNumber)
+    const month = String(new Date().getMonth() + 1).padStart(2, '0')
+    const day = String(new Date().getDate()).padStart(2, '0')
+    const timestamp = Date.now().toString().slice(-6)
+    
+    const cardNumber = `CC-${year}${month}${day}-${timestamp}`
 
     // Update member to active
     const { data: member, error: updateError } = await supabase
@@ -39,8 +31,7 @@ export async function PATCH(request, { params }) {
       .update({
         status: 'active',
         card_number: cardNumber,
-        member_since: new Date().toISOString().split('T')[0],
-        tier: 'silver'
+        member_since: new Date().toISOString()
       })
       .eq('id', id)
       .select()
@@ -51,25 +42,21 @@ export async function PATCH(request, { params }) {
       throw new Error(`Failed to update member: ${updateError.message}`)
     }
 
-    if (!member) {
-      throw new Error('Member not found after update')
-    }
-
     // Send approval email + WhatsApp
     try {
       await sendMemberApproved(member, cardNumber)
     } catch (emailError) {
-      console.error('Email send error (non-blocking):', emailError)
+      console.log('Email send error (member approved):', emailError)
     }
 
     return NextResponse.json(
-      { success: true, message: 'Member approved', card_number: cardNumber },
+      { success: true, message: 'Member approved successfully', card_number: cardNumber },
       { status: 200 }
     )
   } catch (error) {
     console.error('Approve error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error.message || 'Failed to approve member' },
       { status: 500 }
     )
   }
