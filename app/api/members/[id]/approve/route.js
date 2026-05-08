@@ -4,32 +4,14 @@ import { NextResponse } from 'next/server'
 import { supabase } from '../../../../../lib/supabase'
 import { sendMemberApproved } from '../../../../../lib/email'
 
-export async function POST(request, { params }) {
+export async function POST(request, context) {
   try {
-    const { id } = params
-
+    const id = context?.params?.id
     console.log('Approving member ID:', id)
+    console.log('Context:', JSON.stringify(context))
 
-    // Check current status first
-    const { data: existing } = await supabase
-      .from('members')
-      .select('id, status, card_number, email, phone, full_name')
-      .eq('id', id)
-
-    const currentMember = existing?.[0]
-    console.log('Current member:', currentMember)
-
-    if (!currentMember) {
-      return NextResponse.json({ error: 'Member not found' }, { status: 404 })
-    }
-
-    // If already approved, return existing card
-    if (currentMember.status === 'active' && currentMember.card_number) {
-      return NextResponse.json({
-        success: true,
-        card_number: currentMember.card_number,
-        message: 'Already approved'
-      }, { status: 200 })
+    if (!id) {
+      return NextResponse.json({ error: 'No member ID provided' }, { status: 400 })
     }
 
     // Generate card number
@@ -57,15 +39,19 @@ export async function POST(request, { params }) {
       .eq('id', id)
       .select()
 
-    console.log('Update result:', updated, updateError)
+    console.log('Update result:', updated, 'Error:', updateError)
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
-    const updatedMember = updated?.[0]
+    if (!updated || updated.length === 0) {
+      return NextResponse.json({ error: 'Member not found or not updated' }, { status: 404 })
+    }
 
-    // Send email + WhatsApp async
+    const updatedMember = updated[0]
+
+    // Send email async
     if (updatedMember?.email) {
       sendMemberApproved(updatedMember, cardNumber).catch(err => {
         console.error('Email error:', err.message)
@@ -75,7 +61,7 @@ export async function POST(request, { params }) {
     return NextResponse.json({
       success: true,
       card_number: cardNumber,
-      message: 'Member approved'
+      message: 'Member approved successfully'
     }, { status: 200 })
 
   } catch (error) {
