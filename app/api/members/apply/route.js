@@ -8,60 +8,54 @@ export async function POST(request) {
     const body = await request.json()
     const { full_name, email, phone, date_of_birth, address, occupation, special_dates } = body
 
+    console.log('Apply request:', { full_name, email, phone })
+
     // Validation
     if (!full_name?.trim() || !email?.trim() || !phone?.trim()) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      )
+    if (!email.includes('@')) {
+      return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
     }
 
     const phoneDigits = phone.replace(/\D/g, '')
     if (phoneDigits.length < 9) {
-      return NextResponse.json(
-        { error: 'Invalid phone number' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid phone' }, { status: 400 })
     }
 
-    // Check email uniqueness
-    const { data: existingEmail } = await supabase
+    // Check email exists
+    const { data: existingEmail, error: emailError } = await supabase
       .from('members')
-      .select('id')
+      .select('id', { count: 'exact' })
       .eq('email', email.toLowerCase())
-      .single()
 
-    if (existingEmail) {
-      return NextResponse.json(
-        { error: 'This email is already registered' },
-        { status: 409 }
-      )
+    if (emailError) {
+      console.error('Email check error:', emailError)
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
     }
 
-    // Check phone uniqueness
-    const { data: existingPhone } = await supabase
+    if (existingEmail && existingEmail.length > 0) {
+      return NextResponse.json({ error: 'Email already registered' }, { status: 409 })
+    }
+
+    // Check phone exists
+    const { data: existingPhone, error: phoneError } = await supabase
       .from('members')
-      .select('id')
+      .select('id', { count: 'exact' })
       .eq('phone', phone.trim())
-      .single()
 
-    if (existingPhone) {
-      return NextResponse.json(
-        { error: 'This phone number is already registered' },
-        { status: 409 }
-      )
+    if (phoneError) {
+      console.error('Phone check error:', phoneError)
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
     }
 
-    // Insert member with status = pending
-    const { data: member, error: memberError } = await supabase
+    if (existingPhone && existingPhone.length > 0) {
+      return NextResponse.json({ error: 'Phone already registered' }, { status: 409 })
+    }
+
+    // Insert member
+    const { data: member, error: insertError } = await supabase
       .from('members')
       .insert([{
         full_name: full_name.trim(),
@@ -76,47 +70,43 @@ export async function POST(request) {
         punch_count: 0
       }])
       .select()
-      .single()
 
-    if (memberError) {
-      console.error('Member insert error:', memberError)
-      return NextResponse.json(
-        { error: 'Failed to submit application' },
-        { status: 500 }
-      )
+    if (insertError) {
+      console.error('Insert error:', insertError)
+      return NextResponse.json({ error: 'Failed to create member' }, { status: 500 })
+    }
+
+    const newMember = member?.[0]
+    if (!newMember) {
+      return NextResponse.json({ error: 'Member not created' }, { status: 500 })
     }
 
     // Insert special dates if provided
     if (special_dates && special_dates.length > 0) {
       const validDates = special_dates.filter(d => d.occasion_name && d.month && d.day)
-      
       if (validDates.length > 0) {
-        const { error: dateError } = await supabase
+        await supabase
           .from('member_special_dates')
           .insert(validDates.map(d => ({
-            member_id: member.id,
+            member_id: newMember.id,
             occasion_name: d.occasion_name,
             month: parseInt(d.month),
             day: parseInt(d.day)
           })))
-
-        if (dateError) {
-          console.error('Special dates error:', dateError)
-        }
+          .catch(err => console.error('Special dates error:', err))
       }
     }
 
+    console.log('Member created:', newMember.id)
+
     return NextResponse.json({
       success: true,
-      member_id: member.id,
-      message: 'Application submitted successfully'
+      member_id: newMember.id,
+      message: 'Application submitted'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Apply error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
