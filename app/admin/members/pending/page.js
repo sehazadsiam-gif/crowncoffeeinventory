@@ -10,21 +10,24 @@ export default function PendingMembersPage() {
   const [rejecting, setRejecting] = useState(null)
   const [approveConfirm, setApproveConfirm] = useState(null)
   const [rejectConfirm, setRejectConfirm] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     fetchPendingMembers()
-  }, [])
+  }, [refreshKey])
 
   const fetchPendingMembers = async () => {
     try {
+      setLoading(true)
       const token = localStorage.getItem('cc_token')
-      const res = await fetch('/api/members/pending', {
+      const res = await fetch(`/api/members/pending?t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
       setMembers(data.members || [])
     } catch (error) {
       console.error('Error:', error)
+      alert('Error loading pending members')
     } finally {
       setLoading(false)
     }
@@ -43,18 +46,21 @@ export default function PendingMembersPage() {
         body: JSON.stringify({ action: 'approve' })
       })
 
+      const data = await res.json()
+
       if (res.ok) {
-        alert('Member approved successfully!')
-        fetchPendingMembers()
+        alert(`✓ Member approved! Card: ${data.card_number}`)
+        setApproveConfirm(null)
+        // Refresh the list
+        setRefreshKey(prev => prev + 1)
       } else {
-        const data = await res.json()
-        alert(`Error: ${data.error || 'Failed to approve member'}`)
+        alert(`Error: ${data.error}`)
       }
     } catch (error) {
+      console.error('Approve error:', error)
       alert('Error approving member')
     } finally {
       setApproving(null)
-      setApproveConfirm(null)
     }
   }
 
@@ -72,15 +78,17 @@ export default function PendingMembersPage() {
 
       if (res.ok) {
         alert('Member rejected')
-        fetchPendingMembers()
+        setRejectConfirm(null)
+        // Refresh the list
+        setRefreshKey(prev => prev + 1)
       } else {
         alert('Error rejecting member')
       }
     } catch (error) {
+      console.error('Reject error:', error)
       alert('Error rejecting member')
     } finally {
       setRejecting(null)
-      setRejectConfirm(null)
     }
   }
 
@@ -174,7 +182,7 @@ export default function PendingMembersPage() {
           <div style={{ background: 'white', borderRadius: '12px', padding: '32px', maxWidth: '400px', textAlign: 'center' }}>
             <h2 style={{ color: '#2E7D32', fontSize: '18px', fontWeight: 700, marginBottom: '12px' }}>Approve Member?</h2>
             <p style={{ color: '#9C8A76', marginBottom: '24px' }}>
-              {members.find(m => m.id === approveConfirm)?.full_name} will be sent a membership card and welcome email.
+              {members.find(m => m.id === approveConfirm)?.full_name} will be sent a membership card and welcome email + WhatsApp.
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
@@ -185,9 +193,10 @@ export default function PendingMembersPage() {
               </button>
               <button
                 onClick={() => handleApprove(approveConfirm)}
-                style={{ flex: 1, padding: '10px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}
+                disabled={approving === approveConfirm}
+                style={{ flex: 1, padding: '10px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, opacity: approving === approveConfirm ? 0.6 : 1 }}
               >
-                Approve
+                {approving === approveConfirm ? 'Approving...' : 'Approve'}
               </button>
             </div>
           </div>
@@ -211,9 +220,10 @@ export default function PendingMembersPage() {
               </button>
               <button
                 onClick={() => handleReject(rejectConfirm)}
-                style={{ flex: 1, padding: '10px', background: '#D32F2F', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}
+                disabled={rejecting === rejectConfirm}
+                style={{ flex: 1, padding: '10px', background: '#D32F2F', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, opacity: rejecting === rejectConfirm ? 0.6 : 1 }}
               >
-                Reject
+                {rejecting === rejectConfirm ? 'Rejecting...' : 'Reject'}
               </button>
             </div>
           </div>

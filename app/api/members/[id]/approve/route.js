@@ -17,13 +17,22 @@ export async function PATCH(request, { params }) {
 
     const { id } = params
 
-    // Generate unique card number with timestamp to avoid duplicates
+    // Generate unique card number with timestamp
     const year = new Date().getFullYear()
     const month = String(new Date().getMonth() + 1).padStart(2, '0')
     const day = String(new Date().getDate()).padStart(2, '0')
     const timestamp = Date.now().toString().slice(-6)
     
     const cardNumber = `CC-${year}${month}${day}-${timestamp}`
+
+    console.log('Approving member:', { id, cardNumber })
+
+    // Get member first to send to email function
+    const { data: memberBefore } = await supabase
+      .from('members')
+      .select('*')
+      .eq('id', id)
+      .single()
 
     // Update member to active
     const { data: member, error: updateError } = await supabase
@@ -42,11 +51,20 @@ export async function PATCH(request, { params }) {
       throw new Error(`Failed to update member: ${updateError.message}`)
     }
 
+    console.log('Member updated:', member)
+
     // Send approval email + WhatsApp
-    try {
-      await sendMemberApproved(member, cardNumber)
-    } catch (emailError) {
-      console.log('Email send error (member approved):', emailError)
+    if (member.email && member.phone) {
+      try {
+        console.log('Sending approval email to:', member.email, member.phone)
+        await sendMemberApproved(member, cardNumber)
+        console.log('Email + WhatsApp sent successfully')
+      } catch (emailError) {
+        console.error('Email/WhatsApp send error:', emailError)
+        // Don't fail the approval if email fails
+      }
+    } else {
+      console.warn('Missing email or phone for WhatsApp:', { email: member.email, phone: member.phone })
     }
 
     return NextResponse.json(
