@@ -16,7 +16,7 @@ export async function GET(request) {
       .from('member_visits')
       .select('member_id')
       .eq('id', visit_id)
-      .single()
+      
 
     if (visit) {
       await supabase.from('member_feedback').insert([{

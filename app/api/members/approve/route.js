@@ -38,7 +38,7 @@ export async function POST(request) {
       })
       .eq('id', member_id)
       .select()
-      .single()
+      
 
     if (updateError) {
       console.error('Update error:', updateError)

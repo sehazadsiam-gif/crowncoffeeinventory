@@ -56,7 +56,7 @@ export async function GET(request) {
         .eq('type', 'special_date')
         .eq('subject', sd.occasion_name)
         .eq('message', `${currentYear}`)
-        .single()
+        
 
       if (!existing) {
         await sendSpecialDateEmail({
@@ -98,7 +98,7 @@ export async function GET(request) {
             .eq('member_id', m.id)
             .eq('type', 'anniversary')
             .eq('message', `${currentYear}`)
-            .single()
+            
 
           if (!existing) {
             await sendAnniversaryEmail({

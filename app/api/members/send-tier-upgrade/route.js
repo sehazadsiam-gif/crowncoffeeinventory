@@ -20,7 +20,7 @@ export async function POST(request) {
       .from('members')
       .select('full_name, email, card_number')
       .eq('id', member_id)
-      .single()
+      
 
     if (error || !member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })

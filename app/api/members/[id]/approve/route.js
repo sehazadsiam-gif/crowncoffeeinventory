@@ -40,7 +40,7 @@ export async function POST(request, { params }) {
       })
       .eq('id', id)
       .select()
-      .single()
+      
 
     if (updateError) throw updateError
 

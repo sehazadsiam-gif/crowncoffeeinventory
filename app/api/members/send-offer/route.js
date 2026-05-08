@@ -24,7 +24,7 @@ export async function POST(request) {
       .from('members')
       .select('*')
       .eq('id', member_id)
-      .single()
+      
 
     if (memberError || !member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
