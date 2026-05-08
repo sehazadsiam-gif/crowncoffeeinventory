@@ -7,11 +7,9 @@ import { sendMemberApproved } from '../../../../../lib/email'
 export async function POST(request, context) {
   try {
     const id = context?.params?.id
-    console.log('Approving member ID:', id)
-    console.log('Context:', JSON.stringify(context))
 
     if (!id) {
-      return NextResponse.json({ error: 'No member ID provided' }, { status: 400 })
+      return NextResponse.json({ error: 'No member ID' }, { status: 400 })
     }
 
     // Generate card number
@@ -22,31 +20,23 @@ export async function POST(request, context) {
     const timestamp = Date.now().toString().slice(-6)
     const cardNumber = `CC-${year}${month}${day}-${timestamp}`
 
-    // Calculate 30-day free coffee expiry
-    const expiryDate = new Date()
-    expiryDate.setDate(expiryDate.getDate() + 30)
-
-    // Update member status
+    // Update member - simple, no free coffee columns
     const { data: updated, error: updateError } = await supabase
       .from('members')
       .update({
         status: 'active',
         card_number: cardNumber,
-        member_since: now.toISOString(),
-        free_coffee_claimed: false,
-        free_coffee_expires_at: expiryDate.toISOString()
+        member_since: now.toISOString()
       })
       .eq('id', id)
       .select()
-
-    console.log('Update result:', updated, 'Error:', updateError)
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 500 })
     }
 
     if (!updated || updated.length === 0) {
-      return NextResponse.json({ error: 'Member not found or not updated' }, { status: 404 })
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
 
     const updatedMember = updated[0]
@@ -61,7 +51,7 @@ export async function POST(request, context) {
     return NextResponse.json({
       success: true,
       card_number: cardNumber,
-      message: 'Member approved successfully'
+      message: 'Member approved'
     }, { status: 200 })
 
   } catch (error) {
