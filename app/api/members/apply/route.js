@@ -9,9 +9,9 @@ export async function POST(request) {
     const { full_name, email, phone, date_of_birth, address, occupation, special_dates } = body
 
     // Validation
-    if (!full_name || !email || !phone) {
+    if (!full_name?.trim() || !email?.trim() || !phone?.trim()) {
       return NextResponse.json(
-        { error: 'Full name, email, and phone are required.' },
+        { error: 'Missing required fields' },
         { status: 400 }
       )
     }
@@ -19,37 +19,29 @@ export async function POST(request) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { error: 'Invalid email format.' },
+        { error: 'Invalid email format' },
         { status: 400 }
       )
     }
 
-    // Phone format: should start with + and have country code
     const phoneDigits = phone.replace(/\D/g, '')
-    if (phoneDigits.length < 10) {
+    if (phoneDigits.length < 9) {
       return NextResponse.json(
-        { error: 'Phone number must have at least 10 digits.' },
-        { status: 400 }
-      )
-    }
-
-    if (special_dates && special_dates.length > 10) {
-      return NextResponse.json(
-        { error: 'Maximum 10 special dates allowed.' },
+        { error: 'Invalid phone number' },
         { status: 400 }
       )
     }
 
     // Check email uniqueness
-    const { data: existing } = await supabase
+    const { data: existingEmail } = await supabase
       .from('members')
       .select('id')
       .eq('email', email.toLowerCase())
       .single()
 
-    if (existing) {
+    if (existingEmail) {
       return NextResponse.json(
-        { error: 'This email is already registered.' },
+        { error: 'This email is already registered' },
         { status: 409 }
       )
     }
@@ -63,36 +55,33 @@ export async function POST(request) {
 
     if (existingPhone) {
       return NextResponse.json(
-        { error: 'This phone number is already registered.' },
+        { error: 'This phone number is already registered' },
         { status: 409 }
       )
     }
 
-    // Insert member
-    const memberData = {
-      full_name: full_name.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone.trim(),
-      status: 'pending',
-      tier: 'silver',
-      total_visits: 0,
-      punch_count: 0
-    }
-
-    if (date_of_birth) memberData.date_of_birth = date_of_birth
-    if (address) memberData.address = address.trim()
-    if (occupation) memberData.occupation = occupation.trim()
-
+    // Insert member with status = pending
     const { data: member, error: memberError } = await supabase
       .from('members')
-      .insert([memberData])
+      .insert([{
+        full_name: full_name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        date_of_birth: date_of_birth || null,
+        address: address || null,
+        occupation: occupation || null,
+        status: 'pending',
+        tier: 'silver',
+        total_visits: 0,
+        punch_count: 0
+      }])
       .select()
       .single()
 
     if (memberError) {
       console.error('Member insert error:', memberError)
       return NextResponse.json(
-        { error: 'Failed to submit application. Please try again.' },
+        { error: 'Failed to submit application' },
         { status: 500 }
       )
     }
@@ -113,23 +102,20 @@ export async function POST(request) {
 
         if (dateError) {
           console.error('Special dates error:', dateError)
-          // Don't block if special dates fail
         }
       }
     }
 
-    return NextResponse.json(
-      { 
-        success: true,
-        member_id: member.id,
-        message: 'Application submitted successfully'
-      },
-      { status: 200 }
-    )
+    return NextResponse.json({
+      success: true,
+      member_id: member.id,
+      message: 'Application submitted successfully'
+    }, { status: 200 })
+
   } catch (error) {
     console.error('Apply error:', error)
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error.message || 'Server error' },
       { status: 500 }
     )
   }
