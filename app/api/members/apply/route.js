@@ -6,46 +6,36 @@ import { supabase } from '../../../../lib/supabase'
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { full_name, email, phone, date_of_birth, address, occupation, special_dates } = body
+    const { full_name, email, phone, date_of_birth, address, occupation } = body
 
-    console.log('Apply request:', { full_name, email, phone })
+    console.log('New application:', { full_name, email, phone })
 
-    // Validation
-    if (!full_name?.trim() || !email?.trim() || !phone?.trim()) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    if (!full_name || !email || !phone) {
+      return NextResponse.json({ error: 'Name, email and phone are required' }, { status: 400 })
     }
 
-    if (!email.includes('@')) {
-      return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
-    }
-
-    const phoneDigits = phone.replace(/\D/g, '')
-    if (phoneDigits.length < 9) {
-      return NextResponse.json({ error: 'Invalid phone' }, { status: 400 })
-    }
-
-    // Check email - use count instead
-    const { count: emailCount, error: emailError } = await supabase
+    // Check email exists
+    const { data: emailCheck } = await supabase
       .from('members')
-      .select('id', { count: 'exact' })
-      .eq('email', email.toLowerCase())
+      .select('id')
+      .eq('email', email)
 
-    if (emailCount && emailCount > 0) {
+    if (emailCheck && emailCheck.length > 0) {
       return NextResponse.json({ error: 'Email already registered' }, { status: 409 })
     }
 
-    // Check phone - use count instead
-    const { count: phoneCount, error: phoneError } = await supabase
+    // Check phone exists
+    const { data: phoneCheck } = await supabase
       .from('members')
-      .select('id', { count: 'exact' })
-      .eq('phone', phone.trim())
+      .select('id')
+      .eq('phone', phone)
 
-    if (phoneCount && phoneCount > 0) {
+    if (phoneCheck && phoneCheck.length > 0) {
       return NextResponse.json({ error: 'Phone already registered' }, { status: 409 })
     }
 
     // Insert member
-    const { data: memberArray, error: insertError } = await supabase
+    const { data, error } = await supabase
       .from('members')
       .insert([{
         full_name: full_name.trim(),
@@ -61,39 +51,20 @@ export async function POST(request) {
       }])
       .select()
 
-    if (insertError || !memberArray || memberArray.length === 0) {
-      console.error('Insert error:', insertError)
-      return NextResponse.json({ error: 'Failed to create member' }, { status: 500 })
+    if (error) {
+      console.error('Insert error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const newMember = memberArray[0]
-
-    // Insert special dates if provided
-    if (special_dates && special_dates.length > 0) {
-      const validDates = special_dates.filter(d => d.occasion_name && d.month && d.day)
-      if (validDates.length > 0) {
-        await supabase
-          .from('member_special_dates')
-          .insert(validDates.map(d => ({
-            member_id: newMember.id,
-            occasion_name: d.occasion_name,
-            month: parseInt(d.month),
-            day: parseInt(d.day)
-          })))
-          .catch(err => console.error('Special dates error:', err))
-      }
-    }
-
-    console.log('Member created:', newMember.id)
+    console.log('Member created:', data[0].id)
 
     return NextResponse.json({
       success: true,
-      member_id: newMember.id,
-      message: 'Application submitted successfully'
+      member_id: data[0].id
     }, { status: 200 })
 
   } catch (error) {
     console.error('Apply error:', error)
-    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

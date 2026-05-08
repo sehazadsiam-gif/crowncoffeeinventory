@@ -2,36 +2,21 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../../lib/supabase'
-import { validateSession } from '../../../../../lib/auth'
 
-export async function PATCH(request, { params }) {
+export async function POST(request, context) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    const session = await validateSession(token)
-
-    if (!session || session.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { id } = params
+    const id = context?.params?.id
+    if (!id) return NextResponse.json({ error: 'No ID' }, { status: 400 })
 
     const { error } = await supabase
       .from('members')
       .update({ status: 'rejected' })
       .eq('id', id)
 
-    if (error) throw error
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    return NextResponse.json(
-      { success: true, message: 'Member rejected' },
-      { status: 200 }
-    )
+    return NextResponse.json({ success: true }, { status: 200 })
   } catch (error) {
-    console.error('Reject error:', error)
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
