@@ -24,38 +24,28 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid phone' }, { status: 400 })
     }
 
-    // Check email exists
-    const { data: existingEmail, error: emailError } = await supabase
+    // Check email - use count instead
+    const { count: emailCount, error: emailError } = await supabase
       .from('members')
       .select('id', { count: 'exact' })
       .eq('email', email.toLowerCase())
 
-    if (emailError) {
-      console.error('Email check error:', emailError)
-      return NextResponse.json({ error: 'Database error' }, { status: 500 })
-    }
-
-    if (existingEmail && existingEmail.length > 0) {
+    if (emailCount && emailCount > 0) {
       return NextResponse.json({ error: 'Email already registered' }, { status: 409 })
     }
 
-    // Check phone exists
-    const { data: existingPhone, error: phoneError } = await supabase
+    // Check phone - use count instead
+    const { count: phoneCount, error: phoneError } = await supabase
       .from('members')
       .select('id', { count: 'exact' })
       .eq('phone', phone.trim())
 
-    if (phoneError) {
-      console.error('Phone check error:', phoneError)
-      return NextResponse.json({ error: 'Database error' }, { status: 500 })
-    }
-
-    if (existingPhone && existingPhone.length > 0) {
+    if (phoneCount && phoneCount > 0) {
       return NextResponse.json({ error: 'Phone already registered' }, { status: 409 })
     }
 
     // Insert member
-    const { data: member, error: insertError } = await supabase
+    const { data: memberArray, error: insertError } = await supabase
       .from('members')
       .insert([{
         full_name: full_name.trim(),
@@ -71,15 +61,12 @@ export async function POST(request) {
       }])
       .select()
 
-    if (insertError) {
+    if (insertError || !memberArray || memberArray.length === 0) {
       console.error('Insert error:', insertError)
       return NextResponse.json({ error: 'Failed to create member' }, { status: 500 })
     }
 
-    const newMember = member?.[0]
-    if (!newMember) {
-      return NextResponse.json({ error: 'Member not created' }, { status: 500 })
-    }
+    const newMember = memberArray[0]
 
     // Insert special dates if provided
     if (special_dates && special_dates.length > 0) {
@@ -102,11 +89,11 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       member_id: newMember.id,
-      message: 'Application submitted'
+      message: 'Application submitted successfully'
     }, { status: 200 })
 
   } catch (error) {
     console.error('Apply error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 })
   }
 }
