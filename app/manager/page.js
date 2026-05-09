@@ -229,16 +229,22 @@ export default function ManagerDashboard() {
                 <tr style={{ borderBottom: '1px solid #F1F5F9' }}>
                   <th style={thStyle}>Name</th>
                   <th style={thStyle}>Card</th>
+                  <th style={thStyle}>Total Visits</th>
                   <th style={thStyle}>Time</th>
                 </tr>
               </thead>
               <tbody>
                 {todayVisits.length === 0 ? (
-                  <tr><td colSpan={3} style={{ padding: 40, textAlign: 'center', color: '#9C8A76', fontSize: 14 }}>No visits recorded yet today</td></tr>
+                  <tr><td colSpan={4} style={{ padding: 40, textAlign: 'center', color: '#9C8A76', fontSize: 14 }}>No visits recorded yet today</td></tr>
                 ) : todayVisits.map((v, i) => (
                   <tr key={i} style={{ borderBottom: i === todayVisits.length - 1 ? 'none' : '1px solid #F1F5F9' }}>
                     <td style={tdStyle}>{v.full_name}</td>
                     <td style={tdStyle}><code style={{ fontSize: 12, color: '#6B3A2A', background: '#F5F0E8', padding: '2px 6px', borderRadius: 4 }}>{v.card_number}</code></td>
+                    <td style={tdStyle}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#6B3A2A', background: '#F5F0E8', padding: '2px 8px', borderRadius: 12 }}>
+                        {v.total_visits || 0}
+                      </span>
+                    </td>
                     <td style={tdStyle}>{new Date(v.visited_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                   </tr>
                 ))}

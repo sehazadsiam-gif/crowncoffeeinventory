@@ -154,12 +154,20 @@ export default function MembersPage() {
             View, manage, and delete members
           </p>
         </div>
-        <button
-          onClick={() => router.push('/admin/members/pending')}
-          style={{ padding: '12px 20px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 700, boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)' }}
-        >
-          View Pending Approvals
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={() => router.push('/admin/members/special-offers')}
+            style={{ padding: '12px 20px', background: '#C9943A', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 700, boxShadow: '0 4px 12px rgba(201, 148, 58, 0.2)' }}
+          >
+            Special Offers
+          </button>
+          <button
+            onClick={() => router.push('/admin/members/pending')}
+            style={{ padding: '12px 20px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 700, boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)' }}
+          >
+            View Pending Approvals
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: '16px', marginBottom: '32px', flexWrap: 'wrap', alignItems: 'flex-end' }}>

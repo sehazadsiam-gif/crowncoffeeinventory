@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
@@ -12,7 +14,11 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    const todayDateOnly = `${year}-${month}-${day}`
 
     const { data, error } = await supabase
       .from('member_visits')
@@ -21,11 +27,12 @@ export async function GET(request) {
         members (
           full_name,
           card_number,
-          tier
+          tier,
+          total_visits
         )
       `)
-      .gte('visited_at', today + 'T00:00:00')
-      .lte('visited_at', today + 'T23:59:59')
+      .gte('visited_at', todayDateOnly + 'T00:00:00')
+      .lte('visited_at', todayDateOnly + 'T23:59:59')
       .order('visited_at', { ascending: false })
 
     if (error) {
@@ -35,9 +42,10 @@ export async function GET(request) {
 
     const formatted = data.map(v => ({
       visited_at: v.visited_at,
-      full_name: v.members.full_name,
-      card_number: v.members.card_number,
-      tier: v.members.tier
+      full_name: v.members?.full_name || 'Unknown',
+      card_number: v.members?.card_number || 'N/A',
+      tier: v.members?.tier || 'silver',
+      total_visits: v.members?.total_visits || 0
     }))
 
     return NextResponse.json({ visits: formatted })
