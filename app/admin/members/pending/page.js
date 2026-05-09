@@ -9,11 +9,12 @@ export default function PendingMembersPage() {
 
   const load = async () => {
     try {
-      const res = await fetch('/api/members/pending')
+      const res = await fetch(`/api/members/pending?t=${Date.now()}`)
       const data = await res.json()
+      console.log('Loaded pending members:', data.members?.length || 0)
       setMembers(data.members || [])
     } catch (e) {
-      console.error(e)
+      console.error('Load error:', e)
     } finally {
       setLoading(false)
     }
@@ -21,25 +22,34 @@ export default function PendingMembersPage() {
 
   useEffect(() => {
     load()
-    const t = setInterval(load, 3000)
-    return () => clearInterval(t)
+    // Auto-refresh every 2 seconds
+    const interval = setInterval(load, 2000)
+    return () => clearInterval(interval)
   }, [])
 
   const approve = async (id) => {
-    if (!confirm('Approve this member?')) return
+    if (!window.confirm('Approve this member?')) return
+
     setProcessing(id)
     try {
       const token = localStorage.getItem('cc_token')
       const res = await fetch(`/api/members/${id}/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
       })
+
       const data = await res.json()
+      console.log('Approve response:', res.status, data)
+
       if (res.ok) {
         alert('Approved! Card: ' + data.card_number)
+        // Remove from list immediately
         setMembers(m => m.filter(x => x.id !== id))
       } else {
-        alert('Error: ' + data.error)
+        alert('Error: ' + (data.error || 'Unknown error'))
       }
     } catch (e) {
       alert('Error: ' + e.message)
@@ -49,16 +59,22 @@ export default function PendingMembersPage() {
   }
 
   const reject = async (id) => {
-    if (!confirm('Reject this member?')) return
+    if (!window.confirm('Reject this member?')) return
+
     setProcessing(id)
     try {
       const token = localStorage.getItem('cc_token')
       const res = await fetch(`/api/members/${id}/reject`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
       })
+
       if (res.ok) {
         alert('Rejected')
+        // Remove from list immediately
         setMembers(m => m.filter(x => x.id !== id))
       } else {
         alert('Error')
@@ -70,15 +86,17 @@ export default function PendingMembersPage() {
     }
   }
 
-  if (loading) return <div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>
+  }
 
   return (
     <div style={{ padding: '32px', maxWidth: '800px', margin: '0 auto' }}>
       <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px' }}>Pending Approvals</h1>
-      <p style={{ color: '#9C8A76', marginBottom: '16px' }}>{members.length} waiting</p>
+      <p style={{ color: '#9C8A76', marginBottom: '24px' }}>{members.length} members waiting</p>
 
-      <button onClick={load} style={{ marginBottom: '24px', padding: '8px 16px', background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}>
-        Refresh
+      <button onClick={load} style={{ marginBottom: '24px', padding: '10px 16px', background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}>
+        Manual Refresh
       </button>
 
       {members.length === 0 ? (
@@ -88,21 +106,26 @@ export default function PendingMembersPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {members.map(m => (
-            <div key={m.id} style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={m.id} style={{ background: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '6px' }}>{m.full_name}</div>
-                <div style={{ fontSize: '13px', color: '#9C8A76' }}>{m.email}</div>
-                <div style={{ fontSize: '13px', color: '#9C8A76' }}>{m.phone}</div>
-                <div style={{ fontSize: '11px', color: '#BDBDBD', marginTop: '4px' }}>{new Date(m.created_at).toLocaleString()}</div>
+                <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>{m.full_name}</div>
+                <div style={{ fontSize: '12px', color: '#9C8A76', marginBottom: '4px' }}>{m.email}</div>
+                <div style={{ fontSize: '12px', color: '#9C8A76' }}>{m.phone}</div>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button onClick={() => approve(m.id)} disabled={processing === m.id}
-                  style={{ padding: '10px 16px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}>
-                  Approve
+                <button
+                  onClick={() => approve(m.id)}
+                  disabled={processing === m.id}
+                  style={{ padding: '10px 16px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '12px', opacity: processing === m.id ? 0.6 : 1 }}
+                >
+                  {processing === m.id ? '...' : 'Approve'}
                 </button>
-                <button onClick={() => reject(m.id)} disabled={processing === m.id}
-                  style={{ padding: '10px 16px', background: '#D32F2F', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700 }}>
-                  Reject
+                <button
+                  onClick={() => reject(m.id)}
+                  disabled={processing === m.id}
+                  style={{ padding: '10px 16px', background: '#D32F2F', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '12px', opacity: processing === m.id ? 0.6 : 1 }}
+                >
+                  {processing === m.id ? '...' : 'Reject'}
                 </button>
               </div>
             </div>
