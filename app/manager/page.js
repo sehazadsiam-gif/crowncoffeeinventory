@@ -31,8 +31,9 @@ export default function ManagerDashboard() {
   const fetchTodayVisits = useCallback(async () => {
     try {
       const token = localStorage.getItem('cc_token')
-      const res = await fetch('/api/manager/today-visits', { 
-        headers: { Authorization: `Bearer ${token}` } 
+      const res = await fetch(`/api/manager/today-visits?t=${Date.now()}`, { 
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store'
       })
       const data = await res.json()
       setTodayVisits(data.visits || [])
