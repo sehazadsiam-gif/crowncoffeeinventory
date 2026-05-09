@@ -1,10 +1,13 @@
 export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
+import { unstable_noStore as noStore } from 'next/cache'
 
 export async function GET(request) {
+  noStore()
   try {
     const authHeader = request.headers.get('Authorization')
     const token = authHeader?.replace('Bearer ', '')
