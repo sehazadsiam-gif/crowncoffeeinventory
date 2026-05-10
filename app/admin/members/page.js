@@ -29,7 +29,31 @@ export default function MembersPage() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
-      setMembers(data.members || [])
+      
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+
+      const processed = (data.members || []).map(m => {
+        if (!m.date_of_birth) return m;
+
+        const dob = new Date(m.date_of_birth)
+        let nextBirthday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate())
+        
+        if (nextBirthday < today) {
+          nextBirthday.setFullYear(today.getFullYear() + 1)
+        }
+        
+        const diffTime = Math.abs(nextBirthday - today)
+        const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        
+        return {
+          ...m,
+          daysUntilBirthday: daysUntil,
+          isBirthdayToday: daysUntil === 0 || daysUntil === 365
+        }
+      })
+
+      setMembers(processed)
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -106,11 +130,12 @@ export default function MembersPage() {
       return
     }
 
-    const headers = ['Full Name', 'Email', 'Phone', 'Status', 'Visits', 'Tier']
+    const headers = ['Full Name', 'Email', 'Phone', 'Date of Birth', 'Status', 'Visits', 'Tier']
     const rows = filteredMembers.map(m => [
       m.full_name,
       m.email,
       m.phone,
+      m.date_of_birth ? new Date(m.date_of_birth).toISOString().split('T')[0] : 'N/A',
       m.status,
       m.total_visits || 0,
       m.tier || 'silver'
@@ -210,6 +235,7 @@ export default function MembersPage() {
               <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 700, borderBottom: '1px solid #E0E0E0' }}>Name</th>
               <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 700, borderBottom: '1px solid #E0E0E0' }}>Email</th>
               <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 700, borderBottom: '1px solid #E0E0E0' }}>Phone</th>
+              <th style={{ padding: '12px', textAlign: 'left', fontSize: '12px', fontWeight: 700, borderBottom: '1px solid #E0E0E0' }}>DOB</th>
               <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: 700, borderBottom: '1px solid #E0E0E0' }}>Status</th>
               <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: 700, borderBottom: '1px solid #E0E0E0' }}>Visits</th>
               <th style={{ padding: '12px', textAlign: 'center', fontSize: '12px', fontWeight: 700, borderBottom: '1px solid #E0E0E0' }}>Actions</th>
@@ -230,6 +256,18 @@ export default function MembersPage() {
                     <td style={{ padding: '12px', fontSize: '14px', fontWeight: 700 }}>{member.full_name}</td>
                     <td style={{ padding: '12px', fontSize: '13px', color: '#5C4A36' }}>{member.email}</td>
                     <td style={{ padding: '12px', fontSize: '13px', color: '#5C4A36' }}>{member.phone}</td>
+                    <td style={{ padding: '12px', fontSize: '13px', color: '#5C4A36' }}>
+                      {member.date_of_birth ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {new Date(member.date_of_birth).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          {member.isBirthdayToday ? (
+                            <span style={{ background: '#C9943A', color: 'white', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>🎉 TODAY</span>
+                          ) : member.daysUntilBirthday <= 7 ? (
+                            <span style={{ background: '#FFF3E0', color: '#F57C00', padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' }}>Soon</span>
+                          ) : null}
+                        </div>
+                      ) : '-'}
+                    </td>
                     <td style={{ padding: '12px', textAlign: 'center' }}>
                       <span style={{ padding: '4px 10px', borderRadius: '12px', background: statusColor.bg, color: statusColor.text, fontSize: '11px', fontWeight: 700 }}>
                         {statusColor.label}

@@ -24,7 +24,7 @@ export default function MembershipPage() {
     address: '',
     occupation: ''
   })
-  const [specialDates, setSpecialDates] = useState([{ occasion_name: '', month: '', day: '' }])
+  const [specialDates, setSpecialDates] = useState([{ occasion_name: '', date: '' }])
   const [agreePromo, setAgreePromo] = useState(false)
   const [agreeAccuracy, setAgreeAccuracy] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -58,9 +58,30 @@ export default function MembershipPage() {
 
     try {
       const fullPhone = countryCode + form.phone.replace(/\D/g, '')
-      const filteredDates = specialDates.filter(d => d.occasion_name && d.month && d.day)
+      
+      const filteredDates = specialDates.map(d => {
+        if (!d.occasion_name || !d.date) return null
+        const parts = d.date.split(/[-/.]/)
+        if (parts.length < 2) return null
+        return {
+          occasion_name: d.occasion_name,
+          day: parseInt(parts[0]),
+          month: parseInt(parts[1])
+        }
+      }).filter(Boolean)
 
-      console.log('Submitting:', { ...form, phone: fullPhone, special_dates: filteredDates })
+      let dob = null
+      if (form.date_of_birth) {
+        const parts = form.date_of_birth.split(/[-/.]/)
+        if (parts.length === 3) {
+          const dd = parts[0].padStart(2, '0')
+          const mm = parts[1].padStart(2, '0')
+          const yyyy = parts[2]
+          dob = `${yyyy}-${mm}-${dd}`
+        }
+      }
+
+      console.log('Submitting:', { ...form, phone: fullPhone, special_dates: filteredDates, date_of_birth: dob })
 
       const res = await fetch('/api/members/apply', {
         method: 'POST',
@@ -69,7 +90,7 @@ export default function MembershipPage() {
           full_name: form.full_name,
           email: form.email,
           phone: fullPhone,
-          date_of_birth: form.date_of_birth,
+          date_of_birth: dob,
           address: form.address,
           occupation: form.occupation,
           special_dates: filteredDates
@@ -157,9 +178,10 @@ export default function MembershipPage() {
           <div style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '8px', textTransform: 'uppercase' }}>Date of Birth</label>
             <input
-              type="date"
+              type="text"
               value={form.date_of_birth}
               onChange={(e) => setForm({...form, date_of_birth: e.target.value})}
+              placeholder="DD-MM-YYYY (e.g. 15-05-1995)"
               style={{ width: '100%', padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
             />
           </div>
@@ -192,7 +214,7 @@ export default function MembershipPage() {
               {specialDates.length < 10 && (
                 <button
                   type="button"
-                  onClick={() => setSpecialDates([...specialDates, { occasion_name: '', month: '', day: '' }])}
+                  onClick={() => setSpecialDates([...specialDates, { occasion_name: '', date: '' }])}
                   style={{ background: 'none', border: 'none', color: '#6B3A2A', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700 }}
                 >
                   <Plus size={16} />
@@ -203,29 +225,19 @@ export default function MembershipPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {specialDates.map((date, idx) => (
-                <div key={idx} style={{ background: '#FDF8F4', padding: '12px', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 80px 1fr', gap: '8px', alignItems: 'end' }}>
+                <div key={idx} style={{ background: '#FDF8F4', padding: '12px', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', alignItems: 'end' }}>
                   <input
                     type="text"
-                    placeholder="Occasion"
+                    placeholder="Occasion (e.g. Anniversary)"
                     value={date.occasion_name}
                     onChange={(e) => setSpecialDates(specialDates.map((d, i) => i === idx ? {...d, occasion_name: e.target.value} : d))}
                     style={{ padding: '8px 10px', border: '1px solid #E0E0E0', borderRadius: '6px', fontSize: '12px' }}
                   />
-                  <select
-                    value={date.month}
-                    onChange={(e) => setSpecialDates(specialDates.map((d, i) => i === idx ? {...d, month: e.target.value} : d))}
-                    style={{ padding: '8px 10px', border: '1px solid #E0E0E0', borderRadius: '6px', fontSize: '12px' }}
-                  >
-                    <option value="">Month</option>
-                    {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
-                  </select>
                   <input
-                    type="number"
-                    min="1"
-                    max="31"
-                    placeholder="Day"
-                    value={date.day}
-                    onChange={(e) => setSpecialDates(specialDates.map((d, i) => i === idx ? {...d, day: e.target.value} : d))}
+                    type="text"
+                    placeholder="Date (DD-MM)"
+                    value={date.date}
+                    onChange={(e) => setSpecialDates(specialDates.map((d, i) => i === idx ? {...d, date: e.target.value} : d))}
                     style={{ padding: '8px 10px', border: '1px solid #E0E0E0', borderRadius: '6px', fontSize: '12px' }}
                   />
                   <button
