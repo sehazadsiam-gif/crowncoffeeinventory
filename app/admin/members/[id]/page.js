@@ -138,7 +138,7 @@ export default function MemberDetailPage() {
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '12px', color: '#9C8A76', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Punches</div>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: '#1976D2' }}>{member.punch_count || 0}/6</div>
+            <div style={{ fontSize: '20px', fontWeight: 800, color: '#1976D2' }}>{member.punch_count || 0}/5</div>
           </div>
         </div>
 

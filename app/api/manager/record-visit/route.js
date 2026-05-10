@@ -98,8 +98,8 @@ export async function POST(request) {
 
     // Get free coffee progress
     const freeCoffeeProgress = {
-      current_punch: newPunches % 6,
-      total_earned: Math.floor(newPunches / 6)
+      current_punch: newPunches % 5,
+      total_earned: Math.floor(newPunches / 5)
     }
 
     // Send confirmation email + WhatsApp
@@ -119,7 +119,7 @@ export async function POST(request) {
     }
 
     // Check if free coffee earned
-    const freeCoffeeEarned = (newPunches % 6 === 0)
+    const freeCoffeeEarned = (newPunches % 5 === 0)
 
     return NextResponse.json(
       {

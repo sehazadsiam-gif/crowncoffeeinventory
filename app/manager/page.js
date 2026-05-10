@@ -267,7 +267,7 @@ export default function ManagerDashboard() {
 
 function MemberCard({ member, onRecord, loading, justRecorded }) {
   const [expanded, setExpanded] = useState(false)
-  const isFreeCoffee = member.punch_count % 6 === 0 && member.punch_count > 0
+  const isFreeCoffee = member.punch_count % 5 === 0 && member.punch_count > 0
   const discount = member.tier === 'gold' ? '10%' : '5%'
 
   useEffect(() => {
@@ -316,7 +316,7 @@ function MemberCard({ member, onRecord, loading, justRecorded }) {
         
         <div style={{ textAlign: 'right', minWidth: 100 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#9C8A76', textTransform: 'uppercase', margin: '0 0 2px' }}>Punches</p>
-          <p style={{ fontSize: 20, fontWeight: 800, color: '#6B3A2A', margin: 0 }}>{member.punch_count % 6}/6</p>
+          <p style={{ fontSize: 20, fontWeight: 800, color: '#6B3A2A', margin: 0 }}>{member.punch_count % 5}/5</p>
         </div>
       </div>
 
@@ -337,14 +337,14 @@ function MemberCard({ member, onRecord, loading, justRecorded }) {
               <div>
                 <p style={{ fontSize: 12, fontWeight: 700, color: '#9C8A76', marginBottom: 12, textTransform: 'uppercase' }}>PUNCH CARD PROGRESS</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {Array.from({ length: 6 }).map((_, i) => (
+                  {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} style={{
                       width: 24, height: 24, borderRadius: '50%', border: '2px solid #6B3A2A',
-                      background: i < (member.punch_count % 6) ? '#6B3A2A' : 'transparent',
+                      background: i < (member.punch_count % 5) ? '#6B3A2A' : 'transparent',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       transition: 'all 0.2s'
                     }}>
-                      {i < (member.punch_count % 6) && <CheckCircle size={14} style={{ color: '#FFFFFF' }} />}
+                      {i < (member.punch_count % 5) && <CheckCircle size={14} style={{ color: '#FFFFFF' }} />}
                     </div>
                   ))}
                 </div>
