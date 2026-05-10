@@ -1,9 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { Search } from 'lucide-react'
 
 export default function PendingMembersPage() {
   const [members, setMembers] = useState([])
+  const [filteredMembers, setFilteredMembers] = useState([])
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(null)
 
@@ -26,6 +29,19 @@ export default function PendingMembersPage() {
     const interval = setInterval(load, 2000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (!search) {
+      setFilteredMembers(members)
+    } else {
+      const s = search.toLowerCase()
+      setFilteredMembers(members.filter(m => 
+        m.full_name.toLowerCase().includes(s) || 
+        m.email.toLowerCase().includes(s) || 
+        m.phone.includes(search)
+      ))
+    }
+  }, [search, members])
 
   const approve = async (id) => {
     if (!window.confirm('Approve this member?')) return
@@ -95,17 +111,28 @@ export default function PendingMembersPage() {
       <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px' }}>Pending Approvals</h1>
       <p style={{ color: '#9C8A76', marginBottom: '24px' }}>{members.length} members waiting</p>
 
+      <div style={{ position: 'relative', marginBottom: '24px' }}>
+        <Search size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#9C8A76' }} />
+        <input
+          type="text"
+          placeholder="Search by name, email, or phone..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: '100%', padding: '12px 12px 12px 40px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
+        />
+      </div>
+
       <button onClick={load} style={{ marginBottom: '24px', padding: '10px 16px', background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}>
         Manual Refresh
       </button>
 
-      {members.length === 0 ? (
+      {filteredMembers.length === 0 ? (
         <div style={{ padding: '40px', textAlign: 'center', background: '#f5f5f5', borderRadius: '12px', color: '#9C8A76' }}>
-          No pending members
+          {search ? 'No matching members found' : 'No pending members'}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {members.map(m => (
+          {filteredMembers.map(m => (
             <div key={m.id} style={{ background: 'white', padding: '16px', borderRadius: '12px', border: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '6px' }}>{m.full_name}</div>

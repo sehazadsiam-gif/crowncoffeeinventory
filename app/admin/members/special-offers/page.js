@@ -7,6 +7,8 @@ import { Search, Gift, ArrowLeft, Send, Loader2, Calendar } from 'lucide-react'
 export default function SpecialOffersPage() {
   const router = useRouter()
   const [members, setMembers] = useState([])
+  const [filteredMembers, setFilteredMembers] = useState([])
+  const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [sendingId, setSendingId] = useState(null)
   const [customOfferModal, setCustomOfferModal] = useState(null)
@@ -22,6 +24,20 @@ export default function SpecialOffersPage() {
   useEffect(() => {
     fetchMembers()
   }, [])
+
+  useEffect(() => {
+    if (!search) {
+      setFilteredMembers(members)
+    } else {
+      const s = search.toLowerCase()
+      setFilteredMembers(members.filter(m => 
+        m.full_name.toLowerCase().includes(s) || 
+        m.email.toLowerCase().includes(s) || 
+        m.phone.includes(search) ||
+        m.occasion_name.toLowerCase().includes(s)
+      ))
+    }
+  }, [search, members])
 
   const fetchMembers = async () => {
     try {
@@ -79,6 +95,7 @@ export default function SpecialOffersPage() {
       processed.sort((a, b) => a.daysUntil - b.daysUntil)
       
       setMembers(processed)
+      setFilteredMembers(processed)
     } catch (error) {
       console.error('Error fetching members:', error)
     } finally {
@@ -136,14 +153,25 @@ export default function SpecialOffersPage() {
         </div>
       </div>
 
+      <div style={{ position: 'relative', marginBottom: '32px', maxWidth: '500px' }}>
+        <Search size={18} style={{ position: 'absolute', left: '12px', top: '12px', color: '#9C8A76' }} />
+        <input
+          type="text"
+          placeholder="Search by name, email, phone or occasion..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: '100%', padding: '12px 12px 12px 40px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box', background: 'white' }}
+        />
+      </div>
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '24px' }}>
-        {members.length === 0 ? (
+        {filteredMembers.length === 0 ? (
           <div style={{ gridColumn: '1 / -1', padding: '60px', textAlign: 'center', background: 'white', borderRadius: '12px', border: '1px solid #E0E0E0', color: '#9C8A76' }}>
             <Gift size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
-            <p style={{ fontSize: '18px', fontWeight: 600 }}>No birthdays found</p>
-            <p>Ensure members have their date of birth listed.</p>
+            <p style={{ fontSize: '18px', fontWeight: 600 }}>No occasions found</p>
+            <p>Try a different search or ensure members have their date of birth listed.</p>
           </div>
-        ) : members.map(member => (
+        ) : filteredMembers.map(member => (
           <div key={`${member.id}-${member.occasion_name}`} style={{ 
             background: 'white', 
             borderRadius: '16px', 
