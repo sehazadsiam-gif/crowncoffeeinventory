@@ -1,12 +1,10 @@
-// app/api/manager/record-visit/route.js - Complete file
-
 export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
-import { sendVisitConfirmationEmail } from '../../../../lib/email'
-import { sendVisitRecordedSMS, sendFreeCoffeeSMS, sendTierUpgradeSMS } from '../../../../lib/sms'
+import { sendFreeCoffeeEmail, sendFeedbackRequest } from '../../../../lib/email'
+import { sendFreeCoffeeSMS, sendVisitRecordedSMS, sendTierUpgradeSMS } from '../../../../lib/sms'
 
 export async function POST(request) {
   try {
@@ -18,139 +16,115 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { member_id, recorded_by } = await request.json()
+    const { member_id } = await request.json()
 
-    // Get TODAY'S DATE (YYYY-MM-DD format only, no time)
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    const todayDateOnly = `${year}-${month}-${day}`
-
-    console.log('Checking visit for:', { member_id, todayDateOnly })
-
-    // Check if THIS MEMBER already visited TODAY
-    const { data: todayVisits, error: checkError } = await supabase
-      .from('member_visits')
-      .select('id, visited_at')
-      .eq('member_id', member_id)
-      .gte('visited_at', `${todayDateOnly}T00:00:00`)
-      .lt('visited_at', `${todayDateOnly}T23:59:59`)
-
-    console.log('Today visits:', todayVisits)
-
-    if (checkError) {
-      console.error('Check error:', checkError)
-      throw checkError
+    if (!member_id) {
+      return NextResponse.json({ error: 'Member ID required' }, { status: 400 })
     }
 
-    // If member already visited today, block it
-    if (todayVisits && todayVisits.length > 0) {
-      return NextResponse.json(
-        {
-          error: 'Member already visited today. Can record only 1 visit per day per member.',
-          already_visited: true,
-          last_visit: todayVisits[0].visited_at
-        },
-        { status: 400 }
-      )
-    }
-
-    // Record visit
-    const now = new Date().toISOString()
-
-    const { error: visitError } = await supabase
-      .from('member_visits')
-      .insert([{
-        member_id,
-        visited_at: now,
-        recorded_by: recorded_by || 'manager'
-      }])
-
-    if (visitError) {
-      console.error('Visit insert error:', visitError)
-      throw visitError
-    }
-
-    // Get updated member
-    const { data: member, error: memberError } = await supabase
+    const { data: members, error: memberError } = await supabase
       .from('members')
       .select('*')
       .eq('id', member_id)
-      .single()
 
-    if (memberError) throw memberError
+    if (memberError || !members || members.length === 0) {
+      return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+    }
+
+    const member = members[0]
+
+    if (member.status !== 'active') {
+      return NextResponse.json({ error: 'Member is not active' }, { status: 400 })
+    }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const { data: todayVisits } = await supabase
+      .from('member_visits')
+      .select('id')
+      .eq('member_id', member_id)
+      .gte('visited_at', today.toISOString())
+      .lt('visited_at', tomorrow.toISOString())
+
+    if (todayVisits && todayVisits.length > 0) {
+      return NextResponse.json({ error: 'Visit already recorded today for this member' }, { status: 400 })
+    }
+
+    const { data: visits, error: visitError } = await supabase
+      .from('member_visits')
+      .insert([{
+        member_id: member_id,
+        visited_at: new Date().toISOString(),
+        recorded_by: 'manager'
+      }])
+      .select()
+
+    if (visitError) throw visitError
+
+    const visit = visits[0]
 
     const newVisits = (member.total_visits || 0) + 1
-    const newPunches = (member.punch_count || 0) + 1
-    const newTier = newVisits >= 11 ? 'gold' : 'silver'
+    const newPunchCount = (member.punch_count || 0) + 1
+    const freeCoffeeEarned = newPunchCount % 10 === 0
 
-    // Update member stats
+    let newTier = member.tier
+    let tierUpgraded = false
+    if (newVisits >= 25 && member.tier === 'silver') {
+      newTier = 'gold'
+      tierUpgraded = true
+    }
+
     const { error: updateError } = await supabase
       .from('members')
       .update({
         total_visits: newVisits,
-        punch_count: newPunches,
+        punch_count: newPunchCount,
         tier: newTier
       })
       .eq('id', member_id)
 
     if (updateError) throw updateError
 
-    // Get free coffee progress
-    const freeCoffeeProgress = {
-      current_punch: newPunches % 5,
-      total_earned: Math.floor(newPunches / 5)
-    }
+    sendFeedbackRequest({
+      to: member.email,
+      name: member.full_name,
+      card_number: member.card_number,
+      visit_id: visit.id
+    }).catch(err => console.error('Feedback email error:', err))
 
-    // Send confirmation email + WhatsApp
-    try {
-      await sendVisitConfirmationEmail(
-        {
-          ...member,
-          total_visits: newVisits,
-          email: member.email,
-          phone: member.phone
-        },
-        freeCoffeeProgress,
-        newVisits >= 11
-      )
-    } catch (emailError) {
-      console.log('Email/WhatsApp send failed (but visit recorded):', emailError.message)
-    }
+    sendVisitRecordedSMS(member.phone, member.full_name, newVisits, newPunchCount)
+      .catch(err => console.error('Visit SMS error:', err))
 
-    // Send SMS Notifications (Async)
-    const freeCoffeeEarned = (newPunches % 5 === 0)
-    const tierUpgraded = (member.tier === 'silver' && newTier === 'gold')
-
-    sendVisitRecordedSMS(member.phone, member.full_name, newVisits, newPunches).catch(err => console.error('Visit SMS error:', err))
-    
     if (freeCoffeeEarned) {
-      sendFreeCoffeeSMS(member.phone, member.full_name, member.card_number).catch(err => console.error('Free coffee SMS error:', err))
-    }
-    
-    if (tierUpgraded) {
-      sendTierUpgradeSMS(member.phone, member.full_name).catch(err => console.error('Tier upgrade SMS error:', err))
+      sendFreeCoffeeEmail({
+        to: member.email,
+        name: member.full_name,
+        card_number: member.card_number
+      }).catch(err => console.error('Free coffee email error:', err))
+      
+      sendFreeCoffeeSMS(member.phone, member.full_name, member.card_number)
+        .catch(err => console.error('Free coffee SMS error:', err))
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        visits: newVisits,
-        punch_count: newPunches,
-        tier: newTier,
-        free_coffee_earned: freeCoffeeEarned,
-        message: freeCoffeeEarned
-          ? `Visit recorded! Free coffee earned! (Total visits: ${newVisits})`
-          : `Visit recorded! Total visits: ${newVisits}`
-      },
-      { status: 200 }
-    )
+    if (tierUpgraded) {
+      sendTierUpgradeSMS(member.phone, member.full_name)
+        .catch(err => console.error('Tier upgrade SMS error:', err))
+    }
+
+    return NextResponse.json({
+      success: true,
+      total_visits: newVisits,
+      punch_count: newPunchCount,
+      tier: newTier,
+      free_coffee_earned: freeCoffeeEarned,
+      tier_upgraded: tierUpgraded
+    }, { status: 200 })
+
   } catch (error) {
-    console.error('Visit error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Error recording visit' },
-      { status: 500 }
-    )
+    console.error('Record visit error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
