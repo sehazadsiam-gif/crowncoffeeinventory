@@ -75,9 +75,19 @@ export default function MembershipPage() {
       return
     }
 
-    if (form.phone.replace(/\D/g, '').length !== 10) {
-      setError('Phone number must be exactly 10 digits')
-      return
+    const phoneClean = form.phone.replace(/\D/g, '')
+    if (countryCode === '+880') {
+      if (phoneClean.length !== 10) {
+        setError('Bangladesh phone numbers must be exactly 10 digits (e.g., 1712345678)')
+        setLoading(false)
+        return
+      }
+    } else {
+      if (phoneClean.length < 7 || phoneClean.length > 15) {
+        setError('Invalid phone number length for the selected country')
+        setLoading(false)
+        return
+      }
     }
 
     if (!agreePromo || !agreeAccuracy) {
@@ -199,9 +209,13 @@ export default function MembershipPage() {
               <input
                 type="tel"
                 value={form.phone}
-                onChange={(e) => setForm({...form, phone: e.target.value.replace(/\D/g, '').substring(0, 10)})}
-                placeholder="1XXXXXXXXX (10 digits)"
-                maxLength={10}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '')
+                  const max = countryCode === '+880' ? 10 : 15
+                  setForm({...form, phone: val.substring(0, max)})
+                }}
+                placeholder={countryCode === '+880' ? '1XXXXXXXXX (10 digits)' : 'Phone number'}
+                maxLength={countryCode === '+880' ? 10 : 15}
                 style={{ padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px' }}
               />
             </div>
