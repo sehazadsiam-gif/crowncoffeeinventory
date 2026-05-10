@@ -75,8 +75,8 @@ export default function MembershipPage() {
       return
     }
 
-    if (form.phone.replace(/\D/g, '').length < 9) {
-      setError('Invalid phone number')
+    if (form.phone.replace(/\D/g, '').length !== 10) {
+      setError('Phone number must be exactly 10 digits')
       return
     }
 
@@ -199,8 +199,9 @@ export default function MembershipPage() {
               <input
                 type="tel"
                 value={form.phone}
-                onChange={(e) => setForm({...form, phone: e.target.value})}
-                placeholder="17XXXXXXXX"
+                onChange={(e) => setForm({...form, phone: e.target.value.replace(/\D/g, '').substring(0, 10)})}
+                placeholder="1XXXXXXXXX (10 digits)"
+                maxLength={10}
                 style={{ padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px' }}
               />
             </div>
