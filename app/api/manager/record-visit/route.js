@@ -82,7 +82,7 @@ export async function POST(request) {
 
     const newVisits = (member.total_visits || 0) + 1
     const newPunches = (member.punch_count || 0) + 1
-    const newTier = newVisits >= 25 ? 'gold' : 'silver'
+    const newTier = newVisits >= 11 ? 'gold' : 'silver'
 
     // Update member stats
     const { error: updateError } = await supabase
@@ -98,8 +98,8 @@ export async function POST(request) {
 
     // Get free coffee progress
     const freeCoffeeProgress = {
-      current_punch: newPunches % 10,
-      total_earned: Math.floor(newPunches / 10)
+      current_punch: newPunches % 6,
+      total_earned: Math.floor(newPunches / 6)
     }
 
     // Send confirmation email + WhatsApp
@@ -112,14 +112,14 @@ export async function POST(request) {
           phone: member.phone
         },
         freeCoffeeProgress,
-        newVisits >= 25
+        newVisits >= 11
       )
     } catch (emailError) {
       console.log('Email/WhatsApp send failed (but visit recorded):', emailError.message)
     }
 
     // Check if free coffee earned
-    const freeCoffeeEarned = (newPunches % 10 === 0)
+    const freeCoffeeEarned = (newPunches % 6 === 0)
 
     return NextResponse.json(
       {
