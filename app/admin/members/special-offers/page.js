@@ -14,6 +14,7 @@ export default function SpecialOffersPage() {
   const [customOffer, setCustomOffer] = useState({
     title: 'Crown Coffee Special Offer',
     discount_percent: 15,
+    offer_text: '',
     valid_days: 7,
     description: 'Enjoy this exclusive offer on your next visit!'
   })
@@ -30,32 +31,52 @@ export default function SpecialOffersPage() {
       })
       const data = await res.json()
       
-      // Calculate upcoming birthdays
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       
-      let processed = (data.members || []).map(m => {
-        if (!m.date_of_birth) return null
-        
-        const dob = new Date(m.date_of_birth)
-        let nextBirthday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate())
-        
-        if (nextBirthday < today) {
-          nextBirthday.setFullYear(today.getFullYear() + 1)
+      let processed = []
+
+      data.members.forEach(m => {
+        // Handle Birthday
+        if (m.date_of_birth) {
+          const dob = new Date(m.date_of_birth)
+          let nextOccur = new Date(today.getFullYear(), dob.getMonth(), dob.getDate())
+          if (nextOccur < today) nextOccur.setFullYear(today.getFullYear() + 1)
+          
+          const diffTime = Math.abs(nextOccur - today)
+          const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+          
+          processed.push({
+            ...m,
+            occasion_name: 'Birthday',
+            daysUntil: daysUntil,
+            isToday: daysUntil === 0 || daysUntil === 365,
+            actualDate: m.date_of_birth
+          })
         }
-        
-        const diffTime = Math.abs(nextBirthday - today)
-        const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-        
-        return {
-          ...m,
-          daysUntilBirthday: daysUntil,
-          isBirthdayToday: daysUntil === 0 || daysUntil === 365
+
+        // Handle Custom Special Dates
+        if (m.custom_special_dates && m.custom_special_dates.length > 0) {
+          m.custom_special_dates.forEach(sd => {
+            let nextOccur = new Date(today.getFullYear(), sd.month - 1, sd.day)
+            if (nextOccur < today) nextOccur.setFullYear(today.getFullYear() + 1)
+            
+            const diffTime = Math.abs(nextOccur - today)
+            const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+            processed.push({
+              ...m,
+              occasion_name: sd.occasion_name,
+              daysUntil: daysUntil,
+              isToday: daysUntil === 0 || daysUntil === 365,
+              actualDate: `${today.getFullYear()}-${sd.month.toString().padStart(2, '0')}-${sd.day.toString().padStart(2, '0')}`
+            })
+          })
         }
-      }).filter(Boolean)
+      })
       
-      // Sort by upcoming birthdays
-      processed.sort((a, b) => a.daysUntilBirthday - b.daysUntilBirthday)
+      // Sort by upcoming
+      processed.sort((a, b) => a.daysUntil - b.daysUntil)
       
       setMembers(processed)
     } catch (error) {
@@ -123,16 +144,16 @@ export default function SpecialOffersPage() {
             <p>Ensure members have their date of birth listed.</p>
           </div>
         ) : members.map(member => (
-          <div key={member.id} style={{ 
+          <div key={`${member.id}-${member.occasion_name}`} style={{ 
             background: 'white', 
             borderRadius: '16px', 
-            border: member.isBirthdayToday ? '2px solid #C9943A' : '1px solid #E0E0E0',
+            border: member.isToday ? '2px solid #C9943A' : '1px solid #E0E0E0',
             overflow: 'hidden',
-            boxShadow: member.isBirthdayToday ? '0 8px 24px rgba(201, 148, 58, 0.15)' : '0 2px 8px rgba(0,0,0,0.02)'
+            boxShadow: member.isToday ? '0 8px 24px rgba(201, 148, 58, 0.15)' : '0 2px 8px rgba(0,0,0,0.02)'
           }}>
-            {member.isBirthdayToday && (
+            {member.isToday && (
               <div style={{ background: '#C9943A', color: 'white', padding: '8px', textAlign: 'center', fontSize: '12px', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>
-                🎉 Birthday Today! 🎉
+                🎉 {member.occasion_name} Today! 🎉
               </div>
             )}
             
@@ -142,9 +163,10 @@ export default function SpecialOffersPage() {
                   <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1F1F1F', margin: '0 0 4px 0' }}>{member.full_name}</h3>
                   <div style={{ fontSize: '13px', color: '#5C4A36', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Calendar size={14} /> 
-                    {new Date(member.date_of_birth).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    <span style={{ fontWeight: 700 }}>{member.occasion_name}:</span>
+                    {new Date(member.actualDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     <span style={{ color: '#C9943A', fontWeight: 700, marginLeft: '8px' }}>
-                      ({member.isBirthdayToday ? 'Today' : `In ${member.daysUntilBirthday} days`})
+                      ({member.isToday ? 'Today' : `In ${member.daysUntil} days`})
                     </span>
                   </div>
                 </div>
@@ -166,7 +188,7 @@ export default function SpecialOffersPage() {
 
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
-                  onClick={() => sendOffer(member.id, 'birthday')}
+                  onClick={() => sendOffer(member.id, member.occasion_name === 'Birthday' ? 'birthday' : 'custom', member.occasion_name !== 'Birthday' ? { ...customOffer, title: `${member.occasion_name} Special`, description: `Enjoy this special offer for your ${member.occasion_name}!` } : null)}
                   disabled={sendingId === member.id}
                   style={{ 
                     flex: 1, padding: '12px', background: '#C9943A', color: 'white', border: 'none', 
@@ -176,7 +198,7 @@ export default function SpecialOffersPage() {
                   }}
                 >
                   {sendingId === member.id ? <Loader2 size={16} className="spin" /> : <Gift size={16} />}
-                  Birthday Offer
+                  Send {member.occasion_name === 'Birthday' ? 'Birthday' : 'Special'} Offer
                 </button>
                 <button
                   onClick={() => setCustomOfferModal(member)}
@@ -219,8 +241,19 @@ export default function SpecialOffersPage() {
                   <input 
                     type="number" 
                     value={customOffer.discount_percent} 
-                    onChange={e => setCustomOffer({ ...customOffer, discount_percent: parseInt(e.target.value) || 0 })}
+                    onChange={e => setCustomOffer({ ...customOffer, discount_percent: parseInt(e.target.value) || 0, offer_text: '' })}
                     style={{ width: '100%', padding: '12px', border: '1px solid #E0E0E0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    placeholder="e.g. 15"
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#424242', marginBottom: '8px' }}>OR Custom Text</label>
+                  <input 
+                    type="text" 
+                    value={customOffer.offer_text} 
+                    onChange={e => setCustomOffer({ ...customOffer, offer_text: e.target.value, discount_percent: 0 })}
+                    style={{ width: '100%', padding: '12px', border: '1px solid #E0E0E0', borderRadius: '8px', boxSizing: 'border-box' }}
+                    placeholder="e.g. BUY 1 GET 1"
                   />
                 </div>
                 <div style={{ flex: 1 }}>

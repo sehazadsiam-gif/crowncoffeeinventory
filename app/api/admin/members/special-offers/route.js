@@ -14,18 +14,28 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data, error } = await supabase
+    // Fetch members
+    const { data: members, error: memberError } = await supabase
       .from('members')
       .select('id, full_name, email, phone, date_of_birth, status, tier, total_visits')
       .eq('status', 'active')
-      .not('date_of_birth', 'is', null)
 
-    if (error) {
-      console.error('Supabase error:', error)
-      throw error
-    }
+    if (memberError) throw memberError
 
-    return NextResponse.json({ members: data })
+    // Fetch all special dates
+    const { data: specialDates, error: dateError } = await supabase
+      .from('member_special_dates')
+      .select('*')
+
+    if (dateError) throw dateError
+
+    // Combine them
+    const combined = members.map(m => ({
+      ...m,
+      custom_special_dates: specialDates.filter(d => d.member_id === m.id)
+    }))
+
+    return NextResponse.json({ members: combined })
   } catch (error) {
     console.error('Fetch special offers members error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

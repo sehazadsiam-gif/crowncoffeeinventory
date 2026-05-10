@@ -30,6 +30,37 @@ export default function MembershipPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  const handleDateInput = (value, field, index = null) => {
+    // Remove non-digits
+    let clean = value.replace(/\D/g, '')
+    let formatted = ''
+    
+    if (clean.length > 0) {
+      formatted = clean.substring(0, 2)
+      if (clean.length > 2) {
+        formatted += '-' + clean.substring(2, 4)
+        if (clean.length > 4) {
+          formatted += '-' + clean.substring(4, 8)
+        }
+      }
+    }
+
+    if (index !== null) {
+      // For Special Dates (DD-MM)
+      let cleanSM = value.replace(/\D/g, '').substring(0, 4)
+      let formattedSM = ''
+      if (cleanSM.length > 0) {
+        formattedSM = cleanSM.substring(0, 2)
+        if (cleanSM.length > 2) {
+          formattedSM += '-' + cleanSM.substring(2, 4)
+        }
+      }
+      setSpecialDates(specialDates.map((d, i) => i === index ? {...d, date: formattedSM} : d))
+    } else {
+      setForm({...form, [field]: formatted})
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -180,7 +211,7 @@ export default function MembershipPage() {
             <input
               type="text"
               value={form.date_of_birth}
-              onChange={(e) => setForm({...form, date_of_birth: e.target.value})}
+              onChange={(e) => handleDateInput(e.target.value, 'date_of_birth')}
               placeholder="DD-MM-YYYY (e.g. 15-05-1995)"
               style={{ width: '100%', padding: '12px 14px', border: '1px solid #E0E0E0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}
             />
@@ -237,7 +268,7 @@ export default function MembershipPage() {
                     type="text"
                     placeholder="Date (DD-MM)"
                     value={date.date}
-                    onChange={(e) => setSpecialDates(specialDates.map((d, i) => i === idx ? {...d, date: e.target.value} : d))}
+                    onChange={(e) => handleDateInput(e.target.value, 'date', idx)}
                     style={{ padding: '8px 10px', border: '1px solid #E0E0E0', borderRadius: '6px', fontSize: '12px' }}
                   />
                   <button
