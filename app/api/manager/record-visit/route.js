@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
 import { sendVisitConfirmationEmail } from '../../../../lib/email'
+import { sendVisitRecordedSMS, sendFreeCoffeeSMS, sendTierUpgradeSMS } from '../../../../lib/sms'
 
 export async function POST(request) {
   try {
@@ -118,8 +119,19 @@ export async function POST(request) {
       console.log('Email/WhatsApp send failed (but visit recorded):', emailError.message)
     }
 
-    // Check if free coffee earned
+    // Send SMS Notifications (Async)
     const freeCoffeeEarned = (newPunches % 5 === 0)
+    const tierUpgraded = (member.tier === 'silver' && newTier === 'gold')
+
+    sendVisitRecordedSMS(member.phone, member.full_name, newVisits, newPunches).catch(err => console.error('Visit SMS error:', err))
+    
+    if (freeCoffeeEarned) {
+      sendFreeCoffeeSMS(member.phone, member.full_name, member.card_number).catch(err => console.error('Free coffee SMS error:', err))
+    }
+    
+    if (tierUpgraded) {
+      sendTierUpgradeSMS(member.phone, member.full_name).catch(err => console.error('Tier upgrade SMS error:', err))
+    }
 
     return NextResponse.json(
       {

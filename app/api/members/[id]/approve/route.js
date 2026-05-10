@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../../lib/supabase'
 import { sendMemberApproved } from '../../../../../lib/email'
+import { sendMemberApprovedSMS } from '../../../../../lib/sms'
 
 export async function POST(request, context) {
   try {
@@ -45,6 +46,10 @@ export async function POST(request, context) {
     if (updatedMember?.email) {
       sendMemberApproved(updatedMember, cardNumber).catch(err => {
         console.error('Email error:', err.message)
+      })
+      // Send SMS
+      sendMemberApprovedSMS(updatedMember.phone, updatedMember.full_name, cardNumber).catch(err => {
+        console.error('SMS error:', err.message)
       })
     }
 

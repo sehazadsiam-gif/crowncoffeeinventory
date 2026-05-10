@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
+import { sendMemberApplicationConfirm } from '../../../../lib/email'
+import { sendMemberApplicationConfirmSMS } from '../../../../lib/sms'
 
 export async function POST(request) {
   try {
@@ -85,6 +87,10 @@ export async function POST(request) {
     }
 
     console.log('Member created:', newMember.id)
+
+    // Send Notifications (Async, non-blocking)
+    sendMemberApplicationConfirm(newMember).catch(err => console.error('Apply email error:', err))
+    sendMemberApplicationConfirmSMS(newMember.phone, newMember.full_name).catch(err => console.error('Apply SMS error:', err))
 
     return NextResponse.json({
       success: true,
