@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Upload, Download } from 'lucide-react'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -14,6 +14,10 @@ export default function OvertimePage() {
   const [overtimeData, setOvertimeData] = useState(null)
   const [selectedStaff, setSelectedStaff] = useState(null)
   const [importMessage, setImportMessage] = useState('')
+
+  useEffect(() => {
+    loadStaffList()
+  }, [])
 
   const handleCsvUpload = async (e) => {
     const file = e.target.files[0]
@@ -52,7 +56,7 @@ export default function OvertimePage() {
   const loadStaffList = async () => {
     try {
       const token = localStorage.getItem('cc_token')
-      const res = await fetch('/api/admin/staff-list', {
+      const res = await fetch('/api/staff/list', {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
@@ -139,8 +143,13 @@ export default function OvertimePage() {
           {staffList.map(staff => (
             <div key={staff.id} style={{ padding: '12px 16px', borderBottom: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: '14px' }}>{staff.username}</div>
+                <div style={{ fontWeight: 700, fontSize: '14px' }}>{staff.name || staff.username}</div>
                 <div style={{ fontSize: '12px', color: '#9C8A76' }}>Base: {staff.base_salary} TK</div>
+                {staff.overtime_hours_month > 0 && (
+                  <div style={{ fontSize: '12px', color: '#2E7D32', fontWeight: 600 }}>
+                    OT: {staff.overtime_pay_month} TK ({staff.overtime_hours_month} hrs)
+                  </div>
+                )}
               </div>
               <button onClick={() => calculateOvertime(staff.id)} disabled={loading}
                 style={{ padding: '8px 16px', background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>

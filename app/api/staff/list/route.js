@@ -6,15 +6,15 @@ export async function GET() {
   try {
     const { data, error } = await supabase
       .from('staff')
-      .select('id, name, full_name, designation, designation_editable, is_active')
+      .select('id, name, designation, designation_editable, is_active, base_salary')
       .order('name', { ascending: true })
 
     if (error) throw error
 
-    // Handle case where some records might use name and some full_name
+    // Handle case where UI expects full_name
     const formattedStaff = data.map(s => ({
       ...s,
-      full_name: s.full_name || s.name
+      full_name: s.name
     }))
 
     return new Response(JSON.stringify({ staff: formattedStaff }), { status: 200 })

@@ -51,7 +51,7 @@ export default function PayrollPage() {
       const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0]
       const endDate = new Date(y, m, 0).toISOString().split('T')[0]
 
-      const [staffRes, payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes] = await Promise.all([
+      const [staffRes, payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes] = await Promise.all([
         supabase.from('staff').select('*').eq('is_active', true).order('serial', { ascending: true }).order('name', { ascending: true }),
         supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y),
         supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y),
@@ -63,29 +63,29 @@ export default function PayrollPage() {
       ])
 
       const summaryMap = {}
-        ; (summaryRes.data || []).forEach(s => {
-          summaryMap[s.staff_id] = s
-        })
+      ;(summaryRes.data || []).forEach(s => {
+        summaryMap[s.staff_id] = s
+      })
 
       const advancesMap = {}
-        ; (advRes.data || []).forEach(a => {
-          advancesMap[a.staff_id] = (advancesMap[a.staff_id] || 0) + Number(a.amount)
-        })
+      ;(advRes.data || []).forEach(a => {
+        advancesMap[a.staff_id] = (advancesMap[a.staff_id] || 0) + Number(a.amount)
+      })
 
       const unpaidMap = {}
-        ; (unpaidRes.data || []).forEach(a => {
-          unpaidMap[a.staff_id] = (unpaidMap[a.staff_id] || 0) + 1
-        })
+      ;(unpaidRes.data || []).forEach(a => {
+        unpaidMap[a.staff_id] = (unpaidMap[a.staff_id] || 0) + 1
+      })
 
       const lateMap = {}
-        ; (lateRes.data || []).forEach(a => {
-          lateMap[a.staff_id] = (lateMap[a.staff_id] || 0) + 1
-        })
+      ;(lateRes.data || []).forEach(a => {
+        lateMap[a.staff_id] = (lateMap[a.staff_id] || 0) + 1
+      })
 
       const presentMap = {}
-        ; (presentRes.data || []).forEach(a => {
-          presentMap[a.staff_id] = (presentMap[a.staff_id] || 0) + 1
-        })
+      ;(presentRes.data || []).forEach(a => {
+        presentMap[a.staff_id] = (presentMap[a.staff_id] || 0) + 1
+      })
 
       const otLogs = otRes?.data || []
       const otMap = {}
@@ -147,6 +147,9 @@ export default function PayrollPage() {
           payMap[s.id].late_deduction = lateDeduction
           payMap[s.id].present_days = presentCount
           payMap[s.id].absent_days = absentCount
+          // Always update OT from logs
+          payMap[s.id].overtime_hours = otMap[s.id]?.hours || 0
+          payMap[s.id].overtime_pay = otMap[s.id]?.pay || 0
         }
 
         // Auto calculate lunch dinner if not manually set
@@ -169,6 +172,7 @@ export default function PayrollPage() {
       }
       setWaivedStaff(initialWaived)
     } catch (err) {
+      console.error('Fetch payroll error:', err)
       addToast('Error loading payroll', 'error')
     }
   }
