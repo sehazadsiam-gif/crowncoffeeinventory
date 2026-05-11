@@ -58,7 +58,8 @@ export default function PayrollPage() {
         supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate),
         supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate),
         supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate),
-        supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y)
+        supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y),
+        supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate)
       ])
 
       const summaryMap = {}
@@ -86,15 +87,28 @@ export default function PayrollPage() {
           presentMap[a.staff_id] = (presentMap[a.staff_id] || 0) + 1
         })
 
+      const otLogs = otRes?.data || []
+      const otMap = {}
+      otLogs.forEach(log => {
+        if (!otMap[log.staff_id]) otMap[log.staff_id] = { hours: 0, pay: 0 }
+        if (log.manual_override) {
+          otMap[log.staff_id].hours += Number(log.manual_overtime_hours || 0)
+          otMap[log.staff_id].pay += Number(log.manual_overtime_pay || 0)
+        } else {
+          otMap[log.staff_id].hours += Number(log.overtime_hours || 0)
+          otMap[log.staff_id].pay += Number(log.overtime_pay || 0)
+        }
+      })
+
       const payMap = {}
-        ; (payRes.data || []).forEach(p => {
-          payMap[p.staff_id] = {
-            ...p,
-            advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0),
-            manual_unpaid_days: p.manual_unpaid_days ?? null,
-            waived_unpaid_days: p.waived_unpaid_days || 0
-          }
-        })
+      ;(payRes.data || []).forEach(p => {
+        payMap[p.staff_id] = {
+          ...p,
+          advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0),
+          manual_unpaid_days: p.manual_unpaid_days ?? null,
+          waived_unpaid_days: p.waived_unpaid_days || 0
+        }
+      })
 
       const activeStaff = staffRes.data || []
       for (const s of activeStaff) {
@@ -111,7 +125,8 @@ export default function PayrollPage() {
         if (!payMap[s.id]) {
           payMap[s.id] = {
             staff_id: s.id, month: m, year: y,
-            overtime_hours: 0, overtime_pay: 0,
+            overtime_hours: otMap[s.id]?.hours || 0, 
+            overtime_pay: otMap[s.id]?.pay || 0,
             service_charge: 0, bonus: 0,
             lunch_dinner: 0, morning_food: 0,
             advance_taken: advancesMap[s.id] || 0,
@@ -175,8 +190,8 @@ export default function PayrollPage() {
   function calculateFinalSalary(s, p, isLateWaived) {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
-    const perHourRate = Math.floor(Math.floor(base / 30) / 10)
-    const ot = (Number(p.overtime_hours) || 0) * perHourRate
+    const perHourRate = s.hourly_rate || Math.floor(Math.floor(base / 30) / 10)
+    const ot = Number(p.overtime_pay) || (Number(p.overtime_hours) || 0) * perHourRate
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
     const lunch = Number(p.lunch_dinner) || 0
@@ -213,8 +228,7 @@ export default function PayrollPage() {
       const row = { ...prev[staffId], [field]: value }
       if (field === 'overtime_hours') {
         const s = staff.find(st => st.id === staffId)
-        const perDay = Math.round((Number(s?.base_salary) || 0) / 30)
-        const perHourRate = Math.floor(perDay / 10)
+        const perHourRate = s?.hourly_rate || Math.floor(Math.round((Number(s?.base_salary) || 0) / 30) / 10)
         row.overtime_pay = (Number(value) || 0) * perHourRate
       }
       if (field === 'lunch_dinner') {

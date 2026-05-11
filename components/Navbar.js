@@ -68,6 +68,7 @@ export default function Navbar() {
         { href: '/staff', label: 'Directory' },
         { href: '/staff/attendance', label: 'Attendance' },
         { href: '/attendance-import', label: 'Attendance Import', icon: <Upload size={14} /> },
+        { href: '/admin/overtime', label: 'Overtime' },
         { href: '/staff/payroll', label: 'Payroll' },
         { href: '/staff/advances', label: 'Advances' },
         { href: '/staff/service-charge', label: 'Service Charge' },
