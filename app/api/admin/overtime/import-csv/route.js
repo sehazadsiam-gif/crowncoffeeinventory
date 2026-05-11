@@ -22,94 +22,83 @@ export async function POST(request) {
     }
 
     const text = await file.text()
-    const lines = text.split('\n').filter(line => line.trim())
+    const lines = text.split('\n')
 
-    if (lines.length < 2) {
-      return NextResponse.json({ error: 'Invalid CSV format' }, { status: 400 })
-    }
-
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
-    const employeeIndex = headers.findIndex(h => h.includes('employee'))
-    const dateStartIndex = 1
-
+    const headerLine = lines[4]
+    const headers = headerLine.split(',').map(h => h.trim().replace(/"/g, ''))
+    
     const attendanceRecords = []
     const errors = []
 
-    for (let i = 1; i < lines.length; i++) {
-      const cells = lines[i].split(',').map(c => c.trim())
-      const employeeName = cells[employeeIndex]
+    let currentEmployee = null
+    let currentEmployeeData = null
+    let dataBuffer = []
 
-      if (!employeeName || employeeName === 'Not Found') continue
+    for (let i = 5; i < lines.length; i++) {
+      const line = lines[i].trim()
+      if (!line) continue
 
-      const { data: staffData } = await supabase
-        .from('admin_accounts')
-        .select('id, username, base_salary')
-        .ilike('username', `%${employeeName}%`)
-        .single()
-        .catch(() => ({ data: null }))
+      const cells = line.split(',').map(c => c.trim().replace(/"/g, ''))
 
-      if (!staffData) {
-        errors.push(`Employee not found: ${employeeName}`)
-        continue
-      }
-
-      for (let dateIdx = dateStartIndex; dateIdx < cells.length; dateIdx++) {
-        const cellValue = cells[dateIdx]
-        const header = headers[dateIdx]
-
-        if (!header || !cellValue || cellValue === 'Absent' || cellValue === 'Not Found') {
-          continue
+      if (cells[0] && !cells[0].match(/^\d{1,2}/) && cells[0] !== 'Absent' && cells[0] !== 'Not Found') {
+        if (currentEmployee && dataBuffer.length > 0) {
+          processEmployeeData(currentEmployee, currentEmployeeData, dataBuffer, attendanceRecords, errors, headers)
         }
-
-        if (cellValue.includes('AM') || cellValue.includes('PM')) {
-          const times = cellValue.split('-').map(t => t.trim())
-          if (times.length < 2) continue
-
-          const checkInTime = parseTime(times[0])
-          const checkOutTime = parseTime(times[1])
-
-          if (!checkInTime || !checkOutTime) continue
-
-          const dateStr = header.split(' ')[0]
-          const attendanceDate = parseDate(dateStr)
-
-          attendanceRecords.push({
-            staff_id: staffData.id,
-            staff_name: staffData.username,
-            date: attendanceDate,
-            check_in: checkInTime,
-            check_out: checkOutTime,
-            base_salary: staffData.base_salary
-          })
+        
+        currentEmployee = cells[0]
+        currentEmployeeData = {
+          name: cells[0],
+          number: cells[1],
+          designation: cells[2]
+        }
+        dataBuffer = cells.slice(8)
+      } else {
+        if (dataBuffer.length > 0) {
+          dataBuffer = dataBuffer.concat(cells)
         }
       }
+    }
+
+    if (currentEmployee && dataBuffer.length > 0) {
+      processEmployeeData(currentEmployee, currentEmployeeData, dataBuffer, attendanceRecords, errors, headers)
     }
 
     if (attendanceRecords.length === 0) {
-      return NextResponse.json({ error: 'No valid attendance records found' }, { status: 400 })
+      return NextResponse.json({ error: 'No valid attendance records found', debugInfo: { totalLines: lines.length, headerLine, headerCount: headers.length, errors } }, { status: 400 })
     }
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('attendance')
-      .upsert(
-        attendanceRecords.map(r => ({
-          staff_id: r.staff_id,
-          date: r.date,
-          check_in_time: r.check_in,
-          check_out_time: r.check_out
-        })),
-        { onConflict: 'staff_id,date' }
-      )
+    const { data: staffMap } = await supabase
+      .from('admin_accounts')
+      .select('id, username')
 
-    if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
+    const attendanceToInsert = []
+
+    for (const record of attendanceRecords) {
+      const staff = staffMap.find(s => s.username.toLowerCase().includes(record.staffName.toLowerCase()) || record.staffName.toLowerCase().includes(s.username.toLowerCase()))
+
+      if (staff) {
+        attendanceToInsert.push({
+          staff_id: staff.id,
+          date: record.date,
+          check_in_time: record.checkIn,
+          check_out_time: record.checkOut
+        })
+      } else {
+        errors.push(`Staff not found: ${record.staffName}`)
+      }
+    }
+
+    if (attendanceToInsert.length > 0) {
+      await supabase
+        .from('attendance')
+        .upsert(attendanceToInsert, { onConflict: 'staff_id,date' })
     }
 
     return NextResponse.json({
       success: true,
-      imported: attendanceRecords.length,
-      errors: errors,
-      records: attendanceRecords.slice(0, 5)
+      imported: attendanceToInsert.length,
+      errors: errors.slice(0, 10),
+      records: attendanceToInsert.slice(0, 5)
     }, { status: 200 })
 
   } catch (error) {
@@ -118,32 +107,58 @@ export async function POST(request) {
   }
 }
 
-function parseTime(timeStr) {
-  if (!timeStr) return null
+function processEmployeeData(employeeName, employeeData, cells, attendanceRecords, errors, headers) {
+  let dateIndex = 8
 
-  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i)
-  if (!match) return null
+  for (let cellIndex = 0; cellIndex < cells.length; cellIndex++) {
+    const cell = cells[cellIndex]
+    
+    if (cell === 'Absent' || cell === 'Not Found' || cell === '' || cell === '-') {
+      dateIndex++
+      continue
+    }
 
-  let hours = parseInt(match[1])
-  const minutes = parseInt(match[2])
-  const period = match[3]?.toUpperCase()
+    if (cell && cell.includes('AM') || cell.includes('PM')) {
+      const dateHeader = headers[dateIndex]
+      const dateMatch = dateHeader.match(/(\d{1,2})\s+\w+/)
+      
+      if (!dateMatch) {
+        dateIndex++
+        continue
+      }
 
-  if (period === 'PM' && hours !== 12) {
-    hours += 12
-  } else if (period === 'AM' && hours === 12) {
-    hours = 0
+      const dayNum = parseInt(dateMatch[1])
+      const date = `2026-04-${String(dayNum).padStart(2, '0')}`
+
+      const timeMatch = cell.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/)
+
+      if (timeMatch) {
+        let inHour = parseInt(timeMatch[1])
+        const inMin = parseInt(timeMatch[2])
+        const inPeriod = timeMatch[3].toUpperCase()
+
+        if (inPeriod === 'PM' && inHour !== 12) inHour += 12
+        if (inPeriod === 'AM' && inHour === 12) inHour = 0
+
+        let outHour = parseInt(timeMatch[4])
+        const outMin = parseInt(timeMatch[5])
+        const outPeriod = timeMatch[6].toUpperCase()
+
+        if (outPeriod === 'PM' && outHour !== 12) outHour += 12
+        if (outPeriod === 'AM' && outHour === 12) outHour = 0
+
+        const checkIn = `${String(inHour).padStart(2, '0')}:${String(inMin).padStart(2, '0')}`
+        const checkOut = `${String(outHour).padStart(2, '0')}:${String(outMin).padStart(2, '0')}`
+
+        attendanceRecords.push({
+          staffName: employeeName,
+          date,
+          checkIn,
+          checkOut
+        })
+      }
+
+      dateIndex++
+    }
   }
-
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-}
-
-function parseDate(dateStr) {
-  const match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
-  if (!match) return null
-
-  const month = String(match[1]).padStart(2, '0')
-  const day = String(match[2]).padStart(2, '0')
-  const year = match[3]
-
-  return `${year}-${month}-${day}`
 }
