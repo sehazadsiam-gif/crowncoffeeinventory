@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
 import { sendMemberOffer } from '../../../../lib/email'
+import { sendOfferSMS } from '../../../../lib/sms'
 
 export async function POST(request) {
   try {
@@ -41,12 +42,17 @@ export async function POST(request) {
       valid_days: valid_days || 7
     })
 
+    // Send offer SMS
+    if (member.phone) {
+      await sendOfferSMS(member.phone, discount_percent || 10, valid_days || 7)
+    }
+
     // Log notification
     await supabase.from('member_notifications').insert([{
       member_id,
       type: 'offer',
       subject,
-      message,
+      message: `${message} (Sent via SMS + Email)`,
       status: 'sent'
     }])
 

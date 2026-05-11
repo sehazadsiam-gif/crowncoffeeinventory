@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { supabase } from '../../../../../lib/supabase'
 import { validateSession } from '../../../../../lib/auth'
 import { sendSpecialDateEmail, sendMemberOffer } from '../../../../../lib/email'
+import { sendSpecialDateSMS, sendOfferSMS } from '../../../../../lib/sms'
 
 export async function POST(request) {
   try {
@@ -30,9 +31,20 @@ export async function POST(request) {
 
     if (offerType === 'birthday') {
       await sendSpecialDateEmail(member, 'Birthday')
+      await sendSpecialDateSMS(member.phone, member.full_name, 'Birthday')
     } else if (offerType === 'custom' && customOffer) {
       await sendMemberOffer(member, customOffer)
+      await sendOfferSMS(member.phone, customOffer.discount_percent || 10, customOffer.valid_days || 7)
     }
+
+    // Log notification
+    await supabase.from('member_notifications').insert([{
+      member_id: member.id,
+      type: 'offer',
+      subject: offerType === 'birthday' ? 'Birthday Offer' : (customOffer?.title || 'Special Offer'),
+      message: offerType === 'birthday' ? 'Happy Birthday SMS + Email sent' : `Special offer: ${customOffer?.discount_percent}% sent via SMS + Email`,
+      status: 'sent'
+    }]).catch(err => console.error('Log error:', err))
 
     return NextResponse.json({ success: true })
   } catch (error) {

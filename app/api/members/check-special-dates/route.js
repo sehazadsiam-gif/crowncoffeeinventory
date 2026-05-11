@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { sendSpecialDateEmail, sendAnniversaryEmail } from '../../../../lib/email'
+import { sendSpecialDateSMS, sendAnniversarySMS } from '../../../../lib/sms'
 
 export async function GET(request) {
   try {
@@ -67,6 +68,12 @@ export async function GET(request) {
           days_until: daysUntil
         })
 
+        // Send SMS if phone exists
+        const { data: memberFull } = await supabase.from('members').select('phone').eq('id', sd.members.id).single()
+        if (memberFull?.phone) {
+          await sendSpecialDateSMS(memberFull.phone, sd.members.full_name, sd.occasion_name)
+        }
+
         await supabase.from('member_notifications').insert([{
           member_id: sd.members.id,
           type: 'special_date',
@@ -107,6 +114,12 @@ export async function GET(request) {
               card_number: m.card_number,
               years
             })
+
+            // Send SMS if phone exists
+            const { data: memberFull } = await supabase.from('members').select('phone').eq('id', m.id).single()
+            if (memberFull?.phone) {
+              await sendAnniversarySMS(memberFull.phone, m.full_name, years)
+            }
 
             await supabase.from('member_notifications').insert([{
               member_id: m.id,

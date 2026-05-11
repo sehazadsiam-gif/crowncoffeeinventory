@@ -45,7 +45,6 @@ export default function Sidebar({ role, currentPage, staffName }) {
       { label: 'Service Charge', icon: Settings, path: '/admin/service-charge' },
       { label: 'Members', icon: UserCheck, path: '/admin/members' },
       { label: 'Pending Approvals', icon: UserCheck, path: '/admin/members/pending' },
-      { label: 'Send Offer', icon: MessageSquare, path: '/admin/send-offer' },
       { label: 'Balance Sheet', icon: TrendingUp, path: '/balance-sheet' },
     ],
     staff: [

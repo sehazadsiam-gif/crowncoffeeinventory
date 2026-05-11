@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
 import { sendTierUpgradeEmail } from '../../../../lib/email'
+import { sendTierUpgradeSMS } from '../../../../lib/sms'
 
 export async function POST(request) {
   try {
@@ -18,7 +19,7 @@ export async function POST(request) {
 
     const { data: member, error } = await supabase
       .from('members')
-      .select('full_name, email, card_number')
+      .select('full_name, email, card_number, phone')
       .eq('id', member_id)
       
 
@@ -32,11 +33,16 @@ export async function POST(request) {
       card_number: member.card_number
     })
 
+    // Send SMS
+    if (member.phone) {
+      await sendTierUpgradeSMS(member.phone, member.full_name)
+    }
+
     await supabase.from('member_notifications').insert([{
       member_id,
       type: 'tier_upgrade',
       subject: 'Gold Tier Upgrade',
-      message: 'Manually triggered tier upgrade notification'
+      message: 'Manually triggered tier upgrade notification (SMS + Email)'
     }])
 
     return NextResponse.json({ success: true })
