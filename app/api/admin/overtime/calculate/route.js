@@ -1,121 +1,149 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '../../../../../lib/supabase';
+export const dynamic = 'force-dynamic'
+
+import { NextResponse } from 'next/server'
+import { validateSession } from '../../../../../lib/auth'
+import { supabase } from '../../../../../lib/supabase'
 
 export async function POST(request) {
   try {
-    const { staff_id, month, year } = await request.json();
+    const authHeader = request.headers.get('Authorization')
+    const token = authHeader ? authHeader.replace('Bearer ', '') : null
+    const session = await validateSession(token)
+
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { staff_id, month, year } = await request.json()
 
     if (!staff_id || !month || !year) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // 1. Get staff details (especially hourly_rate)
-    const { data: staff, error: staffError } = await supabase
-      .from('staff')
-      .select('*')
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0]
+
+    const { data: staffData } = await supabase
+      .from('admin_accounts')
+      .select('base_salary, username')
       .eq('id', staff_id)
-      .single();
+      .single()
 
-    if (staffError || !staff) {
-      return NextResponse.json({ error: 'Staff not found' }, { status: 404 });
+    if (!staffData) {
+      return NextResponse.json({ error: 'Staff not found' }, { status: 404 })
     }
 
-    const hourly_rate = staff.hourly_rate || (staff.base_salary / 30 / 10);
-    const shift_hours = staff.shift_hours || 10;
-
-    // 2. Get attendance records for the specified month and year
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
-
-    const { data: attendanceRecords, error: attendanceError } = await supabase
+    const { data: attendanceData } = await supabase
       .from('attendance')
       .select('*')
       .eq('staff_id', staff_id)
       .gte('date', startDate)
-      .lte('date', endDate);
+      .lte('date', endDate)
+      .order('date', { ascending: true })
 
-    if (attendanceError) {
-      throw attendanceError;
-    }
+    const baseSalary = staffData.base_salary || 0
+    const hourlyRate = baseSalary / 30 / 10
+    const shiftHours = 10
 
-    let total_ot_hours = 0;
-    let total_ot_pay = 0;
-    const overtime_records = [];
+    let overtimeRecords = []
+    let totalOvertimeHours = 0
+    let totalOvertimePay = 0
+    let daysWorked = 0
 
-    // 3. Calculate OT for each day
-    for (const record of attendanceRecords) {
-      if (!record.check_in || !record.check_out) continue;
+    for (const attendance of attendanceData || []) {
+      const actualHours = calculateHours(attendance.check_in_time, attendance.check_out_time)
+      const overtimeHours = Math.max(0, actualHours - shiftHours)
+      const overtimePay = Math.round(overtimeHours * hourlyRate * 100) / 100
 
-      const [inH, inM] = record.check_in.split(':').map(Number);
-      const [outH, outM] = record.check_out.split(':').map(Number);
-
-      let actual_hours = (outH + outM / 60) - (inH + inM / 60);
-      
-      if (actual_hours < 0) actual_hours += 24;
-
-      const overtime_hours = Math.max(0, actual_hours - shift_hours);
-      const overtime_pay = overtime_hours * hourly_rate;
-
-      // Check if manual override exists
-      const { data: existingLog } = await supabase
+      const { data: existing } = await supabase
         .from('overtime_logs')
-        .select('*')
+        .select('id')
         .eq('staff_id', staff_id)
-        .eq('date', record.date)
-        .single();
+        .eq('date', attendance.date)
+        .single()
+        .catch(() => ({ data: null }))
 
-      let logData = {
-        staff_id,
-        date: record.date,
-        check_in: record.check_in,
-        check_out: record.check_out,
-        shift_hours,
-        actual_hours: Number(actual_hours.toFixed(2)),
-        overtime_hours: Number(overtime_hours.toFixed(2)),
-        hourly_rate,
-        overtime_pay: Number(overtime_pay.toFixed(2)),
-        updated_at: new Date().toISOString()
-      };
-
-      if (existingLog && existingLog.manual_override) {
-        total_ot_hours += Number(existingLog.manual_overtime_hours || 0);
-        total_ot_pay += Number(existingLog.manual_overtime_pay || 0);
-        overtime_records.push(existingLog);
-      } else {
-        const { data: savedLog, error: logError } = await supabase
+      if (existing) {
+        await supabase
           .from('overtime_logs')
-          .upsert(logData, { onConflict: 'staff_id, date' })
-          .select()
-          .single();
-
-        if (logError) console.error('Error saving OT log:', logError);
-        
-        total_ot_hours += logData.overtime_hours;
-        total_ot_pay += logData.overtime_pay;
-        overtime_records.push(savedLog || logData);
+          .update({
+            check_in: attendance.check_in_time,
+            check_out: attendance.check_out_time,
+            actual_hours: actualHours,
+            overtime_hours: overtimeHours,
+            hourly_rate: hourlyRate,
+            overtime_pay: overtimePay,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id)
+      } else {
+        await supabase
+          .from('overtime_logs')
+          .insert([{
+            staff_id,
+            date: attendance.date,
+            check_in: attendance.check_in_time,
+            check_out: attendance.check_out_time,
+            actual_hours: actualHours,
+            overtime_hours: overtimeHours,
+            hourly_rate: hourlyRate,
+            overtime_pay: overtimePay,
+            shift_hours: shiftHours
+          }])
       }
-    }
 
-    // 4. Update staff monthly totals
-    const { error: updateError } = await supabase
-      .from('staff')
-      .update({
-        overtime_hours_month: Number(total_ot_hours.toFixed(2)),
-        overtime_pay_month: Number(total_ot_pay.toFixed(2))
+      totalOvertimeHours += overtimeHours
+      totalOvertimePay += overtimePay
+      daysWorked++
+
+      overtimeRecords.push({
+        date: attendance.date,
+        checkIn: attendance.check_in_time,
+        checkOut: attendance.check_out_time,
+        actualHours: parseFloat(actualHours.toFixed(2)),
+        overtimeHours: parseFloat(overtimeHours.toFixed(2)),
+        overtimePay: parseFloat(overtimePay.toFixed(2))
       })
-      .eq('id', staff_id);
-
-    if (updateError) throw updateError;
+    }
 
     return NextResponse.json({
       success: true,
-      overtime_records,
-      total_hours: Number(total_ot_hours.toFixed(2)),
-      total_pay: Number(total_ot_pay.toFixed(2))
-    });
+      staffName: staffData.username,
+      staffId: staff_id,
+      baseSalary,
+      hourlyRate: parseFloat(hourlyRate.toFixed(2)),
+      month,
+      year,
+      daysWorked,
+      overtimeRecords,
+      totalOvertimeHours: parseFloat(totalOvertimeHours.toFixed(2)),
+      totalOvertimePay: parseFloat(totalOvertimePay.toFixed(2))
+    }, { status: 200 })
 
   } catch (error) {
-    console.error('Overtime calculation error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Calculate overtime error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
+}
+
+function calculateHours(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return 0
+
+  const inParts = checkIn.split(':')
+  const outParts = checkOut.split(':')
+
+  const inHours = parseInt(inParts[0])
+  const inMins = parseInt(inParts[1])
+  const outHours = parseInt(outParts[0])
+  const outMins = parseInt(outParts[1])
+
+  const inTotalMins = inHours * 60 + inMins
+  let outTotalMins = outHours * 60 + outMins
+
+  if (outTotalMins < inTotalMins) {
+    outTotalMins += 24 * 60
+  }
+
+  const diffMins = outTotalMins - inTotalMins
+  return diffMins / 60
 }
