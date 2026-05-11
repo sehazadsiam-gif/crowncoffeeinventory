@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../../../../lib/supabase';
 import * as XLSX from 'xlsx';
 
 export async function POST(request) {
@@ -17,7 +17,6 @@ export async function POST(request) {
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
 
-    // Expected columns: staff_id, date, check_in, check_out
     let imported_count = 0;
     const staff_ids = new Set();
     const months_years = new Set();
@@ -27,7 +26,6 @@ export async function POST(request) {
 
       if (!staff_id || !date) continue;
 
-      // Create/Update attendance record
       const { error: attendanceError } = await supabase
         .from('attendance')
         .upsert({
@@ -49,15 +47,11 @@ export async function POST(request) {
       }
     }
 
-    // Trigger calculation for each staff and month/year affected
     let calculated_count = 0;
     for (const staff_id of staff_ids) {
       for (const my of months_years) {
         const [year, month] = my.split('-').map(Number);
         
-        // We can't easily call our own API route internally with a relative URL in Next.js without some hacks
-        // So we'll call a shared calculation function or just re-implement the logic here
-        // For simplicity and robustness, I'll trigger a fetch to the calculate endpoint using the full URL
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         try {
           await fetch(`${baseUrl}/api/admin/overtime/calculate`, {

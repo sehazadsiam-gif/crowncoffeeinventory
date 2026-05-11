@@ -1,25 +1,33 @@
-export const dynamic = 'force-dynamic'
-
-import { NextResponse } from 'next/server'
-import { validateSession } from '../../../../../lib/auth'
+import { NextResponse } from 'next/server';
+import { supabase } from '../../../../../lib/supabase';
 
 export async function GET(request) {
   try {
-    const authHeader = request.headers.get('Authorization')
-    const token = authHeader ? authHeader.replace('Bearer ', '') : null
-    const session = await validateSession(token)
+    const { searchParams } = new URL(request.url);
+    const staff_id = searchParams.get('staff_id');
+    const month = searchParams.get('month');
+    const year = searchParams.get('year');
 
-    if (!session || session.role !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!staff_id || !month || !year) {
+      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    return NextResponse.json({
-      success: true,
-      logs: []
-    }, { status: 200 })
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
+    const { data: logs, error } = await supabase
+      .from('overtime_logs')
+      .select('*')
+      .eq('staff_id', staff_id)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true });
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, logs });
   } catch (error) {
-    console.error('Get logs error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error('Error fetching overtime logs:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
