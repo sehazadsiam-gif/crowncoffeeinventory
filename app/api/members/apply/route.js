@@ -2,8 +2,8 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
-import { sendMemberApplicationConfirm, sendAdminMemberAlert } from '../../../../lib/email'
-import { sendMemberApplicationConfirmSMS } from '../../../../lib/sms'
+import { sendMemberApproved, sendAdminMemberAlert } from '../../../../lib/email'
+import { sendMemberApprovedSMS } from '../../../../lib/sms'
 
 export async function POST(request) {
   try {
@@ -41,6 +41,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'This phone number is already registered' }, { status: 409 })
     }
 
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const timestamp = Date.now().toString().slice(-6)
+    const cardNumber = `CC-${year}${month}${day}-${timestamp}`
+
     const { data: members, error: insertError } = await supabase
       .from('members')
       .insert([{
@@ -50,7 +57,9 @@ export async function POST(request) {
         date_of_birth: date_of_birth || null,
         address: address || null,
         occupation: occupation || null,
-        status: 'pending',
+        status: 'active',
+        card_number: cardNumber,
+        member_since: now.toISOString(),
         tier: 'silver',
         total_visits: 0,
         punch_count: 0
@@ -78,10 +87,15 @@ export async function POST(request) {
       }
     }
 
-    sendMemberApplicationConfirm(member)
-      .catch(err => console.error('Email error:', err))
+    sendMemberApproved({
+      to: member.email,
+      name: member.full_name,
+      card_number: cardNumber,
+      member_since: now.toLocaleDateString(),
+      tier: 'silver'
+    }).catch(err => console.error('Email error:', err))
     
-    sendMemberApplicationConfirmSMS(member.phone, member.full_name)
+    sendMemberApprovedSMS(member.phone, member.full_name, cardNumber)
       .catch(err => console.error('SMS error:', err))
     
     sendAdminMemberAlert({ 
@@ -90,6 +104,15 @@ export async function POST(request) {
       phone: member.phone, 
       special_dates_count: special_dates?.length || 0 
     }).catch(err => console.error('Admin alert error:', err))
+
+    // Keep a log of auto-approval for admin
+    await supabase.from('member_notifications').insert([{
+      member_id: member.id,
+      type: 'approval',
+      subject: 'Auto Approved',
+      message: 'Member was automatically approved upon registration.',
+      status: 'sent'
+    }]).catch(err => console.error('Log error:', err))
 
     return NextResponse.json({
       success: true,

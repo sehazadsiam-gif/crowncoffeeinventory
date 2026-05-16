@@ -71,6 +71,6 @@ export async function POST(request) {
     return NextResponse.json({ success: true, count: successCount })
   } catch (error) {
     console.error('Broadcast error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }
 }
