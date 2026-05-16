@@ -106,7 +106,8 @@ export default function PayrollPage() {
           ...p,
           advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0),
           manual_unpaid_days: p.manual_unpaid_days ?? null,
-          waived_unpaid_days: p.waived_unpaid_days || 0
+          waived_unpaid_days: p.waived_unpaid_days || 0,
+          overtime_manual: p.miscellaneous_plus === 1
         }
       })
 
@@ -127,6 +128,9 @@ export default function PayrollPage() {
             staff_id: s.id, month: m, year: y,
             overtime_hours: otMap[s.id]?.hours || 0, 
             overtime_pay: otMap[s.id]?.pay || 0,
+            overtime_auto_hours: otMap[s.id]?.hours || 0,
+            overtime_auto_pay: otMap[s.id]?.pay || 0,
+            overtime_manual: false,
             service_charge: 0, bonus: 0,
             lunch_dinner: 0, morning_food: 0,
             advance_taken: advancesMap[s.id] || 0,
@@ -147,9 +151,14 @@ export default function PayrollPage() {
           payMap[s.id].late_deduction = lateDeduction
           payMap[s.id].present_days = presentCount
           payMap[s.id].absent_days = absentCount
-          // Always update OT from logs
-          payMap[s.id].overtime_hours = otMap[s.id]?.hours || 0
-          payMap[s.id].overtime_pay = otMap[s.id]?.pay || 0
+          // Update auto OT values
+          payMap[s.id].overtime_auto_hours = otMap[s.id]?.hours || 0
+          payMap[s.id].overtime_auto_pay = otMap[s.id]?.pay || 0
+          // Update OT if not manually overridden
+          if (!payMap[s.id].overtime_manual) {
+            payMap[s.id].overtime_hours = otMap[s.id]?.hours || 0
+            payMap[s.id].overtime_pay = otMap[s.id]?.pay || 0
+          }
         }
 
         // Auto calculate lunch dinner if not manually set
@@ -231,6 +240,8 @@ export default function PayrollPage() {
     setPayroll(prev => {
       const row = { ...prev[staffId], [field]: value }
       if (field === 'overtime_hours') {
+        const autoVal = row.overtime_auto_hours || 0
+        row.overtime_manual = Number(value) !== autoVal
         const s = staff.find(st => st.id === staffId)
         const perHourRate = s?.hourly_rate || Math.floor(Math.round((Number(s?.base_salary) || 0) / 30) / 10)
         row.overtime_pay = (Number(value) || 0) * perHourRate
@@ -263,6 +274,7 @@ export default function PayrollPage() {
         others_taken: Number(row.others_taken) || 0,
         miscellaneous: Number(row.miscellaneous) || 0,
         miscellaneous_note: row.miscellaneous_note || '',
+        miscellaneous_plus: row.overtime_manual ? 1 : 0,
         is_paid: row.is_paid || false,
         manual_unpaid_days: row.manual_unpaid_days === null ? null : Number(row.manual_unpaid_days),
         waived_unpaid_days: Number(row.waived_unpaid_days) || 0,
@@ -525,6 +537,30 @@ export default function PayrollPage() {
                       <td style={{ padding: '12px 8px', fontWeight: 600 }}>৳{base.toLocaleString()}</td>
                       <td style={{ padding: '12px 8px' }}>
                         <input type="number" style={inputStyle} value={row.overtime_hours} onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)} onBlur={() => handleBlur(s.id)} />
+                        {row.overtime_manual && (
+                          <p style={{ fontSize: '10px', color: '#fa7b17', marginTop: '2px', fontWeight: 600 }}>Manual</p>
+                        )}
+                        {row.overtime_manual && (
+                          <button
+                            onClick={() => {
+                              handleInput(s.id, 'overtime_hours', row.overtime_auto_hours || 0)
+                              setPayroll(prev => ({
+                                ...prev,
+                                [s.id]: {
+                                  ...prev[s.id],
+                                  overtime_hours: row.overtime_auto_hours || 0,
+                                  overtime_pay: row.overtime_auto_pay || 0,
+                                  overtime_manual: false
+                                }
+                              }))
+                              setTimeout(() => handleBlur(s.id), 100)
+                            }}
+                            style={{
+                              fontSize: '10px', color: '#8B5E3C', background: 'none', border: 'none',
+                              cursor: 'pointer', padding: 0, marginTop: '2px', textDecoration: 'underline'
+                            }}
+                          >Reset</button>
+                        )}
                         {Number(row.overtime_pay) > 0 && <p style={{ fontSize: '10px', color: '#10B981', margin: '2px 0 0 0', fontWeight: 700 }}>+৳{row.overtime_pay}</p>}
                       </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.service_charge} onChange={e => handleInput(s.id, 'service_charge', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>

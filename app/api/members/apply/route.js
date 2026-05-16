@@ -78,7 +78,7 @@ export async function POST(request) {
       }
     }
 
-    sendMemberApplicationConfirm({ to: member.email, name: member.full_name })
+    sendMemberApplicationConfirm(member)
       .catch(err => console.error('Email error:', err))
     
     sendMemberApplicationConfirmSMS(member.phone, member.full_name)

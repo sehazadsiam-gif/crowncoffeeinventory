@@ -13,6 +13,15 @@ export default function SpecialOffersPage() {
   const [sendingId, setSendingId] = useState(null)
   const [customOfferModal, setCustomOfferModal] = useState(null)
   
+  const [broadcastModal, setBroadcastModal] = useState(false)
+  const [broadcasting, setBroadcasting] = useState(false)
+  const [broadcastData, setBroadcastData] = useState({
+    subject: '',
+    message: '',
+    sendEmail: true,
+    sendSms: true
+  })
+  
   const [customOffer, setCustomOffer] = useState({
     title: 'Crown Coffee Special Offer',
     discount_percent: 15,
@@ -134,6 +143,45 @@ export default function SpecialOffersPage() {
     }
   }
 
+  const sendBroadcast = async () => {
+    if (!broadcastData.subject || !broadcastData.message) {
+      alert('Subject and message are required')
+      return
+    }
+    
+    if (!broadcastData.sendEmail && !broadcastData.sendSms) {
+      alert('Please select at least one method (Email or SMS)')
+      return
+    }
+
+    setBroadcasting(true)
+    try {
+      const token = localStorage.getItem('cc_token')
+      const res = await fetch('/api/admin/members/broadcast', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(broadcastData)
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        alert(`Broadcast sent successfully to ${data.count} members!`)
+        setBroadcastModal(false)
+        setBroadcastData({ subject: '', message: '', sendEmail: true, sendSms: true })
+      } else {
+        const errorData = await res.json()
+        alert(errorData.error || 'Failed to send broadcast')
+      }
+    } catch (err) {
+      alert('Network error while sending broadcast')
+    } finally {
+      setBroadcasting(false)
+    }
+  }
+
   if (loading) {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#9C8A76' }}>Loading special occasions...</div>
   }
@@ -147,10 +195,16 @@ export default function SpecialOffersPage() {
         >
           <ArrowLeft size={16} /> Back
         </button>
-        <div>
+        <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#1F1F1F', margin: 0 }}>Special Occasions & Offers</h1>
           <p style={{ color: '#9C8A76', margin: '4px 0 0 0' }}>Send personalized birthday and custom offers to your members</p>
         </div>
+        <button
+          onClick={() => setBroadcastModal(true)}
+          style={{ background: '#2E7D32', color: 'white', border: 'none', borderRadius: '8px', padding: '12px 24px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)' }}
+        >
+          <Send size={18} /> Broadcast Message
+        </button>
       </div>
 
       <div style={{ position: 'relative', marginBottom: '32px', maxWidth: '500px' }}>
@@ -319,6 +373,77 @@ export default function SpecialOffersPage() {
               >
                 {sendingId === customOfferModal.id ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
                 Send Offer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Broadcast Modal */}
+      {broadcastModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '600px', boxShadow: '0 24px 48px rgba(0,0,0,0.2)' }}>
+            <h2 style={{ color: '#1F1F1F', fontSize: '24px', fontWeight: 800, margin: '0 0 8px 0' }}>Broadcast Message</h2>
+            <p style={{ color: '#9C8A76', margin: '0 0 24px 0' }}>Send a message to all active members</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#424242', marginBottom: '8px' }}>Subject</label>
+                <input 
+                  type="text" 
+                  value={broadcastData.subject} 
+                  onChange={e => setBroadcastData({ ...broadcastData, subject: e.target.value })}
+                  style={{ width: '100%', padding: '12px', border: '1px solid #E0E0E0', borderRadius: '8px', boxSizing: 'border-box' }}
+                  placeholder="e.g. Holiday Special Notice"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#424242', marginBottom: '8px' }}>Message</label>
+                <textarea 
+                  value={broadcastData.message} 
+                  onChange={e => setBroadcastData({ ...broadcastData, message: e.target.value })}
+                  style={{ width: '100%', padding: '12px', border: '1px solid #E0E0E0', borderRadius: '8px', boxSizing: 'border-box', minHeight: '150px', resize: 'vertical' }}
+                  placeholder="Type your message here..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '24px', marginTop: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, color: '#424242' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={broadcastData.sendEmail}
+                    onChange={e => setBroadcastData({ ...broadcastData, sendEmail: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  Send via Email
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, color: '#424242' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={broadcastData.sendSms}
+                    onChange={e => setBroadcastData({ ...broadcastData, sendSms: e.target.checked })}
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  Send via SMS
+                </label>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setBroadcastModal(false)}
+                style={{ flex: 1, padding: '14px', background: '#F5F5F5', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 700, color: '#424242' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={sendBroadcast}
+                disabled={broadcasting}
+                style={{ flex: 2, padding: '14px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: '8px', cursor: broadcasting ? 'not-allowed' : 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                {broadcasting ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
+                Send to All Members
               </button>
             </div>
           </div>
