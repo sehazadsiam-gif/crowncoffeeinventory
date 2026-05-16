@@ -44,7 +44,9 @@ export async function POST(request) {
       subject: offerType === 'birthday' ? 'Birthday Offer' : (customOffer?.title || 'Special Offer'),
       message: offerType === 'birthday' ? 'Happy Birthday SMS + Email sent' : `Special offer: ${customOffer?.discount_percent}% sent via SMS + Email`,
       status: 'sent'
-    }]).catch(err => console.error('Log error:', err))
+    }]).then(({ error }) => {
+      if (error) console.error('Log error:', error)
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

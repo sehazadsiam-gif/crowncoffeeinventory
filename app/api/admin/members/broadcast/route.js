@@ -66,7 +66,9 @@ export async function POST(request) {
       subject: subject,
       message: message,
       status: 'sent'
-    }]).catch(err => console.error('Log error:', err))
+    }]).then(({ error }) => {
+      if (error) console.error('Log error:', error)
+    })
 
     return NextResponse.json({ success: true, count: successCount })
   } catch (error) {

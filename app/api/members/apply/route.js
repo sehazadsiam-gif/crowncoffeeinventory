@@ -83,7 +83,9 @@ export async function POST(request) {
             month: parseInt(d.month),
             day: parseInt(d.day)
           })))
-          .catch(err => console.error('Special dates error:', err))
+          .then(({ error }) => {
+            if (error) console.error('Special dates error:', error)
+          })
       }
     }
 
@@ -112,7 +114,9 @@ export async function POST(request) {
       subject: 'Auto Approved',
       message: 'Member was automatically approved upon registration.',
       status: 'sent'
-    }]).catch(err => console.error('Log error:', err))
+    }]).then(({ error }) => {
+      if (error) console.error('Log error:', error)
+    })
 
     return NextResponse.json({
       success: true,
