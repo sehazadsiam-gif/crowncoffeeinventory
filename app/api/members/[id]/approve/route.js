@@ -48,13 +48,8 @@ export async function POST(request, context) {
 
     const member = data[0]
 
-    sendMemberApproved({ 
-      to: member.email, 
-      name: member.full_name, 
-      card_number: cardNumber,
-      member_since: now.toLocaleDateString(),
-      tier: 'silver'
-    }).catch(err => console.error('Email error:', err))
+    sendMemberApproved(member, cardNumber)
+      .catch(err => console.error('Email error:', err))
     
     sendMemberApprovedSMS(member.phone, member.full_name, cardNumber)
       .catch(err => console.error('SMS error:', err))

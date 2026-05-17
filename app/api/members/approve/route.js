@@ -51,7 +51,7 @@ export async function POST(request) {
 
     // Send approval notifications (Email + WhatsApp)
     try {
-      await sendMemberApproved(member, cardNumber)
+      await sendMemberApproved(member[0], cardNumber)
     } catch (notifError) {
       console.error('Notification error (non-blocking):', notifError)
     }
