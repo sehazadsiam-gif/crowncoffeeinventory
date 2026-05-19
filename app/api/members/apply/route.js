@@ -23,23 +23,9 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Phone must be at least 9 digits' }, { status: 400 })
     }
 
-    const { data: emailCheck } = await supabase
-      .from('members')
-      .select('id')
-      .eq('email', email.toLowerCase())
+    // Email and phone number uniqueness checks are bypassed per request to let members register
+    // with the same email or phone number as many times as they want.
 
-    if (emailCheck && emailCheck.length > 0) {
-      return NextResponse.json({ error: 'This email is already registered' }, { status: 409 })
-    }
-
-    const { data: phoneCheck } = await supabase
-      .from('members')
-      .select('id')
-      .eq('phone', phone.trim())
-
-    if (phoneCheck && phoneCheck.length > 0) {
-      return NextResponse.json({ error: 'This phone number is already registered' }, { status: 409 })
-    }
 
     const now = new Date()
     const year = now.getFullYear()
