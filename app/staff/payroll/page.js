@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
-import { Printer, Plus, Trash2, X, History, ChevronUp, ChevronDown } from 'lucide-react'
+import { Printer, Plus, Trash2, X, History, ChevronUp, ChevronDown, Calculator } from 'lucide-react'
+import PayrollCalculator from '../../../components/PayrollCalculator'
 import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../../components/PaySlip'), { ssr: false })
@@ -28,6 +29,7 @@ export default function PayrollPage() {
   const [printData, setPrintData] = useState(null)
   const [nameSort, setNameSort] = useState('asc') // 'asc' | 'desc'
   const [waivedStaff, setWaivedStaff] = useState({})
+  const [showCalculator, setShowCalculator] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -457,11 +459,24 @@ export default function PayrollPage() {
             <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Payroll Center</h1>
             <p style={{ color: '#64748B', fontSize: '14px', margin: '4px 0 0 0' }}>{months[month - 1]} {year}</p>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <select className="input" style={{ width: '130px' }} value={month} onChange={e => setMonth(Number(e.target.value))}>
               {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
             <input type="number" className="input" style={{ width: '85px' }} value={year} onChange={e => setYear(Number(e.target.value))} />
+            <button
+              onClick={() => setShowCalculator(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '9px 14px', borderRadius: '8px',
+                background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                color: 'white', border: 'none', cursor: 'pointer',
+                fontSize: '13px', fontWeight: 700,
+                boxShadow: '0 2px 8px rgba(99,102,241,0.35)'
+              }}
+            >
+              <Calculator size={15} /> Calculator
+            </button>
           </div>
         </div>
 
@@ -736,6 +751,25 @@ export default function PayrollPage() {
         </div>
       </main>
       {printData && <PaySlip data={printData} onClose={() => setPrintData(null)} />}
+      {showCalculator && staff.length > 0 && (
+        <PayrollCalculator
+          staff={staff}
+          payroll={payroll}
+          waivedStaff={waivedStaff}
+          month={month}
+          year={year}
+          monthName={months[month - 1]}
+          onClose={() => setShowCalculator(false)}
+          onApply={(staffId, sandboxValues) => {
+            setPayroll(prev => {
+              const updated = { ...prev[staffId], ...sandboxValues }
+              return { ...prev, [staffId]: updated }
+            })
+            setTimeout(() => handleBlur(staffId), 150)
+            setShowCalculator(false)
+          }}
+        />
+      )}
       <style jsx>{`.input { width: 100%; padding: 8px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 13px; outline: none; }`}</style>
     </div>
   )
