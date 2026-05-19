@@ -3,17 +3,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import {
-  ArrowLeft, Plus, X, Loader2, User, Mail, Phone,
-  Cake, MapPin, Briefcase, Star, CalendarHeart,
+import { 
+  ArrowLeft, Plus, X, Loader2, User, Mail, Phone, 
+  Cake, MapPin, Briefcase, Star, CalendarHeart, 
   ClipboardList, Coffee, Sparkles, Award, Gift, Zap
 } from 'lucide-react'
 
 const COUNTRIES = [
-  { code: '+880', name: 'Bangladesh (BD)' },
+  { code: '+880', name: 'BD (+880)' },
   { code: '+1', name: 'USA (+1)' },
   { code: '+44', name: 'UK (+44)' },
-  { code: '+91', name: 'India (+91)' }
+  { code: '+91', name: 'IND (+91)' }
 ]
 
 export default function MembershipPage() {
@@ -69,9 +69,9 @@ export default function MembershipPage() {
       setError('Please fill in all required fields.')
       return
     }
-    if (!form.email.includes('@')) {
-      setError('Please enter a valid email address.');
-      return
+    if (!form.email.includes('@')) { 
+      setError('Please enter a valid email address.'); 
+      return 
     }
     const phoneClean = form.phone.replace(/\D/g, '')
     if (countryCode === '+880' && phoneClean.length !== 10) {
@@ -81,9 +81,9 @@ export default function MembershipPage() {
       setError('Please enter a valid phone number length.')
       return
     }
-    if (!agreePromo || !agreeAccuracy) {
-      setError('Please agree to both the terms & data accuracy conditions.');
-      return
+    if (!agreePromo || !agreeAccuracy) { 
+      setError('Please agree to both the terms & data accuracy conditions.'); 
+      return 
     }
     setLoading(true)
     try {
@@ -94,7 +94,7 @@ export default function MembershipPage() {
         if (parts.length < 2) return null
         return { occasion_name: d.occasion_name, day: parseInt(parts[0]), month: parseInt(parts[1]) }
       }).filter(Boolean)
-
+      
       let dob = null
       if (form.date_of_birth) {
         const parts = form.date_of_birth.split(/[-/.]/)
@@ -130,82 +130,50 @@ export default function MembershipPage() {
   }
 
   return (
-    <div style={{
-      background: '#FAF6F0',
-      minHeight: '100vh',
-      padding: '40px 20px',
-      position: 'relative',
-      overflow: 'hidden',
-      fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif"
-    }}>
+    <div className="membership-container">
       {/* Decorative ambient gradients */}
       <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '40%', height: '40%', background: 'radial-gradient(circle, rgba(201,148,58,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
       <div style={{ position: 'absolute', bottom: '-5%', right: '-5%', width: '45%', height: '45%', background: 'radial-gradient(circle, rgba(123,74,46,0.05) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-
+        
         {/* Navigation & Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <Link href="/" style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: '#1E110A',
-            textDecoration: 'none',
-            fontSize: '13px',
-            fontWeight: 700,
-            background: '#FFFFFF',
-            padding: '10px 18px',
-            borderRadius: '100px',
-            border: '1px solid #E8DCD3',
+          <Link href="/" style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            color: '#1E110A', 
+            textDecoration: 'none', 
+            fontSize: '13px', 
+            fontWeight: 700, 
+            background: '#FFFFFF', 
+            padding: '10px 18px', 
+            borderRadius: '100px', 
+            border: '1px solid #E8DCD3', 
             boxShadow: '0 2px 8px rgba(30,17,10,0.04)',
-            transition: 'all 0.2s ease'
+            transition: 'all 0.2s ease' 
           }}
-            className="back-btn"
+          className="back-btn"
           >
             <ArrowLeft size={14} strokeWidth={2.5} /> Back to home
           </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(201,148,58,0.1)', color: '#C9943A', padding: '6px 14px', borderRadius: '100px', fontSize: '12px', fontWeight: 700, letterSpacing: '0.5px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(201,148,58,0.1)', color: '#C9943A', padding: '6px 14px', borderRadius: '100px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px' }}>
             <Sparkles size={13} /> PREMIUM EXCLUSIVE
           </div>
         </div>
 
         {/* Outer Grid Container */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '40px',
-          alignItems: 'start'
-        }}
-          className="form-grid"
-        >
-
+        <div className="form-grid">
+          
           {/* Left Column: Visual VIP club card & values */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '28px',
-            position: 'sticky',
-            top: '40px'
-          }}>
-
+          <div className="visual-column">
+            
             {/* Title & Introduction */}
             <div>
-              <h1 style={{
-                fontSize: '38px',
-                fontWeight: 900,
-                color: '#1E110A',
-                margin: '0 0 10px 0',
-                letterSpacing: '-1px',
-                lineHeight: 1.15
-              }}>
+              <h1 className="main-title">
                 The Crown Coffee <br />
-                <span style={{
-                  background: 'linear-gradient(135deg, #7B4A2E, #C9943A)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  fontWeight: 900
-                }}>
+                <span className="gold-text">
                   Membership Club
                 </span>
               </h1>
@@ -215,26 +183,13 @@ export default function MembershipPage() {
             </div>
 
             {/* Dynamic Live Member Card Preview */}
-            <div className="card-vip-container" style={{
-              background: 'linear-gradient(135deg, #1E110A 0%, #351F14 100%)',
-              borderRadius: '24px',
-              padding: '28px',
-              position: 'relative',
-              boxShadow: '0 20px 45px rgba(30,17,10,0.22)',
-              border: '1px solid rgba(251,248,245,0.08)',
-              overflow: 'hidden',
-              aspectRatio: '1.6 / 1',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              transition: 'all 0.3s ease'
-            }}>
+            <div className="card-vip-container">
               {/* Card Gold Accent Pattern overlay */}
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                background: 'radial-gradient(circle at 80% 20%, rgba(201,148,58,0.12) 0%, transparent 60%)',
-                pointerEvents: 'none'
+              <div style={{ 
+                position: 'absolute', 
+                inset: 0, 
+                background: 'radial-gradient(circle at 80% 20%, rgba(201,148,58,0.12) 0%, transparent 60%)', 
+                pointerEvents: 'none' 
               }} />
 
               {/* Card Header */}
@@ -246,107 +201,66 @@ export default function MembershipPage() {
                       borderRadius: '8px',
                       padding: '6px',
                       boxShadow: '0 2px 8px rgba(201,148,58,0.3)'
-                    }}>
-                      <Coffee size={18} color="#1E110A" strokeWidth={2.5} />
+                    }}
+                    className="card-logo-bg"
+                    >
+                      <Coffee size={18} color="#1E110A" strokeWidth={2.5} className="card-logo-icon" />
                     </div>
-                    <span style={{
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      color: '#FAF6F0',
-                      letterSpacing: '1px',
-                      fontFamily: "'Georgia', serif"
-                    }}>
+                    <span className="card-brand-title">
                       CROWN COFFEE
                     </span>
                   </div>
-                  <span style={{ fontSize: '9px', color: '#C9943A', fontWeight: 800, letterSpacing: '2px', textTransform: 'uppercase', display: 'block', marginTop: '6px', marginLeft: '34px' }}>
+                  <span className="card-brand-subtitle">
                     CLUB MEMBER
                   </span>
                 </div>
-
+                
                 {/* Chip Icon */}
-                <div style={{
-                  width: '38px',
-                  height: '28px',
-                  background: 'linear-gradient(135deg, #E6D2B5 0%, #A2825A 100%)',
-                  borderRadius: '6px',
-                  opacity: 0.85,
-                  position: 'relative'
-                }}>
+                <div className="card-chip">
                   <div style={{ position: 'absolute', top: '50%', left: '0', right: '0', height: '1px', background: 'rgba(30,17,10,0.2)' }} />
                   <div style={{ position: 'absolute', left: '50%', top: '0', bottom: '0', width: '1px', background: 'rgba(30,17,10,0.2)' }} />
                 </div>
               </div>
 
               {/* Card Middle: Member Name */}
-              <div style={{ zIndex: 1, margin: '24px 0 12px 0' }}>
+              <div style={{ zIndex: 1, margin: '24px 0 12px 0' }} className="card-middle-section">
                 <span style={{ fontSize: '9px', color: '#A2968E', letterSpacing: '1.5px', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
                   CARDHOLDER
                 </span>
-                <span style={{
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  color: '#FAF6F0',
-                  letterSpacing: '0.5px',
-                  fontFamily: "'Segoe UI', sans-serif",
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: 'block'
-                }}>
-                  {form.full_name || 'YOUR NAME HERE'}
+                <span className="card-holder-name">
+                  {form.full_name || 'Sehazad Siam'}
                 </span>
               </div>
 
               {/* Card Footer */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-end',
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'flex-end', 
                 zIndex: 1,
                 borderTop: '1px solid rgba(250,246,240,0.1)',
-                paddingTop: '12px'
+                paddingTop: '12px' 
               }}>
                 <div>
                   <span style={{ fontSize: '8px', color: '#A2968E', letterSpacing: '1px', display: 'block', textTransform: 'uppercase' }}>
                     MEMBER ID
                   </span>
-                  <span style={{ fontSize: '11px', color: '#E4DCD3', fontFamily: 'monospace', fontWeight: 600 }}>
+                  <span className="card-member-id">
                     CC-{new Date().getFullYear()}{String(new Date().getMonth() + 1).padStart(2, '0')}-XXXXXX
                   </span>
                 </div>
-                <div style={{
-                  background: 'linear-gradient(135deg, #C9943A, #A2825A)',
-                  color: '#1E110A',
-                  fontSize: '9px',
-                  fontWeight: 900,
-                  padding: '4px 10px',
-                  borderRadius: '100px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  boxShadow: '0 2px 10px rgba(201,148,58,0.2)'
-                }}>
+                <div className="card-tier-badge">
                   SILVER TIER
                 </div>
               </div>
             </div>
 
             {/* Elite Club Values List */}
-            <div style={{
-              background: '#FFFFFF',
-              borderRadius: '20px',
-              padding: '24px',
-              border: '1px solid #E8DCD3',
-              boxShadow: '0 4px 20px rgba(30,17,10,0.02)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '18px'
-            }}>
+            <div className="benefits-card">
               <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1E110A', margin: '0 0 4px 0', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Award size={18} style={{ color: '#C9943A' }} /> Exclusive Club Benefits
               </h3>
-
+              
               <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
                 <div style={{ background: '#FAF6F0', borderRadius: '10px', padding: '8px', color: '#7B4A2E' }}>
                   <Gift size={16} />
@@ -373,32 +287,25 @@ export default function MembershipPage() {
                 </div>
                 <div>
                   <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1E110A', margin: '0 0 2px 0' }}>Birthday & Anniversary Gifts</h4>
-                  <p style={{ fontSize: '12px', color: '#5C524C', margin: '0', lineHeight: 1.4 }}>Celebrate special dates with curated gifts, free bakery items, and custom offers.</p>
+                  <p style={{ fontSize: '12px', color: '#5C524C', margin: '0', lineHeight: 1.4 }}>Celebrate special dates with complimentary treats and custom VIP offers.</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Right Column: High-End Application Form */}
-          <div style={{
-            background: '#FFFFFF',
-            borderRadius: '24px',
-            padding: '36px',
-            boxShadow: '0 15px 40px rgba(30,17,10,0.06), 0 2px 8px rgba(0,0,0,0.02)',
-            border: '1px solid #E8DCD3',
-            position: 'relative'
-          }}>
+          <div className="form-card">
             {/* High-end progress indicator */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: '#E8DCD3',
-              borderTopLeftRadius: '24px',
+            <div style={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              height: '4px', 
+              background: '#E8DCD3', 
+              borderTopLeftRadius: '24px', 
               borderTopRightRadius: '24px',
-              overflow: 'hidden'
+              overflow: 'hidden' 
             }}>
               <div style={{
                 height: '100%',
@@ -422,19 +329,19 @@ export default function MembershipPage() {
 
             {/* Error Message */}
             {error && (
-              <div style={{
-                background: '#FDF2F2',
-                border: '1px solid #FDE8E8',
-                borderRadius: '12px',
-                padding: '12px 16px',
-                marginBottom: '24px',
-                color: '#9B1C1C',
-                fontSize: '13px',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                animation: 'shake 0.3s ease'
+              <div style={{ 
+                background: '#FDF2F2', 
+                border: '1px solid #FDE8E8', 
+                borderRadius: '12px', 
+                padding: '12px 16px', 
+                marginBottom: '24px', 
+                color: '#9B1C1C', 
+                fontSize: '13px', 
+                fontWeight: 600, 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                animation: 'shake 0.3s ease' 
               }}>
                 <span style={{ display: 'inline-block', width: '6px', height: '6px', background: '#9B1C1C', borderRadius: '50%' }}></span>
                 {error}
@@ -442,7 +349,7 @@ export default function MembershipPage() {
             )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-
+              
               {/* Primary Required Details Section */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -452,7 +359,7 @@ export default function MembershipPage() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
+                  
                   {/* Full Name */}
                   <FieldGroup label="Full Name" icon={<User size={14} />} required>
                     <StyledInput
@@ -481,25 +388,13 @@ export default function MembershipPage() {
 
                   {/* Phone */}
                   <FieldGroup label="Phone Number" icon={<Phone size={14} />} required>
-                    <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: '8px' }}>
+                    <div className="phone-input-grid">
                       <select
                         value={countryCode}
                         onChange={e => setCountryCode(e.target.value)}
-                        style={{
-                          padding: '12px 14px',
-                          border: '2px solid #E8DCD3',
-                          borderRadius: '12px',
-                          fontSize: '13px',
-                          background: '#FFFFFF',
-                          color: '#1E110A',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          outline: 'none',
-                          transition: 'border-color 0.2s'
-                        }}
+                        className={`country-code-select ${focusedField === 'phone_code' ? 'select-focused' : ''}`}
                         onFocus={() => setFocusedField('phone_code')}
                         onBlur={() => setFocusedField(null)}
-                        className={focusedField === 'phone_code' ? 'select-focused' : ''}
                       >
                         {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.code} {c.name}</option>)}
                       </select>
@@ -530,7 +425,7 @@ export default function MembershipPage() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
+                  
                   {/* Date of Birth */}
                   <FieldGroup label="Date of Birth" hint="Format: DD-MM-YYYY">
                     <StyledInput
@@ -545,12 +440,12 @@ export default function MembershipPage() {
                   </FieldGroup>
 
                   {/* Occupation */}
-                  <FieldGroup label="Occupation"  >
+                  <FieldGroup label="Occupation">
                     <StyledInput
                       type="text"
                       value={form.occupation}
                       onChange={e => setForm({ ...form, occupation: e.target.value })}
-                      placeholder=""
+                      placeholder="e.g. Software Engineer, Student..."
                       focused={focusedField === 'occupation'}
                       onFocus={() => setFocusedField('occupation')}
                       onBlur={() => setFocusedField(null)}
@@ -571,7 +466,6 @@ export default function MembershipPage() {
                         padding: '12px 14px',
                         border: `2px solid ${focusedField === 'address' ? '#C9943A' : '#E8DCD3'}`,
                         borderRadius: '12px',
-                        fontSize: '14px',
                         boxSizing: 'border-box',
                         resize: 'none',
                         background: '#FFFFFF',
@@ -581,18 +475,14 @@ export default function MembershipPage() {
                         boxShadow: focusedField === 'address' ? '0 0 0 4px rgba(201,148,58,0.12)' : 'none',
                         outline: 'none'
                       }}
+                      className="form-textarea"
                     />
                   </FieldGroup>
                 </div>
               </div>
 
               {/* Special Dates Dynamic Section */}
-              <div style={{
-                background: '#FAF6F0',
-                borderRadius: '16px',
-                padding: '20px',
-                border: '1px solid #E8DCD3'
-              }}>
+              <div className="special-dates-section">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CalendarHeart size={15} style={{ color: '#7B4A2E' }} />
@@ -629,69 +519,66 @@ export default function MembershipPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {specialDates.map((date, idx) => (
-                    <div key={idx} style={{
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 110px 38px',
-                      gap: '8px',
-                      alignItems: 'center'
-                    }}>
-                      <input
-                        type="text"
-                        placeholder="Occasion (e.g. Anniversary)"
-                        value={date.occasion_name}
-                        onChange={e => setSpecialDates(specialDates.map((d, i) => i === idx ? { ...d, occasion_name: e.target.value } : d))}
-                        style={{
-                          padding: '10px 12px',
-                          border: '1.5px solid #E8DCD3',
-                          borderRadius: '10px',
-                          fontSize: '13px',
-                          background: 'white',
-                          color: '#1E110A',
-                          outline: 'none',
-                          fontFamily: 'inherit',
-                          transition: 'border-color 0.2s'
-                        }}
-                        onFocus={() => setFocusedField(`spec_occ_${idx}`)}
-                        onBlur={() => setFocusedField(null)}
-                        className={focusedField === `spec_occ_${idx}` ? 'special-input-focused' : ''}
-                      />
-                      <input
-                        type="text"
-                        placeholder="DD-MM"
-                        value={date.date}
-                        onChange={e => handleDateInput(e.target.value, 'date', idx)}
-                        style={{
-                          padding: '10px 12px',
-                          border: '1.5px solid #E8DCD3',
-                          borderRadius: '10px',
-                          fontSize: '13px',
-                          background: 'white',
-                          color: '#1E110A',
-                          outline: 'none',
-                          fontFamily: 'inherit',
-                          textAlign: 'center',
-                          transition: 'border-color 0.2s'
-                        }}
-                        onFocus={() => setFocusedField(`spec_date_${idx}`)}
-                        onBlur={() => setFocusedField(null)}
-                        className={focusedField === `spec_date_${idx}` ? 'special-input-focused' : ''}
-                      />
+                    <div key={idx} className="special-date-row">
+                      {/* Left: Input Wrapper */}
+                      <div className="special-inputs-wrapper">
+                        <input
+                          type="text"
+                          placeholder="Occasion (e.g. Anniversary)"
+                          value={date.occasion_name}
+                          onChange={e => setSpecialDates(specialDates.map((d, i) => i === idx ? { ...d, occasion_name: e.target.value } : d))}
+                          style={{ 
+                            padding: '10px 12px', 
+                            border: '1.5px solid #E8DCD3', 
+                            borderRadius: '10px', 
+                            background: 'white', 
+                            color: '#1E110A', 
+                            outline: 'none', 
+                            fontFamily: 'inherit',
+                            transition: 'border-color 0.2s'
+                          }}
+                          onFocus={() => setFocusedField(`spec_occ_${idx}`)}
+                          onBlur={() => setFocusedField(null)}
+                          className={`special-text-input ${focusedField === `spec_occ_${idx}` ? 'special-input-focused' : ''}`}
+                        />
+                        <input
+                          type="text"
+                          placeholder="DD-MM"
+                          value={date.date}
+                          onChange={e => handleDateInput(e.target.value, 'date', idx)}
+                          style={{ 
+                            padding: '10px 12px', 
+                            border: '1.5px solid #E8DCD3', 
+                            borderRadius: '10px', 
+                            background: 'white', 
+                            color: '#1E110A', 
+                            outline: 'none', 
+                            fontFamily: 'inherit',
+                            textAlign: 'center',
+                            transition: 'border-color 0.2s'
+                          }}
+                          onFocus={() => setFocusedField(`spec_date_${idx}`)}
+                          onBlur={() => setFocusedField(null)}
+                          className={`special-date-input ${focusedField === `spec_date_${idx}` ? 'special-input-focused' : ''}`}
+                        />
+                      </div>
+                      
+                      {/* Right: Delete Action button */}
                       <button
                         type="button"
                         onClick={() => setSpecialDates(specialDates.filter((_, i) => i !== idx))}
-                        style={{
-                          background: '#FDF2F2',
-                          border: 'none',
-                          color: '#EF5350',
-                          cursor: 'pointer',
-                          width: '38px',
-                          height: '38px',
-                          borderRadius: '10px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'background 0.2s'
+                        style={{ 
+                          background: '#FDF2F2', 
+                          border: 'none', 
+                          color: '#EF5350', 
+                          cursor: 'pointer', 
+                          borderRadius: '10px', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          transition: 'background 0.2s' 
                         }}
+                        className="delete-date-btn"
                         onMouseOver={e => e.currentTarget.style.background = '#FDE8E8'}
                         onMouseOut={e => e.currentTarget.style.background = '#FDF2F2'}
                       >
@@ -741,7 +628,6 @@ export default function MembershipPage() {
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: '14px',
-                  fontSize: '15px',
                   fontWeight: 800,
                   cursor: loading ? 'not-allowed' : 'pointer',
                   display: 'flex',
@@ -754,6 +640,7 @@ export default function MembershipPage() {
                   letterSpacing: '0.3px',
                   marginTop: '10px'
                 }}
+                className="submit-form-btn"
               >
                 {loading ? (
                   <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Processing Membership...</>
@@ -767,7 +654,7 @@ export default function MembershipPage() {
         </div>
       </div>
 
-      {/* Global CSS styles */}
+      {/* Global CSS styles for fully responsive layout */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         
@@ -781,6 +668,7 @@ export default function MembershipPage() {
           75% { transform: translateX(4px); }
         }
         
+        /* Base Styling elements */
         input::placeholder { color: #BDB2AA; }
         textarea::placeholder { color: #BDB2AA; }
         
@@ -816,15 +704,359 @@ export default function MembershipPage() {
           border-color: rgba(201,148,58,0.3) !important;
         }
 
+        /* ----------------------------------------------- */
+        /* RESPONSIVE LAYOUT CLASSES (PC Friendly Default) */
+        /* ----------------------------------------------- */
+
+        .membership-container {
+          background: #FAF6F0;
+          min-height: 100vh;
+          padding: 40px 20px;
+          position: relative;
+          overflow: hidden;
+          font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.25fr;
+          gap: 40px;
+          align-items: start;
+        }
+
+        .visual-column {
+          display: flex;
+          flex-direction: column;
+          gap: 28px;
+          position: sticky;
+          top: 40px;
+        }
+
+        .main-title {
+          font-size: 38px;
+          font-weight: 900;
+          color: #1E110A;
+          margin: 0 0 10px 0;
+          letter-spacing: -1.5px;
+          line-height: 1.15;
+        }
+
+        .gold-text {
+          background: 'linear-gradient(135deg, #7B4A2E, #C9943A)';
+          background: linear-gradient(135deg, #7B4A2E, #C9943A);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          font-weight: 900;
+        }
+
+        .card-vip-container {
+          background: linear-gradient(135deg, #1E110A 0%, #351F14 100%);
+          border-radius: 24px;
+          padding: 28px;
+          position: relative;
+          box-shadow: 0 20px 45px rgba(30,17,10,0.22);
+          border: 1px solid rgba(251,248,245,0.08);
+          overflow: hidden;
+          aspect-ratio: 1.6 / 1;
+          display: flex;
+          flex-direction: column;
+          justifyContent: space-between;
+          transition: all 0.3s ease;
+        }
+
+        .card-logo-bg {
+          background: linear-gradient(135deg, #C9943A, #E4B869);
+          border-radius: 8px;
+          padding: 6px;
+          box-shadow: 0 2px 8px rgba(201,148,58,0.3);
+        }
+
+        .card-logo-icon {
+          width: 18px;
+          height: 18px;
+        }
+
+        .card-brand-title {
+          font-size: 13px;
+          font-weight: 800;
+          color: #FAF6F0;
+          letter-spacing: 1px;
+          font-family: 'Georgia', serif;
+        }
+
+        .card-brand-subtitle {
+          font-size: 9px;
+          color: #C9943A;
+          font-weight: 800;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          display: block;
+          margin-top: 6px;
+          margin-left: 34px;
+        }
+
+        .card-chip {
+          width: 38px;
+          height: 28px;
+          background: linear-gradient(135deg, #E6D2B5 0%, #A2825A 100%);
+          border-radius: 6px;
+          opacity: 0.85;
+          position: relative;
+        }
+
+        .card-holder-name {
+          font-size: 20px;
+          font-weight: 700;
+          color: #FAF6F0;
+          letter-spacing: 0.5px;
+          font-family: 'Segoe UI', sans-serif;
+          text-transform: uppercase;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: block;
+        }
+
+        .card-member-id {
+          font-size: 11px;
+          color: #E4DCD3;
+          font-family: monospace;
+          fontWeight: 600;
+        }
+
+        .card-tier-badge {
+          background: linear-gradient(135deg, #C9943A, #A2825A);
+          color: #1E110A;
+          font-size: 9px;
+          font-weight: 900;
+          padding: 4px 10px;
+          border-radius: 100px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          box-shadow: 0 2px 10px rgba(201,148,58,0.2);
+        }
+
+        .benefits-card {
+          background: #FFFFFF;
+          border-radius: 20px;
+          padding: 24px;
+          border: 1px solid #E8DCD3;
+          box-shadow: 0 4px 20px rgba(30,17,10,0.02);
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+
+        .form-card {
+          background: #FFFFFF;
+          border-radius: 24px;
+          padding: 36px;
+          box-shadow: 0 15px 40px rgba(30,17,10,0.06), 0 2px 8px rgba(0,0,0,0.02);
+          border: 1px solid #E8DCD3;
+          position: relative;
+        }
+
+        .phone-input-grid {
+          display: grid;
+          grid-template-columns: 120px 1fr;
+          gap: 8px;
+        }
+
+        .country-code-select {
+          padding: 12px 14px;
+          border: 2px solid #E8DCD3;
+          borderRadius: 12px;
+          font-size: 14px;
+          background: #FFFFFF;
+          color: #1E110A;
+          font-weight: 600;
+          cursor: pointer;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+
+        .form-textarea {
+          border: 2px solid #E8DCD3;
+          border-radius: 12px;
+          font-size: 14px;
+        }
+
+        .special-dates-section {
+          background: #FAF6F0;
+          border-radius: 16px;
+          padding: 20px;
+          border: 1px solid #E8DCD3;
+        }
+
+        .special-date-row {
+          display: grid;
+          grid-template-columns: 1fr 110px 38px;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .special-inputs-wrapper {
+          display: contents; /* Blends inputs seamlessly into desktop grid */
+        }
+
+        .special-text-input {
+          font-size: 14px;
+        }
+
+        .special-date-input {
+          font-size: 14px;
+        }
+
+        .delete-date-btn {
+          width: 38px;
+          height: 38px;
+        }
+
+        .submit-form-btn {
+          font-size: 15px;
+        }
+
+
+        /* ----------------------------------------------- */
+        /* MOBILE OPTIMIZATIONS (Phone User Friendly)      */
+        /* ----------------------------------------------- */
+
         @media (max-width: 768px) {
-          .form-grid {
-            grid-template-columns: 1fr !important;
-            gap: 30px !important;
+          .membership-container {
+            padding: 20px 12px; /* Thinner padding on phone */
           }
+
+          .form-grid {
+            grid-template-columns: 1fr; /* Single column flow */
+            gap: 24px;
+          }
+
+          .visual-column {
+            position: relative; /* Release sticky positioning */
+            top: 0;
+            gap: 20px;
+          }
+
+          .main-title {
+            font-size: 28px; /* Tighter heading font sizes */
+            letter-spacing: -0.8px;
+          }
+
           .card-vip-container {
-            aspect-ratio: auto !important;
-            height: 180px !important;
-            padding: 20px !important;
+            aspect-ratio: auto;
+            height: 160px;
+            padding: 16px 20px;
+            border-radius: 16px;
+          }
+
+          .card-logo-bg {
+            padding: 4px;
+          }
+
+          .card-logo-icon {
+            width: 14px;
+            height: 14px;
+          }
+
+          .card-brand-title {
+            font-size: 11px;
+          }
+
+          .card-brand-subtitle {
+            font-size: 8px;
+            margin-top: 4px;
+            margin-left: 24px;
+          }
+
+          .card-chip {
+            width: 30px;
+            height: 22px;
+            border-radius: 4px;
+          }
+
+          .card-middle-section {
+            margin: 12px 0 8px 0 !important;
+          }
+
+          .card-holder-name {
+            font-size: 16px;
+          }
+
+          .card-member-id {
+            font-size: 10px;
+          }
+
+          .card-tier-badge {
+            font-size: 8px;
+            padding: 3px 8px;
+          }
+
+          .benefits-card {
+            padding: 18px;
+            border-radius: 16px;
+          }
+
+          .form-card {
+            padding: 24px 16px; /* Greatly expanded horizontal spaces for inputs! */
+            border-radius: 20px;
+          }
+
+          .phone-input-grid {
+            grid-template-columns: 90px 1fr; /* Smaller selector, more room for numbers */
+          }
+
+          .country-code-select {
+            padding: 12px 8px; /* Tighter dropdown padding */
+          }
+
+          /* CRITICAL FOR MOBILE: 16px Input Font sizes completely */
+          /* bypasses iOS Safari's forced auto-zoom on field focus! */
+          input, select, textarea,
+          .special-text-input, .special-date-input,
+          .country-code-select, .form-textarea {
+            font-size: 16px !important; 
+          }
+
+          .special-dates-section {
+            padding: 14px 12px;
+          }
+
+          /* Fully responsive Occasion item rows */
+          .special-date-row {
+            grid-template-columns: 1fr 44px; /* Stacks the two inputs, leaves tap-friendly delete button on the right */
+            background: #FFFFFF;
+            border: 1px solid #E8DCD3;
+            border-radius: 12px;
+            padding: 8px;
+            gap: 10px;
+          }
+
+          .special-inputs-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+
+          .special-text-input, .special-date-input {
+            width: 100% !important;
+            box-sizing: border-box;
+            border: 1px solid #E8DCD3 !important;
+            border-radius: 8px !important;
+            padding: 8px 10px !important;
+          }
+
+          .delete-date-btn {
+            grid-column: 2;
+            grid-row: 1;
+            height: 74px; /* Matches the combined stacked height of inputs! */
+            width: 44px !important; /* Perfect large finger-tap target! */
+            margin: 0;
+            border-radius: 8px !important;
+          }
+
+          .submit-form-btn {
+            font-size: 16px;
+            padding: 14px !important;
           }
         }
       `}</style>
@@ -835,18 +1067,18 @@ export default function MembershipPage() {
 function FieldGroup({ label, icon, required, hint, children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-      <label style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        fontSize: '11px',
-        fontWeight: 800,
-        color: '#1E110A',
-        marginBottom: '6px',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px'
+      <label style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '6px', 
+        fontSize: '11px', 
+        fontWeight: 800, 
+        color: '#1E110A', 
+        marginBottom: '6px', 
+        textTransform: 'uppercase', 
+        letterSpacing: '0.5px' 
       }}>
-        <span style={{ display: 'flex', alignItems: 'center', color: '#7B4A2E' }}>{icon}</span>
+        {icon && <span style={{ display: 'flex', alignItems: 'center', color: '#7B4A2E' }}>{icon}</span>}
         {label}
         {required && <span style={{ color: '#EF5350', fontSize: '13px', marginLeft: '2px' }}>*</span>}
         {hint && <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: '#7B6E66', fontSize: '10px', marginLeft: '4px' }}>— {hint}</span>}
@@ -865,7 +1097,6 @@ function StyledInput({ focused, ...props }) {
         padding: '12px 14px',
         border: `2px solid ${focused ? '#C9943A' : '#E8DCD3'}`,
         borderRadius: '12px',
-        fontSize: '14px',
         boxSizing: 'border-box',
         background: '#FFFFFF',
         color: '#1E110A',
@@ -874,37 +1105,38 @@ function StyledInput({ focused, ...props }) {
         boxShadow: focused ? '0 0 0 4px rgba(201,148,58,0.12)' : 'none',
         outline: 'none'
       }}
+      className="form-input"
     />
   )
 }
 
 function CuteCheckbox({ checked, onChange, label }) {
   return (
-    <label style={{
-      display: 'flex',
-      gap: '12px',
-      alignItems: 'flex-start',
-      cursor: 'pointer',
-      padding: '12px 14px',
-      background: checked ? 'rgba(201,148,58,0.03)' : '#FFFFFF',
-      borderRadius: '12px',
-      border: `1.5px solid ${checked ? '#C9943A' : '#E8DCD3'}`,
-      transition: 'all 0.2s ease',
-      userSelect: 'none'
+    <label style={{ 
+      display: 'flex', 
+      gap: '12px', 
+      alignItems: 'flex-start', 
+      cursor: 'pointer', 
+      padding: '12px 14px', 
+      background: checked ? 'rgba(201,148,58,0.03)' : '#FFFFFF', 
+      borderRadius: '12px', 
+      border: `1.5px solid ${checked ? '#C9943A' : '#E8DCD3'}`, 
+      transition: 'all 0.2s ease', 
+      userSelect: 'none' 
     }}>
-      <div style={{
-        width: '18px',
-        height: '18px',
-        borderRadius: '5px',
-        border: `2px solid ${checked ? '#C9943A' : '#BDB2AA'}`,
-        background: checked ? '#C9943A' : '#FFFFFF',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s ease',
-        flexShrink: 0,
+      <div style={{ 
+        width: '18px', 
+        height: '18px', 
+        borderRadius: '5px', 
+        border: `2px solid ${checked ? '#C9943A' : '#BDB2AA'}`, 
+        background: checked ? '#C9943A' : '#FFFFFF', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        transition: 'all 0.2s ease', 
+        flexShrink: 0, 
         marginTop: '1.5px',
-        position: 'relative'
+        position: 'relative' 
       }}>
         {checked && (
           <svg width="10" height="8" viewBox="0 0 10 8" fill="none" style={{ position: 'absolute' }}>
@@ -913,12 +1145,12 @@ function CuteCheckbox({ checked, onChange, label }) {
         )}
         <input type="checkbox" checked={checked} onChange={onChange} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
       </div>
-      <span style={{
-        fontSize: '12.5px',
-        color: checked ? '#1E110A' : '#5C524C',
-        fontWeight: checked ? 600 : 400,
-        lineHeight: '1.45',
-        transition: 'all 0.2s ease'
+      <span style={{ 
+        fontSize: '12.5px', 
+        color: checked ? '#1E110A' : '#5C524C', 
+        fontWeight: checked ? 600 : 400, 
+        lineHeight: '1.45', 
+        transition: 'all 0.2s ease' 
       }}>{label}</span>
     </label>
   )
