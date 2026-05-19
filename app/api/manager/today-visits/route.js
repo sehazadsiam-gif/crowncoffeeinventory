@@ -14,11 +14,18 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = String(today.getMonth() + 1).padStart(2, '0')
-    const day = String(today.getDate()).padStart(2, '0')
-    const todayDateOnly = `${year}-${month}-${day}`
+    const url = new URL(request.url)
+    const dateParam = url.searchParams.get('date')
+
+    let targetDate = new Date()
+    if (dateParam) {
+      targetDate = new Date(dateParam)
+    }
+
+    const year = targetDate.getFullYear()
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0')
+    const day = String(targetDate.getDate()).padStart(2, '0')
+    const targetDateOnly = `${year}-${month}-${day}`
 
     const { data, error } = await supabase
       .from('member_visits')
@@ -31,8 +38,8 @@ export async function GET(request) {
           total_visits
         )
       `)
-      .gte('visited_at', todayDateOnly + 'T00:00:00')
-      .lte('visited_at', todayDateOnly + 'T23:59:59')
+      .gte('visited_at', targetDateOnly + 'T00:00:00')
+      .lte('visited_at', targetDateOnly + 'T23:59:59')
       .order('visited_at', { ascending: false })
 
     if (error) {

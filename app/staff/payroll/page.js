@@ -30,6 +30,8 @@ export default function PayrollPage() {
   const [nameSort, setNameSort] = useState('asc') // 'asc' | 'desc'
   const [waivedStaff, setWaivedStaff] = useState({})
   const [showCalculator, setShowCalculator] = useState(false)
+  const [editingSalary, setEditingSalary] = useState(null)
+  const [salaryInput, setSalaryInput] = useState('')
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -200,6 +202,21 @@ export default function PayrollPage() {
       map[p.staff_id].push(p)
     })
     setPayments(map)
+  }
+
+  async function saveSalary(staffId) {
+    const val = Number(salaryInput)
+    if (!val || val <= 0) return addToast('Enter valid salary', 'error')
+    try {
+      const { error } = await supabase.from('staff').update({ base_salary: val }).eq('id', staffId)
+      if (error) throw error
+      setStaff(prev => prev.map(s => s.id === staffId ? { ...s, base_salary: val } : s))
+      setEditingSalary(null)
+      addToast('Salary updated', 'success')
+      await fetchAll(month, year)
+    } catch (err) {
+      addToast('Failed to update salary', 'error')
+    }
   }
 
   function calculateFinalSalary(s, p, isLateWaived) {
@@ -428,8 +445,9 @@ export default function PayrollPage() {
   const totalRemainingAll = grandTotal - totalPaidAll
 
   const inputStyle = {
-    width: '60px', padding: '6px', fontSize: '12px', borderRadius: '6px', border: '1px solid #E2E8F0',
-    outline: 'none', background: '#F8FAFC', color: '#1E293B', textAlign: 'center'
+    width: '60px', padding: '6px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border-medium)',
+    outline: 'none', background: 'var(--bg-surface)', color: 'var(--text-primary)', textAlign: 'center',
+    transition: 'all 0.15s ease'
   }
 
   const colHeaders = [
@@ -450,13 +468,13 @@ export default function PayrollPage() {
   ]
 
   return (
-    <div style={{ background: '#F8FAFC', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }}>
+    <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, color 0.3s ease' }}>
       <Navbar />
       <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px' }}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Payroll Center</h1>
+            <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Payroll Center</h1>
             <p style={{ color: '#64748B', fontSize: '14px', margin: '4px 0 0 0' }}>{months[month - 1]} {year}</p>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -481,14 +499,14 @@ export default function PayrollPage() {
         </div>
 
         <div style={{
-          background: '#fef7e0',
-          border: '1px solid #f0d080',
-          borderLeft: '4px solid #B07830',
+          background: 'var(--warning-bg)',
+          border: '1px solid var(--border-accent)',
+          borderLeft: '4px solid var(--warning)',
           borderRadius: '8px',
           padding: '12px 16px',
           marginBottom: '20px',
           fontSize: '13px',
-          color: '#7A5010',
+          color: 'var(--warning)',
           display: 'flex',
           flexDirection: 'column',
           gap: '6px'
@@ -505,13 +523,13 @@ export default function PayrollPage() {
           </p>
         </div>
 
-        <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto', position: 'relative' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '1400px' }}>
               <thead>
-                <tr style={{ background: '#F5F0E8', borderBottom: '2px solid #E8E0D4' }}>
+                <tr style={{ background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-medium)' }}>
                   {colHeaders.map(h => h === 'Staff' ? (
-                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'left', cursor: 'pointer', userSelect: 'none', position: 'sticky', top: 0, zIndex: 10, background: '#F5F0E8', borderBottom: '2px solid #E8E0D4' }}
+                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'left', cursor: 'pointer', userSelect: 'none', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-medium)' }}
                       onClick={() => setNameSort(nameSort === 'asc' ? 'desc' : 'asc')}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -522,7 +540,7 @@ export default function PayrollPage() {
                       </span>
                     </th>
                   ) : (
-                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 10, background: '#F5F0E8', borderBottom: '2px solid #E8E0D4' }}>{h}</th>
+                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-medium)' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -542,14 +560,32 @@ export default function PayrollPage() {
                   const finalUnpaidDays = Math.max(0, autoUnpaid - waived)
 
                   return (
-                    <tr key={s.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                    <tr key={s.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
                       <td style={{ padding: '12px 8px', textAlign: 'left' }}>
-                        <p style={{ fontWeight: 700, fontSize: '13px', margin: 0 }}>{s.name}</p>
-                        <p style={{ fontSize: '11px', color: '#64748B', margin: '2px 0 0 0' }}>{s.designation}</p>
-                        {Number(row.present_days) > 0 && <p style={{ fontSize: '11px', color: '#10B981', marginTop: '3px', fontWeight: 600 }}>Present: {row.present_days}d</p>}
-                        {Number(row.absent_days) > 0 && <p style={{ fontSize: '11px', color: '#EF4444', marginTop: '3px', fontWeight: 600 }}>Absent: {row.absent_days}d</p>}
+                        <p style={{ fontWeight: 700, fontSize: '13px', margin: 0, color: 'var(--text-primary)' }}>{s.name}</p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>{s.designation}</p>
+                        {Number(row.present_days) > 0 && <p style={{ fontSize: '11px', color: '#34D399', marginTop: '3px', fontWeight: 600 }}>Present: {row.present_days}d</p>}
+                        {Number(row.absent_days) > 0 && <p style={{ fontSize: '11px', color: '#F87171', marginTop: '3px', fontWeight: 600 }}>Absent: {row.absent_days}d</p>}
                       </td>
-                      <td style={{ padding: '12px 8px', fontWeight: 600 }}>৳{base.toLocaleString()}</td>
+                      <td style={{ padding: '10px 8px' }}>
+                        {editingSalary === s.id ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                            <input type="number" autoFocus value={salaryInput} onChange={e => setSalaryInput(e.target.value)}
+                              style={{ width: '80px', padding: '4px 6px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)', color: 'var(--text-primary)', textAlign: 'center', outline: 'none' }}
+                              onKeyDown={e => { if (e.key === 'Enter') saveSalary(s.id); if (e.key === 'Escape') setEditingSalary(null) }}
+                            />
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button onClick={() => saveSalary(s.id)} style={{ fontSize: '10px', padding: '2px 7px', background: '#10B981', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>✓</button>
+                              <button onClick={() => setEditingSalary(null)} style={{ fontSize: '10px', padding: '2px 7px', background: '#374151', color: '#9CA3AF', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>✕</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div onDoubleClick={() => { setEditingSalary(s.id); setSalaryInput(base) }} style={{ cursor: 'pointer' }} title="Double-click to edit salary">
+                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>৳{base.toLocaleString()}</div>
+                            <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>✎ edit</div>
+                          </div>
+                        )}
+                      </td>
                       <td style={{ padding: '12px 8px' }}>
                         <input type="number" style={inputStyle} value={row.overtime_hours} onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)} onBlur={() => handleBlur(s.id)} />
                         {row.overtime_manual && (
@@ -571,12 +607,12 @@ export default function PayrollPage() {
                               setTimeout(() => handleBlur(s.id), 100)
                             }}
                             style={{
-                              fontSize: '10px', color: '#8B5E3C', background: 'none', border: 'none',
+                              color: '#94A3B8', background: 'none', border: 'none',
                               cursor: 'pointer', padding: 0, marginTop: '2px', textDecoration: 'underline'
                             }}
                           >Reset</button>
                         )}
-                        {Number(row.overtime_pay) > 0 && <p style={{ fontSize: '10px', color: '#10B981', margin: '2px 0 0 0', fontWeight: 700 }}>+৳{row.overtime_pay}</p>}
+                        {Number(row.overtime_pay) > 0 && <p style={{ fontSize: '10px', color: '#34D399', margin: '2px 0 0 0', fontWeight: 700 }}>+৳{row.overtime_pay}</p>}
                       </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.service_charge} onChange={e => handleInput(s.id, 'service_charge', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.bonus} onChange={e => handleInput(s.id, 'bonus', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
@@ -589,12 +625,12 @@ export default function PayrollPage() {
                           onBlur={() => handleBlur(s.id)}
                         />
                         {/* Show auto calculated amount */}
-                        <p style={{ fontSize: '10px', color: '#9C8A76', marginTop: '3px' }}>
-                          Auto: ৳{row.lunch_dinner_auto || 0}
-                        </p>
+                        <p style={{ fontSize: '10px', color: '#64748B', marginTop: '3px' }}>
+                           Auto: ৳{row.lunch_dinner_auto || 0}
+                         </p>
                         {/* Show manual override indicator */}
                         {row.lunch_dinner_manual && (
-                          <p style={{ fontSize: '10px', color: '#fa7b17', marginTop: '2px', fontWeight: 600 }}>
+                          <p style={{ fontSize: '10px', color: '#FBBF24', marginTop: '2px', fontWeight: 600 }}>
                             Manual
                           </p>
                         )}
@@ -614,7 +650,7 @@ export default function PayrollPage() {
                               setTimeout(() => handleBlur(s.id), 100)
                             }}
                             style={{
-                              fontSize: '10px', color: '#8B5E3C',
+                              fontSize: '10px', color: '#94A3B8',
                               background: 'none', border: 'none',
                               cursor: 'pointer', padding: 0,
                               marginTop: '2px', textDecoration: 'underline'
@@ -625,30 +661,30 @@ export default function PayrollPage() {
                         )}
                       </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.morning_food} onChange={e => handleInput(s.id, 'morning_food', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#EF4444' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
 
                       {/* Unpaid Leave Column */}
                       <td style={{ padding: '14px 8px' }}>
-                        <div style={{ fontSize: '11px', color: '#64748B' }}>
+                         <div style={{ fontSize: '11px', color: '#94A3B8' }}>
                           <p style={{ margin: 0 }}>Auto: {autoUnpaid}d (-৳{(autoUnpaid * perDay).toLocaleString()})</p>
-
-                          <div style={{ marginTop: '8px', borderTop: '1px dashed #E8E0D4', paddingTop: '8px' }}>
+                          
+                          <div style={{ marginTop: '8px', borderTop: '1px dashed var(--border-medium)', paddingTop: '8px' }}>
                             <label style={{ display: 'block', fontSize: '10px' }}>Waive:</label>
-                            <input type="number" min="0" style={{ width: '50px', padding: '3px', fontSize: '11px', border: '1px solid #e0d8cc', borderRadius: '4px' }}
+                            <input type="number" min="0" style={{ width: '50px', padding: '3px', fontSize: '11px', border: '1px solid var(--border-medium)', borderRadius: '4px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
                               value={row.waived_unpaid_days || ''} placeholder="0"
                               onChange={e => handleInput(s.id, 'waived_unpaid_days', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </div>
-
+ 
                           <div style={{ marginTop: '8px' }}>
                             <label style={{ display: 'block', fontSize: '10px' }}>Override Result:</label>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                              <input type="number" min="0" style={{ width: '50px', padding: '3px', fontSize: '11px', border: '1px solid #e0d8cc', borderRadius: '4px' }}
+                              <input type="number" min="0" style={{ width: '50px', padding: '3px', fontSize: '11px', border: '1px solid var(--border-medium)', borderRadius: '4px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
                                 placeholder="Auto" value={row.manual_unpaid_days ?? ''}
                                 onChange={e => handleInput(s.id, 'manual_unpaid_days', e.target.value === '' ? null : Number(e.target.value))}
                                 onBlur={() => handleBlur(s.id)} />
-                              {row.manual_unpaid_days !== null && <button onClick={() => { handleInput(s.id, 'manual_unpaid_days', null); setTimeout(() => handleBlur(s.id), 100) }} style={{ fontSize: '9px', color: '#d93025', background: 'none', border: 'none', cursor: 'pointer' }}>Reset</button>}
+                              {row.manual_unpaid_days !== null && <button onClick={() => { handleInput(s.id, 'manual_unpaid_days', null); setTimeout(() => handleBlur(s.id), 100) }} style={{ fontSize: '9px', color: '#F87171', background: 'none', border: 'none', cursor: 'pointer' }}>Reset</button>}
                             </div>
                           </div>
                         </div>
@@ -657,8 +693,8 @@ export default function PayrollPage() {
                       <td style={{ padding: '14px 8px' }}>
                         {Number(row.late_days) > 0 ? (
                           <div>
-                            <p style={{ fontSize: '12px', color: '#fa7b17', fontWeight: 700, margin: 0 }}>{row.late_days} late</p>
-                            <p style={{ fontSize: '10px', color: '#d93025', marginTop: '2px', textDecoration: waivedStaff[s.id] ? 'line-through' : 'none' }}>-৳{Number(row.late_deduction).toLocaleString()}</p>
+                            <p style={{ fontSize: '12px', color: '#FBBF24', fontWeight: 700, margin: 0 }}>{row.late_days} late</p>
+                            <p style={{ fontSize: '10px', color: '#F87171', marginTop: '2px', textDecoration: waivedStaff[s.id] ? 'line-through' : 'none' }}>-৳{Number(row.late_deduction).toLocaleString()}</p>
                             <button onClick={async () => {
                                const newWaived = !waivedStaff[s.id]
                                setWaivedStaff(prev => ({ ...prev, [s.id]: newWaived }))
@@ -681,22 +717,22 @@ export default function PayrollPage() {
                                  addToast('Failed to save waiver', 'error')
                                  setWaivedStaff(prev => ({ ...prev, [s.id]: !newWaived }))
                                }
-                             }} style={{ padding: '2px 6px', fontSize: '10px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: waivedStaff[s.id] ? '#e6f4ea' : '#fef7e0', color: waivedStaff[s.id] ? '#1e8e3e' : '#B07830' }}>{waivedStaff[s.id] ? 'Waived' : 'Waive'}</button>
+                             }} style={{ padding: '2px 6px', fontSize: '10px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: waivedStaff[s.id] ? '#0D2B1A' : '#1C1500', color: waivedStaff[s.id] ? '#34D399' : '#D4A017' }}>{waivedStaff[s.id] ? 'Waived' : 'Waive'}</button>
                           </div>
                         ) : '—'}
                       </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.miscellaneous} onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
-                      <td style={{ padding: '12px 8px', fontWeight: 800, color: '#3B82F6', fontSize: '14px' }}>৳{finalSalary.toLocaleString()}</td>
+                      <td style={{ padding: '12px 8px', fontWeight: 800, color: '#34D399', fontSize: '14px' }}>৳{finalSalary.toLocaleString()}</td>
                       <td style={{ padding: '12px 8px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '6px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#10B981' }}>Paid: ৳{paid.toLocaleString()}</span>
-                          {rem > 0 && <span style={{ fontSize: '10px', fontWeight: 600, color: '#EF4444' }}>Due: ৳{rem.toLocaleString()}</span>}
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#34D399' }}>Paid: ৳{paid.toLocaleString()}</span>
+                          {rem > 0 && <span style={{ fontSize: '10px', fontWeight: 600, color: '#F87171' }}>Due: ৳{rem.toLocaleString()}</span>}
                         </div>
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
-                          <button onClick={() => setShowPaymentForm(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#3B82F6', color: 'white', border: 'none', cursor: 'pointer' }}><Plus size={14} /></button>
-                          <button onClick={() => setShowHistory(showHistory === s.id ? null : s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }} title="Payment History"><History size={14} /></button>
-                          <button onClick={() => setPrintData({ staff: s, payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary, is_waived: waivedStaff[s.id] }, month: months[month - 1], year })} style={{ padding: '5px', borderRadius: '4px', background: '#F1F5F9', color: '#64748B', border: 'none', cursor: 'pointer' }}><Printer size={14} /></button>
-                          <button onClick={() => deletePayrollEntry(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#FEF2F2', color: '#EF4444', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                          <button onClick={() => setShowPaymentForm(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#10B981', color: '#fff', border: 'none', cursor: 'pointer' }}><Plus size={14} /></button>
+                          <button onClick={() => setShowHistory(showHistory === s.id ? null : s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#1C2233', color: '#94A3B8', border: 'none', cursor: 'pointer' }} title="Payment History"><History size={14} /></button>
+                          <button onClick={() => setPrintData({ staff: s, payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary, is_waived: waivedStaff[s.id] }, month: months[month - 1], year })} style={{ padding: '5px', borderRadius: '4px', background: '#1C2233', color: '#94A3B8', border: 'none', cursor: 'pointer' }}><Printer size={14} /></button>
+                          <button onClick={() => deletePayrollEntry(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#2D1515', color: '#F87171', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
                         </div>
 
                         {/* Payment History Popover */}
@@ -705,24 +741,24 @@ export default function PayrollPage() {
                             display: showHistory === s.id ? 'block' : 'none',
                             position: 'absolute', 
                             right: '60px', 
-                            background: 'white', 
-                            border: '1px solid #E2E8F0', 
+                            background: '#1C2233', 
+                            border: '1px solid #2D3A52', 
                             padding: '12px', 
                             borderRadius: '10px', 
-                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)', 
+                            boxShadow: '0 10px 25px rgba(0,0,0,0.5)', 
                             zIndex: 101, 
                             width: '240px', 
                             textAlign: 'left' 
                           }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>Payment History</h4>
+                              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#E2E8F0' }}>Payment History</h4>
                               <button onClick={() => setShowHistory(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={14} /></button>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxH: '200px', overflowY: 'auto' }}>
                               {staffPayments.map(p => (
-                                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', padding: '8px', background: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', padding: '8px', background: '#252F45', borderRadius: '6px', border: '1px solid #2D3A52' }}>
                                   <div>
-                                    <div style={{ fontWeight: 700, color: '#0F172A' }}>৳{Number(p.amount).toLocaleString()}</div>
+                                    <div style={{ fontWeight: 700, color: '#E2E8F0' }}>৳{Number(p.amount).toLocaleString()}</div>
                                     <div style={{ color: '#64748B', fontSize: '10px' }}>{new Date(p.payment_date).toLocaleDateString()}</div>
                                     {p.notes && <div style={{ color: '#94A3B8', fontSize: '9px', marginTop: '2px' }}>{p.notes}</div>}
                                   </div>
@@ -734,8 +770,8 @@ export default function PayrollPage() {
                         )}
 
                         {showPaymentForm === s.id && (
-                          <div style={{ position: 'absolute', right: '100px', background: 'white', border: '1px solid #E2E8F0', padding: '12px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 100, width: '200px', textAlign: 'left' }}>
-                            <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 700 }}>Record Payment</h4>
+                          <div style={{ position: 'absolute', right: '100px', background: '#1C2233', border: '1px solid #2D3A52', padding: '12px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 100, width: '200px', textAlign: 'left' }}>
+                            <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Record Payment</h4>
                             <input type="number" className="input" placeholder="Amount" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} style={{ marginBottom: '8px' }} />
                             <input type="date" className="input" value={paymentForm.date} onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })} style={{ marginBottom: '10px' }} />
                             <button onClick={() => savePayment(s.id)} style={{ width: '100%', padding: '8px', background: '#10B981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}>Confirm</button>
@@ -770,7 +806,7 @@ export default function PayrollPage() {
           }}
         />
       )}
-      <style jsx>{`.input { width: 100%; padding: 8px; border: 1px solid #E2E8F0; border-radius: 6px; font-size: 13px; outline: none; }`}</style>
+      <style jsx>{`.input { width: 100%; padding: 8px; border: 1px solid var(--border-medium); border-radius: 6px; font-size: 13px; outline: none; background: var(--bg-surface); color: var(--text-primary); transition: all 0.15s ease; }`}</style>
     </div>
   )
 }

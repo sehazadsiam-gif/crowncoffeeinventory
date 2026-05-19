@@ -22,6 +22,18 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body>
+        <script dangerouslySetInnerHTML={{__html: `
+          (function() {
+            try {
+              var saved = localStorage.getItem('cc_theme_mode');
+              if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.body.classList.add('dark-mode');
+              } else {
+                document.body.classList.remove('dark-mode');
+              }
+            } catch (e) {}
+          })();
+        `}} />
         <EnvCheck />
         <ToastProvider>
           <LoginGate>

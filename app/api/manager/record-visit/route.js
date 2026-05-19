@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { supabase } from '../../../../lib/supabase'
 import { validateSession } from '../../../../lib/auth'
-import { sendFreeCoffeeEmail, sendFeedbackRequest } from '../../../../lib/email'
+import { sendVisitConfirmationEmail, sendFeedbackRequest, sendTierUpgradeEmail } from '../../../../lib/email'
 import { sendFreeCoffeeSMS, sendVisitRecordedSMS, sendTierUpgradeSMS } from '../../../../lib/sms'
 
 export async function POST(request) {
@@ -68,11 +68,11 @@ export async function POST(request) {
 
     const newVisits = (member.total_visits || 0) + 1
     const newPunchCount = (member.punch_count || 0) + 1
-    const freeCoffeeEarned = newPunchCount % 10 === 0
+    const freeCoffeeEarned = newPunchCount % 5 === 0
 
     let newTier = member.tier
     let tierUpgraded = false
-    if (newVisits >= 25 && member.tier === 'silver') {
+    if (newVisits >= 11 && member.tier === 'silver') {
       newTier = 'gold'
       tierUpgraded = true
     }
@@ -88,28 +88,24 @@ export async function POST(request) {
 
     if (updateError) throw updateError
 
-    sendFeedbackRequest({
-      to: member.email,
-      name: member.full_name,
-      card_number: member.card_number,
-      visit_id: visit.id
-    }).catch(err => console.error('Feedback email error:', err))
+    sendFeedbackRequest(member, visit.id)
+      .catch(err => console.error('Feedback email error:', err))
 
     sendVisitRecordedSMS(member.phone, member.full_name, newVisits, newPunchCount)
       .catch(err => console.error('Visit SMS error:', err))
+      
+    const currentPunch = newPunchCount % 5
+    sendVisitConfirmationEmail(member, { current_punch: currentPunch === 0 ? 5 : currentPunch }, tierUpgraded)
+      .catch(err => console.error('Visit email error:', err))
 
     if (freeCoffeeEarned) {
-      sendFreeCoffeeEmail({
-        to: member.email,
-        name: member.full_name,
-        card_number: member.card_number
-      }).catch(err => console.error('Free coffee email error:', err))
-      
       sendFreeCoffeeSMS(member.phone, member.full_name, member.card_number)
         .catch(err => console.error('Free coffee SMS error:', err))
     }
 
     if (tierUpgraded) {
+      sendTierUpgradeEmail(member)
+        .catch(err => console.error('Tier upgrade email error:', err))
       sendTierUpgradeSMS(member.phone, member.full_name)
         .catch(err => console.error('Tier upgrade SMS error:', err))
     }

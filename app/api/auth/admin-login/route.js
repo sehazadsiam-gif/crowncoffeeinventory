@@ -16,6 +16,7 @@ export async function POST(request) {
       .from('admin_accounts')
       .select('*')
       .eq('username', username.toLowerCase().trim())
+      .eq('role', 'admin')
       .single()
 
     if (error || !admin) {

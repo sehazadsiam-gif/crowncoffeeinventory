@@ -10,6 +10,12 @@
   --accent-blue-light: #60A5FA;
   --accent-blue-dim: rgba(37, 99, 235, 0.08);
 
+  --accent-brown: #7C2D12;
+  --accent-brown-light: #9A3412;
+  --accent-brown-dim: rgba(124, 45, 18, 0.08);
+  --accent-gold: #D97706;
+  --accent-gold-dim: rgba(217, 119, 6, 0.08);
+
   --primary: #2563EB;
   --primary-hover: #1D4ED8;
   --primary-light: rgba(37, 99, 235, 0.08);
@@ -46,6 +52,54 @@
   --hr-text-muted: #64748B;
 }
 
+body.dark-mode {
+  --bg-base: #0B0F19;
+  --bg-surface: #151B28;
+  --bg-subtle: #1E2535;
+  --bg-hover: #2D3A52;
+
+  --accent-blue: #3B82F6;
+  --accent-blue-light: #60A5FA;
+  --accent-blue-dim: rgba(59, 130, 246, 0.15);
+
+  --accent-brown: #FF8A58;
+  --accent-brown-light: #FFA07A;
+  --accent-brown-dim: rgba(255, 138, 88, 0.15);
+  --accent-gold: #F59E0B;
+  --accent-gold-dim: rgba(245, 158, 11, 0.15);
+
+  --primary: #3B82F6;
+  --primary-hover: #2563EB;
+  --primary-light: rgba(59, 130, 246, 0.15);
+
+  --text-primary: #F3F4F6;
+  --text-secondary: #E5E7EB;
+  --text-muted: #94A3B8;
+
+  --border-light: #1E2535;
+  --border-medium: #2D3A52;
+  --border-accent: rgba(59, 130, 246, 0.25);
+
+  --success: #34D399;
+  --success-bg: rgba(52, 211, 153, 0.15);
+  --danger: #F87171;
+  --danger-bg: rgba(248, 113, 113, 0.15);
+  --warning: #FBBF24;
+  --warning-bg: rgba(251, 191, 36, 0.15);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.6);
+
+  --hr-bg: #0B0F19;
+  --hr-surface: #151B28;
+  --hr-primary: #3B82F6;
+  --hr-warning: #FBBF24;
+  --hr-text-primary: #F3F4F6;
+  --hr-text-secondary: #E5E7EB;
+  --hr-text-muted: #94A3B8;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -59,6 +113,11 @@ body {
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.card, .card-premium, .input, button, table, thead th, tbody td, nav, div {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
 h1,
@@ -384,6 +443,7 @@ select.input {
   min-height: 100vh;
   font-family: var(--font-sans);
   color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .hr-theme h1,

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { 
   Coffee, Menu as MenuIcon, X, Calculator as CalcIcon, 
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
-  Upload, FileSpreadsheet, UserCheck
+  Upload, FileSpreadsheet, UserCheck, Sun, Moon
 } from 'lucide-react'
 
 export default function Navbar() {
@@ -15,6 +15,39 @@ export default function Navbar() {
   const [activeDropdown, setActiveDropdown] = useState(null)
   const [userRole, setUserRole] = useState(null)
   const [username, setUsername] = useState('')
+  const [theme, setTheme] = useState('light')
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('cc_theme_mode')
+    if (savedTheme) {
+      setTheme(savedTheme)
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode')
+      } else {
+        document.body.classList.remove('dark-mode')
+      }
+    } else {
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      if (systemDark) {
+        setTheme('dark')
+        document.body.classList.add('dark-mode')
+      } else {
+        setTheme('light')
+        document.body.classList.remove('dark-mode')
+      }
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light'
+    setTheme(nextTheme)
+    localStorage.setItem('cc_theme_mode', nextTheme)
+    if (nextTheme === 'dark') {
+      document.body.classList.add('dark-mode')
+    } else {
+      document.body.classList.remove('dark-mode')
+    }
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -85,7 +118,7 @@ export default function Navbar() {
   if (!userRole && !['/', '/admin/login', '/staff/login'].includes(pathname) && !pathname.startsWith('/membership')) return null
 
   return (
-    <nav style={{ background: 'white', borderBottom: '1px solid var(--border-light)', position: 'sticky', top: 0, zIndex: 1000 }}>
+    <nav style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-light)', position: 'sticky', top: 0, zIndex: 1000 }}>
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         
         {/* Brand */}
@@ -134,9 +167,9 @@ export default function Navbar() {
 
                 {hasChildren && isActive && (
                   <div style={{
-                    position: 'absolute', top: '100%', left: 0, width: '220px', background: 'white',
+                    position: 'absolute', top: '100%', left: 0, width: '220px', background: 'var(--bg-surface)',
                     borderRadius: '12px', border: '1px solid var(--border-light)', padding: '8px',
-                    boxShadow: '0 10px 30px rgba(15,23,42,0.12)', marginTop: '2px',
+                    boxShadow: 'var(--shadow-lg)', marginTop: '2px',
                     zIndex: 1001, pointerEvents: 'auto',
                     animation: 'dropdownFadeIn 0.2s ease-out forwards'
                   }}>
@@ -167,6 +200,30 @@ export default function Navbar() {
             )
           })}
 
+          {/* Theme Toggle Button */}
+          <button 
+            onClick={toggleTheme}
+            style={{
+              padding: '8px',
+              borderRadius: '8px',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: '8px',
+              marginRight: '8px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+
           {userRole && (
             <div style={{ marginLeft: '12px', paddingLeft: '12px', borderLeft: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ textAlign: 'right' }}>
@@ -183,15 +240,34 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Menu Toggle */}
-        <button onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ display: 'none', background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }} className="mobile-toggle">
-          {isMenuOpen ? <X size={24} /> : <MenuIcon size={24} />}
-        </button>
+        {/* Mobile Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button 
+            onClick={toggleTheme}
+            className="mobile-theme-toggle"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              padding: '8px',
+              display: 'none',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          >
+            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ display: 'none', background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }} className="mobile-toggle">
+            {isMenuOpen ? <X size={24} /> : <MenuIcon size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div style={{ display: 'none', background: 'white', borderTop: '1px solid var(--border-light)', padding: '16px' }} className="mobile-menu">
+        <div style={{ display: 'none', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-light)', padding: '16px' }} className="mobile-menu">
           {navItems.map((item, idx) => (
             <div key={idx}>
               {item.href ? (
@@ -239,6 +315,7 @@ export default function Navbar() {
         }
         @media (max-width: 1023px) {
           .mobile-toggle { display: block !important; }
+          .mobile-theme-toggle { display: flex !important; }
           .mobile-menu { display: block !important; }
         }
       `}</style>

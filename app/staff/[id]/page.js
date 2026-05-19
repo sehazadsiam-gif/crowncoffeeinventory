@@ -247,10 +247,20 @@ export default function StaffProfile() {
   }
 
   if (loading) return (
-    <div><Navbar /><div style={{ padding: '100px', textAlign: 'center' }}><div className="loader"></div></div></div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease' }}>
+      <Navbar />
+      <div style={{ padding: '100px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <div className="loader"></div>
+      </div>
+    </div>
   )
   if (!staff) return (
-    <div><Navbar /><div style={{ padding: '100px', textAlign: 'center' }}>Staff not found</div></div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease' }}>
+      <Navbar />
+      <div style={{ padding: '100px', textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-muted)' }}>Staff not found</p>
+      </div>
+    </div>
   )
 
   const currentMonthAdvances = advances
@@ -260,7 +270,7 @@ export default function StaffProfile() {
   const maxPayroll = Math.max(...payroll.map(p => p.final_salary), 1)
 
   return (
-    <div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, color 0.3s ease' }}>
       <Navbar />
       <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '32px 24px 60px' }}>
 
@@ -275,11 +285,11 @@ export default function StaffProfile() {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              <h1 style={{ fontSize: '32px', margin: 0, fontFamily: 'var(--font-display)' }}>{staff.name}</h1>
+              <h1 style={{ fontSize: '32px', margin: 0, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>{staff.name}</h1>
               <span style={{
                 fontSize: '12px', padding: '4px 10px', borderRadius: '20px',
-                background: staff.is_active ? '#e6f4ea' : '#fce8e6',
-                color: staff.is_active ? '#1e8e3e' : '#d93025',
+                background: staff.is_active ? 'var(--success-bg)' : 'var(--danger-bg)',
+                color: staff.is_active ? 'var(--success)' : 'var(--danger)',
                 fontWeight: 600
               }}>
                 {staff.is_active ? 'Active' : 'Inactive'}
@@ -378,9 +388,9 @@ export default function StaffProfile() {
               </h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {attendance.map(a => {
-                  let color = '#1e8e3e'
-                  if (a.status === 'absent') color = '#d93025'
-                  else if (a.status === 'half_day') color = '#fbbc04'
+                  let color = 'var(--success)'
+                  if (a.status === 'absent') color = 'var(--danger)'
+                  else if (a.status === 'half_day') color = 'var(--warning)'
                   else if (a.status === 'late') color = '#fa7b17'
                   return (
                     <div
@@ -396,9 +406,9 @@ export default function StaffProfile() {
               </div>
               <div style={{ marginTop: '16px', display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                 {[
-                  { color: '#1e8e3e', label: 'Present' },
-                  { color: '#d93025', label: 'Absent' },
-                  { color: '#fbbc04', label: 'Half Day' },
+                  { color: 'var(--success)', label: 'Present' },
+                  { color: 'var(--danger)', label: 'Absent' },
+                  { color: 'var(--warning)', label: 'Half Day' },
                   { color: '#fa7b17', label: 'Late' },
                 ].map(item => (
                   <span key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -448,9 +458,9 @@ export default function StaffProfile() {
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                 <Wallet size={18} color="#d93025" /> Advance History
               </h3>
-              <div style={{ padding: '12px', background: '#fce8e6', borderRadius: '8px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', color: '#d93025', fontWeight: 600 }}>This Month Total</span>
-                <span style={{ fontSize: '16px', color: '#d93025', fontWeight: 700 }}>৳{currentMonthAdvances.toLocaleString()}</span>
+              <div style={{ padding: '12px', background: 'var(--danger-bg)', borderRadius: '8px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: 'var(--danger)', fontWeight: 600 }}>This Month Total</span>
+                <span style={{ fontSize: '16px', color: 'var(--danger)', fontWeight: 700 }}>৳{currentMonthAdvances.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {advances.map(a => (
@@ -494,9 +504,9 @@ export default function StaffProfile() {
                 {notes.map(n => {
                   let noteBg = 'var(--bg-subtle)'
                   let noteBorder = 'var(--border-medium)'
-                  if (n.note_type === 'warning') { noteBg = '#fce8e6'; noteBorder = '#d93025' }
-                  else if (n.note_type === 'commendation') { noteBg = '#e6f4ea'; noteBorder = '#1e8e3e' }
-                  else if (n.note_type === 'performance') { noteBg = '#fef7e0'; noteBorder = '#fbbc04' }
+                  if (n.note_type === 'warning') { noteBg = 'var(--danger-bg)'; noteBorder = 'var(--danger)' }
+                  else if (n.note_type === 'commendation') { noteBg = 'var(--success-bg)'; noteBorder = 'var(--success)' }
+                  else if (n.note_type === 'performance') { noteBg = 'var(--warning-bg)'; noteBorder = 'var(--warning)' }
                   return (
                     <div key={n.id} style={{
                       padding: '12px',
