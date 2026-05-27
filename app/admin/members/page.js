@@ -15,6 +15,12 @@ export default function MembersPage() {
   const [deactivateConfirm, setDeactivateConfirm] = useState(null)
 
   useEffect(() => {
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
+    if (!token || role !== 'admin') {
+      router.replace('/admin/login')
+      return
+    }
     fetchMembers()
   }, [])
 
@@ -28,6 +34,17 @@ export default function MembersPage() {
       const res = await fetch('/api/members/list', {
         headers: { Authorization: `Bearer ${token}` }
       })
+      
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem('cc_token')
+          localStorage.removeItem('cc_role')
+          router.replace('/admin/login')
+          return
+        }
+        throw new Error('Failed to fetch members')
+      }
+
       const data = await res.json()
       
       const today = new Date()
