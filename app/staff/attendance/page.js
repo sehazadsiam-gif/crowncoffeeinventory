@@ -20,6 +20,8 @@ export default function AttendancePage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [editingRow, setEditingRow] = useState(null)
+  const [leaveRequests, setLeaveRequests] = useState([])
+  const [adminNotes, setAdminNotes] = useState({})
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -30,10 +32,95 @@ export default function AttendancePage() {
     }
     if (activeTab === 'daily') {
       fetchStaffAndAttendance()
-    } else {
+    } else if (activeTab === 'monthly') {
       fetchMonthlySummary()
+    } else if (activeTab === 'leave_requests') {
+      fetchLeaveRequests()
     }
   }, [date, activeTab, selectedMonth, selectedYear])
+
+  async function fetchLeaveRequests() {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('leave_requests')
+        .select('*, staff(name, designation)')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      setLeaveRequests(data || [])
+    } catch (err) {
+      addToast('Error loading leave requests', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleLeaveAction(requestId, action, staffId, leaveType, startDate, endDate) {
+    try {
+      const note = adminNotes[requestId] || ''
+      setSaving(true)
+
+      const { error: requestError } = await supabase
+        .from('leave_requests')
+        .update({ status: action, admin_note: note })
+        .eq('id', requestId)
+      if (requestError) throw requestError
+
+      if (action === 'approved') {
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        const records = []
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          records.push({
+            staff_id: staffId,
+            date: d.toISOString().split('T')[0],
+            status: 'absent',
+            leave_type: leaveType,
+            note: `Approved ${leaveType} leave`
+          })
+        }
+
+        if (records.length > 0) {
+          const { error: attError } = await supabase
+            .from('attendance')
+            .upsert(records, { onConflict: 'staff_id,date' })
+          if (attError) throw attError
+        }
+
+        const currentYear = new Date(startDate).getFullYear()
+        const col = `${leaveType}_used`
+        const { data: balanceData } = await supabase
+          .from('leave_balance')
+          .select('*')
+          .eq('staff_id', staffId)
+          .eq('year', currentYear)
+          .single()
+
+        if (balanceData) {
+          const newUsed = Number(balanceData[col] || 0) + records.length
+          await supabase
+            .from('leave_balance')
+            .update({ [col]: newUsed })
+            .eq('id', balanceData.id)
+        } else {
+          await supabase
+            .from('leave_balance')
+            .insert([{
+              staff_id: staffId,
+              year: currentYear,
+              [`${leaveType}_used`]: records.length
+            }])
+        }
+      }
+
+      addToast(`Leave request ${action}`, 'success')
+      fetchLeaveRequests()
+    } catch (err) {
+      addToast(`Action failed: ${err.message}`, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function fetchMonthlySummary() {
     try {
@@ -185,6 +272,17 @@ export default function AttendancePage() {
               >
                 Monthly Summary
               </button>
+              <button 
+                onClick={() => setActiveTab('leave_requests')}
+                style={{ 
+                  padding: '8px 4px', fontSize: '15px', fontWeight: activeTab === 'leave_requests' ? 700 : 500,
+                  color: activeTab === 'leave_requests' ? 'var(--accent-blue)' : 'var(--text-muted)',
+                  border: 'none', borderBottom: activeTab === 'leave_requests' ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                  background: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              >
+                Leave Requests
+              </button>
             </div>
           </div>
 
@@ -204,14 +302,14 @@ export default function AttendancePage() {
                   <Save size={16} /> {saving ? 'Saving...' : 'Save Attendance'}
                 </button>
               </div>
-            ) : (
+            ) : activeTab === 'monthly' ? (
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                 <select className="input" style={{ width: '140px' }} value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))}>
                   {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
                 </select>
                 <input type="number" className="input" style={{ width: '90px' }} value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} />
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -307,7 +405,7 @@ export default function AttendancePage() {
               </div>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'monthly' ? (
           /* Monthly Summary View */
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             {loading ? (
@@ -374,6 +472,80 @@ export default function AttendancePage() {
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Leave Requests View */
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            {loading ? (
+              <div style={{ padding: '60px', textAlign: 'center' }}><div className="loader"></div></div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-medium)' }}>
+                      <th style={{ padding: '12px 16px' }}>Staff</th>
+                      <th style={{ padding: '12px 16px' }}>Leave Type</th>
+                      <th style={{ padding: '12px 16px' }}>Dates</th>
+                      <th style={{ padding: '12px 16px' }}>Reason</th>
+                      <th style={{ padding: '12px 16px' }}>Status</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaveRequests.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>No leave requests found.</td>
+                      </tr>
+                    ) : leaveRequests.map(r => {
+                      const statusColors = { pending: '#fa7b17', approved: '#1e8e3e', rejected: '#d93025' }
+                      return (
+                        <tr key={r.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                          <td style={{ padding: '12px 16px' }}>
+                            <p style={{ fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{r.staff?.name}</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>{r.staff?.designation}</p>
+                          </td>
+                          <td style={{ padding: '12px 16px', textTransform: 'capitalize' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px', background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
+                              {r.leave_type}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-primary)' }}>
+                            {new Date(r.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(r.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-muted)', maxWidth: '250px', wordBreak: 'break-word' }}>
+                            {r.reason}
+                          </td>
+                          <td style={{ padding: '12px 16px', fontWeight: 700, textTransform: 'capitalize', color: statusColors[r.status] || 'var(--text-muted)' }}>
+                            {r.status}
+                            {r.admin_note && <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400, margin: '2px 0 0 0' }}>Note: {r.admin_note}</p>}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                            {r.status === 'pending' ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                                <input
+                                  type="text"
+                                  className="input"
+                                  style={{ width: '160px', padding: '6px', fontSize: '12px' }}
+                                  placeholder="Admin note..."
+                                  value={adminNotes[r.id] || ''}
+                                  onChange={e => setAdminNotes({ ...adminNotes, [r.id]: e.target.value })}
+                                />
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <button className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px', background: '#fce8e6', color: '#d93025', border: '1px solid #f0c0c0' }} onClick={() => handleLeaveAction(r.id, 'rejected', r.staff_id, r.leave_type, r.start_date, r.end_date)} disabled={saving}>Reject</button>
+                                  <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px', background: '#1e8e3e', color: 'white', border: 'none' }} onClick={() => handleLeaveAction(r.id, 'approved', r.staff_id, r.leave_type, r.start_date, r.end_date)} disabled={saving}>Approve</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Processed</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

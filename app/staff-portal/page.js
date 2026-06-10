@@ -2,7 +2,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { Coffee, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Coffee, LogOut, ChevronLeft, ChevronRight, Printer } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
+
 
 export default function StaffPortalPage() {
   const router = useRouter()
@@ -19,6 +23,10 @@ export default function StaffPortalPage() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
   const [summary, setSummary] = useState(null)
+  const [leaveRequests, setLeaveRequests] = useState([])
+  const [newLeave, setNewLeave] = useState({ start_date: '', end_date: '', leave_type: 'sick', reason: '' })
+  const [submittingLeave, setSubmittingLeave] = useState(false)
+  const [printData, setPrintData] = useState(null)
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -35,7 +43,7 @@ export default function StaffPortalPage() {
     try {
       setLoading(true)
       const currentYear = new Date().getFullYear()
-      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes] = await Promise.all([
+      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes] = await Promise.all([
         supabase.from('staff').select('*').eq('id', staffId).single(),
         supabase.from('payroll_entries').select('*').eq('staff_id', staffId).order('year', { ascending: false }).order('month', { ascending: false }).limit(24),
         supabase.from('salary_payments').select('*').eq('staff_id', staffId).order('payment_date', { ascending: false }),
@@ -43,7 +51,8 @@ export default function StaffPortalPage() {
         supabase.from('advance_log').select('*').eq('staff_id', staffId).order('date', { ascending: false }),
         supabase.from('staff_notes').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
         supabase.from('leave_balance').select('*').eq('staff_id', staffId).eq('year', currentYear).single(),
-        supabase.from('monthly_attendance_summary').select('*').eq('staff_id', staffId)
+        supabase.from('monthly_attendance_summary').select('*').eq('staff_id', staffId),
+        supabase.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
       ])
       setStaff(staffRes.data)
       setPayroll(payRes.data || [])
@@ -53,6 +62,7 @@ export default function StaffPortalPage() {
       setNotes(notesRes.data || [])
       setLeave(leaveRes.data)
       setSummary(summaryRes.data || [])
+      setLeaveRequests(leaveReqRes.data || [])
     } catch (err) {
       console.error('Error fetching staff data:', err)
     } finally {
@@ -66,6 +76,35 @@ export default function StaffPortalPage() {
     localStorage.removeItem('cc_staff_id')
     localStorage.removeItem('cc_staff_name')
     router.replace('/')
+  }
+
+  async function handleRequestLeave(e) {
+    e.preventDefault()
+    if (!newLeave.start_date || !newLeave.end_date) {
+      alert('Please select start and end dates.')
+      return
+    }
+    try {
+      setSubmittingLeave(true)
+      const { error } = await supabase.from('leave_requests').insert([{
+        staff_id: staff.id,
+        start_date: newLeave.start_date,
+        end_date: newLeave.end_date,
+        leave_type: newLeave.leave_type,
+        reason: newLeave.reason,
+        status: 'pending'
+      }])
+      if (error) throw error
+      alert('Leave request submitted successfully!')
+      setNewLeave({ start_date: '', end_date: '', leave_type: 'sick', reason: '' })
+      const { data } = await supabase.from('leave_requests').select('*').eq('staff_id', staff.id).order('created_at', { ascending: false })
+      setLeaveRequests(data || [])
+    } catch (err) {
+      console.error(err)
+      alert('Failed to submit leave request: ' + err.message)
+    } finally {
+      setSubmittingLeave(false)
+    }
   }
 
   function prevMonth() {
@@ -144,7 +183,7 @@ export default function StaffPortalPage() {
 
   const remaining = finalSalary - totalPaidThisMonth
   const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
-  const tabs = ['overview', 'salary', 'attendance', 'advances', 'remarks']
+  const tabs = ['overview', 'salary', 'attendance', 'advances', 'remarks', 'leave_requests']
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF7F2' }}>
@@ -287,9 +326,27 @@ export default function StaffPortalPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {monthPayroll ? (
               <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>
-                  Salary Breakdown — {monthNames[selectedMonth - 1]} {selectedYear}
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: 0 }}>
+                    Salary Breakdown — {monthNames[selectedMonth - 1]} {selectedYear}
+                  </h3>
+                  <button
+                    onClick={() => setPrintData({
+                      staff,
+                      payroll: { ...monthPayroll, final_salary: finalSalary, is_paid: totalPaidThisMonth >= finalSalary, is_waived: isCurrentMonth ? false : monthPayroll?.late_waived },
+                      month: monthNames[selectedMonth - 1],
+                      year: selectedYear
+                    })}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '6px 12px', borderRadius: '6px',
+                      background: '#1C2233', color: '#94A3B8',
+                      border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600
+                    }}
+                  >
+                    <Printer size={14} /> Print Pay Slip
+                  </button>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '8px' }}>
                   {[
                     { label: 'Base Salary', value: base, neutral: true },
@@ -558,7 +615,79 @@ export default function StaffPortalPage() {
           </div>
         )}
 
+        {/* Leave Requests Tab */}
+        {activeTab === 'leave_requests' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* New Request Form */}
+            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>Request Leave</h3>
+              <form onSubmit={handleRequestLeave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 600 }}>Start Date</label>
+                    <input type="date" required value={newLeave.start_date} onChange={e => setNewLeave({...newLeave, start_date: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #E8E0D4', background: '#FAF7F2' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 600 }}>End Date</label>
+                    <input type="date" required value={newLeave.end_date} onChange={e => setNewLeave({...newLeave, end_date: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #E8E0D4', background: '#FAF7F2' }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 600 }}>Leave Type</label>
+                  <select value={newLeave.leave_type} onChange={e => setNewLeave({...newLeave, leave_type: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #E8E0D4', background: '#FAF7F2' }}>
+                    <option value="sick">Sick Leave</option>
+                    <option value="casual">Casual Leave</option>
+                    <option value="annual">Annual Leave</option>
+                    <option value="unpaid">Unpaid Leave</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 600 }}>Reason / Note</label>
+                  <textarea placeholder="Reason for leave..." value={newLeave.reason} onChange={e => setNewLeave({...newLeave, reason: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #E8E0D4', background: '#FAF7F2', minHeight: '80px', fontFamily: 'inherit' }} />
+                </div>
+                <button type="submit" disabled={submittingLeave} style={{ padding: '10px', background: '#8B5E3C', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }}>
+                  {submittingLeave ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </form>
+            </div>
+
+            {/* Request History */}
+            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>Leave Request History</h3>
+              {leaveRequests.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#9C8A76', fontSize: '13px', margin: 0 }}>No leave requests submitted yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {leaveRequests.map(r => {
+                    const statusColors = { pending: '#fa7b17', approved: '#1e8e3e', rejected: '#d93025' }
+                    return (
+                      <div key={r.id} style={{ border: '1px solid #E8E0D4', borderRadius: '8px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: '#1C1410' }}>
+                              {new Date(r.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(r.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                            <span style={{ fontSize: '10px', textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', background: '#F5F0E8', color: '#8B5E3C', fontWeight: 700 }}>
+                              {r.leave_type}
+                            </span>
+                          </div>
+                          {r.reason && <p style={{ fontSize: '12px', color: '#9C8A76', margin: '6px 0 0 0' }}>{r.reason}</p>}
+                          {r.admin_note && <p style={{ fontSize: '12px', color: '#d93025', margin: '4px 0 0 0', fontWeight: 600 }}>Admin note: {r.admin_note}</p>}
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'capitalize', color: statusColors[r.status] || '#9C8A76' }}>
+                          {r.status}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
       </main>
+      {printData && <PaySlip data={printData} onClose={() => setPrintData(null)} />}
     </div>
   )
 }
