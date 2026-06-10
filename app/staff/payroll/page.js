@@ -122,7 +122,7 @@ export default function PayrollPage() {
         const lateDays = summary ? Number(summary.late_days || 0) : (lateMap[s.id] || 0)
         const presentCount = summary ? Number(summary.present_days || 0) : (presentMap[s.id] || 0)
         const absentCount = summary ? Number(summary.absent_days || 0) : (unpaidMap[s.id] || 0)
-        const totalPresentForFood = presentCount + lateDays
+        const totalPresentForFood = presentCount
 
         const perDay = Math.round(Number(s.base_salary) / 30)
         const lateDeductionDays = Math.floor(lateDays / 3)
