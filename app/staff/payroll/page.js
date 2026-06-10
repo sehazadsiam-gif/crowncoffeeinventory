@@ -119,9 +119,10 @@ export default function PayrollPage() {
       for (const s of activeStaff) {
         const summary = summaryMap[s.id]
 
-        const lateDays = summary ? summary.late_days : (lateMap[s.id] || 0)
-        const presentCount = summary ? summary.present_days : (presentMap[s.id] || 0)
-        const absentCount = summary ? summary.absent_days : (unpaidMap[s.id] || 0)
+        const lateDays = summary ? Number(summary.late_days || 0) : (lateMap[s.id] || 0)
+        const presentCount = summary ? Number(summary.present_days || 0) : (presentMap[s.id] || 0)
+        const absentCount = summary ? Number(summary.absent_days || 0) : (unpaidMap[s.id] || 0)
+        const totalPresentForFood = presentCount + lateDays
 
         const perDay = Math.round(Number(s.base_salary) / 30)
         const lateDeductionDays = Math.floor(lateDays / 3)
@@ -136,7 +137,9 @@ export default function PayrollPage() {
             overtime_auto_pay: otMap[s.id]?.pay || 0,
             overtime_manual: false,
             service_charge: 0, bonus: 0,
-            lunch_dinner: 0, morning_food: 0,
+            lunch_dinner: totalPresentForFood * 140, morning_food: 0,
+            lunch_dinner_auto: totalPresentForFood * 140,
+            lunch_dinner_manual: false,
             advance_taken: advancesMap[s.id] || 0,
             others_taken: 0, miscellaneous: 0,
             is_paid: false,
@@ -167,10 +170,10 @@ export default function PayrollPage() {
 
         // Auto calculate lunch dinner if not manually set
         if (!payMap[s.id].lunch_dinner_manual) {
-          payMap[s.id].lunch_dinner = presentCount * 140
-          payMap[s.id].lunch_dinner_auto = presentCount * 140
+          payMap[s.id].lunch_dinner = totalPresentForFood * 140
+          payMap[s.id].lunch_dinner_auto = totalPresentForFood * 140
         } else {
-          payMap[s.id].lunch_dinner_auto = presentCount * 140
+          payMap[s.id].lunch_dinner_auto = totalPresentForFood * 140
         }
       }
 
@@ -565,6 +568,7 @@ export default function PayrollPage() {
                         <p style={{ fontWeight: 700, fontSize: '13px', margin: 0, color: 'var(--text-primary)' }}>{s.name}</p>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>{s.designation}</p>
                         {Number(row.present_days) > 0 && <p style={{ fontSize: '11px', color: '#34D399', marginTop: '3px', fontWeight: 600 }}>Present: {row.present_days}d</p>}
+                        {Number(row.late_days) > 0 && <p style={{ fontSize: '11px', color: '#FBBF24', marginTop: '3px', fontWeight: 600 }}>Late: {row.late_days}d</p>}
                         {Number(row.absent_days) > 0 && <p style={{ fontSize: '11px', color: '#F87171', marginTop: '3px', fontWeight: 600 }}>Absent: {row.absent_days}d</p>}
                       </td>
                       <td style={{ padding: '10px 8px' }}>
@@ -624,17 +628,14 @@ export default function PayrollPage() {
                           onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)}
                           onBlur={() => handleBlur(s.id)}
                         />
-                        {/* Show auto calculated amount */}
                         <p style={{ fontSize: '10px', color: '#64748B', marginTop: '3px' }}>
                            Auto: ৳{row.lunch_dinner_auto || 0}
                          </p>
-                        {/* Show manual override indicator */}
                         {row.lunch_dinner_manual && (
                           <p style={{ fontSize: '10px', color: '#FBBF24', marginTop: '2px', fontWeight: 600 }}>
                             Manual
                           </p>
                         )}
-                        {/* Reset to auto button */}
                         {row.lunch_dinner_manual && (
                           <button
                             onClick={() => {
@@ -664,7 +665,6 @@ export default function PayrollPage() {
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
 
-                      {/* Unpaid Leave Column */}
                       <td style={{ padding: '14px 8px' }}>
                          <div style={{ fontSize: '11px', color: '#94A3B8' }}>
                           <p style={{ margin: 0 }}>Auto: {autoUnpaid}d (-৳{(autoUnpaid * perDay).toLocaleString()})</p>
@@ -735,7 +735,6 @@ export default function PayrollPage() {
                           <button onClick={() => deletePayrollEntry(s.id)} style={{ padding: '5px', borderRadius: '4px', background: '#2D1515', color: '#F87171', border: 'none', cursor: 'pointer' }}><Trash2 size={14} /></button>
                         </div>
 
-                        {/* Payment History Popover */}
                         {staffPayments.length > 0 && (
                           <div style={{ 
                             display: showHistory === s.id ? 'block' : 'none',
@@ -799,6 +798,11 @@ export default function PayrollPage() {
           onApply={(staffId, sandboxValues) => {
             setPayroll(prev => {
               const updated = { ...prev[staffId], ...sandboxValues }
+              if (Number(updated.lunch_dinner) !== Number(updated.lunch_dinner_auto)) {
+                updated.lunch_dinner_manual = true;
+              } else {
+                updated.lunch_dinner_manual = false;
+              }
               return { ...prev, [staffId]: updated }
             })
             setTimeout(() => handleBlur(staffId), 150)
