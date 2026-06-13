@@ -4,7 +4,7 @@ import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
 import { useParams, useRouter } from 'next/navigation'
-import { User, Wallet, CalendarDays, Receipt, Clock, MessageSquare, Plus, Download } from 'lucide-react'
+import { User, Wallet, CalendarDays, Receipt, Clock, MessageSquare, Plus, Download, Lock } from 'lucide-react'
 
 export default function StaffProfile() {
   const router = useRouter()
@@ -18,6 +18,9 @@ export default function StaffProfile() {
   const [attendance, setAttendance] = useState([])
   const [loading, setLoading] = useState(true)
   const [newNote, setNewNote] = useState({ text: '', type: 'general' })
+  const [account, setAccount] = useState(null)
+  const [credForm, setCredForm] = useState({ username: '', password: '' })
+  const [savingCreds, setSavingCreds] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -34,13 +37,14 @@ export default function StaffProfile() {
       setLoading(true)
       const currentYear = new Date().getFullYear()
 
-      const [staffRes, leaveRes, advRes, notesRes, payRes, attRes] = await Promise.all([
+      const [staffRes, leaveRes, advRes, notesRes, payRes, attRes, accountRes] = await Promise.all([
         supabase.from('staff').select('*').eq('id', id).single(),
         supabase.from('leave_balance').select('*').eq('staff_id', id).eq('year', currentYear).single(),
         supabase.from('advance_log').select('*').eq('staff_id', id).order('created_at', { ascending: false }).limit(10),
         supabase.from('staff_notes').select('*').eq('staff_id', id).order('created_at', { ascending: false }),
         supabase.from('payroll_entries').select('*').eq('staff_id', id).order('year', { ascending: false }).order('month', { ascending: false }).limit(6),
-        supabase.from('attendance').select('*').eq('staff_id', id).order('date', { ascending: false }).limit(30)
+        supabase.from('attendance').select('*').eq('staff_id', id).order('date', { ascending: false }).limit(30),
+        supabase.from('staff_accounts').select('username').eq('staff_id', id).maybeSingle()
       ])
 
       if (staffRes.error) throw staffRes.error
@@ -50,6 +54,10 @@ export default function StaffProfile() {
       setNotes(notesRes.data || [])
       setPayroll(payRes.data?.reverse() || [])
       setAttendance(attRes.data || [])
+      setAccount(accountRes.data)
+      if (accountRes.data?.username) {
+        setCredForm(f => ({ ...f, username: accountRes.data.username }))
+      }
     } catch (err) {
       addToast('Error loading profile data', 'error')
     } finally {
@@ -100,6 +108,39 @@ export default function StaffProfile() {
       addToast('Note added', 'success')
     } catch (err) {
       addToast('Error adding note', 'error')
+    }
+  }
+
+  async function handleSaveCredentials() {
+    if (!credForm.username || !credForm.password) {
+      addToast('Username and password are required', 'error')
+      return
+    }
+    if (credForm.password.length < 6) {
+      addToast('Password must be at least 6 characters', 'error')
+      return
+    }
+    try {
+      setSavingCreds(true)
+      const res = await fetch('/api/staff/set-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          staff_id: id,
+          username: credForm.username,
+          password: credForm.password
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save credentials')
+      
+      addToast('Portal credentials saved successfully', 'success')
+      setCredForm(f => ({ ...f, password: '' }))
+      fetchProfileData()
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally {
+      setSavingCreds(false)
     }
   }
 
@@ -524,6 +565,58 @@ export default function StaffProfile() {
                 {notes.length === 0 && (
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No notes added yet.</p>
                 )}
+              </div>
+            </div>
+
+            <div className="card">
+              <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <Lock size={18} color="var(--accent-blue)" /> Staff Portal Access
+              </h3>
+              
+              <div style={{ marginBottom: '16px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                {account?.username ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--success)', fontWeight: 500, marginBottom: '12px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)' }} />
+                    Portal access is ACTIVE
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--border-medium)' }} />
+                    No portal access configured yet
+                  </div>
+                )}
+                Set or update the credentials this staff member will use to log into the Staff Portal.
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label className="label" style={{ color: 'var(--text-secondary)' }}>Username</label>
+                  <input
+                    className="input"
+                    placeholder="e.g. mehedi"
+                    value={credForm.username}
+                    onChange={e => setCredForm({ ...credForm, username: e.target.value })}
+                    autoCapitalize="none"
+                  />
+                </div>
+                <div>
+                  <label className="label" style={{ color: 'var(--text-secondary)' }}>New Password</label>
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder={account?.username ? "Enter to change password..." : "Create password (min 6 chars)"}
+                    value={credForm.password}
+                    onChange={e => setCredForm({ ...credForm, password: e.target.value })}
+                  />
+                </div>
+                <button 
+                  className="btn-primary" 
+                  onClick={handleSaveCredentials}
+                  disabled={savingCreds}
+                  style={{ marginTop: '8px' }}
+                >
+                  {savingCreds ? 'Saving...' : 'Save Credentials'}
+                </button>
               </div>
             </div>
 
