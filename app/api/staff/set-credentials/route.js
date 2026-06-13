@@ -57,7 +57,12 @@ export async function POST(request) {
       // Insert new
       const { error } = await supabase
         .from('staff_accounts')
-        .insert([{ staff_id, username: cleanUsername, password_hash }])
+        .insert([{ 
+          staff_id, 
+          username: cleanUsername, 
+          password_hash,
+          mobile_number: 'user_' + cleanUsername // Required field fallback
+        }])
       resultError = error;
     }
 
