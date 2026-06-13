@@ -153,7 +153,8 @@ export default function StaffPortalPage() {
 
   const lateDeductionDays = Math.floor(lateDays / 3)
   const perDay = Math.round(Number(staff?.base_salary || 0) / 30)
-  const lateDeduction = lateDeductionDays * perDay
+  const isLateWaived = monthPayroll?.late_waived || false
+  const lateDeduction = isLateWaived ? 0 : lateDeductionDays * perDay
 
   // Final salary calculation
   const base = Number(staff?.base_salary || 0)
@@ -268,8 +269,15 @@ export default function StaffPortalPage() {
             <p style={{ fontSize: '10px', color: '#9C8A76', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600, marginBottom: '6px' }}>Late</p>
             <p style={{ fontSize: '18px', fontWeight: 700, color: '#fa7b17', margin: 0 }}>{lateDays} days</p>
             {lateDeductionDays > 0 && (
-              <p style={{ fontSize: '11px', color: '#d93025', marginTop: '4px', fontWeight: 600 }}>
-                = {lateDeductionDays} unpaid day{lateDeductionDays > 1 ? 's' : ''} (-৳{lateDeduction.toLocaleString()})
+              <p style={{ fontSize: '11px', color: isLateWaived ? '#1e8e3e' : '#d93025', marginTop: '4px', fontWeight: 600 }}>
+                {isLateWaived ? (
+                  <span style={{ textDecoration: 'line-through', opacity: 0.7 }}>
+                    {lateDeductionDays} unpaid day{lateDeductionDays > 1 ? 's' : ''} (-৳{(lateDeductionDays * perDay).toLocaleString()})
+                  </span>
+                ) : (
+                  `= ${lateDeductionDays} unpaid day${lateDeductionDays > 1 ? 's' : ''} (-৳${lateDeduction.toLocaleString()})`
+                )}
+                {isLateWaived && <span style={{ marginLeft: '4px' }}>Waived</span>}
               </p>
             )}
           </div>
@@ -441,7 +449,7 @@ export default function StaffPortalPage() {
               const pAdv = Number(p.advance_taken || 0)
               const pOthers = Number(p.others_taken || 0)
               const pUnpaid = Number(p.unpaid_leave_deduction || 0)
-              const pLateDeduct = p.month === selectedMonth && p.year === selectedYear ? lateDeduction : 0
+              const pLateDeduct = p.late_waived ? 0 : (Number(p.late_deduction) || 0)
               const pFinal = Math.round(
                 pBase + pOt + Number(p.service_charge || 0) + Number(p.bonus || 0) +
                 Number(p.lunch_dinner || 0) + Number(p.morning_food || 0) + pMisc
