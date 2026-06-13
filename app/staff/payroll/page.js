@@ -281,6 +281,19 @@ export default function PayrollPage() {
     const s = staff.find(st => st.id === staffId)
     if (!s || !row) return
     const finalSalary = calculateFinalSalary(s, row, waivedStaff[staffId])
+    
+    const base = Number(s.base_salary) || 0
+    const perDay = Math.round(base / 30)
+    const absentDays = Number(row.absent_days) || 0
+    const autoUnpaidDays = Math.max(0, absentDays - 4)
+    const waivedDays = Number(row.waived_unpaid_days) || 0
+    const finalUnpaidDays = Math.max(0, autoUnpaidDays - waivedDays)
+    const unpaidDeduction = finalUnpaidDays * perDay
+    const manualUnpaid = row.manual_unpaid_days !== undefined && row.manual_unpaid_days !== null
+      ? Number(row.manual_unpaid_days) * perDay
+      : unpaidDeduction
+    const late = waivedStaff[staffId] ? 0 : (Number(row.late_deduction) || 0)
+
     try {
       const { error } = await supabase.from('payroll_entries').upsert({
         staff_id: row.staff_id,
@@ -303,6 +316,8 @@ export default function PayrollPage() {
         absent_days: Number(row.absent_days) || 0,
         late_waived: waivedStaff[staffId] || false,
         lunch_dinner_manual: row.lunch_dinner_manual || false,
+        unpaid_leave_deduction: manualUnpaid,
+        late_deduction: late,
         final_salary: finalSalary
       }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
