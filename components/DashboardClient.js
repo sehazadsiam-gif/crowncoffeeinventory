@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import {
   ShoppingCart, BookOpen, Package, ClipboardList,
   CheckCircle2, ArrowRight, Wallet, TrendingUp, AlertTriangle, Calendar,
-  Users, UserCheck, FileText, Send, MessageSquare, Clock, BellRing, Box
+  Users, UserCheck, FileText, Send, MessageSquare, Clock, BellRing, Box, Zap
 } from 'lucide-react'
 
 export default function DashboardClient() {
