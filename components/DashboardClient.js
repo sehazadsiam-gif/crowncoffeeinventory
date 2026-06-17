@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import {
   ShoppingCart, BookOpen, Package, ClipboardList,
   CheckCircle2, ArrowRight, Wallet, TrendingUp, AlertTriangle, Calendar,
-  Users, UserCheck, FileText, Send, MessageSquare, Clock, BellRing, Box, Zap
+  Users, UserCheck, FileText, Send, MessageSquare, Clock, BellRing, Box, Zap, CalendarDays
 } from 'lucide-react'
 
 export default function DashboardClient() {
@@ -172,6 +172,7 @@ export default function DashboardClient() {
               <ModuleLink href="/stock" icon={<Box size={24} />} title="Inventory" color="var(--warning)" badge={stats.lowStockCount > 0 ? stats.lowStockCount : null} />
               <ModuleLink href="/staff/attendance" icon={<UserCheck size={24} />} title="Attendance" color="var(--hr-primary)" />
               <ModuleLink href="/staff/payroll" icon={<FileText size={24} />} title="Payroll" color="var(--hr-primary)" />
+              <ModuleLink href="/staff/leave-requests" icon={<CalendarDays size={24} />} title="Leave Requests" color="#f59e0b" badge={alerts.pendingLeaves.length > 0 ? alerts.pendingLeaves.length : null} />
             </div>
           </div>
 

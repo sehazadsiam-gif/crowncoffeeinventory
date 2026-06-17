@@ -104,6 +104,7 @@ export default function Navbar() {
         { href: '/admin/overtime', label: 'Overtime' },
         { href: '/staff/payroll', label: 'Payroll' },
         { href: '/staff/advances', label: 'Advances' },
+        { href: '/staff/leave-requests', label: 'Leave Requests' },
         { href: '/staff/service-charge', label: 'Service Charge' },
         { href: '/staff/history', label: 'Payment History' },
       ]
