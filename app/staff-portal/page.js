@@ -334,7 +334,7 @@ export default function StaffPortalPage() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
-        {tabs.map(t => {
+          {(() => {
             const tabLabels = {
               overview: 'Overview',
               salary: 'Salary',
@@ -344,23 +344,25 @@ export default function StaffPortalPage() {
               leave_requests: '📅 Leave Requests',
               messages: '💬 Messages'
             }
-            return (
-            <button
-              key={t}
-              onClick={() => setActiveTab(t)}
-              style={{
-                padding: '8px 16px', fontSize: '13px', fontWeight: 600,
-                borderRadius: '20px', border: 'none', cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                background: activeTab === t ? '#8B5E3C' : 'white',
-                color: activeTab === t ? 'white' : '#9C8A76',
-                boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
-              }}
-            >
-              {tabLabels[t] || t}
-            </button>
-          )})
+            return tabs.map(t => (
+              <button
+                key={t}
+                onClick={() => setActiveTab(t)}
+                style={{
+                  padding: '8px 16px', fontSize: '13px', fontWeight: 600,
+                  borderRadius: '20px', border: 'none', cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  background: activeTab === t ? '#8B5E3C' : 'white',
+                  color: activeTab === t ? 'white' : '#9C8A76',
+                  boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
+                }}
+              >
+                {tabLabels[t] || t}
+              </button>
+            ))
+          })()}
         </div>
+
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
