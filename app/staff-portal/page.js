@@ -27,6 +27,9 @@ export default function StaffPortalPage() {
   const [newLeave, setNewLeave] = useState({ start_date: '', end_date: '', leave_type: 'sick', reason: '' })
   const [submittingLeave, setSubmittingLeave] = useState(false)
   const [printData, setPrintData] = useState(null)
+  const [messages, setMessages] = useState([])
+  const [newMessage, setNewMessage] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -43,7 +46,7 @@ export default function StaffPortalPage() {
     try {
       setLoading(true)
       const currentYear = new Date().getFullYear()
-      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes] = await Promise.all([
+      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes, msgRes] = await Promise.all([
         supabase.from('staff').select('*').eq('id', staffId).single(),
         supabase.from('payroll_entries').select('*').eq('staff_id', staffId).order('year', { ascending: false }).order('month', { ascending: false }).limit(24),
         supabase.from('salary_payments').select('*').eq('staff_id', staffId).order('payment_date', { ascending: false }),
@@ -52,7 +55,8 @@ export default function StaffPortalPage() {
         supabase.from('staff_notes').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
         supabase.from('leave_balance').select('*').eq('staff_id', staffId).eq('year', currentYear).single(),
         supabase.from('monthly_attendance_summary').select('*').eq('staff_id', staffId),
-        supabase.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
+        supabase.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
+        supabase.from('staff_messages').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
       ])
       setStaff(staffRes.data)
       setPayroll(payRes.data || [])
@@ -63,6 +67,7 @@ export default function StaffPortalPage() {
       setLeave(leaveRes.data)
       setSummary(summaryRes.data || [])
       setLeaveRequests(leaveReqRes.data || [])
+      setMessages(msgRes.data || [])
     } catch (err) {
       console.error('Error fetching staff data:', err)
     } finally {
@@ -95,6 +100,25 @@ export default function StaffPortalPage() {
         status: 'pending'
       }])
       if (error) throw error
+
+      // Notify admin via email
+      try {
+        await fetch('/api/email/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'leave_admin_alert',
+            staffName: staff.name,
+            leaveType: newLeave.leave_type,
+            startDate: newLeave.start_date,
+            endDate: newLeave.end_date,
+            reason: newLeave.reason
+          })
+        })
+      } catch (emailErr) {
+        console.error('Admin alert email failed:', emailErr)
+      }
+
       alert('Leave request submitted successfully!')
       setNewLeave({ start_date: '', end_date: '', leave_type: 'sick', reason: '' })
       const { data } = await supabase.from('leave_requests').select('*').eq('staff_id', staff.id).order('created_at', { ascending: false })
@@ -184,7 +208,7 @@ export default function StaffPortalPage() {
 
   const remaining = finalSalary - totalPaidThisMonth
   const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
-  const tabs = ['overview', 'salary', 'attendance', 'advances', 'remarks', 'leave_requests']
+  const tabs = ['overview', 'salary', 'attendance', 'advances', 'remarks', 'leave_requests', 'messages']
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF7F2' }}>
@@ -688,6 +712,76 @@ export default function StaffPortalPage() {
                       </div>
                     )
                   })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === 'messages' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Send new message */}
+            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: '0 0 14px 0' }}>💬 Message Admin</h3>
+              <textarea
+                value={newMessage}
+                onChange={e => setNewMessage(e.target.value)}
+                placeholder="Type your message to the admin here..."
+                rows={4}
+                style={{ width: '100%', padding: '12px', fontSize: '14px', border: '1.5px solid #E8E0D4', borderRadius: '8px', resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', color: '#1C1410' }}
+              />
+              <button
+                disabled={!newMessage.trim() || sendingMessage}
+                onClick={async () => {
+                  if (!newMessage.trim()) return
+                  setSendingMessage(true)
+                  try {
+                    const { error } = await supabase.from('staff_messages').insert([{ staff_id: staff.id, message: newMessage.trim() }])
+                    if (error) throw error
+                    // Email admin
+                    await fetch('/api/email/send', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        type: 'staff_message',
+                        staffName: staff.name,
+                        message: newMessage.trim(),
+                        sentAt: new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+                      })
+                    })
+                    setNewMessage('')
+                    const { data } = await supabase.from('staff_messages').select('*').eq('staff_id', staff.id).order('created_at', { ascending: false })
+                    setMessages(data || [])
+                    alert('Message sent to admin!')
+                  } catch (err) {
+                    alert('Failed to send message: ' + err.message)
+                  } finally {
+                    setSendingMessage(false)
+                  }
+                }}
+                style={{ marginTop: '10px', padding: '10px 20px', background: sendingMessage || !newMessage.trim() ? '#D4B896' : '#8B5E3C', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: sendingMessage || !newMessage.trim() ? 'not-allowed' : 'pointer' }}
+              >
+                {sendingMessage ? 'Sending...' : 'Send Message'}
+              </button>
+            </div>
+
+            {/* Message history */}
+            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: '0 0 14px 0' }}>📨 Sent Messages</h3>
+              {messages.length === 0 ? (
+                <p style={{ color: '#9C8A76', fontSize: '14px', textAlign: 'center', padding: '20px 0' }}>No messages sent yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {messages.map(m => (
+                    <div key={m.id} style={{ background: '#F5F0E8', borderRadius: '8px', padding: '12px 16px' }}>
+                      <p style={{ fontSize: '14px', color: '#1C1410', margin: '0 0 6px 0', lineHeight: '1.6' }}>{m.message}</p>
+                      <p style={{ fontSize: '11px', color: '#9C8A76', margin: 0 }}>
+                        {new Date(m.created_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
+                        {m.is_read && <span style={{ marginLeft: '8px', color: '#1e8e3e', fontWeight: 600 }}>✓ Read</span>}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

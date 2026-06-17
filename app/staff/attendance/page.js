@@ -22,6 +22,8 @@ export default function AttendancePage() {
   const [editingRow, setEditingRow] = useState(null)
   const [leaveRequests, setLeaveRequests] = useState([])
   const [adminNotes, setAdminNotes] = useState({})
+  const [staffMessages, setStaffMessages] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -36,6 +38,8 @@ export default function AttendancePage() {
       fetchMonthlySummary()
     } else if (activeTab === 'leave_requests') {
       fetchLeaveRequests()
+    } else if (activeTab === 'messages') {
+      fetchStaffMessages()
     }
   }, [date, activeTab, selectedMonth, selectedYear])
 
@@ -53,6 +57,37 @@ export default function AttendancePage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function fetchStaffMessages() {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('staff_messages')
+        .select('*, staff(name, designation)')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      setStaffMessages(data || [])
+      setUnreadCount((data || []).filter(m => !m.is_read).length)
+    } catch (err) {
+      addToast('Error loading messages', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function markMessageRead(id) {
+    await supabase.from('staff_messages').update({ is_read: true }).eq('id', id)
+    setStaffMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: true } : m))
+    setUnreadCount(prev => Math.max(0, prev - 1))
+  }
+
+  async function markAllRead() {
+    const unreadIds = staffMessages.filter(m => !m.is_read).map(m => m.id)
+    if (unreadIds.length === 0) return
+    await supabase.from('staff_messages').update({ is_read: true }).in('id', unreadIds)
+    setStaffMessages(prev => prev.map(m => ({ ...m, is_read: true })))
+    setUnreadCount(0)
   }
 
   async function handleLeaveAction(requestId, action, staffId, leaveType, startDate, endDate) {
