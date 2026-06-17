@@ -334,7 +334,17 @@ export default function StaffPortalPage() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {tabs.map(t => (
+        {tabs.map(t => {
+            const tabLabels = {
+              overview: 'Overview',
+              salary: 'Salary',
+              attendance: 'Attendance',
+              advances: 'Advances',
+              remarks: 'Remarks',
+              leave_requests: '📅 Leave Requests',
+              messages: '💬 Messages'
+            }
+            return (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
@@ -345,12 +355,11 @@ export default function StaffPortalPage() {
                 background: activeTab === t ? '#8B5E3C' : 'white',
                 color: activeTab === t ? 'white' : '#9C8A76',
                 boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
-                textTransform: 'capitalize'
               }}
             >
-              {t}
+              {tabLabels[t] || t}
             </button>
-          ))}
+          )})
         </div>
 
         {/* Overview Tab */}
@@ -649,66 +658,90 @@ export default function StaffPortalPage() {
 
         {/* Leave Requests Tab */}
         {activeTab === 'leave_requests' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* New Request Form */}
-            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>Request Leave</h3>
-              <form onSubmit={handleRequestLeave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(28,20,16,0.07)' }}>
+              <div style={{ background: '#6B3A2A', padding: '16px 20px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'white', margin: 0 }}>📅 Request Leave</h3>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)', margin: '4px 0 0' }}>Fill in the form below and the admin will be notified immediately.</p>
+              </div>
+              <div style={{ padding: '20px' }}>
+              <form onSubmit={handleRequestLeave} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 600 }}>Start Date</label>
-                    <input type="date" required value={newLeave.start_date} onChange={e => setNewLeave({...newLeave, start_date: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #E8E0D4', background: '#FAF7F2' }} />
+                    <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Start Date</label>
+                    <input type="date" required value={newLeave.start_date} onChange={e => setNewLeave({...newLeave, start_date: e.target.value})} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #E8E0D4', background: '#FAF7F2', fontFamily: 'inherit', boxSizing: 'border-box', fontSize: '14px', color: '#1C1410' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 600 }}>End Date</label>
-                    <input type="date" required value={newLeave.end_date} onChange={e => setNewLeave({...newLeave, end_date: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #E8E0D4', background: '#FAF7F2' }} />
+                    <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>End Date</label>
+                    <input type="date" required value={newLeave.end_date} onChange={e => setNewLeave({...newLeave, end_date: e.target.value})} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #E8E0D4', background: '#FAF7F2', fontFamily: 'inherit', boxSizing: 'border-box', fontSize: '14px', color: '#1C1410' }} />
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 600 }}>Leave Type</label>
-                  <select value={newLeave.leave_type} onChange={e => setNewLeave({...newLeave, leave_type: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #E8E0D4', background: '#FAF7F2' }}>
-                    <option value="sick">Sick Leave</option>
-                    <option value="casual">Casual Leave</option>
-                    <option value="annual">Annual Leave</option>
-                    <option value="unpaid">Unpaid Leave</option>
+                  <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leave Type</label>
+                  <select value={newLeave.leave_type} onChange={e => setNewLeave({...newLeave, leave_type: e.target.value})} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #E8E0D4', background: '#FAF7F2', fontFamily: 'inherit', fontSize: '14px', color: '#1C1410' }}>
+                    <option value="sick">🤒 Sick Leave</option>
+                    <option value="casual">☕ Casual Leave</option>
+                    <option value="annual">✈️ Annual Leave</option>
+                    <option value="unpaid">📋 Unpaid Leave</option>
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 600 }}>Reason / Note</label>
-                  <textarea placeholder="Reason for leave..." value={newLeave.reason} onChange={e => setNewLeave({...newLeave, reason: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #E8E0D4', background: '#FAF7F2', minHeight: '80px', fontFamily: 'inherit' }} />
+                  <label style={{ display: 'block', fontSize: '12px', color: '#9C8A76', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Reason (Optional)</label>
+                  <textarea placeholder="Briefly describe the reason for your leave..." value={newLeave.reason} onChange={e => setNewLeave({...newLeave, reason: e.target.value})} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #E8E0D4', background: '#FAF7F2', minHeight: '90px', fontFamily: 'inherit', fontSize: '14px', resize: 'vertical', boxSizing: 'border-box', color: '#1C1410' }} />
                 </div>
-                <button type="submit" disabled={submittingLeave} style={{ padding: '10px', background: '#8B5E3C', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }}>
-                  {submittingLeave ? 'Submitting...' : 'Submit Request'}
+                <button type="submit" disabled={submittingLeave} style={{ padding: '12px', background: submittingLeave ? '#B07830' : '#6B3A2A', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '14px', cursor: submittingLeave ? 'not-allowed' : 'pointer', transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  {submittingLeave ? '⏳ Submitting...' : '📤 Submit Leave Request'}
                 </button>
               </form>
+              </div>
             </div>
 
             {/* Request History */}
-            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px' }}>Leave Request History</h3>
+            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '14px', padding: '20px', boxShadow: '0 2px 12px rgba(28,20,16,0.07)' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                📋 My Leave History
+                <span style={{ fontSize: '12px', background: '#F5F0E8', color: '#8B5E3C', padding: '2px 10px', borderRadius: '20px', fontWeight: 600 }}>{leaveRequests.length} total</span>
+              </h3>
               {leaveRequests.length === 0 ? (
-                <p style={{ textAlign: 'center', color: '#9C8A76', fontSize: '13px', margin: 0 }}>No leave requests submitted yet.</p>
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9C8A76' }}>
+                  <p style={{ fontSize: '32px', margin: '0 0 8px' }}>📭</p>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: '#5C4A36', margin: '0 0 4px' }}>No requests yet</p>
+                  <p style={{ fontSize: '13px', margin: 0 }}>Submit your first leave request above.</p>
+                </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {leaveRequests.map(r => {
-                    const statusColors = { pending: '#fa7b17', approved: '#1e8e3e', rejected: '#d93025' }
+                    const statusCfg = {
+                      pending:  { color: '#B07830', bg: '#fef7e0', label: '⏳ Pending' },
+                      approved: { color: '#1e8e3e', bg: '#e6f4ea', label: '✅ Approved' },
+                      rejected: { color: '#d93025', bg: '#fce8e6', label: '❌ Rejected' },
+                    }
+                    const cfg = statusCfg[r.status] || statusCfg.pending
+                    const days = Math.max(1, Math.round((new Date(r.end_date) - new Date(r.start_date)) / (1000 * 60 * 60 * 24)) + 1)
                     return (
-                      <div key={r.id} style={{ border: '1px solid #E8E0D4', borderRadius: '8px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div key={r.id} style={{ border: `1px solid ${cfg.color}40`, borderRadius: '10px', overflow: 'hidden' }}>
+                        <div style={{ background: cfg.bg, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '13px', fontWeight: 700, color: '#1C1410' }}>
-                              {new Date(r.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} - {new Date(r.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {new Date(r.start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                              {r.start_date !== r.end_date && ` → ${new Date(r.end_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}
                             </span>
-                            <span style={{ fontSize: '10px', textTransform: 'uppercase', padding: '2px 6px', borderRadius: '4px', background: '#F5F0E8', color: '#8B5E3C', fontWeight: 700 }}>
-                              {r.leave_type}
-                            </span>
+                            <span style={{ fontSize: '11px', background: '#F5F0E8', color: '#8B5E3C', padding: '2px 8px', borderRadius: '6px', fontWeight: 700, textTransform: 'uppercase' }}>{r.leave_type}</span>
+                            <span style={{ fontSize: '12px', color: '#9C8A76' }}>{days} day{days > 1 ? 's' : ''}</span>
                           </div>
-                          {r.reason && <p style={{ fontSize: '12px', color: '#9C8A76', margin: '6px 0 0 0' }}>{r.reason}</p>}
-                          {r.admin_note && <p style={{ fontSize: '12px', color: '#d93025', margin: '4px 0 0 0', fontWeight: 600 }}>Admin note: {r.admin_note}</p>}
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: cfg.color }}>{cfg.label}</span>
                         </div>
-                        <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'capitalize', color: statusColors[r.status] || '#9C8A76' }}>
-                          {r.status}
-                        </span>
+                        {(r.reason || r.admin_note) && (
+                          <div style={{ padding: '10px 16px', background: 'white' }}>
+                            {r.reason && <p style={{ fontSize: '13px', color: '#5C4A36', margin: '0 0 4px' }}>{r.reason}</p>}
+                            {r.admin_note && (
+                              <p style={{ fontSize: '12px', color: cfg.color, margin: 0, fontWeight: 600, background: cfg.bg, padding: '6px 10px', borderRadius: '6px', display: 'inline-block' }}>
+                                Admin: {r.admin_note}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )
                   })}
