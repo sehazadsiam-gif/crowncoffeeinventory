@@ -316,8 +316,6 @@ export default function PayrollPage() {
         absent_days: Number(row.absent_days) || 0,
         late_waived: waivedStaff[staffId] || false,
         lunch_dinner_manual: row.lunch_dinner_manual || false,
-        unpaid_leave_deduction: manualUnpaid,
-        late_deduction: late,
         final_salary: finalSalary
       }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
@@ -513,6 +511,21 @@ export default function PayrollPage() {
             >
               <Calculator size={15} /> Calculator
             </button>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Total Salary</p>
+            <p style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>৳{grandTotal.toLocaleString()}</p>
+          </div>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Paid Amount</p>
+            <p style={{ fontSize: '24px', fontWeight: 800, color: '#34D399', margin: 0 }}>৳{totalPaidAll.toLocaleString()}</p>
+          </div>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Remaining to Pay</p>
+            <p style={{ fontSize: '24px', fontWeight: 800, color: totalRemainingAll > 0 ? '#F87171' : '#34D399', margin: 0 }}>৳{totalRemainingAll.toLocaleString()}</p>
           </div>
         </div>
 

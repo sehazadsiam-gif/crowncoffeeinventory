@@ -25,11 +25,11 @@ const LEAVE_TYPE_LABELS = {
 export default function LeaveRequestsPage() {
   const router = useRouter()
   const [authorized, setAuthorized] = useState(false)
-  const [requests, setRequests] = useState([])
+  const [allRequests, setAllRequests] = useState([])   // all requests from DB
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('pending')
   const [actionLoading, setActionLoading] = useState(null)
-  const [noteModal, setNoteModal] = useState(null) // { id, action, note }
+  const [noteModal, setNoteModal] = useState(null)
   const [toast, setToast] = useState(null)
 
   useEffect(() => {
@@ -42,33 +42,33 @@ export default function LeaveRequestsPage() {
   const fetchRequests = useCallback(async () => {
     setLoading(true)
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('leave_requests')
-        .select('*, staff:staff_id(name, position)')
+        .select('*, staff:staff_id(name)')
         .order('created_at', { ascending: false })
-
-      if (filter !== 'all') query = query.eq('status', filter)
-
-      const { data, error } = await query
       if (error) throw error
-      setRequests(data || [])
+      setAllRequests(data || [])
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [filter])
+  }, [])  // stable — no deps, fetches everything
 
   useEffect(() => {
     if (!authorized) return
     fetchRequests()
 
+    // One stable realtime channel — not recreated on filter change
     const channel = supabase.channel('leave_requests_admin')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, fetchRequests)
       .subscribe()
 
     return () => supabase.removeChannel(channel)
   }, [authorized, fetchRequests])
+
+  // Filter client-side so channel is never torn down
+  const requests = filter === 'all' ? allRequests : allRequests.filter(r => r.status === filter)
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type })
@@ -99,12 +99,14 @@ export default function LeaveRequestsPage() {
     return Math.max(1, diff + 1)
   }
 
+  // Counts always calculated from full dataset
   const counts = {
-    all: requests.length,
-    pending: requests.filter(r => r.status === 'pending').length,
-    approved: requests.filter(r => r.status === 'approved').length,
-    rejected: requests.filter(r => r.status === 'rejected').length,
+    all: allRequests.length,
+    pending: allRequests.filter(r => r.status === 'pending').length,
+    approved: allRequests.filter(r => r.status === 'approved').length,
+    rejected: allRequests.filter(r => r.status === 'rejected').length,
   }
+
 
   if (!authorized) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
