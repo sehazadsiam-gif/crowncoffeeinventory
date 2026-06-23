@@ -241,40 +241,56 @@ export default function StaffPortalPage() {
   const tabs = ['overview', 'salary', 'attendance', 'advances', 'remarks', 'leave_requests', 'messages']
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF7F2' }}>
+    <div className={`min-h-screen flex items-center justify-center transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-[#FAF7F2]'}`}>
       <div className="loader"></div>
     </div>
   )
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF7F2] text-[#1C1410]'} font-sans`}>
+    <div className={`min-h-screen transition-colors duration-500 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-[#FAF7F2] text-[#1C1410]'} font-sans`}>
 
-      <nav className={`border-b px-6 flex items-center justify-between h-[60px] sticky top-0 z-50 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-[#E8E0D4]'}`}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ background: '#8B5E3C', padding: '6px', borderRadius: '8px' }}>
-            <Coffee size={18} color="white" />
-          </div>
-          <span style={{ fontWeight: 700, fontSize: '16px' }}>{t.portalTitle}</span>
-        </div>
+      <nav className={`px-6 flex items-center justify-between h-[70px] sticky top-0 z-50 transition-all duration-300 backdrop-blur-md border-b ${darkMode ? 'bg-slate-950/80 border-slate-800 shadow-sm shadow-slate-900/50' : 'bg-white/80 border-[#E8E0D4] shadow-sm'}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-[#8B5E3C] to-[#5C3E28] shadow-md">
+            <Coffee size={20} color="white" />
+          </div>
+          <span className="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#8B5E3C] to-[#5C3E28] dark:from-[#D4B896] dark:to-[#F5F0E8]">{t.portalTitle}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           
-          <button onClick={toggleLanguage} className={`p-2 rounded-full transition flex items-center gap-2 ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} title={t.languageSwitch}>
-            <Languages size={18} />
-          </button>
+          <div className={`flex items-center p-1 rounded-full border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-100 border-gray-200'}`}>
+            <button 
+              onClick={() => setLang('en')} 
+              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-300 ${lang === 'en' ? (darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-gray-800 shadow-sm') : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            >
+              EN
+            </button>
+            <button 
+              onClick={() => setLang('bn')} 
+              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-300 ${lang === 'bn' ? (darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-gray-800 shadow-sm') : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            >
+              BN
+            </button>
+          </div>
           
-          <button onClick={toggleDarkMode} className={`p-2 rounded-full transition ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} title={darkMode ? t.lightMode : t.darkMode}>
-            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          <button onClick={toggleDarkMode} className={`relative overflow-hidden w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 border hover:scale-105 active:scale-95 ${darkMode ? 'bg-slate-900 border-slate-700 text-yellow-400 hover:shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-white border-gray-200 text-gray-600 hover:shadow-md'}`} title={darkMode ? t.lightMode : t.darkMode}>
+            <div className={`absolute transition-transform duration-500 ${darkMode ? 'rotate-0 opacity-100' : '-rotate-90 opacity-0'}`}>
+              <Sun size={18} />
+            </div>
+            <div className={`absolute transition-transform duration-500 ${darkMode ? 'rotate-90 opacity-0' : 'rotate-0 opacity-100'}`}>
+              <Moon size={18} />
+            </div>
           </button>
 
-          <div style={{ textAlign: 'right', marginLeft: '8px' }}>
-            <p style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>{staff?.name}</p>
-            <p style={{ fontSize: '11px', opacity: 0.7, margin: 0 }}>{staff?.designation}</p>
+          <div style={{ textAlign: 'right', marginLeft: '12px' }} className="hidden sm:block">
+            <p className="text-sm font-bold m-0">{staff?.name}</p>
+            <p className="text-xs opacity-60 m-0">{staff?.designation}</p>
           </div>
           <button
             onClick={handleLogout}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', background: '#fce8e6', border: 'none', borderRadius: '6px', color: '#d93025', cursor: 'pointer', fontSize: '12px', fontWeight: 600, marginLeft: '4px' }}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 dark:border dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-xl font-bold text-xs transition-all duration-300 hover:shadow-sm active:scale-95 ml-2"
           >
-            <LogOut size={14} /> {t.logout}
+            <LogOut size={16} /> <span className="hidden sm:inline">{t.logout}</span>
           </button>
         </div>
       </nav>
@@ -794,14 +810,20 @@ export default function StaffPortalPage() {
 
         {/* Interactive Mailbox Tab */}
         {activeTab === 'messages' && (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {/* Compose Box */}
-            <div className={`p-6 rounded-2xl shadow-sm border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-[#E8E0D4]'}`}>
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">💬 {t.composeNew}</h3>
+            <div className={`p-8 rounded-3xl shadow-lg border transition-all duration-300 relative overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#E8E0D4]'}`}>
+              <div className={`absolute top-0 left-0 w-full h-1 ${darkMode ? 'bg-gradient-to-r from-blue-600 to-indigo-600' : 'bg-gradient-to-r from-blue-500 to-cyan-400'}`}></div>
+              <h3 className="text-xl font-extrabold mb-6 flex items-center gap-3">
+                <div className={`p-2 rounded-xl ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
+                  <Send size={20} />
+                </div>
+                {t.composeNew}
+              </h3>
               
-              <div className="mb-4">
-                <label className="block text-sm font-semibold mb-2 opacity-80">{t.queryType}</label>
+              <div className="mb-6">
+                <label className="block text-sm font-bold mb-3 opacity-80 uppercase tracking-wider">{t.queryType}</label>
                 <div className="flex flex-wrap gap-3">
                   {[
                     { id: 'Requisition', label: t.typeRequisition },
@@ -812,10 +834,10 @@ export default function StaffPortalPage() {
                     <button
                       key={opt.id}
                       onClick={() => setQueryType(opt.id)}
-                      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all border-2 ${
+                      className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 border-2 active:scale-95 ${
                         queryType === opt.id 
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
-                          : `border-transparent ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-[0_0_20px_rgba(59,130,246,0.15)] dark:bg-blue-900/20 dark:text-blue-300 dark:shadow-[0_0_20px_rgba(59,130,246,0.1)]' 
+                          : `border-transparent ${darkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`
                       }`}
                     >
                       {opt.label}
@@ -824,15 +846,17 @@ export default function StaffPortalPage() {
                 </div>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-semibold mb-2 opacity-80">{t.messageLabel}</label>
+              <div className="mb-6">
+                <label className="block text-sm font-bold mb-3 opacity-80 uppercase tracking-wider">{t.messageLabel}</label>
                 <textarea
                   value={newMessage}
                   onChange={e => setNewMessage(e.target.value)}
                   placeholder={t.messagePlaceholder}
-                  rows={4}
-                  className={`w-full p-4 rounded-xl border-2 transition-all outline-none resize-y ${
-                    darkMode ? 'bg-gray-900 border-gray-700 focus:border-blue-500' : 'bg-gray-50 border-gray-200 focus:border-blue-500'
+                  rows={5}
+                  className={`w-full p-5 rounded-2xl border-2 transition-all duration-300 outline-none resize-y text-base ${
+                    darkMode 
+                      ? 'bg-slate-950 border-slate-800 focus:border-blue-500 focus:bg-slate-900 shadow-inner' 
+                      : 'bg-gray-50 border-gray-200 focus:border-blue-500 focus:bg-white shadow-inner'
                   }`}
                 />
               </div>
@@ -863,63 +887,73 @@ export default function StaffPortalPage() {
                     setSendingMessage(false)
                   }
                 }}
-                className={`flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl font-bold transition-all ${
+                className={`group flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 rounded-2xl font-extrabold transition-all duration-300 ${
                   sendingMessage || !newMessage.trim() 
-                    ? 'bg-gray-400 cursor-not-allowed text-white opacity-50' 
-                    : 'bg-blue-600 hover:bg-blue-700 text-white active:scale-95 shadow-md hover:shadow-lg'
+                    ? `cursor-not-allowed opacity-50 ${darkMode ? 'bg-slate-800 text-slate-500' : 'bg-gray-200 text-gray-500'}` 
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg hover:shadow-blue-500/30 active:scale-95'
                 }`}
               >
-                <Send size={18} />
+                <span className={`${!sendingMessage && newMessage.trim() ? 'group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform' : ''}`}>
+                  <Send size={20} />
+                </span>
                 {sendingMessage ? t.submitting : t.submitBtn}
               </button>
             </div>
 
             {/* Inbox / Sent Messages */}
-            <div className={`p-6 rounded-2xl shadow-sm border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-[#E8E0D4]'}`}>
-              <h3 className="text-lg font-bold mb-4">📨 {t.myRequests}</h3>
+            <div className="flex flex-col gap-4">
+              <h3 className="text-2xl font-extrabold mb-2 ml-2 tracking-tight">📨 {t.myRequests}</h3>
               {messages.length === 0 ? (
-                <div className="py-12 text-center opacity-60">
-                  <p className="text-4xl mb-3">📭</p>
-                  <p>{t.noRequests}</p>
+                <div className={`p-12 text-center rounded-3xl border-dashed border-2 ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-gray-300 bg-white/50'}`}>
+                  <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${darkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
+                    <span className="text-4xl opacity-50">📭</span>
+                  </div>
+                  <p className="text-lg font-semibold opacity-60">{t.noRequests}</p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
-                  {messages.map(m => {
+                <div className="flex flex-col gap-5">
+                  {messages.map((m, i) => {
                     const isPending = m.status === 'Pending'
                     const isApproved = m.status === 'Approved'
                     const isRejected = m.status === 'Rejected'
                     
                     return (
-                      <div key={m.id} className={`p-5 rounded-xl border ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-[#F9F9F9] border-gray-200'}`}>
-                        <div className="flex justify-between items-start mb-3 flex-wrap gap-2">
-                          <div>
-                            <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+                      <div key={m.id} className={`p-6 rounded-3xl border shadow-sm transition-all duration-300 hover:shadow-md animate-in fade-in slide-in-from-bottom-4 ${darkMode ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-[#E8E0D4] hover:border-gray-300'}`} style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'both' }}>
+                        <div className="flex justify-between items-start mb-4 flex-wrap gap-3">
+                          <div className="flex items-center gap-3">
+                            <span className={`text-xs font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-widest ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-gray-100 text-gray-700'}`}>
                               {m.type === 'Requisition' ? t.typeRequisition : m.type === 'Leave' ? t.typeLeave : m.type === 'Problem' ? t.typeProblem : m.type}
                             </span>
-                            <span className="text-xs opacity-60 ml-3">
+                            <span className="text-sm font-medium opacity-50">
                               {new Date(m.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
                             </span>
                           </div>
                           
-                          <span className={`text-xs font-bold px-3 py-1 rounded-full ${
-                            isPending ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                            isApproved ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                          <div className={`flex items-center gap-2 text-xs font-extrabold px-4 py-1.5 rounded-full ${
+                            isPending ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20' :
+                            isApproved ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20' :
+                            'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
                           }`}>
+                            <span className={`w-2 h-2 rounded-full ${isPending ? 'bg-yellow-500 animate-pulse' : isApproved ? 'bg-green-500' : 'bg-red-500'}`}></span>
                             {isPending ? t.statusPending : isApproved ? t.statusApproved : t.statusRejected}
-                          </span>
+                          </div>
                         </div>
                         
-                        <p className="whitespace-pre-wrap text-sm mb-4">{m.message}</p>
+                        <p className={`whitespace-pre-wrap text-base leading-relaxed mb-2 ${darkMode ? 'text-slate-300' : 'text-gray-800'}`}>{m.message}</p>
                         
                         {m.admin_reply && (
-                          <div className={`mt-3 p-3 rounded-lg border-l-4 ${
-                            isApproved ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 
-                            isRejected ? 'bg-red-50 border-red-500 dark:bg-red-900/20' : 
-                            'bg-blue-50 border-blue-500 dark:bg-blue-900/20'
+                          <div className={`mt-5 p-5 rounded-2xl border ${
+                            isApproved ? 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-900/30' : 
+                            isRejected ? 'bg-red-50/50 border-red-200 dark:bg-red-900/10 dark:border-red-900/30' : 
+                            'bg-blue-50/50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-900/30'
                           }`}>
-                            <p className="text-xs font-bold mb-1 opacity-80">{t.adminReply}</p>
-                            <p className="text-sm">{m.admin_reply}</p>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${isApproved ? 'bg-green-500' : isRejected ? 'bg-red-500' : 'bg-blue-500'}`}>
+                                A
+                              </div>
+                              <p className={`text-sm font-extrabold uppercase tracking-wider ${isApproved ? 'text-green-700 dark:text-green-400' : isRejected ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>{t.adminReply}</p>
+                            </div>
+                            <p className={`text-base ml-8 ${darkMode ? 'text-slate-300' : 'text-gray-800'}`}>{m.admin_reply}</p>
                           </div>
                         )}
                       </div>
