@@ -233,7 +233,7 @@ export default function StaffPortalPage() {
   const unpaidDeductionAmount = unpaidDeductionDays * perDay
 
   const finalSalary = monthPayroll ? Math.round(
-    base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaidDeductionAmount - lateDeduction
+    base + lunch + morn + bonus + sc + misc
   ) : 0
 
   const remaining = finalSalary - totalPaidThisMonth
@@ -249,48 +249,126 @@ export default function StaffPortalPage() {
   return (
     <div className={`min-h-screen transition-colors duration-500 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-[#FAF7F2] text-[#1C1410]'} font-sans`}>
 
-      <nav className={`px-6 flex items-center justify-between h-[70px] sticky top-0 z-50 transition-all duration-300 backdrop-blur-md border-b ${darkMode ? 'bg-slate-950/80 border-slate-800 shadow-sm shadow-slate-900/50' : 'bg-white/80 border-[#E8E0D4] shadow-sm'}`}>
+      <nav style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        height: '70px',
+        padding: '0 24px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        borderBottom: '1px solid var(--border-light)',
+        backgroundColor: 'var(--bg-surface)',
+        backdropFilter: 'blur(10px)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-[#8B5E3C] to-[#5C3E28] shadow-md">
-            <Coffee size={20} color="white" />
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '38px',
+            height: '38px',
+            borderRadius: '12px',
+            background: 'linear-gradient(135deg, #8B5E3C 0%, #5C3E28 100%)',
+            boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+          }}>
+            <Coffee size={18} color="white" />
           </div>
-          <span className="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#8B5E3C] to-[#5C3E28] dark:from-[#D4B896] dark:to-[#F5F0E8]">{t.portalTitle}</span>
+          <span style={{ fontWeight: 800, fontSize: '16px', color: 'var(--text-primary)' }}>
+            {t.portalTitle}
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           
-          <div className={`flex items-center p-1 rounded-full border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-100 border-gray-200'}`}>
+          {/* Language Switch */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '2px',
+            borderRadius: '20px',
+            border: '1px solid var(--border-light)',
+            backgroundColor: 'var(--bg-subtle)'
+          }}>
             <button 
               onClick={() => setLang('en')} 
-              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-300 ${lang === 'en' ? (darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-gray-800 shadow-sm') : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '16px',
+                border: 'none',
+                cursor: 'pointer',
+                background: lang === 'en' ? 'var(--bg-surface)' : 'transparent',
+                color: lang === 'en' ? 'var(--text-primary)' : 'var(--text-muted)',
+                boxShadow: lang === 'en' ? 'var(--shadow-sm)' : 'none',
+                transition: 'all 0.2s'
+              }}
             >
               EN
             </button>
             <button 
               onClick={() => setLang('bn')} 
-              className={`px-3 py-1.5 text-xs font-bold rounded-full transition-all duration-300 ${lang === 'bn' ? (darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-gray-800 shadow-sm') : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '16px',
+                border: 'none',
+                cursor: 'pointer',
+                background: lang === 'bn' ? 'var(--bg-surface)' : 'transparent',
+                color: lang === 'bn' ? 'var(--text-primary)' : 'var(--text-muted)',
+                boxShadow: lang === 'bn' ? 'var(--shadow-sm)' : 'none',
+                transition: 'all 0.2s'
+              }}
             >
               BN
             </button>
           </div>
           
-          <button onClick={toggleDarkMode} className={`relative overflow-hidden w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 border hover:scale-105 active:scale-95 ${darkMode ? 'bg-slate-900 border-slate-700 text-yellow-400 hover:shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-white border-gray-200 text-gray-600 hover:shadow-md'}`} title={darkMode ? t.lightMode : t.darkMode}>
-            <div className={`absolute transition-transform duration-500 ${darkMode ? 'rotate-0 opacity-100' : '-rotate-90 opacity-0'}`}>
-              <Sun size={18} />
-            </div>
-            <div className={`absolute transition-transform duration-500 ${darkMode ? 'rotate-90 opacity-0' : 'rotate-0 opacity-100'}`}>
-              <Moon size={18} />
-            </div>
+          {/* Theme Switch */}
+          <button 
+            onClick={toggleDarkMode} 
+            style={{
+              width: '38px',
+              height: '38px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              border: '1px solid var(--border-light)',
+              backgroundColor: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer'
+            }}
+            title={darkMode ? t.lightMode : t.darkMode}
+          >
+            {darkMode ? <Sun size={18} style={{ color: 'var(--warning)' }} /> : <Moon size={18} style={{ color: 'var(--text-muted)' }} />}
           </button>
 
-          <div style={{ textAlign: 'right', marginLeft: '12px' }} className="hidden sm:block">
-            <p className="text-sm font-bold m-0">{staff?.name}</p>
-            <p className="text-xs opacity-60 m-0">{staff?.designation}</p>
+          <div style={{ textAlign: 'right', marginLeft: '4px' }} className="hidden sm:block">
+            <p style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>{staff?.name}</p>
+            <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', margin: 0 }}>{staff?.designation}</p>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 dark:border dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-xl font-bold text-xs transition-all duration-300 hover:shadow-sm active:scale-95 ml-2"
+            className="btn-secondary"
+            style={{
+              padding: '8px 14px',
+              borderRadius: '10px',
+              fontSize: '12px',
+              fontWeight: 700,
+              color: 'var(--danger)',
+              borderColor: 'var(--danger)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'none',
+              cursor: 'pointer'
+            }}
           >
-            <LogOut size={16} /> <span className="hidden sm:inline">{t.logout}</span>
+            <LogOut size={14} /> <span>{t.logout}</span>
           </button>
         </div>
       </nav>
@@ -404,12 +482,20 @@ export default function StaffPortalPage() {
                 key={t}
                 onClick={() => setActiveTab(t)}
                 style={{
-                  padding: '8px 16px', fontSize: '13px', fontWeight: 600,
-                  borderRadius: '20px', border: 'none', cursor: 'pointer',
+                  padding: '10px 18px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  borderRadius: '12px',
+                  border: activeTab === t ? 'none' : '1px solid var(--border-light)',
+                  cursor: 'pointer',
                   whiteSpace: 'nowrap',
-                  background: activeTab === t ? '#8B5E3C' : 'white',
-                  color: activeTab === t ? 'white' : '#9C8A76',
-                  boxShadow: '0 1px 4px rgba(28,20,16,0.06)',
+                  background: activeTab === t ? 'linear-gradient(135deg, #8B5E3C 0%, #5C3E28 100%)' : 'var(--bg-surface)',
+                  color: activeTab === t ? 'white' : 'var(--text-secondary)',
+                  boxShadow: activeTab === t ? '0 4px 12px rgba(139,94,60,0.2)' : 'var(--shadow-sm)',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
                 {tabLabels[t] || t}
