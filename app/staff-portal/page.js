@@ -2,8 +2,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
-import { Coffee, LogOut, ChevronLeft, ChevronRight, Printer } from 'lucide-react'
+import { Coffee, LogOut, ChevronLeft, ChevronRight, Printer, Languages, Moon, Sun, Send } from 'lucide-react'
 import dynamic from 'next/dynamic'
+import { translations } from '../../lib/i18n'
 
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
 
@@ -29,7 +30,36 @@ export default function StaffPortalPage() {
   const [printData, setPrintData] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
+  const [queryType, setQueryType] = useState('Requisition')
   const [sendingMessage, setSendingMessage] = useState(false)
+  const [lang, setLang] = useState('bn')
+  const [darkMode, setDarkMode] = useState(false)
+
+  const t = translations[lang]
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isDark = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      setDarkMode(isDark)
+      if (isDark) document.documentElement.classList.add('dark')
+    }
+  }, [])
+
+  const toggleDarkMode = () => {
+    const newMode = !darkMode
+    setDarkMode(newMode)
+    if (newMode) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+  }
+
+  const toggleLanguage = () => {
+    setLang(prev => prev === 'en' ? 'bn' : 'en')
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -56,7 +86,7 @@ export default function StaffPortalPage() {
         supabase.from('leave_balance').select('*').eq('staff_id', staffId).eq('year', currentYear).single(),
         supabase.from('monthly_attendance_summary').select('*').eq('staff_id', staffId),
         supabase.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
-        supabase.from('staff_messages').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
+        supabase.from('staff_queries').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
       ])
       setStaff(staffRes.data)
       setPayroll(payRes.data || [])
@@ -217,25 +247,34 @@ export default function StaffPortalPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FAF7F2', fontFamily: 'system-ui, sans-serif' }}>
+    <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'bg-gray-900 text-white' : 'bg-[#FAF7F2] text-[#1C1410]'} font-sans`}>
 
-      <nav style={{ background: 'white', borderBottom: '1px solid #E8E0D4', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px', position: 'sticky', top: 0, zIndex: 100 }}>
+      <nav className={`border-b px-6 flex items-center justify-between h-[60px] sticky top-0 z-50 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-[#E8E0D4]'}`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ background: '#8B5E3C', padding: '6px', borderRadius: '8px' }}>
             <Coffee size={18} color="white" />
           </div>
-          <span style={{ fontWeight: 700, color: '#1C1410', fontSize: '16px' }}>Crown Coffee</span>
+          <span style={{ fontWeight: 700, fontSize: '16px' }}>{t.portalTitle}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: '13px', fontWeight: 700, color: '#1C1410', margin: 0 }}>{staff?.name}</p>
-            <p style={{ fontSize: '11px', color: '#9C8A76', margin: 0 }}>{staff?.designation}</p>
+          
+          <button onClick={toggleLanguage} className={`p-2 rounded-full transition flex items-center gap-2 ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} title={t.languageSwitch}>
+            <Languages size={18} />
+          </button>
+          
+          <button onClick={toggleDarkMode} className={`p-2 rounded-full transition ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-yellow-400' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`} title={darkMode ? t.lightMode : t.darkMode}>
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          <div style={{ textAlign: 'right', marginLeft: '8px' }}>
+            <p style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>{staff?.name}</p>
+            <p style={{ fontSize: '11px', opacity: 0.7, margin: 0 }}>{staff?.designation}</p>
           </div>
           <button
             onClick={handleLogout}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', background: '#fce8e6', border: 'none', borderRadius: '6px', color: '#d93025', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', background: '#fce8e6', border: 'none', borderRadius: '6px', color: '#d93025', cursor: 'pointer', fontSize: '12px', fontWeight: 600, marginLeft: '4px' }}
           >
-            <LogOut size={14} /> Logout
+            <LogOut size={14} /> {t.logout}
           </button>
         </div>
       </nav>
@@ -753,73 +792,143 @@ export default function StaffPortalPage() {
           </div>
         )}
 
-        {/* Messages Tab */}
+        {/* Interactive Mailbox Tab */}
         {activeTab === 'messages' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Send new message */}
-            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: '0 0 14px 0' }}>💬 Message Admin</h3>
-              <textarea
-                value={newMessage}
-                onChange={e => setNewMessage(e.target.value)}
-                placeholder="Type your message to the admin here..."
-                rows={4}
-                style={{ width: '100%', padding: '12px', fontSize: '14px', border: '1.5px solid #E8E0D4', borderRadius: '8px', resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', color: '#1C1410' }}
-              />
+          <div className="flex flex-col gap-6">
+            
+            {/* Compose Box */}
+            <div className={`p-6 rounded-2xl shadow-sm border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-[#E8E0D4]'}`}>
+              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">💬 {t.composeNew}</h3>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-semibold mb-2 opacity-80">{t.queryType}</label>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { id: 'Requisition', label: t.typeRequisition },
+                    { id: 'Leave', label: t.typeLeave },
+                    { id: 'Problem', label: t.typeProblem },
+                    { id: 'Other', label: t.typeOther }
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => setQueryType(opt.id)}
+                      className={`px-4 py-2 rounded-full text-sm font-semibold transition-all border-2 ${
+                        queryType === opt.id 
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+                          : `border-transparent ${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold mb-2 opacity-80">{t.messageLabel}</label>
+                <textarea
+                  value={newMessage}
+                  onChange={e => setNewMessage(e.target.value)}
+                  placeholder={t.messagePlaceholder}
+                  rows={4}
+                  className={`w-full p-4 rounded-xl border-2 transition-all outline-none resize-y ${
+                    darkMode ? 'bg-gray-900 border-gray-700 focus:border-blue-500' : 'bg-gray-50 border-gray-200 focus:border-blue-500'
+                  }`}
+                />
+              </div>
+
               <button
                 disabled={!newMessage.trim() || sendingMessage}
                 onClick={async () => {
                   if (!newMessage.trim()) return
                   setSendingMessage(true)
                   try {
-                    const { error } = await supabase.from('staff_messages').insert([{ staff_id: staff.id, message: newMessage.trim() }])
-                    if (error) throw error
-                    // Email admin
-                    await fetch('/api/email/send', {
+                    const res = await fetch('/api/staffquery', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
-                        type: 'staff_message',
-                        staffName: staff.name,
-                        message: newMessage.trim(),
-                        sentAt: new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })
+                        staff_id: staff.id,
+                        staff_name: staff.name,
+                        type: queryType,
+                        message: newMessage.trim()
                       })
                     })
+                    if (!res.ok) throw new Error('Failed to send')
                     setNewMessage('')
-                    const { data } = await supabase.from('staff_messages').select('*').eq('staff_id', staff.id).order('created_at', { ascending: false })
+                    const { data } = await supabase.from('staff_queries').select('*').eq('staff_id', staff.id).order('created_at', { ascending: false })
                     setMessages(data || [])
-                    alert('Message sent to admin!')
                   } catch (err) {
                     alert('Failed to send message: ' + err.message)
                   } finally {
                     setSendingMessage(false)
                   }
                 }}
-                style={{ marginTop: '10px', padding: '10px 20px', background: sendingMessage || !newMessage.trim() ? '#D4B896' : '#8B5E3C', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: sendingMessage || !newMessage.trim() ? 'not-allowed' : 'pointer' }}
+                className={`flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl font-bold transition-all ${
+                  sendingMessage || !newMessage.trim() 
+                    ? 'bg-gray-400 cursor-not-allowed text-white opacity-50' 
+                    : 'bg-blue-600 hover:bg-blue-700 text-white active:scale-95 shadow-md hover:shadow-lg'
+                }`}
               >
-                {sendingMessage ? 'Sending...' : 'Send Message'}
+                <Send size={18} />
+                {sendingMessage ? t.submitting : t.submitBtn}
               </button>
             </div>
 
-            {/* Message history */}
-            <div style={{ background: 'white', border: '1px solid #E8E0D4', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 4px rgba(28,20,16,0.06)' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: '0 0 14px 0' }}>📨 Sent Messages</h3>
+            {/* Inbox / Sent Messages */}
+            <div className={`p-6 rounded-2xl shadow-sm border ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-[#E8E0D4]'}`}>
+              <h3 className="text-lg font-bold mb-4">📨 {t.myRequests}</h3>
               {messages.length === 0 ? (
-                <p style={{ color: '#9C8A76', fontSize: '14px', textAlign: 'center', padding: '20px 0' }}>No messages sent yet.</p>
+                <div className="py-12 text-center opacity-60">
+                  <p className="text-4xl mb-3">📭</p>
+                  <p>{t.noRequests}</p>
+                </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {messages.map(m => (
-                    <div key={m.id} style={{ background: '#F5F0E8', borderRadius: '8px', padding: '12px 16px' }}>
-                      <p style={{ fontSize: '14px', color: '#1C1410', margin: '0 0 6px 0', lineHeight: '1.6' }}>{m.message}</p>
-                      <p style={{ fontSize: '11px', color: '#9C8A76', margin: 0 }}>
-                        {new Date(m.created_at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
-                        {m.is_read && <span style={{ marginLeft: '8px', color: '#1e8e3e', fontWeight: 600 }}>✓ Read</span>}
-                      </p>
-                    </div>
-                  ))}
+                <div className="flex flex-col gap-4">
+                  {messages.map(m => {
+                    const isPending = m.status === 'Pending'
+                    const isApproved = m.status === 'Approved'
+                    const isRejected = m.status === 'Rejected'
+                    
+                    return (
+                      <div key={m.id} className={`p-5 rounded-xl border ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-[#F9F9F9] border-gray-200'}`}>
+                        <div className="flex justify-between items-start mb-3 flex-wrap gap-2">
+                          <div>
+                            <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+                              {m.type === 'Requisition' ? t.typeRequisition : m.type === 'Leave' ? t.typeLeave : m.type === 'Problem' ? t.typeProblem : m.type}
+                            </span>
+                            <span className="text-xs opacity-60 ml-3">
+                              {new Date(m.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
+                            </span>
+                          </div>
+                          
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                            isPending ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                            isApproved ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {isPending ? t.statusPending : isApproved ? t.statusApproved : t.statusRejected}
+                          </span>
+                        </div>
+                        
+                        <p className="whitespace-pre-wrap text-sm mb-4">{m.message}</p>
+                        
+                        {m.admin_reply && (
+                          <div className={`mt-3 p-3 rounded-lg border-l-4 ${
+                            isApproved ? 'bg-green-50 border-green-500 dark:bg-green-900/20' : 
+                            isRejected ? 'bg-red-50 border-red-500 dark:bg-red-900/20' : 
+                            'bg-blue-50 border-blue-500 dark:bg-blue-900/20'
+                          }`}>
+                            <p className="text-xs font-bold mb-1 opacity-80">{t.adminReply}</p>
+                            <p className="text-sm">{m.admin_reply}</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
+
           </div>
         )}
 
