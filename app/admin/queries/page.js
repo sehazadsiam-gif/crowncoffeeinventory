@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { translations } from '../../../lib/i18n'
-import { Moon, Sun, Languages, ArrowLeft, Check, X, Send } from 'lucide-react'
+import { Moon, Sun, ArrowLeft, Check, X, RefreshCw, MessageSquare, Shield } from 'lucide-react'
 
 export default function AdminQueriesPage() {
   const router = useRouter()
@@ -22,11 +22,16 @@ export default function AdminQueriesPage() {
     if (typeof window !== 'undefined') {
       const isDark = localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
       setDarkMode(isDark)
-      if (isDark) document.documentElement.classList.add('dark')
+      if (isDark) {
+        document.body.classList.add('dark-mode')
+      } else {
+        document.body.classList.remove('dark-mode')
+      }
       
-      const isAdmin = localStorage.getItem('isAdmin')
-      if (!isAdmin) {
-        router.push('/login')
+      const token = localStorage.getItem('cc_token')
+      const role = localStorage.getItem('cc_role')
+      if (!token || role !== 'admin') {
+        router.push('/admin/login')
         return
       }
     }
@@ -73,158 +78,421 @@ export default function AdminQueriesPage() {
     const newMode = !darkMode
     setDarkMode(newMode)
     if (newMode) {
-      document.documentElement.classList.add('dark')
+      document.body.classList.add('dark-mode')
       localStorage.setItem('theme', 'dark')
     } else {
-      document.documentElement.classList.remove('dark')
+      document.body.classList.remove('dark-mode')
       localStorage.setItem('theme', 'light')
     }
   }
 
-  const toggleLanguage = () => {
-    setLang(prev => prev === 'en' ? 'bn' : 'en')
-  }
-
   if (loading && queries.length === 0) return (
-    <div className={`min-h-screen flex items-center justify-center transition-colors duration-300 ${darkMode ? 'bg-slate-950' : 'bg-[#FAF7F2]'}`}>
-      <div className="loader"></div>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: darkMode ? '#0B0F19' : '#F8FAFC',
+      transition: 'background-color 0.3s ease'
+    }}>
+      <div className="loader" style={{ width: '40px', height: '40px' }}></div>
     </div>
   )
 
   return (
-    <div className={`min-h-screen transition-colors duration-500 ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} font-sans`}>
-      <nav className={`px-6 flex items-center justify-between h-[70px] sticky top-0 z-50 transition-all duration-300 backdrop-blur-md border-b ${darkMode ? 'bg-slate-950/80 border-slate-800 shadow-sm shadow-slate-900/50' : 'bg-white/80 border-slate-200 shadow-sm'}`}>
-        <div className="flex items-center gap-4">
-          <button onClick={() => router.push('/admin/dashboard')} className={`p-2.5 rounded-full transition-all active:scale-95 ${darkMode ? 'hover:bg-slate-800 text-slate-300 hover:text-white' : 'hover:bg-slate-100 text-slate-600 hover:text-slate-900'}`}>
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: 'var(--bg-base)',
+      color: 'var(--text-primary)',
+      fontFamily: 'var(--font-sans)',
+      transition: 'background-color 0.3s ease, color 0.3s ease'
+    }}>
+      {/* Navbar */}
+      <nav style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        height: '70px',
+        padding: '0 24px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        borderBottom: '1px solid var(--border-light)',
+        backgroundColor: 'var(--bg-surface)',
+        backdropFilter: 'blur(10px)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button 
+            onClick={() => router.push('/dashboard')} 
+            style={{
+              padding: '8px',
+              borderRadius: '50%',
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-muted)',
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+          >
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">{t.adminTitle}</h1>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ background: 'var(--accent-blue-dim)', padding: '6px', borderRadius: '8px' }}>
+              <Shield size={18} style={{ color: 'var(--accent-blue)' }} />
+            </div>
+            <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>
+              {t.adminTitle}
+            </span>
+          </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          <div className={`flex items-center p-1 rounded-full border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-100 border-gray-200'}`}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Language Switch */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '2px',
+            borderRadius: '20px',
+            border: '1px solid var(--border-light)',
+            backgroundColor: 'var(--bg-subtle)'
+          }}>
             <button 
               onClick={() => setLang('en')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all duration-300 ${lang === 'en' ? (darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-gray-800 shadow-sm') : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '16px',
+                border: 'none',
+                cursor: 'pointer',
+                background: lang === 'en' ? 'var(--bg-surface)' : 'transparent',
+                color: lang === 'en' ? 'var(--text-primary)' : 'var(--text-muted)',
+                boxShadow: lang === 'en' ? 'var(--shadow-sm)' : 'none',
+                transition: 'all 0.2s'
+              }}
             >
               EN
             </button>
             <button 
               onClick={() => setLang('bn')} 
-              className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all duration-300 ${lang === 'bn' ? (darkMode ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-gray-800 shadow-sm') : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '16px',
+                border: 'none',
+                cursor: 'pointer',
+                background: lang === 'bn' ? 'var(--bg-surface)' : 'transparent',
+                color: lang === 'bn' ? 'var(--text-primary)' : 'var(--text-muted)',
+                boxShadow: lang === 'bn' ? 'var(--shadow-sm)' : 'none',
+                transition: 'all 0.2s'
+              }}
             >
               BN
             </button>
           </div>
           
-          <button onClick={toggleDarkMode} className={`relative overflow-hidden w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 border hover:scale-105 active:scale-95 ${darkMode ? 'bg-slate-900 border-slate-700 text-yellow-400 hover:shadow-[0_0_15px_rgba(250,204,21,0.2)]' : 'bg-white border-gray-200 text-gray-600 hover:shadow-md'}`} title={darkMode ? t.lightMode : t.darkMode}>
-            <div className={`absolute transition-transform duration-500 ${darkMode ? 'rotate-0 opacity-100' : '-rotate-90 opacity-0'}`}>
-              <Sun size={18} />
-            </div>
-            <div className={`absolute transition-transform duration-500 ${darkMode ? 'rotate-90 opacity-0' : 'rotate-0 opacity-100'}`}>
-              <Moon size={18} />
-            </div>
+          {/* Dark Mode Switch */}
+          <button 
+            onClick={toggleDarkMode} 
+            style={{
+              width: '38px',
+              height: '38px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '50%',
+              border: '1px solid var(--border-light)',
+              backgroundColor: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              position: 'relative'
+            }}
+          >
+            {darkMode ? <Sun size={18} style={{ color: 'var(--warning)' }} /> : <Moon size={18} style={{ color: 'var(--text-muted)' }} />}
           </button>
         </div>
       </nav>
 
-      <main className="max-w-5xl mx-auto p-6 py-10">
-        <div className="mb-10 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Main Container */}
+      <main style={{
+        maxWidth: '900px',
+        margin: '0 auto',
+        padding: '40px 16px 80px'
+      }}>
+        {/* Header Block */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          marginBottom: '32px',
+          flexWrap: 'wrap',
+          gap: '16px'
+        }}>
           <div>
-            <h2 className="text-3xl font-extrabold tracking-tight mb-2">{t.adminTitle}</h2>
-            <p className="text-lg opacity-60 font-medium">{t.adminSubtitle}</p>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.5px' }}>
+              {lang === 'bn' ? 'স্টাফদের ইনবক্স' : 'Staff Query Inbox'}
+            </h1>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
+              {t.adminSubtitle}
+            </p>
           </div>
-          <button onClick={fetchQueries} className={`px-5 py-2.5 rounded-xl font-bold transition-all duration-300 hover:shadow-md active:scale-95 border ${darkMode ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-blue-400' : 'bg-white hover:bg-gray-50 border-gray-200 text-blue-600'}`}>
-            Refresh Inbox
+          
+          <button 
+            onClick={fetchQueries} 
+            className="btn-secondary"
+            style={{
+              padding: '10px 18px',
+              borderRadius: '10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontWeight: 600,
+              fontSize: '13px'
+            }}
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            {lang === 'bn' ? 'রিফ্রেশ করুন' : 'Refresh'}
           </button>
         </div>
 
-        <div className="flex flex-col gap-6">
+        {/* Query List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {queries.length === 0 ? (
-            <div className={`p-16 text-center rounded-3xl border-dashed border-2 ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-gray-300 bg-white/50'}`}>
-              <div className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-6 ${darkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
-                <span className="text-5xl opacity-50">📭</span>
+            <div className="card" style={{
+              padding: '60px 24px',
+              textAlign: 'center',
+              borderRadius: '16px'
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                backgroundColor: 'var(--bg-subtle)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                color: 'var(--text-muted)'
+              }}>
+                <MessageSquare size={28} />
               </div>
-              <p className="text-xl font-semibold opacity-60">No queries found in the inbox.</p>
+              <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px 0' }}>
+                {lang === 'bn' ? 'কোনো মেসেজ নেই' : 'Inbox is Clean'}
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0 }}>
+                {lang === 'bn' ? 'স্টাফদের থেকে কোনো নতুন মেসেজ পাওয়া যায়নি।' : 'No query messages have been received yet.'}
+              </p>
             </div>
           ) : (
-            queries.map((q, i) => {
+            queries.map((q) => {
               const isPending = q.status === 'Pending'
               const isApproved = q.status === 'Approved'
               const isRejected = q.status === 'Rejected'
+              
+              // Map types to Bangla
+              const typeLabels = {
+                'Requisition': lang === 'bn' ? 'রিকুইজিশন' : 'Requisition',
+                'Leave Request': lang === 'bn' ? 'ছুটির আবেদন' : 'Leave Request',
+                'Report Problem': lang === 'bn' ? 'সমস্যা রিপোর্ট' : 'Report Problem',
+                'Other': lang === 'bn' ? 'অন্যান্য' : 'Other'
+              }
+
+              // Status badges
+              let badgeClass = 'badge-gray'
+              let statusText = q.status
+              if (isPending) {
+                badgeClass = 'badge-amber'
+                statusText = lang === 'bn' ? 'অপেক্ষমান' : 'Pending'
+              } else if (isApproved) {
+                badgeClass = 'badge-green'
+                statusText = lang === 'bn' ? 'অনুমোদিত' : 'Approved'
+              } else if (isRejected) {
+                badgeClass = 'badge-red'
+                statusText = lang === 'bn' ? 'প্রত্যাখ্যাত' : 'Rejected'
+              }
 
               return (
-                <div key={q.id} className={`p-8 rounded-3xl border shadow-sm transition-all duration-300 hover:shadow-lg animate-in fade-in slide-in-from-bottom-4 ${darkMode ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-slate-200 hover:border-slate-300'}`} style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'both' }}>
-                  <div className={`flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 pb-6 border-b ${darkMode ? 'border-slate-800' : 'border-slate-100'} gap-4`}>
+                <div key={q.id} className="card-premium" style={{
+                  borderRadius: '16px',
+                  border: isPending ? '1px solid var(--accent-blue-light)' : '1px solid var(--border-light)',
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  boxShadow: isPending ? '0 4px 15px rgba(37,99,235,0.05)' : 'var(--shadow-sm)'
+                }}>
+                  {/* Card Header */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    borderBottom: '1px solid var(--border-light)',
+                    paddingBottom: '14px',
+                    flexWrap: 'wrap',
+                    gap: '12px'
+                  }}>
                     <div>
-                      <h3 className="font-extrabold text-xl mb-2 flex items-center gap-3">
+                      <h3 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 6px 0' }}>
                         {q.staff_name}
                       </h3>
-                      <div className="flex items-center flex-wrap gap-3">
-                        <span className={`text-xs font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-widest ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'}`}>
-                          {q.type}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span className="badge badge-blue" style={{ fontSize: '11px', fontWeight: 700 }}>
+                          {typeLabels[q.type] || q.type}
                         </span>
-                        <span className="text-sm font-medium opacity-50 flex items-center gap-1.5">
-                          <span className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-slate-700' : 'bg-slate-300'}`}></span>
-                          {new Date(q.created_at).toLocaleString()}
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                          • {new Date(q.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-US', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </span>
                       </div>
                     </div>
                     
-                    <div className={`flex items-center gap-2 text-xs font-extrabold px-4 py-2 rounded-full ${
-                      isPending ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20' :
-                      isApproved ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20' :
-                      'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
-                    }`}>
-                      <span className={`w-2 h-2 rounded-full ${isPending ? 'bg-yellow-500 animate-pulse' : isApproved ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                      {q.status}
-                    </div>
+                    <span className={`badge ${badgeClass}`} style={{
+                      padding: '4px 12px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      {statusText}
+                    </span>
                   </div>
 
-                  <p className={`whitespace-pre-wrap text-lg leading-relaxed mb-8 ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>{q.message}</p>
+                  {/* Message body */}
+                  <div style={{
+                    fontSize: '15px',
+                    color: 'var(--text-primary)',
+                    lineHeight: '1.6',
+                    whiteSpace: 'pre-wrap',
+                    padding: '8px 0'
+                  }}>
+                    {q.message}
+                  </div>
 
-                  {/* Reply Section */}
+                  {/* Reply Input/History */}
                   {isPending ? (
-                    <div className={`p-6 rounded-2xl border transition-all duration-300 ${darkMode ? 'bg-slate-950 border-slate-800 focus-within:border-blue-500/50 focus-within:shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'bg-slate-50 border-slate-200 focus-within:border-blue-500/50 focus-within:shadow-[0_0_20px_rgba(59,130,246,0.1)]'}`}>
-                      <label className="block text-xs font-bold uppercase tracking-wider mb-3 opacity-70">Admin Reply</label>
+                    <div style={{
+                      backgroundColor: 'var(--bg-subtle)',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      border: '1px solid var(--border-light)',
+                      marginTop: '8px'
+                    }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        color: 'var(--text-muted)',
+                        marginBottom: '8px',
+                        letterSpacing: '0.5px'
+                      }}>
+                        {lang === 'bn' ? 'উত্তর লিখুন (ঐচ্ছিক)' : 'Write Reply (Optional)'}
+                      </label>
                       <textarea
+                        className="input"
                         placeholder={t.replyPlaceholder}
                         value={replyText[q.id] || ''}
-                        onChange={(e) => setReplyText({...replyText, [q.id]: e.target.value})}
-                        className={`w-full p-4 rounded-xl border-2 outline-none resize-y mb-4 transition-all duration-300 text-base ${darkMode ? 'bg-slate-900 border-slate-800 focus:border-blue-500 focus:bg-slate-950' : 'bg-white border-slate-200 focus:border-blue-500 focus:bg-white'}`}
-                        rows={3}
+                        onChange={(e) => setReplyText({ ...replyText, [q.id]: e.target.value })}
+                        style={{
+                          width: '100%',
+                          minHeight: '70px',
+                          marginBottom: '12px',
+                          borderRadius: '8px',
+                          resize: 'vertical'
+                        }}
                       />
-                      <div className="flex justify-end gap-4">
-                        <button 
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button
                           disabled={updatingId === q.id}
                           onClick={() => handleStatusChange(q.id, 'Rejected')}
-                          className="px-6 py-3 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:border-red-900/30 dark:text-red-400 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 active:scale-95"
+                          className="btn-secondary"
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            color: 'var(--danger)',
+                            borderColor: 'var(--danger)',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
                         >
-                          <X size={18} /> {t.btnReject}
+                          <X size={14} />
+                          {t.btnReject}
                         </button>
-                        <button 
+                        <button
                           disabled={updatingId === q.id}
                           onClick={() => handleStatusChange(q.id, 'Approved')}
-                          className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/20 rounded-xl font-bold transition-all duration-300 flex items-center gap-2 active:scale-95"
+                          className="btn-primary"
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            backgroundColor: 'var(--success)',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
                         >
-                          <Check size={18} /> {t.btnApprove}
+                          <Check size={14} />
+                          {t.btnApprove}
                         </button>
                       </div>
                     </div>
                   ) : (
                     q.admin_reply && (
-                      <div className={`p-6 rounded-2xl border ${
-                        isApproved ? 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-900/30' : 
-                        isRejected ? 'bg-red-50/50 border-red-200 dark:bg-red-900/10 dark:border-red-900/30' : 
-                        'bg-blue-50/50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-900/30'
-                      }`}>
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-extrabold text-white shadow-sm ${isApproved ? 'bg-green-500' : isRejected ? 'bg-red-500' : 'bg-blue-500'}`}>
+                      <div style={{
+                        backgroundColor: 'var(--bg-subtle)',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        border: '1px solid var(--border-light)',
+                        marginTop: '8px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            backgroundColor: isApproved ? 'var(--success)' : 'var(--danger)',
+                            color: 'white',
+                            fontSize: '10px',
+                            fontWeight: 800,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
                             A
-                          </div>
-                          <p className={`text-sm font-extrabold uppercase tracking-wider ${isApproved ? 'text-green-700 dark:text-green-400' : isRejected ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>Your Reply</p>
+                          </span>
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            {t.adminReply}
+                          </span>
                         </div>
-                        <p className={`text-lg ml-11 ${darkMode ? 'text-slate-300' : 'text-slate-800'}`}>{q.admin_reply}</p>
+                        <p style={{
+                          fontSize: '13.5px',
+                          color: 'var(--text-secondary)',
+                          margin: '0 0 0 26px',
+                          lineHeight: '1.5',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {q.admin_reply}
+                        </p>
                       </div>
                     )
                   )}
