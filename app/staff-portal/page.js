@@ -347,7 +347,7 @@ export default function StaffPortalPage() {
             {darkMode ? <Sun size={18} style={{ color: 'var(--warning)' }} /> : <Moon size={18} style={{ color: 'var(--text-muted)' }} />}
           </button>
 
-          <div style={{ textAlign: 'right', marginLeft: '4px' }} className="hidden sm:block">
+          <div style={{ textAlign: 'right', marginLeft: '4px' }} className="mobile-hide">
             <p style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>{staff?.name}</p>
             <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', margin: 0 }}>{staff?.designation}</p>
           </div>
@@ -376,12 +376,12 @@ export default function StaffPortalPage() {
       <main style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 16px 60px' }}>
 
         {/* Month Selector */}
-        <div style={{ background: '#6B3A2A', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="mobile-compact-padding" style={{ background: '#6B3A2A', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button onClick={prevMonth} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'white' }}>
             <ChevronLeft size={18} />
           </button>
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '22px', fontWeight: 800, color: 'white', margin: 0 }}>
+            <p className="mobile-text-lg" style={{ fontSize: '22px', fontWeight: 800, color: 'white', margin: 0 }}>
               {monthNames[selectedMonth - 1]} {selectedYear}
             </p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px' }}>
@@ -405,7 +405,7 @@ export default function StaffPortalPage() {
         </div>
 
         {/* Monthly Overview Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+        <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
           {[
             { label: 'Final Salary', value: '৳' + finalSalary.toLocaleString(), color: '#8B5E3C' },
             { label: 'Received', value: '৳' + totalPaidThisMonth.toLocaleString(), color: '#1e8e3e' },
@@ -1123,6 +1123,21 @@ export default function StaffPortalPage() {
 
 
       </main>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media (max-width: 640px) {
+          .mobile-hide { display: none !important; }
+          .responsive-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 8px !important;
+          }
+          .mobile-compact-padding {
+            padding: 12px 16px !important;
+          }
+          .mobile-text-lg {
+            font-size: 16px !important;
+          }
+        }
+      `}} />
       {printData && <PaySlip data={printData} onClose={() => setPrintData(null)} />}
     </div>
   )
