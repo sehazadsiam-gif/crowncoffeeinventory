@@ -391,13 +391,13 @@ export default function StaffPortalPage() {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
           {(() => {
             const tabLabels = {
-              overview: 'Overview',
-              salary: 'Salary',
-              attendance: 'Attendance',
-              advances: 'Advances',
-              remarks: 'Remarks',
-              leave_requests: '📅 Leave Requests',
-              messages: '💬 Messages'
+              overview: lang === 'bn' ? 'ওভারভিউ' : 'Overview',
+              salary: lang === 'bn' ? 'বেতন' : 'Salary',
+              attendance: lang === 'bn' ? 'উপস্থিতি' : 'Attendance',
+              advances: lang === 'bn' ? 'অগ্রিম' : 'Advances',
+              remarks: lang === 'bn' ? 'মন্তব্য' : 'Remarks',
+              leave_requests: lang === 'bn' ? '📅 ছুটির আবেদন' : '📅 Leave Requests',
+              messages: lang === 'bn' ? '💬 মেসেজ বক্স' : '💬 Messages'
             }
             return tabs.map(t => (
               <button

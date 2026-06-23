@@ -39,7 +39,7 @@ export default function DashboardClient() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bazar_entries' }, () => fetchStatsForDate(date))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ingredients' }, () => fetchStatsForDate(date))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, () => fetchStatsForDate(date))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_messages' }, () => fetchStatsForDate(date))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_queries' }, () => fetchStatsForDate(date))
       .subscribe()
 
     return () => {
@@ -61,7 +61,7 @@ export default function DashboardClient() {
         supabase.from('attendance').select('status').eq('date', selectedDate),
         supabase.from('advance_log').select('amount').eq('month', currentMonth).eq('year', currentYear),
         supabase.from('leave_requests').select('*, staff:staff_id(name)').eq('status', 'pending'),
-        supabase.from('staff_messages').select('*, staff:staff_id(name)').eq('is_read', false)
+        supabase.from('staff_queries').select('*, staff:staff_id(name)').eq('status', 'Pending')
       ])
 
       const totalSales = (salesRes.data || []).reduce((s, row) => s + (row.total_revenue || 0), 0)
@@ -165,7 +165,7 @@ export default function DashboardClient() {
             <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Zap size={20} style={{ color: 'var(--warning)' }} /> Quick Modules
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px' }}>
               <ModuleLink href="/sales" icon={<ShoppingCart size={24} />} title="Sales POS" color="var(--success)" />
               <ModuleLink href="/menu" icon={<BookOpen size={24} />} title="Menu Mgmt" color="var(--primary)" />
               <ModuleLink href="/bazar" icon={<ClipboardList size={24} />} title="Bazar Entry" color="var(--danger)" />
@@ -173,6 +173,7 @@ export default function DashboardClient() {
               <ModuleLink href="/staff/attendance" icon={<UserCheck size={24} />} title="Attendance" color="var(--hr-primary)" />
               <ModuleLink href="/staff/payroll" icon={<FileText size={24} />} title="Payroll" color="var(--hr-primary)" />
               <ModuleLink href="/staff/leave-requests" icon={<CalendarDays size={24} />} title="Leave Requests" color="#f59e0b" badge={alerts.pendingLeaves.length > 0 ? alerts.pendingLeaves.length : null} />
+              <ModuleLink href="/admin/queries" icon={<MessageSquare size={24} />} title="Staff Inbox" color="#3b82f6" badge={alerts.unreadMessages.length > 0 ? alerts.unreadMessages.length : null} />
             </div>
           </div>
 
@@ -245,10 +246,10 @@ export default function DashboardClient() {
 
               {/* Unread Messages */}
               {alerts.unreadMessages.map(msg => (
-                <ActionItem key={msg.id} icon={<MessageSquare size={18} />} color="#3b82f6" title="Unread Staff Message">
-                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{msg.staff?.name}</span> sent a message on {new Date(msg.created_at).toLocaleDateString()}.
+                <ActionItem key={msg.id} icon={<MessageSquare size={18} />} color="#3b82f6" title="Pending Staff Request">
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{msg.staff?.name || msg.staff_name}</span> ({msg.type}): "{msg.message.substring(0, 60)}{msg.message.length > 60 ? '...' : ''}"
                   <div style={{ marginTop: '8px' }}>
-                    <Link href="/staff/messages" style={{ fontSize: '12px', color: '#3b82f6', fontWeight: 700, textDecoration: 'none' }}>Read Message &rarr;</Link>
+                    <Link href="/admin/queries" style={{ fontSize: '12px', color: '#3b82f6', fontWeight: 700, textDecoration: 'none' }}>Open Staff Inbox &rarr;</Link>
                   </div>
                 </ActionItem>
               ))}
