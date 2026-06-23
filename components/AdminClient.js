@@ -209,6 +209,28 @@ export default function AdminClient({ initialStats }) {
       {/* Tab Content: Management */}
       {activeTab === 'entities' && (
         <div className="animate-in" style={{ display: 'grid', gap: '24px' }}>
+          <div className="card-premium" style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%)', color: 'white', border: 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.15)', padding: '10px', borderRadius: '12px', backdropFilter: 'blur(10px)' }}>
+                    <AlertCircle size={24} color="white" />
+                  </div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 800, margin: 0, color: 'white' }}>Staff Inbox</h3>
+                </div>
+                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.75)', margin: 0 }}>
+                  View and reply to requisitions, leave requests, and messages sent by staff members.
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/admin/queries')}
+                style={{ background: 'white', color: '#2563eb', padding: '12px 28px', borderRadius: '12px', border: 'none', fontWeight: 700, fontSize: '15px', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}
+              >
+                Open Staff Inbox →
+              </button>
+            </div>
+          </div>
+
           <div className="card-premium">
             <h3 style={{ fontSize: '18px', marginBottom: '16px' }}>Manage Project Access</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '20px' }}>
@@ -222,6 +244,7 @@ export default function AdminClient({ initialStats }) {
             </div>
           </div>
         </div>
+
       )}
 
       {/* Confirmation Modal */}

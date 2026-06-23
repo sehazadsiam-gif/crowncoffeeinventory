@@ -808,163 +808,176 @@ export default function StaffPortalPage() {
           </div>
         )}
 
-        {/* Interactive Mailbox Tab */}
-        {activeTab === 'messages' && (
-          <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            
-            {/* Compose Box */}
-            <div className={`p-8 rounded-3xl shadow-lg border transition-all duration-300 relative overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#E8E0D4]'}`}>
-              <div className={`absolute top-0 left-0 w-full h-1 ${darkMode ? 'bg-gradient-to-r from-blue-600 to-indigo-600' : 'bg-gradient-to-r from-blue-500 to-cyan-400'}`}></div>
-              <h3 className="text-xl font-extrabold mb-6 flex items-center gap-3">
-                <div className={`p-2 rounded-xl ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
-                  <Send size={20} />
+        {/* Messages Tab — Ultra Modern Mailbox */}
+        {activeTab === 'messages' && (() => {
+          const typeConfig = {
+            Requisition: { icon: '📦', color: 'from-orange-500 to-amber-500', bg: darkMode ? 'bg-orange-900/20 border-orange-800/40' : 'bg-orange-50 border-orange-200', label: t.typeRequisition },
+            Leave:       { icon: '🏖️', color: 'from-blue-500 to-cyan-500',   bg: darkMode ? 'bg-blue-900/20 border-blue-800/40'   : 'bg-blue-50 border-blue-200',   label: t.typeLeave },
+            Problem:     { icon: '⚠️', color: 'from-red-500 to-rose-500',    bg: darkMode ? 'bg-red-900/20 border-red-800/40'     : 'bg-red-50 border-red-200',     label: t.typeProblem },
+            Other:       { icon: '💬', color: 'from-purple-500 to-violet-500', bg: darkMode ? 'bg-purple-900/20 border-purple-800/40': 'bg-purple-50 border-purple-200', label: t.typeOther },
+          }
+          const selectedConfig = typeConfig[queryType] || typeConfig.Other
+
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', alignItems: 'start' }}>
+
+              {/* LEFT PANEL: Compose */}
+              <div className={`rounded-3xl border overflow-hidden shadow-xl ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                {/* Gradient Header */}
+                <div className={`bg-gradient-to-r ${selectedConfig.color} p-6`}>
+                  <p className="text-white/80 text-xs font-bold uppercase tracking-widest mb-1">{t.composeNew}</p>
+                  <h3 className="text-white text-2xl font-black">{selectedConfig.label}</h3>
                 </div>
-                {t.composeNew}
-              </h3>
-              
-              <div className="mb-6">
-                <label className="block text-sm font-bold mb-3 opacity-80 uppercase tracking-wider">{t.queryType}</label>
-                <div className="flex flex-wrap gap-3">
-                  {[
-                    { id: 'Requisition', label: t.typeRequisition },
-                    { id: 'Leave', label: t.typeLeave },
-                    { id: 'Problem', label: t.typeProblem },
-                    { id: 'Other', label: t.typeOther }
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      onClick={() => setQueryType(opt.id)}
-                      className={`px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 border-2 active:scale-95 ${
-                        queryType === opt.id 
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-[0_0_20px_rgba(59,130,246,0.15)] dark:bg-blue-900/20 dark:text-blue-300 dark:shadow-[0_0_20px_rgba(59,130,246,0.1)]' 
-                          : `border-transparent ${darkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-bold mb-3 opacity-80 uppercase tracking-wider">{t.messageLabel}</label>
-                <textarea
-                  value={newMessage}
-                  onChange={e => setNewMessage(e.target.value)}
-                  placeholder={t.messagePlaceholder}
-                  rows={5}
-                  className={`w-full p-5 rounded-2xl border-2 transition-all duration-300 outline-none resize-y text-base ${
-                    darkMode 
-                      ? 'bg-slate-950 border-slate-800 focus:border-blue-500 focus:bg-slate-900 shadow-inner' 
-                      : 'bg-gray-50 border-gray-200 focus:border-blue-500 focus:bg-white shadow-inner'
-                  }`}
-                />
-              </div>
-
-              <button
-                disabled={!newMessage.trim() || sendingMessage}
-                onClick={async () => {
-                  if (!newMessage.trim()) return
-                  setSendingMessage(true)
-                  try {
-                    const res = await fetch('/api/staffquery', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        staff_id: staff.id,
-                        staff_name: staff.name,
-                        type: queryType,
-                        message: newMessage.trim()
-                      })
-                    })
-                    if (!res.ok) throw new Error('Failed to send')
-                    setNewMessage('')
-                    const { data } = await supabase.from('staff_queries').select('*').eq('staff_id', staff.id).order('created_at', { ascending: false })
-                    setMessages(data || [])
-                  } catch (err) {
-                    alert('Failed to send message: ' + err.message)
-                  } finally {
-                    setSendingMessage(false)
-                  }
-                }}
-                className={`group flex items-center justify-center gap-3 w-full sm:w-auto px-8 py-4 rounded-2xl font-extrabold transition-all duration-300 ${
-                  sendingMessage || !newMessage.trim() 
-                    ? `cursor-not-allowed opacity-50 ${darkMode ? 'bg-slate-800 text-slate-500' : 'bg-gray-200 text-gray-500'}` 
-                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg hover:shadow-blue-500/30 active:scale-95'
-                }`}
-              >
-                <span className={`${!sendingMessage && newMessage.trim() ? 'group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform' : ''}`}>
-                  <Send size={20} />
-                </span>
-                {sendingMessage ? t.submitting : t.submitBtn}
-              </button>
-            </div>
-
-            {/* Inbox / Sent Messages */}
-            <div className="flex flex-col gap-4">
-              <h3 className="text-2xl font-extrabold mb-2 ml-2 tracking-tight">📨 {t.myRequests}</h3>
-              {messages.length === 0 ? (
-                <div className={`p-12 text-center rounded-3xl border-dashed border-2 ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-gray-300 bg-white/50'}`}>
-                  <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4 ${darkMode ? 'bg-slate-800' : 'bg-gray-100'}`}>
-                    <span className="text-4xl opacity-50">📭</span>
+                <div className="p-6">
+                  {/* Type Selector */}
+                  <div className="mb-5">
+                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{t.queryType}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(typeConfig).map(([id, cfg]) => (
+                        <button
+                          key={id}
+                          onClick={() => setQueryType(id)}
+                          className={`flex items-center gap-2.5 p-3 rounded-2xl font-bold text-sm transition-all duration-200 active:scale-95 border ${
+                            queryType === id
+                              ? `bg-gradient-to-r ${cfg.color} text-white border-transparent shadow-lg`
+                              : `border ${darkMode ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`
+                          }`}
+                        >
+                          <span className="text-lg">{cfg.icon}</span>
+                          <span className="truncate">{cfg.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-lg font-semibold opacity-60">{t.noRequests}</p>
+
+                  {/* Message Field */}
+                  <div className="mb-5">
+                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{t.messageLabel}</p>
+                    <textarea
+                      value={newMessage}
+                      onChange={e => setNewMessage(e.target.value)}
+                      placeholder={t.messagePlaceholder}
+                      rows={5}
+                      className={`w-full p-4 rounded-2xl border-2 transition-all duration-300 outline-none resize-none text-base leading-relaxed font-medium ${
+                        darkMode
+                          ? 'bg-slate-950 border-slate-800 focus:border-blue-500 text-slate-200 placeholder-slate-600'
+                          : 'bg-slate-50 border-slate-200 focus:border-blue-500 text-slate-800 placeholder-slate-400'
+                      }`}
+                    />
+                    <div className={`text-right text-xs mt-1 font-medium ${newMessage.length > 400 ? 'text-red-500' : (darkMode ? 'text-slate-600' : 'text-slate-400')}`}>
+                      {newMessage.length} / 500
+                    </div>
+                  </div>
+
+                  {/* Send Button */}
+                  <button
+                    disabled={!newMessage.trim() || sendingMessage}
+                    onClick={async () => {
+                      if (!newMessage.trim()) return
+                      setSendingMessage(true)
+                      try {
+                        const res = await fetch('/api/staffquery', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ staff_id: staff.id, staff_name: staff.name, type: queryType, message: newMessage.trim() })
+                        })
+                        if (!res.ok) throw new Error('Failed to send')
+                        setNewMessage('')
+                        const { data } = await supabase.from('staff_queries').select('*').eq('staff_id', staff.id).order('created_at', { ascending: false })
+                        setMessages(data || [])
+                      } catch (err) {
+                        alert('Failed to send message: ' + err.message)
+                      } finally {
+                        setSendingMessage(false)
+                      }
+                    }}
+                    className={`w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-base transition-all duration-300 ${
+                      sendingMessage || !newMessage.trim()
+                        ? `opacity-50 cursor-not-allowed ${darkMode ? 'bg-slate-800 text-slate-500' : 'bg-slate-200 text-slate-400'}`
+                        : `bg-gradient-to-r ${selectedConfig.color} text-white shadow-lg hover:shadow-2xl active:scale-95 hover:opacity-95`
+                    }`}
+                  >
+                    <Send size={20} className={!sendingMessage && newMessage.trim() ? 'group-hover:-translate-y-0.5 transition-transform' : ''} />
+                    {sendingMessage ? t.submitting : t.submitBtn}
+                  </button>
                 </div>
-              ) : (
-                <div className="flex flex-col gap-5">
-                  {messages.map((m, i) => {
-                    const isPending = m.status === 'Pending'
+              </div>
+
+              {/* RIGHT PANEL: Inbox */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className={`text-xl font-black tracking-tight ${darkMode ? 'text-white' : 'text-slate-800'}`}>{t.myRequests}</h3>
+                  <span className={`text-sm font-bold px-3 py-1 rounded-full ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                    {messages.length}
+                  </span>
+                </div>
+
+                {messages.length === 0 ? (
+                  <div className={`flex flex-col items-center justify-center p-12 rounded-3xl border-2 border-dashed ${darkMode ? 'border-slate-800 text-slate-600' : 'border-slate-200 text-slate-400'}`}>
+                    <div className="text-5xl mb-4 opacity-40">📪</div>
+                    <p className="font-bold text-lg">{t.noRequests}</p>
+                  </div>
+                ) : (
+                  messages.map((m, i) => {
+                    const isPending  = m.status === 'Pending'
                     const isApproved = m.status === 'Approved'
                     const isRejected = m.status === 'Rejected'
-                    
+                    const cfg = typeConfig[m.type] || typeConfig.Other
+
                     return (
-                      <div key={m.id} className={`p-6 rounded-3xl border shadow-sm transition-all duration-300 hover:shadow-md animate-in fade-in slide-in-from-bottom-4 ${darkMode ? 'bg-slate-900 border-slate-800 hover:border-slate-700' : 'bg-white border-[#E8E0D4] hover:border-gray-300'}`} style={{ animationDelay: `${i * 50}ms`, animationFillMode: 'both' }}>
-                        <div className="flex justify-between items-start mb-4 flex-wrap gap-3">
-                          <div className="flex items-center gap-3">
-                            <span className={`text-xs font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-widest ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-gray-100 text-gray-700'}`}>
-                              {m.type === 'Requisition' ? t.typeRequisition : m.type === 'Leave' ? t.typeLeave : m.type === 'Problem' ? t.typeProblem : m.type}
-                            </span>
-                            <span className="text-sm font-medium opacity-50">
-                              {new Date(m.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
-                            </span>
+                      <div
+                        key={m.id}
+                        className={`rounded-3xl border overflow-hidden shadow-sm hover:shadow-md transition-all duration-300`}
+                        style={{ animationDelay: `${i * 60}ms` }}
+                      >
+                        {/* Card Header Strip */}
+                        <div className={`bg-gradient-to-r ${cfg.color} px-5 py-3 flex items-center justify-between`}>
+                          <div className="flex items-center gap-2 text-white font-bold text-sm">
+                            <span>{cfg.icon}</span>
+                            <span>{cfg.label}</span>
                           </div>
-                          
-                          <div className={`flex items-center gap-2 text-xs font-extrabold px-4 py-1.5 rounded-full ${
-                            isPending ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20' :
-                            isApproved ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20' :
-                            'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                          <span className={`text-xs font-black px-3 py-1 rounded-full flex items-center gap-1.5 ${
+                            isPending  ? 'bg-yellow-400/20 text-yellow-100 border border-yellow-400/30' :
+                            isApproved ? 'bg-green-400/20 text-green-100 border border-green-400/30' :
+                                         'bg-red-400/20 text-red-100 border border-red-400/30'
                           }`}>
-                            <span className={`w-2 h-2 rounded-full ${isPending ? 'bg-yellow-500 animate-pulse' : isApproved ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                            <span className={`w-1.5 h-1.5 rounded-full inline-block ${isPending ? 'bg-yellow-300 animate-pulse' : isApproved ? 'bg-green-300' : 'bg-red-300'}`}></span>
                             {isPending ? t.statusPending : isApproved ? t.statusApproved : t.statusRejected}
-                          </div>
+                          </span>
                         </div>
-                        
-                        <p className={`whitespace-pre-wrap text-base leading-relaxed mb-2 ${darkMode ? 'text-slate-300' : 'text-gray-800'}`}>{m.message}</p>
-                        
-                        {m.admin_reply && (
-                          <div className={`mt-5 p-5 rounded-2xl border ${
-                            isApproved ? 'bg-green-50/50 border-green-200 dark:bg-green-900/10 dark:border-green-900/30' : 
-                            isRejected ? 'bg-red-50/50 border-red-200 dark:bg-red-900/10 dark:border-red-900/30' : 
-                            'bg-blue-50/50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-900/30'
-                          }`}>
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${isApproved ? 'bg-green-500' : isRejected ? 'bg-red-500' : 'bg-blue-500'}`}>
-                                A
+
+                        {/* Card Body */}
+                        <div className={`p-5 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'} border-t-0`}>
+                          <p className={`text-xs font-semibold mb-3 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                            {new Date(m.created_at).toLocaleString(lang === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
+                          </p>
+                          <p className={`text-sm leading-relaxed whitespace-pre-wrap ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{m.message}</p>
+
+                          {m.admin_reply && (
+                            <div className={`mt-4 p-4 rounded-2xl border ${
+                              isApproved ? (darkMode ? 'bg-green-900/15 border-green-800/30' : 'bg-green-50 border-green-200') :
+                              isRejected ? (darkMode ? 'bg-red-900/15 border-red-800/30'   : 'bg-red-50 border-red-200')   :
+                                           (darkMode ? 'bg-blue-900/15 border-blue-800/30'  : 'bg-blue-50 border-blue-200')
+                            }`}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white ${isApproved ? 'bg-green-500' : isRejected ? 'bg-red-500' : 'bg-blue-500'}`}>A</div>
+                                <span className={`text-xs font-black uppercase tracking-wider ${isApproved ? 'text-green-600 dark:text-green-400' : isRejected ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400'}`}>{t.adminReply}</span>
                               </div>
-                              <p className={`text-sm font-extrabold uppercase tracking-wider ${isApproved ? 'text-green-700 dark:text-green-400' : isRejected ? 'text-red-700 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>{t.adminReply}</p>
+                              <p className={`text-sm ml-8 leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>{m.admin_reply}</p>
                             </div>
-                            <p className={`text-base ml-8 ${darkMode ? 'text-slate-300' : 'text-gray-800'}`}>{m.admin_reply}</p>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     )
-                  })}
-                </div>
-              )}
-            </div>
+                  })
+                )}
+              </div>
 
-          </div>
-        )}
+            </div>
+          )
+        })()}
+
 
       </main>
       {printData && <PaySlip data={printData} onClose={() => setPrintData(null)} />}
