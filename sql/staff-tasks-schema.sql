@@ -17,6 +17,17 @@ CREATE TABLE IF NOT EXISTS staff_tasks (
 -- Enable Row Level Security
 ALTER TABLE staff_tasks ENABLE ROW LEVEL SECURITY;
 
+-- Allow all operations (admin controls access via application logic)
+DROP POLICY IF EXISTS "Allow all select staff_tasks" ON staff_tasks;
+DROP POLICY IF EXISTS "Allow all insert staff_tasks" ON staff_tasks;
+DROP POLICY IF EXISTS "Allow all update staff_tasks" ON staff_tasks;
+DROP POLICY IF EXISTS "Allow all delete staff_tasks" ON staff_tasks;
+
+CREATE POLICY "Allow all select staff_tasks" ON staff_tasks FOR SELECT USING (true);
+CREATE POLICY "Allow all insert staff_tasks" ON staff_tasks FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow all update staff_tasks" ON staff_tasks FOR UPDATE USING (true);
+CREATE POLICY "Allow all delete staff_tasks" ON staff_tasks FOR DELETE USING (true);
+
 -- Optional: Create an index for faster staff lookups
 CREATE INDEX IF NOT EXISTS idx_staff_tasks_staff_id ON staff_tasks (staff_id);
 CREATE INDEX IF NOT EXISTS idx_staff_tasks_status ON staff_tasks (status);

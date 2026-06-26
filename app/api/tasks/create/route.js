@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendTaskAssignmentEmail } from '../../../../lib/email'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-)
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://smaoazpzngwyuqbdghfn.supabase.co'
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtYW9henB6bmd3eXVxYmRnaGZuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjM0NzIyNiwiZXhwIjoyMDkxOTIzMjI2fQ.pRCFjvM2P-yzzkoh3fI7mJaCX4pXitusfAy2xbNhS_0'
+
+const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 export async function POST(request) {
   try {
