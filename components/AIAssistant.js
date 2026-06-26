@@ -122,8 +122,14 @@ export default function AIAssistant() {
     setLoading(true)
 
     try {
-      // Build system prompt based on context
+      // Extract active page text content for AI context
+      const pageText = getPageText()
+      
+      // Build system prompt based on context and active page text
       let systemPrompt = `Current page: ${pathname}. `
+      if (pageText) {
+        systemPrompt += `Page Text Content: ${pageText}. `
+      }
       if (contextData) {
         systemPrompt += `Page Data Context: ${JSON.stringify(contextData)}. `
       }

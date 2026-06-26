@@ -6,7 +6,7 @@ import {
   Coffee, Menu as MenuIcon, X, 
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
   Upload, FileSpreadsheet, UserCheck, Sun, Moon, Receipt, Package,
-  TrendingUp, Calculator as CalcIcon
+  TrendingUp, Calculator as CalcIcon, ShoppingBag
 } from 'lucide-react'
 
 export default function Navbar() {
@@ -78,6 +78,7 @@ export default function Navbar() {
 
   const adminItems = [
     { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
+    { href: '/pos', label: 'POS', icon: <ShoppingBag size={16} /> },
     {
       label: 'Sales',
       icon: <Receipt size={16} />,

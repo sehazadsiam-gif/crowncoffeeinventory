@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendTaskStatusUpdateEmail } from '../../../../lib/email'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -9,7 +10,7 @@ const supabase = createClient(
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { task_id, status, staff_note, staff_id } = body
+    const { task_id, status, staff_note } = body
 
     if (!task_id || !status) {
       return NextResponse.json({ error: 'task_id and status are required' }, { status: 400 })
@@ -23,20 +24,17 @@ export async function POST(request) {
 
     if (error) throw error
 
-    // Notify admin via email
+    // Notify admin via email directly
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/email/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'task_status_update',
-          staffName: data.staff?.name || 'Staff',
-          taskTitle: data.title,
-          status,
-          staffNote: staff_note || ''
-        })
+      await sendTaskStatusUpdateEmail({
+        staffName: data.staff?.name || 'Staff',
+        taskTitle: data.title,
+        status,
+        staffNote: staff_note || ''
       })
-    } catch {}
+    } catch (err) {
+      console.error('Failed to send status update email to admin:', err)
+    }
 
     return NextResponse.json({ success: true, task: data })
   } catch (error) {

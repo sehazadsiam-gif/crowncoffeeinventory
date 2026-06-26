@@ -52,10 +52,19 @@ export async function POST(request) {
       )
     }
 
+    // Filter messages for Anthropic (first message must have role 'user')
+    let anthropicMessages = messages.map(m => ({
+      role: m.role,
+      content: m.content
+    }))
+    if (anthropicMessages.length > 0 && anthropicMessages[0].role === 'assistant') {
+      anthropicMessages = anthropicMessages.slice(1)
+    }
+
     const body = {
       model: 'claude-3-5-sonnet-latest',
       max_tokens: 4000,
-      messages
+      messages: anthropicMessages
     }
 
     let finalSystemPrompt = "You are the AI Assistant for Crown Coffee, an advanced cafe inventory and management system. Help the user understand their data, find features, and manage their coffee shop efficiently. Keep answers concise, actionable, and formatted in markdown."

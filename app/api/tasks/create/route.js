@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendTaskAssignmentEmail } from '../../../../lib/email'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -27,23 +28,20 @@ export async function POST(request) {
     // Fetch staff email for notification
     const { data: staffData } = await supabase.from('staff').select('name, email').eq('id', staff_id).single()
 
-    // Send assignment email to staff if they have an email
+    // Send assignment email directly without localhost HTTP fetch
     if (staffData?.email) {
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/email/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'task_assigned',
-            staffName: staffData.name,
-            to: staffData.email,
-            taskTitle: title,
-            description: description || '',
-            priority: priority || 'normal',
-            dueDate: due_date || null
-          })
+        await sendTaskAssignmentEmail({
+          to: staffData.email,
+          staffName: staffData.name,
+          taskTitle: title,
+          description: description || '',
+          priority: priority || 'normal',
+          dueDate: due_date || null
         })
-      } catch {}
+      } catch (err) {
+        console.error('Failed to send task assignment email:', err)
+      }
     }
 
     return NextResponse.json({ success: true, task: data })
