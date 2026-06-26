@@ -78,9 +78,23 @@ export default function Navbar() {
 
   const adminItems = [
     { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
-    { href: '/sales', label: 'Sales', icon: <Receipt size={16} /> },
+    {
+      label: 'Sales',
+      icon: <Receipt size={16} />,
+      children: [
+        { href: '/sales', label: 'Sales Register' },
+        { href: '/sales-import', label: 'Sales Import' },
+      ]
+    },
     { href: '/bazar', label: 'Bazar', icon: <TrendingUp size={16} /> },
-    { href: '/stock', label: 'Stock', icon: <Package size={16} /> },
+    {
+      label: 'Stock',
+      icon: <Package size={16} />,
+      children: [
+        { href: '/stock', label: 'Stock Manager' },
+        { href: '/stock-import', label: 'Stock Import' },
+      ]
+    },
     {
       label: 'Menu',
       icon: <BookOpen size={16} />,
@@ -94,6 +108,7 @@ export default function Navbar() {
       icon: <Users size={16} />,
       children: [
         { href: '/staff', label: 'Directory' },
+        { href: '/admin/tasks', label: 'Assign Tasks' },
         { href: '/staff/attendance', label: 'Attendance' },
         { href: '/attendance-import', label: 'Attendance Import' },
         { href: '/admin/overtime', label: 'Overtime' },

@@ -6,7 +6,7 @@ import {
   Coffee, LogOut, ChevronLeft, ChevronRight, Printer,
   Moon, Sun, Send, Globe, LayoutDashboard, Wallet,
   CalendarDays, TrendingUp, MessageSquare, FileText,
-  CheckCircle2, Clock, XCircle, Home
+  CheckCircle2, Clock, XCircle, Home, CheckSquare, ClipboardList, AlertTriangle
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { translations } from '../../lib/i18n'
@@ -38,6 +38,9 @@ export default function StaffPortalPage() {
   const [lang, setLang] = useState('bn')
   const [darkMode, setDarkMode] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [tasks, setTasks] = useState([])
+  const [updatingTaskId, setUpdatingTaskId] = useState(null)
+  const [taskNotes, setTaskNotes] = useState({})
 
   const t = translations[lang]
 
@@ -73,7 +76,7 @@ export default function StaffPortalPage() {
     try {
       setLoading(true)
       const currentYear = new Date().getFullYear()
-      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes, msgRes] = await Promise.all([
+      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes, msgRes, tasksRes] = await Promise.all([
         supabase.from('staff').select('*').eq('id', staffId).single(),
         supabase.from('payroll_entries').select('*').eq('staff_id', staffId).order('year', { ascending: false }).order('month', { ascending: false }).limit(24),
         supabase.from('salary_payments').select('*').eq('staff_id', staffId).order('payment_date', { ascending: false }),
@@ -83,7 +86,8 @@ export default function StaffPortalPage() {
         supabase.from('leave_balance').select('*').eq('staff_id', staffId).eq('year', currentYear).single(),
         supabase.from('monthly_attendance_summary').select('*').eq('staff_id', staffId),
         supabase.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
-        supabase.from('staff_queries').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
+        supabase.from('staff_queries').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
+        supabase.from('staff_tasks').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
       ])
       setStaff(staffRes.data)
       setPayroll(payRes.data || [])
@@ -95,6 +99,7 @@ export default function StaffPortalPage() {
       setSummary(summaryRes.data || [])
       setLeaveRequests(leaveReqRes.data || [])
       setMessages(msgRes.data || [])
+      setTasks(tasksRes.data || [])
     } catch (err) {
       console.error('Error fetching staff data:', err)
     } finally {
@@ -134,6 +139,32 @@ export default function StaffPortalPage() {
       alert('Failed to submit: ' + err.message)
     } finally {
       setSubmittingLeave(false)
+    }
+  }
+
+  async function handleUpdateTaskStatus(taskId, status) {
+    try {
+      setUpdatingTaskId(taskId)
+      const res = await fetch('/api/tasks/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          task_id: taskId,
+          status,
+          staff_note: taskNotes[taskId] || '',
+          staff_id: staff.id
+        })
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Failed to update task')
+      
+      alert(lang === 'bn' ? 'কাজের অগ্রগতি সফলভাবে আপডেট করা হয়েছে!' : 'Task status updated successfully!')
+      const { data } = await supabase.from('staff_tasks').select('*').eq('staff_id', staff.id).order('created_at', { ascending: false })
+      setTasks(data || [])
+    } catch (err) {
+      alert('Error updating task: ' + err.message)
+    } finally {
+      setUpdatingTaskId(null)
     }
   }
 
@@ -187,6 +218,7 @@ export default function StaffPortalPage() {
 
   const tabs = [
     { key: 'overview', icon: <Home size={15} />, label: lang === 'bn' ? 'ওভারভিউ' : 'Overview' },
+    { key: 'tasks', icon: <CheckSquare size={15} />, label: lang === 'bn' ? 'কাজসমূহ' : 'Tasks' },
     { key: 'salary', icon: <Wallet size={15} />, label: lang === 'bn' ? 'বেতন' : 'Salary' },
     { key: 'attendance', icon: <CalendarDays size={15} />, label: lang === 'bn' ? 'উপস্থিতি' : 'Attendance' },
     { key: 'advances', icon: <TrendingUp size={15} />, label: lang === 'bn' ? 'অগ্রিম' : 'Advances' },
@@ -350,6 +382,58 @@ export default function StaffPortalPage() {
             <ChevronRight size={18} />
           </button>
         </div>
+
+        {/* Urgent Tasks Banner */}
+        {tasks.filter(tk => tk.status === 'pending' && (tk.priority === 'urgent' || tk.priority === 'high')).length > 0 && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%)',
+            border: '1.5px solid var(--danger)',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: '0 8px 32px rgba(239, 68, 68, 0.15)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ background: 'var(--danger)', borderRadius: '50%', padding: '8px', display: 'flex', color: 'white' }}>
+                <AlertTriangle size={18} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '15px', fontWeight: 800, margin: 0, color: 'var(--danger)' }}>
+                  {lang === 'bn' ? 'জরুরি পদক্ষেপ প্রয়োজন!' : 'Urgent Action Required!'}
+                </h4>
+                <p style={{ fontSize: '13px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: 600 }}>
+                  {lang === 'bn' 
+                    ? `আপনার জন্য ${tasks.filter(tk => tk.status === 'pending').length}টি কাজ বাকি আছে। অনুগ্রহ করে দ্রুত সম্পন্ন করুন।` 
+                    : `You have ${tasks.filter(tk => tk.status === 'pending').length} pending tasks assigned by the administrator.`}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab('tasks')}
+              style={{
+                background: 'var(--danger)',
+                color: 'white',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'transform 0.2s',
+                fontFamily: 'var(--font-sans)'
+              }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.03)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              {lang === 'bn' ? 'কাজগুলো দেখুন' : 'View Tasks'}
+            </button>
+          </div>
+        )}
 
         {/* Summary Stat Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '20px' }}>
@@ -694,6 +778,190 @@ export default function StaffPortalPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* ── TASKS TAB ── */}
+        {activeTab === 'tasks' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-in">
+            <div className="card" style={{ padding: '24px', borderRadius: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <ClipboardList size={22} color="var(--primary)" />
+                  {t.todoTab}
+                </h3>
+                <div style={{ display: 'flex', gap: '12px', fontSize: '12.5px', fontWeight: 700 }}>
+                  <span style={{ color: 'var(--success)' }}>
+                    {t.tasksCompleted}: {tasks.filter(tk => tk.status === 'done').length}
+                  </span>
+                  <span style={{ color: 'var(--warning)' }}>
+                    {t.tasksPending}: {tasks.filter(tk => tk.status === 'pending').length}
+                  </span>
+                </div>
+              </div>
+
+              {tasks.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                  <CheckCircle2 size={36} style={{ marginBottom: '12px', opacity: 0.4, color: 'var(--success)' }} />
+                  <p style={{ margin: 0, fontSize: '14px' }}>{t.noTasks}</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {tasks.map(task => {
+                    const isUrgent = task.priority === 'urgent'
+                    const isHigh = task.priority === 'high'
+                    const pColor = isUrgent ? 'var(--danger)' : isHigh ? 'var(--warning)' : 'var(--success)'
+                    
+                    const isDone = task.status === 'done'
+                    const isNotDone = task.status === 'not_done'
+                    const statusBg = isDone ? 'var(--success-bg)' : isNotDone ? 'var(--danger-bg)' : 'var(--warning-bg)'
+                    const statusColor = isDone ? 'var(--success)' : isNotDone ? 'var(--danger)' : 'var(--warning)'
+                    const statusText = isDone ? t.statusDone : isNotDone ? t.statusNotDone : t.statusPending
+
+                    return (
+                      <div key={task.id} style={{
+                        background: 'var(--bg-surface)',
+                        border: `1.5px solid ${isUrgent && !isDone ? 'var(--danger)' : 'var(--border-light)'}`,
+                        borderRadius: '14px',
+                        padding: '18px',
+                        boxShadow: 'var(--shadow-xs)',
+                        transition: 'all 0.2s'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                          <div>
+                            <span style={{ fontSize: '11px', background: 'var(--bg-subtle)', color: pColor, fontWeight: 800, padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                              {task.priority === 'urgent' ? t.priorityUrgent : task.priority === 'high' ? t.priorityHigh : task.priorityNormal}
+                            </span>
+                            <h4 style={{ fontSize: '16px', fontWeight: 800, margin: '6px 0 2px 0', color: 'var(--text-primary)' }}>
+                              {task.title}
+                            </h4>
+                          </div>
+                          <span style={{ background: statusBg, color: statusColor, fontWeight: 800, fontSize: '11.5px', padding: '3px 10px', borderRadius: '6px' }}>
+                            {statusText}
+                          </span>
+                        </div>
+
+                        {task.description && (
+                          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: '0 0 14px 0', lineHeight: 1.55 }}>
+                            {task.description}
+                          </p>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                          <CalendarDays size={14} />
+                          <span>{t.dueDate}: {task.due_date ? new Date(task.due_date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium' }) : 'N/A'}</span>
+                        </div>
+
+                        {/* Note Input */}
+                        {!isDone && (
+                          <div style={{ marginBottom: '14px' }}>
+                            <input
+                              type="text"
+                              value={taskNotes[task.id] || ''}
+                              onChange={e => setTaskNotes({ ...taskNotes, [task.id]: e.target.value })}
+                              placeholder={t.notePlaceholder}
+                              style={{
+                                width: '100%',
+                                padding: '10px 12px',
+                                borderRadius: '8px',
+                                border: '1.5px solid var(--border-light)',
+                                background: 'var(--bg-base)',
+                                color: 'var(--text-primary)',
+                                fontSize: '13px',
+                                fontFamily: 'var(--font-sans)'
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {!isDone && (
+                            <button
+                              onClick={() => handleUpdateTaskStatus(task.id, 'done')}
+                              disabled={updatingTaskId === task.id}
+                              style={{
+                                flex: 1,
+                                background: 'var(--success)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                fontWeight: 700,
+                                fontSize: '12.5px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'opacity 0.2s'
+                              }}
+                            >
+                              <CheckCircle2 size={15} />
+                              {lang === 'bn' ? 'সম্পন্ন চিহ্নিত করুন' : 'Mark Done'}
+                            </button>
+                          )}
+
+                          {!isNotDone && (
+                            <button
+                              onClick={() => handleUpdateTaskStatus(task.id, 'not_done')}
+                              disabled={updatingTaskId === task.id}
+                              style={{
+                                flex: 1,
+                                background: 'var(--danger)',
+                                color: 'white',
+                                border: 'none',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                fontWeight: 700,
+                                fontSize: '12.5px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'opacity 0.2s'
+                              }}
+                            >
+                              <XCircle size={15} />
+                              {lang === 'bn' ? 'অসম্পন্ন চিহ্নিত করুন' : 'Mark Not Done'}
+                            </button>
+                          )}
+
+                          {(isDone || isNotDone) && (
+                            <button
+                              onClick={() => handleUpdateTaskStatus(task.id, 'pending')}
+                              disabled={updatingTaskId === task.id}
+                              style={{
+                                flex: 1,
+                                background: 'var(--bg-subtle)',
+                                color: 'var(--text-secondary)',
+                                border: '1.5px solid var(--border-medium)',
+                                padding: '9px',
+                                borderRadius: '8px',
+                                fontWeight: 700,
+                                fontSize: '12.5px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                transition: 'background 0.2s'
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-subtle)'}
+                            >
+                              <Clock size={15} />
+                              {lang === 'bn' ? 'আবার শুরু করুন' : 'Reopen / Mark Pending'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import * as XLSX from 'xlsx'
 import { createClient } from '@supabase/supabase-js'
+import { parseDocumentWithGemini } from '../../../../lib/gemini'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -17,72 +17,103 @@ export async function POST(req) {
     }
 
     const bytes = await file.arrayBuffer()
-    const workbook = XLSX.read(bytes, { type: 'buffer' })
-    const sheetName = workbook.SheetNames[0]
-    const worksheet = workbook.Sheets[sheetName]
-    const rows = XLSX.utils.sheet_to_json(worksheet)
+    const mimeType = file.type || 'application/pdf'
 
-    if (rows.length === 0) {
-      return NextResponse.json({ error: 'File is empty' }, { status: 400 })
+    // Define response schema for recipes
+    const responseSchema = {
+      type: 'object',
+      properties: {
+        menu_items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Name of the menu item' },
+              category: { type: 'string', description: 'Category of the menu item (e.g., Coffee, Tea, Food, Beverage)' },
+              price: { type: 'number', description: 'Selling price of the menu item' },
+              ingredients: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Name of the raw ingredient used' },
+                    quantity: { type: 'number', description: 'Quantity required for one serving of this menu item' },
+                    unit: { type: 'string', description: 'Standard unit (e.g., gm, ml, pcs, kg, liter)' }
+                  },
+                  required: ['name', 'quantity', 'unit']
+                }
+              }
+            },
+            required: ['name', 'category', 'price', 'ingredients']
+          }
+        }
+      },
+      required: ['menu_items']
     }
 
-    // Group rows by Item Name
-    const groupedItems = {}
-    for (const row of rows) {
-      const itemName = row['Item Name'] || row['item_name']
-      if (!itemName) continue
-      
-      if (!groupedItems[itemName]) {
-        groupedItems[itemName] = {
-          name: itemName,
-          category: row['Category'] || row['category'] || 'Other',
-          price: parseFloat(row['Price'] || row['price'] || 0),
-          ingredients: []
-        }
-      }
-      
-      const ingredientName = row['Ingredient'] || row['ingredient']
-      if (ingredientName) {
-        groupedItems[itemName].ingredients.push({
-          name: ingredientName,
-          quantity: parseFloat(row['Quantity'] || row['quantity'] || 0),
-          unit: row['Unit'] || row['unit'] || 'pcs'
-        })
-      }
+    const prompt = `
+      You are an expert recipe and menu compiler for a premium coffee shop.
+      Analyze the attached document (PDF, CSV, or Text) which lists menu items and their recipes.
+      For each menu item, extract:
+      1. Item Name
+      2. Category (standardize to "Coffee", "Tea", "Food", "Beverage" or "Other")
+      3. Selling Price
+      4. A list of ingredients needed to prepare one single serving of this item.
+      For each ingredient, specify its name, the quantity required, and the unit.
+      Standardize units to "gm" (grams), "ml" (milliliters), "pcs" (pieces), "kg" (kilograms), or "liter" (liters).
+    `
+
+    const parsedData = await parseDocumentWithGemini(bytes, mimeType, prompt, responseSchema)
+    const menuItems = parsedData.menu_items || []
+
+    return NextResponse.json({
+      success: true,
+      menu_items: menuItems
+    })
+  } catch (error) {
+    console.error('Menu/Recipe import parse error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+// PUT handler to confirm and save the recipes/menu items
+export async function PUT(req) {
+  try {
+    const { menu_items } = await req.json()
+    if (!menu_items || !Array.isArray(menu_items)) {
+      return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
     }
 
     let itemsCount = 0
     let recipesCount = 0
-    let skippedCount = 0
 
-    for (const itemName of Object.keys(groupedItems)) {
-      const itemData = groupedItems[itemName]
-      
+    for (const itemData of menu_items) {
       // 1. Get or Create Menu Item
       let { data: menuItem, error: fetchError } = await supabase
         .from('menu_items')
         .select('id')
-        .ilike('name', itemName)
+        .ilike('name', itemData.name)
         .single()
-      
+
       if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
 
       let menuItemId
       if (menuItem) {
         menuItemId = menuItem.id
-        // Optionally update price/category? Instructions don't explicitly say to update menu item details, 
-        // but it's usually expected. I'll update them.
+        // Update price & category
         await supabase.from('menu_items').update({
           category: itemData.category,
-          selling_price: itemData.price
+          selling_price: itemData.price,
+          is_active: true
         }).eq('id', menuItemId)
       } else {
         const { data: newItem, error: insertError } = await supabase
           .from('menu_items')
           .insert({
-            name: itemName,
+            name: itemData.name,
             category: itemData.category,
-            selling_price: itemData.price
+            selling_price: itemData.price,
+            is_active: true
           })
           .select('id')
           .single()
@@ -91,30 +122,31 @@ export async function POST(req) {
         itemsCount++
       }
 
-      // 2. Handle Recipes: Delete old ones first as per requirement
+      // 2. Clear old recipe mappings
       await supabase.from('recipes').delete().eq('menu_item_id', menuItemId)
 
-      // 3. Process Ingredients and Recipes
+      // 3. Process Ingredients & Recipes
       for (const ing of itemData.ingredients) {
-        // Find ingredient case-insensitively
+        // Find existing ingredient case-insensitively
         let { data: ingredient, error: ingError } = await supabase
           .from('ingredients')
-          .select('id, unit')
+          .select('id')
           .ilike('name', ing.name)
           .single()
-        
+
         if (ingError && ingError.code !== 'PGRST116') throw ingError
 
         let ingredientId
         if (ingredient) {
           ingredientId = ingredient.id
-          // Keep existing unit as per requirement
         } else {
+          // Create new ingredient if it doesn't exist
           const { data: newIng, error: ingInsertError } = await supabase
             .from('ingredients')
             .insert({
               name: ing.name,
-              unit: ing.unit
+              unit: ing.unit,
+              current_stock: 0
             })
             .select('id')
             .single()
@@ -122,23 +154,16 @@ export async function POST(req) {
           ingredientId = newIng.id
         }
 
-        // Insert Recipe
+        // Insert Recipe Link
         const { error: recipeError } = await supabase
           .from('recipes')
           .insert({
             menu_item_id: menuItemId,
             ingredient_id: ingredientId,
-            quantity: ing.quantity,
-            unit: ing.unit // We can store the unit in recipe if the table supports it, 
-            // but the original schema I saw didn't have unit in recipes. 
-            // Let me check the recipes table columns again.
+            quantity: ing.quantity
           })
-        if (recipeError) {
-          // If recipes table doesn't have unit column, it might fail. 
-          // I'll check the schema again.
-          console.error('Recipe insert error:', recipeError)
-          skippedCount++
-        } else {
+
+        if (!recipeError) {
           recipesCount++
         }
       }
@@ -147,11 +172,10 @@ export async function POST(req) {
     return NextResponse.json({
       success: true,
       items: itemsCount,
-      recipes: recipesCount,
-      skipped: skippedCount
+      recipes: recipesCount
     })
   } catch (error) {
-    console.error('Menu import error:', error)
+    console.error('Menu/Recipe import save error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

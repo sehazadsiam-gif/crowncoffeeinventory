@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import * as XLSX from 'xlsx'
 import { createClient } from '@supabase/supabase-js'
+import { parseDocumentWithGemini } from '../../../../lib/gemini'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -18,48 +18,95 @@ export async function POST(req) {
     }
 
     const bytes = await file.arrayBuffer()
-    const workbook = XLSX.read(bytes, { type: 'buffer' })
-    const sheetName = workbook.SheetNames[0]
-    const worksheet = workbook.Sheets[sheetName]
-    const rows = XLSX.utils.sheet_to_json(worksheet)
+    const mimeType = file.type || 'application/pdf'
 
-    if (rows.length === 0) {
-      return NextResponse.json({ error: 'File is empty' }, { status: 400 })
+    // Define response schema for sales report
+    const responseSchema = {
+      type: 'object',
+      properties: {
+        sales: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Name of the menu item sold' },
+              quantity: { type: 'integer', description: 'Total quantity sold (integer)' }
+            },
+            required: ['name', 'quantity']
+          }
+        }
+      },
+      required: ['sales']
     }
 
-    // Fetch all active menu items for matching
+    const prompt = `
+      You are an expert sales parser.
+      Analyze the attached PDF or CSV sales report from an external POS system.
+      Extract each menu item sold and the corresponding total quantity sold on that day.
+      Clean up item names to match typical cafe menu naming conventions if necessary.
+    `
+
+    const parsedData = await parseDocumentWithGemini(bytes, mimeType, prompt, responseSchema)
+    const extractedSales = parsedData.sales || []
+
+    // Fetch all active menu items for client-side/preview mapping
     const { data: menuItems } = await supabase
       .from('menu_items')
       .select('id, name, selling_price')
       .eq('is_active', true)
 
-    const unmatched = []
-    const toInsert = []
-
-    for (const row of rows) {
-      const itemName = row['Item Name'] || row['item_name'] || row['Item']
-      const quantity = parseInt(row['Quantity'] || row['quantity'] || row['Qty'] || 0)
-
-      if (!itemName || quantity <= 0) continue
-
-      // Case-insensitive matching
-      // Partial matching: see if itemName is contained in any menu item name or vice-versa
+    // Map extracted items to existing menu items
+    const processedSales = extractedSales.map(sale => {
       const match = menuItems.find(m => 
-        m.name.toLowerCase() === itemName.toString().toLowerCase() ||
-        m.name.toLowerCase().includes(itemName.toString().toLowerCase()) ||
-        itemName.toString().toLowerCase().includes(m.name.toLowerCase())
+        m.name.toLowerCase() === sale.name.toLowerCase() ||
+        m.name.toLowerCase().includes(sale.name.toLowerCase()) ||
+        sale.name.toLowerCase().includes(m.name.toLowerCase())
       )
 
-      if (match) {
-        toInsert.push({
-          date,
-          menu_item_id: match.id,
-          quantity,
-          total_revenue: quantity * match.selling_price
-        })
-      } else {
-        unmatched.push(itemName)
+      return {
+        name: sale.name,
+        quantity: sale.quantity,
+        menu_item_id: match ? match.id : null,
+        matched_name: match ? match.name : null,
+        price: match ? match.selling_price : 0,
+        unmatched: !match
       }
+    })
+
+    return NextResponse.json({
+      success: true,
+      sales: processedSales,
+      date
+    })
+  } catch (error) {
+    console.error('Sales import parse error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+// PUT to save daily sales records
+export async function PUT(req) {
+  try {
+    const { sales, date } = await req.json()
+    if (!sales || !Array.isArray(sales)) {
+      return NextResponse.json({ error: 'Invalid data' }, { status: 400 })
+    }
+
+    const toInsert = []
+    let skippedCount = 0
+
+    for (const item of sales) {
+      if (!item.menu_item_id) {
+        skippedCount++
+        continue
+      }
+
+      toInsert.push({
+        date: date || new Date().toISOString().split('T')[0],
+        menu_item_id: item.menu_item_id,
+        quantity: item.quantity,
+        total_revenue: item.quantity * item.price
+      })
     }
 
     if (toInsert.length > 0) {
@@ -70,10 +117,10 @@ export async function POST(req) {
     return NextResponse.json({
       success: true,
       imported: toInsert.length,
-      unmatched
+      skipped: skippedCount
     })
   } catch (error) {
-    console.error('Sales import error:', error)
+    console.error('Sales import save error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

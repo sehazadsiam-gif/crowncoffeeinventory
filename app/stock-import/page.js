@@ -8,10 +8,11 @@ import {
   AlertCircle, ChevronRight, Package, Info, ArrowLeft, RefreshCw
 } from 'lucide-react'
 
-export default function MenuImportPage() {
+export default function StockImportPage() {
   const router = useRouter()
   const { addToast } = useToast()
   const [file, setFile] = useState(null)
+  const [mode, setMode] = useState('add') // 'add' or 'overwrite'
   const [previewData, setPreviewData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -46,8 +47,9 @@ export default function MenuImportPage() {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('mode', mode)
 
-      const res = await fetch('/api/menu/import', {
+      const res = await fetch('/api/stock/import', {
         method: 'POST',
         body: formData
       })
@@ -55,8 +57,8 @@ export default function MenuImportPage() {
 
       if (!res.ok) throw new Error(result.error || 'Failed to parse file')
 
-      setPreviewData(result.menu_items)
-      addToast('Menu & Recipes parsed successfully with Gemini AI!', 'success')
+      setPreviewData(result.ingredients)
+      addToast('Document parsed successfully with Gemini!', 'success')
     } catch (err) {
       console.error(err)
       addToast(err.message || 'Error parsing file', 'error')
@@ -70,23 +72,24 @@ export default function MenuImportPage() {
     if (!previewData || previewData.length === 0) return
     setSaving(true)
     try {
-      const res = await fetch('/api/menu/import', {
+      const res = await fetch('/api/stock/import', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          menu_items: previewData
+          ingredients: previewData,
+          mode: mode
         })
       })
       const result = await res.json()
 
       if (result.success) {
-        addToast(`Successfully imported: Registered ${result.items} new menu items and mapped recipes`, 'success')
-        router.push('/menu')
+        addToast(`Successfully imported: Created ${result.created} new, Updated ${result.updated} existing items`, 'success')
+        router.push('/stock')
       } else {
         throw new Error(result.error)
       }
     } catch (err) {
-      addToast(err.message || 'Saving recipes failed', 'error')
+      addToast(err.message || 'Saving failed', 'error')
     } finally {
       setSaving(false)
     }
@@ -99,7 +102,7 @@ export default function MenuImportPage() {
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <button 
-            onClick={() => router.push('/menu')}
+            onClick={() => router.push('/stock')}
             style={{
               background: 'none',
               border: 'none',
@@ -112,8 +115,8 @@ export default function MenuImportPage() {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Smart Recipe & Menu Import</h1>
-            <p style={{ color: '#64748B', marginTop: '4px' }}>Upload recipe PDFs or CSV lists to automatically populate menu items and linking recipes</p>
+            <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Kitchen Stock Import</h1>
+            <p style={{ color: '#64748B', marginTop: '4px' }}>Upload inventory sheets to bulk update raw ingredient stock levels</p>
           </div>
         </div>
 
@@ -121,6 +124,35 @@ export default function MenuImportPage() {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
+            {/* Options Toggle */}
+            {!previewData && (
+              <div className="card" style={{ padding: '24px', background: 'white', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1E293B', marginBottom: '12px' }}>Import Configuration</h3>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+                    <input 
+                      type="radio" 
+                      name="mode" 
+                      value="add" 
+                      checked={mode === 'add'} 
+                      onChange={() => setMode('add')} 
+                    />
+                    Add to Existing Stock
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px' }}>
+                    <input 
+                      type="radio" 
+                      name="mode" 
+                      value="overwrite" 
+                      checked={mode === 'overwrite'} 
+                      onChange={() => setMode('overwrite')} 
+                    />
+                    Overwrite Existing Stock (Set exact values)
+                  </label>
+                </div>
+              </div>
+            )}
+
             {/* Upload Zone */}
             {!previewData && !loading && (
               <div 
@@ -148,7 +180,7 @@ export default function MenuImportPage() {
                   <Upload size={32} color="#64748B" />
                 </div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1E293B', marginBottom: '8px' }}>
-                  Click to upload menu/recipes document or drag and drop
+                  Click to upload inventory sheet or drag and drop
                 </h3>
                 <p style={{ color: '#64748B', fontSize: '14px' }}>
                   PDF, Excel, Images, CSV or Text files up to 10MB (Processed securely by AI)
@@ -162,10 +194,10 @@ export default function MenuImportPage() {
                   <RefreshCw className="animate-spin" size={32} color="#D4933A" />
                 </div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1E293B', marginBottom: '8px' }}>
-                  Gemini AI is parsing and linking your recipes...
+                  Gemini AI is parsing your stock document...
                 </h3>
                 <p style={{ color: '#64748B', fontSize: '14px' }}>
-                  Structuring ingredients and menu items. This takes just a few seconds.
+                  This takes just a few seconds.
                 </p>
               </div>
             )}
@@ -176,10 +208,10 @@ export default function MenuImportPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
                   <div>
                     <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1E293B' }}>
-                      Preview: {previewData.length} Menu Items Found
+                      Preview: {previewData.length} Items Found
                     </h3>
                     <p style={{ color: '#64748B', fontSize: '13px' }}>
-                      Please review the items and their ingredients below.
+                      Mode: <strong>{mode === 'overwrite' ? 'Overwrite stock level' : 'Add to stock level'}</strong>
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: '12px' }}>
@@ -211,32 +243,25 @@ export default function MenuImportPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {previewData.map((item, idx) => (
-                    <div key={idx} style={{ padding: '16px', border: '1px solid #F1F5F9', borderRadius: '8px', background: '#F8FAFC' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', alignItems: 'center' }}>
-                        <div>
-                          <strong style={{ fontSize: '16px', color: '#1E293B' }}>{item.name}</strong>
-                          <span style={{ marginLeft: '8px', fontSize: '12px', background: '#E2E8F0', padding: '2px 8px', borderRadius: '12px', color: '#475569' }}>
-                            {item.category}
-                          </span>
-                        </div>
-                        <span style={{ fontWeight: 700, color: 'var(--primary)' }}>
-                          ৳ {item.price}
-                        </span>
-                      </div>
-                      
-                      {/* Ingredients list */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '8px', marginTop: '8px' }}>
-                        {item.ingredients.map((ing, iIdx) => (
-                          <div key={iIdx} style={{ fontSize: '13px', background: 'white', padding: '6px 10px', borderRadius: '4px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ color: '#475569' }}>{ing.name}</span>
-                            <strong style={{ color: '#0F172A' }}>{ing.quantity} {ing.unit}</strong>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #E2E8F0', paddingBottom: '12px' }}>
+                        <th style={{ padding: '12px', color: '#64748B', fontWeight: 600 }}>Ingredient Name</th>
+                        <th style={{ padding: '12px', color: '#64748B', fontWeight: 600 }}>Quantity to {mode === 'overwrite' ? 'Set' : 'Add'}</th>
+                        <th style={{ padding: '12px', color: '#64748B', fontWeight: 600 }}>Unit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewData.map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '12px', color: '#1E293B', fontWeight: 500 }}>{item.name}</td>
+                          <td style={{ padding: '12px', color: '#0F172A', fontWeight: 700 }}>{item.quantity}</td>
+                          <td style={{ padding: '12px', color: '#64748B' }}>{item.unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

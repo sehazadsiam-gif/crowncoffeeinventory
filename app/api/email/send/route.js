@@ -1,4 +1,4 @@
-import { sendRemarkEmail, sendPayrollEmail, sendPaymentEmail, sendAdvanceEmail, sendLeaveRequestAdminAlert, sendLeaveResponseEmail, sendStaffMessageAlert } from '../../../../lib/email'
+import { sendRemarkEmail, sendPayrollEmail, sendPaymentEmail, sendAdvanceEmail, sendLeaveRequestAdminAlert, sendLeaveResponseEmail, sendStaffMessageAlert, sendTaskAssignmentEmail, sendTaskStatusUpdateEmail } from '../../../../lib/email'
 
 export async function POST(request) {
   try {
@@ -7,7 +7,7 @@ export async function POST(request) {
     const { type, ...data } = body
 
     // Admin-directed emails use hardcoded admin email, so they don't require 'to' from the frontend
-    const adminAlertTypes = ['leave_admin_alert', 'staff_message']
+    const adminAlertTypes = ['leave_admin_alert', 'staff_message', 'task_status_update']
 
     if (!data.to && !adminAlertTypes.includes(type)) {
       console.log('No email address provided, skipping')
@@ -20,6 +20,8 @@ export async function POST(request) {
     if (type === 'leave_admin_alert') await sendLeaveRequestAdminAlert(data)
     if (type === 'leave_response') await sendLeaveResponseEmail(data)
     if (type === 'staff_message') await sendStaffMessageAlert(data)
+    if (type === 'task_assigned') await sendTaskAssignmentEmail(data)
+    if (type === 'task_status_update') await sendTaskStatusUpdateEmail(data)
     console.log('Email sent successfully to:', data.to)
     return Response.json({ success: true })
   } catch (error) {
