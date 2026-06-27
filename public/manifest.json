@@ -1,6 +1,6 @@
 {
-  "name": "Crown Coffee Inventory",
-  "short_name": "CrownCoffee",
+  "name": "Crown Coffee Staffs",
+  "short_name": "CC Staffs",
   "description": "Crown Coffee Inventory & Staff Management System",
   "start_url": "/",
   "display": "standalone",

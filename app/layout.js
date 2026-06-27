@@ -5,14 +5,14 @@ import EnvCheck from '../components/EnvCheck'
 import LoginGate from '../components/LoginGate'
 
 export const metadata = {
-  title: 'Crown Coffee Inventory and Stock Management',
-  description: 'Stock and inventory management for Crown Coffee',
+  title: 'Crown Coffee Staffs',
+  description: 'Crown Coffee Staff Management System',
   manifest: '/manifest.json',
   themeColor: '#8B5E3C',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Crown Coffee',
+    title: 'Crown Coffee Staffs',
   },
   icons: {
     icon: '/icons/icon-192x192.png',
@@ -33,7 +33,7 @@ export default function RootLayout({ children }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Crown Coffee" />
+        <meta name="apple-mobile-web-app-title" content="Crown Coffee Staffs" />
         <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
       </head>
       <body>
