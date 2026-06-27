@@ -192,6 +192,32 @@ export default function AdminTasksPage() {
     }
   }
 
+  async function handleVerifyTask(taskId, verify) {
+    try {
+      const body = verify 
+        ? { task_id: taskId, status: 'done', is_verified: true }
+        : { task_id: taskId, status: 'pending', is_verified: false }
+        
+      const res = await fetch('/api/tasks/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Failed to verify task')
+
+      addToast(verify ? 'Task marked as verified' : 'Task rejected back to pending', 'success')
+      
+      // Refresh tasks
+      const resTasks = await fetch('/api/tasks/list')
+      const dataTasks = await resTasks.json()
+      setTasks(dataTasks.tasks || [])
+    } catch (err) {
+      addToast(err.message, 'error')
+    }
+  }
+
   const filteredTasks = tasks.filter(task => {
     const staffMatch = filterStaff === 'all' || task.staff_id === filterStaff
     const statusMatch = filterStatus === 'all' || task.status === filterStatus
@@ -477,9 +503,17 @@ export default function AdminTasksPage() {
                   
                   const isDone = task.status === 'done'
                   const isNotDone = task.status === 'not_done'
-                  const statusBg = isDone ? 'var(--success-bg)' : isNotDone ? 'var(--danger-bg)' : 'var(--warning-bg)'
-                  const statusColor = isDone ? 'var(--success)' : isNotDone ? 'var(--danger)' : 'var(--warning)'
-                  const statusText = isDone ? t.statusDone : isNotDone ? t.statusNotDone : t.statusPending
+                  
+                  const statusBg = isDone 
+                    ? (task.is_verified ? 'var(--success-bg)' : 'var(--warning-bg)') 
+                    : isNotDone ? 'var(--danger-bg)' : 'var(--warning-bg)'
+                  const statusColor = isDone 
+                    ? (task.is_verified ? 'var(--success)' : 'var(--warning)') 
+                    : isNotDone ? 'var(--danger)' : 'var(--warning)'
+                  
+                  const statusText = isDone 
+                    ? (task.is_verified ? (lang === 'bn' ? 'যাচাইকৃত সম্পন্ন' : 'Verified Done') : (lang === 'bn' ? 'যাচাইকরণ পেন্ডিং' : 'Pending Verification'))
+                    : isNotDone ? t.statusNotDone : t.statusPending
 
                   return (
                     <div key={task.id} style={{
@@ -548,6 +582,53 @@ export default function AdminTasksPage() {
                           <span>{t.due}: {task.due_date ? new Date(task.due_date).toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-GB', { dateStyle: 'medium' }) : 'N/A'}</span>
                         </div>
                       </div>
+
+                      {task.status === 'done' && !task.is_verified && (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '12px', borderTop: '1px dashed var(--border-light)', paddingTop: '12px' }}>
+                          <button
+                            onClick={() => handleVerifyTask(task.id, true)}
+                            style={{
+                              flex: 1,
+                              background: 'var(--success)',
+                              color: 'white',
+                              border: 'none',
+                              padding: '8px',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <CheckCircle size={14} />
+                            {lang === 'en' ? 'Verify Done' : 'যাচাই করুন'}
+                          </button>
+                          <button
+                            onClick={() => handleVerifyTask(task.id, false)}
+                            style={{
+                              flex: 1,
+                              background: 'var(--danger)',
+                              color: 'white',
+                              border: 'none',
+                              padding: '8px',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <XCircle size={14} />
+                            {lang === 'en' ? 'Reject / Re-open' : 'প্রত্যাখ্যান'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })}

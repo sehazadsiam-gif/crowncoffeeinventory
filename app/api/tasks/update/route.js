@@ -10,14 +10,22 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { task_id, status, staff_note } = body
+    const { task_id, status, staff_note, is_verified } = body
 
     if (!task_id || !status) {
       return NextResponse.json({ error: 'task_id and status are required' }, { status: 400 })
     }
 
+    const updateFields = { status, updated_at: new Date().toISOString() }
+    if (staff_note !== undefined) {
+      updateFields.staff_note = staff_note || null
+    }
+    if (is_verified !== undefined) {
+      updateFields.is_verified = is_verified
+    }
+
     const { data, error } = await supabase.from('staff_tasks')
-      .update({ status, staff_note: staff_note || null, updated_at: new Date().toISOString() })
+      .update(updateFields)
       .eq('id', task_id)
       .select('*, staff(name, email)')
       .single()

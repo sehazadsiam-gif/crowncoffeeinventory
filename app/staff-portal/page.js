@@ -158,7 +158,13 @@ export default function StaffPortalPage() {
       const result = await res.json()
       if (!res.ok) throw new Error(result.error || 'Failed to update task')
       
-      alert(lang === 'bn' ? 'কাজের অগ্রগতি সফলভাবে আপডেট করা হয়েছে!' : 'Task status updated successfully!')
+      if (status === 'done') {
+        alert(lang === 'bn' 
+          ? 'কাজের অগ্রগতি সফলভাবে আপডেট করা হয়েছে! (অ্যাডমিন যাচাইয়ের অপেক্ষায়)' 
+          : 'Task status updated! (Pending admin verification)')
+      } else {
+        alert(lang === 'bn' ? 'কাজের অগ্রগতি সফলভাবে আপডেট করা হয়েছে!' : 'Task status updated successfully!')
+      }
       const resTasks = await fetch(`/api/tasks/list?staff_id=${staff.id}`)
       const dataTasks = await resTasks.json()
       setTasks(dataTasks.tasks || [])
@@ -815,9 +821,17 @@ export default function StaffPortalPage() {
                     
                     const isDone = task.status === 'done'
                     const isNotDone = task.status === 'not_done'
-                    const statusBg = isDone ? 'var(--success-bg)' : isNotDone ? 'var(--danger-bg)' : 'var(--warning-bg)'
-                    const statusColor = isDone ? 'var(--success)' : isNotDone ? 'var(--danger)' : 'var(--warning)'
-                    const statusText = isDone ? t.statusDone : isNotDone ? t.statusNotDone : t.statusPending
+                    
+                    const statusBg = isDone 
+                      ? (task.is_verified ? 'var(--success-bg)' : 'var(--warning-bg)') 
+                      : isNotDone ? 'var(--danger-bg)' : 'var(--warning-bg)'
+                    const statusColor = isDone 
+                      ? (task.is_verified ? 'var(--success)' : 'var(--warning)') 
+                      : isNotDone ? 'var(--danger)' : 'var(--warning)'
+                    
+                    const statusText = isDone 
+                      ? (task.is_verified ? (lang === 'bn' ? 'যাচাইকৃত সম্পন্ন' : 'Verified Done') : (lang === 'bn' ? 'যাচাইকরণ পেন্ডিং' : 'Pending Verification'))
+                      : isNotDone ? t.statusNotDone : t.statusPending
 
                     return (
                       <div key={task.id} style={{

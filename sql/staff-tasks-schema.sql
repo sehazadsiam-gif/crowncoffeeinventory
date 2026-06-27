@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS staff_tasks (
   due_date DATE,
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'done', 'not_done')),
   staff_note TEXT,
+  is_verified BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
