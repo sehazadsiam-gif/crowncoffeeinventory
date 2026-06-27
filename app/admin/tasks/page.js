@@ -118,7 +118,7 @@ export default function AdminTasksPage() {
       setLoading(true)
       const [staffRes, tasksRes] = await Promise.all([
         supabase.from('staff').select('id, name, designation').eq('is_active', true).order('name'),
-        supabase.from('staff_tasks').select('*, staff(id, name, designation)').order('created_at', { ascending: false })
+        fetch('/api/tasks/list').then(res => res.json()).then(data => ({ data: data.tasks || [], error: null }))
       ])
       
       if (staffRes.error) throw staffRes.error
@@ -162,8 +162,9 @@ export default function AdminTasksPage() {
       })
       
       // Refresh tasks
-      const { data } = await supabase.from('staff_tasks').select('*, staff(id, name, designation)').order('created_at', { ascending: false })
-      setTasks(data || [])
+      const resTasks = await fetch('/api/tasks/list')
+      const dataTasks = await resTasks.json()
+      setTasks(dataTasks.tasks || [])
     } catch (err) {
       addToast(err.message, 'error')
     } finally {

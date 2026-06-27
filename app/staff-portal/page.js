@@ -87,7 +87,7 @@ export default function StaffPortalPage() {
         supabase.from('monthly_attendance_summary').select('*').eq('staff_id', staffId),
         supabase.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
         supabase.from('staff_queries').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
-        supabase.from('staff_tasks').select('*').eq('staff_id', staffId).order('created_at', { ascending: false })
+        fetch(`/api/tasks/list?staff_id=${staffId}`).then(res => res.json()).then(data => ({ data: data.tasks || [], error: null }))
       ])
       setStaff(staffRes.data)
       setPayroll(payRes.data || [])
@@ -159,8 +159,9 @@ export default function StaffPortalPage() {
       if (!res.ok) throw new Error(result.error || 'Failed to update task')
       
       alert(lang === 'bn' ? 'কাজের অগ্রগতি সফলভাবে আপডেট করা হয়েছে!' : 'Task status updated successfully!')
-      const { data } = await supabase.from('staff_tasks').select('*').eq('staff_id', staff.id).order('created_at', { ascending: false })
-      setTasks(data || [])
+      const resTasks = await fetch(`/api/tasks/list?staff_id=${staff.id}`)
+      const dataTasks = await resTasks.json()
+      setTasks(dataTasks.tasks || [])
     } catch (err) {
       alert('Error updating task: ' + err.message)
     } finally {
