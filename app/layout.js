@@ -7,10 +7,17 @@ import LoginGate from '../components/LoginGate'
 export const metadata = {
   title: 'Crown Coffee Inventory and Stock Management',
   description: 'Stock and inventory management for Crown Coffee',
+  manifest: '/manifest.json',
+  themeColor: '#8B5E3C',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Crown Coffee',
+  },
   icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
+    icon: '/icons/icon-192x192.png',
+    shortcut: '/icons/icon-192x192.png',
+    apple: '/icons/icon-192x192.png',
   },
 }
 
@@ -20,6 +27,14 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <meta name="theme-color" content="#8B5E3C" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Crown Coffee" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
       </head>
       <body>
         <script dangerouslySetInnerHTML={{__html: `
@@ -33,6 +48,15 @@ export default function RootLayout({ children }) {
               }
             } catch (e) {}
           })();
+        `}} />
+        <script dangerouslySetInnerHTML={{__html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js')
+                .then(function(reg) { console.log('SW registered:', reg.scope); })
+                .catch(function(err) { console.error('SW registration failed:', err); });
+            });
+          }
         `}} />
         <EnvCheck />
         <ToastProvider>

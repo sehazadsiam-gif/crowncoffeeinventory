@@ -1,5 +1,4 @@
--- Run this in Supabase SQL Editor
--- POS Schema for Crown Coffee POS system
+
 
 -- 1. POS Settings table for Printer and Receipt Configurations
 CREATE TABLE IF NOT EXISTS pos_settings (
