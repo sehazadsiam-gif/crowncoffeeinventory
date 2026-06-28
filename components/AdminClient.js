@@ -121,7 +121,10 @@ export default function AdminClient({ initialStats }) {
             System-wide management, data operations, and security overrides.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <a href="https://crowncoffeejobs.vercel.app/admin" target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ padding: '10px 20px', fontSize: '11px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Users size={14} /> Jobs Admin
+          </a>
           <button onClick={() => window.print()} className="btn-secondary" style={{ padding: '10px 20px', fontSize: '11px' }}>
             <FileText size={14} /> System Report
           </button>
