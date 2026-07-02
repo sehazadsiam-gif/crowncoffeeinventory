@@ -24,16 +24,17 @@ export default function AdminClient({ initialStats }) {
 
   useEffect(() => {
     const auth = localStorage.getItem('isAdmin')
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    const tab = params ? params.get('tab') : null
+
+    // Allow feedbacks tab without admin login
     if (auth === 'true') {
       setIsAuthorized(true)
-      // Check query parameter for default active tab
-      if (typeof window !== 'undefined') {
-        const params = new URLSearchParams(window.location.search)
-        const tab = params.get('tab')
-        if (tab) {
-          setActiveTab(tab)
-        }
-      }
+      if (tab) setActiveTab(tab)
+    } else if (tab === 'feedbacks') {
+      // Public feedbacks view - skip auth
+      setIsAuthorized(true)
+      setActiveTab('feedbacks')
     } else {
       router.push('/login')
     }
@@ -380,16 +381,16 @@ export default function AdminClient({ initialStats }) {
                   <MessageSquare size={18} style={{ color: 'var(--accent-brown)' }} /> Guest Feedbacks
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px', margin: 0 }}>
-                  Customer reviews, ratings, and feedback collected from ccadmin.online/guest-feedbacks
+                  Customer reviews from ccadmin.online/guest-feedbacks
                 </p>
               </div>
-              <button 
-                onClick={fetchFeedbacks} 
-                className="btn-secondary" 
+              <button
+                onClick={fetchFeedbacks}
+                className="btn-secondary"
                 style={{ padding: '8px 16px', fontSize: '12px' }}
                 disabled={feedbacksLoading}
               >
-                Refresh List
+                Refresh
               </button>
             </div>
 
@@ -402,108 +403,147 @@ export default function AdminClient({ initialStats }) {
                 <MessageSquare size={36} style={{ opacity: 0.3, marginBottom: '8px' }} />
                 <p style={{ fontSize: '14px', margin: 0 }}>No feedbacks received yet.</p>
               </div>
-            ) : (
-              <>
-                {/* Stats Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-                  <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '10px', border: '1px solid var(--border-light)', textAlign: 'center' }}>
-                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Feedbacks</p>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>{feedbacks.length}</p>
-                  </div>
-                  <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '10px', border: '1px solid var(--border-light)', textAlign: 'center' }}>
-                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Average Rating</p>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 800, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                      {(feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length).toFixed(1)} <Star size={20} fill="var(--accent-gold)" stroke="var(--accent-gold)" />
-                    </p>
-                  </div>
-                  <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '10px', border: '1px solid var(--border-light)', textAlign: 'center' }}>
-                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Positive Reviews (4-5★)</p>
-                    <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 800, color: 'var(--success)' }}>
-                      {Math.round((feedbacks.filter(f => f.rating >= 4).length / feedbacks.length) * 100)}%
-                    </p>
-                  </div>
-                </div>
-
-                {/* Feedbacks Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-                  {feedbacks.map((fb) => (
-                    <div 
-                      key={fb.id} 
-                      style={{ 
-                        padding: '24px', 
-                        background: 'var(--bg-surface)', 
-                        borderRadius: '12px', 
-                        border: '1px solid var(--border-light)',
-                        display: 'grid',
-                        gap: '16px',
-                        boxShadow: 'var(--shadow-sm)',
-                        transition: 'transform 0.2s, box-shadow 0.2s',
-                        cursor: 'default'
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', gap: '3px' }}>
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star 
-                              key={s} 
-                              size={16} 
-                              fill={s <= fb.rating ? 'var(--accent-gold)' : 'none'} 
-                              stroke={s <= fb.rating ? 'var(--accent-gold)' : 'var(--text-faint)'} 
-                            />
-                          ))}
-                        </div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                          {new Date(fb.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          Phone: {fb.phone}
-                        </span>
-                        {fb.highlights && fb.highlights.length > 0 && fb.highlights.map((h) => (
-                          <span 
-                            key={h} 
-                            style={{ 
-                              fontSize: '11px', 
-                              padding: '4px 10px', 
-                              borderRadius: '999px', 
-                              background: 'var(--accent-brown-dim)', 
-                              color: 'var(--accent-brown)', 
-                              fontWeight: 600,
-                              textTransform: 'capitalize' 
-                            }}
-                          >
-                            {h.replace('_', ' ')}
-                          </span>
-                        ))}
-                      </div>
-
-                      {fb.suggestion ? (
-                        <p style={{ 
-                          margin: 0, 
-                          fontSize: '13px', 
-                          color: 'var(--text-secondary)', 
-                          background: 'var(--bg-subtle)', 
-                          padding: '12px 16px', 
-                          borderRadius: '8px', 
-                          borderLeft: '3px solid var(--accent-brown)',
-                          lineHeight: 1.5
-                        }}>
-                          {fb.suggestion}
-                        </p>
-                      ) : (
-                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-faint)', fontStyle: 'italic' }}>
-                          No comments left.
-                        </p>
-                      )}
+            ) : (() => {
+              const avg = feedbacks.reduce((s, f) => s + f.rating, 0) / feedbacks.length
+              const dist = [1, 2, 3, 4, 5].map(r => ({ r, count: feedbacks.filter(f => f.rating === r).length }))
+              const maxDist = Math.max(...dist.map(d => d.count), 1)
+              const highlightCounts = ['food', 'service', 'value_for_money'].map(h => ({
+                label: h === 'value_for_money' ? 'Value for Money' : h.charAt(0).toUpperCase() + h.slice(1),
+                count: feedbacks.filter(f => f.highlights && f.highlights.includes(h)).length
+              }))
+              const maxHL = Math.max(...highlightCounts.map(h => h.count), 1)
+              return (
+                <>
+                  {/* KPI Row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+                    <div style={{ padding: '20px', background: 'linear-gradient(135deg, var(--accent-gold-dim), var(--bg-subtle))', borderRadius: '12px', border: '1px solid var(--accent-gold-dim)', textAlign: 'center' }}>
+                      <p style={{ margin: 0, fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total Reviews</p>
+                      <p style={{ margin: '8px 0 0 0', fontSize: '32px', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>{feedbacks.length}</p>
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
+                    <div style={{ padding: '20px', background: 'linear-gradient(135deg, var(--accent-gold-dim), var(--bg-subtle))', borderRadius: '12px', border: '1px solid var(--accent-gold-dim)', textAlign: 'center' }}>
+                      <p style={{ margin: 0, fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Average Rating</p>
+                      <p style={{ margin: '8px 0 0 0', fontSize: '32px', fontWeight: 900, color: 'var(--accent-gold)', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        {avg.toFixed(1)} <Star size={22} fill="var(--accent-gold)" stroke="none" />
+                      </p>
+                    </div>
+                    <div style={{ padding: '20px', background: 'linear-gradient(135deg, var(--success-bg), var(--bg-subtle))', borderRadius: '12px', border: '1px solid var(--success-bg)', textAlign: 'center' }}>
+                      <p style={{ margin: 0, fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Positive (4-5★)</p>
+                      <p style={{ margin: '8px 0 0 0', fontSize: '32px', fontWeight: 900, color: 'var(--success)', lineHeight: 1 }}>
+                        {Math.round(feedbacks.filter(f => f.rating >= 4).length / feedbacks.length * 100)}%
+                      </p>
+                    </div>
+                    <div style={{ padding: '20px', background: 'linear-gradient(135deg, var(--danger-bg), var(--bg-subtle))', borderRadius: '12px', border: '1px solid var(--danger-bg)', textAlign: 'center' }}>
+                      <p style={{ margin: 0, fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Critical (1-2★)</p>
+                      <p style={{ margin: '8px 0 0 0', fontSize: '32px', fontWeight: 900, color: 'var(--danger)', lineHeight: 1 }}>
+                        {feedbacks.filter(f => f.rating <= 2).length}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Charts Row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginBottom: '28px' }}>
+                    {/* Star Distribution Bar Chart */}
+                    <div style={{ padding: '24px', background: 'var(--bg-subtle)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+                      <h4 style={{ margin: '0 0 20px 0', fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Rating Distribution</h4>
+                      <div style={{ display: 'grid', gap: '10px' }}>
+                        {[5, 4, 3, 2, 1].map(r => {
+                          const item = dist.find(d => d.r === r)
+                          const pct = Math.round((item.count / maxDist) * 100)
+                          const color = r >= 4 ? 'var(--success)' : r === 3 ? 'var(--warning)' : 'var(--danger)'
+                          return (
+                            <div key={r} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', width: '16px', textAlign: 'right' }}>{r}</span>
+                              <Star size={12} fill={color} stroke="none" />
+                              <div style={{ flex: 1, height: '10px', background: 'var(--bg-hover)', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '99px', transition: 'width 0.6s ease' }} />
+                              </div>
+                              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', minWidth: '20px' }}>{item.count}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Highlights Bar Chart */}
+                    <div style={{ padding: '24px', background: 'var(--bg-subtle)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+                      <h4 style={{ margin: '0 0 20px 0', fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>What Guests Loved</h4>
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        {highlightCounts.map(({ label, count }) => {
+                          const pct = Math.round((count / maxHL) * 100)
+                          return (
+                            <div key={label}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>{label}</span>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{count}</span>
+                              </div>
+                              <div style={{ height: '10px', background: 'var(--bg-hover)', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent-brown)', borderRadius: '99px', transition: 'width 0.6s ease' }} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Individual Feedback Cards */}
+                  <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>All Reviews ({feedbacks.length})</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+                    {feedbacks.map((fb) => {
+                      const dt = new Date(fb.created_at)
+                      const dateStr = dt.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
+                      const timeStr = dt.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+                      return (
+                        <div
+                          key={fb.id}
+                          style={{
+                            padding: '20px',
+                            background: 'var(--bg-surface)',
+                            borderRadius: '12px',
+                            border: '1px solid var(--border-light)',
+                            display: 'grid',
+                            gap: '14px',
+                            boxShadow: 'var(--shadow-sm)',
+                            transition: 'transform 0.2s, box-shadow 0.2s'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                            <div style={{ display: 'flex', gap: '3px' }}>
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star key={s} size={16} fill={s <= fb.rating ? 'var(--accent-gold)' : 'none'} stroke={s <= fb.rating ? 'var(--accent-gold)' : 'var(--text-faint)'} />
+                              ))}
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>{dateStr}</p>
+                              <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>{timeStr}</p>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>📞 {fb.phone}</span>
+                            {fb.highlights && fb.highlights.length > 0 && fb.highlights.map((h) => (
+                              <span key={h} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '999px', background: 'var(--accent-brown-dim)', color: 'var(--accent-brown)', fontWeight: 600, textTransform: 'capitalize' }}>
+                                {h.replace(/_/g, ' ')}
+                              </span>
+                            ))}
+                          </div>
+
+                          {fb.suggestion ? (
+                            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', background: 'var(--bg-subtle)', padding: '10px 14px', borderRadius: '8px', borderLeft: '3px solid var(--accent-brown)', lineHeight: 1.5 }}>
+                              {fb.suggestion}
+                            </p>
+                          ) : (
+                            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-faint)', fontStyle: 'italic' }}>No comment left.</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
+              )
+            })()}
           </div>
         </div>
       )}

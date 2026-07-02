@@ -54,7 +54,8 @@ export default function GuestFeedbackPage() {
           rating,
           highlights,
           suggestion,
-          phone
+          phone,
+          submitted_at: new Date().toISOString()   // device local time in ISO format
         })
       })
 

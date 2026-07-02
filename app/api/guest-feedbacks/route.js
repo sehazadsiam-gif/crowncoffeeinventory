@@ -2,7 +2,7 @@ import { supabase } from '../../../lib/supabase'
 
 export async function POST(request) {
   try {
-    const { rating, highlights, suggestion, phone } = await request.json()
+    const { rating, highlights, suggestion, phone, submitted_at } = await request.json()
 
     // Validation
     if (!rating || rating < 1 || rating > 5) {
@@ -19,7 +19,8 @@ export async function POST(request) {
           rating: parseInt(rating),
           highlights: highlights || [],
           suggestion: suggestion || '',
-          phone: phone.trim()
+          phone: phone.trim(),
+          created_at: submitted_at || new Date().toISOString()
         }
       ])
       .select()
