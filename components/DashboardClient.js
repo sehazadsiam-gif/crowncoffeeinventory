@@ -90,7 +90,7 @@ export default function DashboardClient() {
   const attendancePct = hrStats.activeStaff > 0 ? Math.round((hrStats.presentToday / hrStats.activeStaff) * 100) : 0
 
   const quickModules = [
-    { href: '/sales',              icon: <ShoppingCart size={22} />, title: 'Sales POS',       color: '#10B981', desc: 'Record daily sales' },
+    { href: '/admin?tab=feedbacks',icon: <MessageSquare size={22} />,title: 'Guest Feedbacks', color: '#B0633E', desc: 'View reviews & ratings' },
     { href: '/menu',               icon: <BookOpen size={22} />,     title: 'Menu',             color: '#3B82F6', desc: 'Manage menu items' },
     { href: '/bazar',              icon: <ClipboardList size={22} />,title: 'Bazar',            color: '#EF4444', desc: 'Log expenses' },
     { href: '/stock',              icon: <Box size={22} />,           title: 'Inventory',        color: '#F59E0B', desc: 'Track stock', badge: stats.lowStockCount > 0 ? stats.lowStockCount : null },

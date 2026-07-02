@@ -26,6 +26,14 @@ export default function AdminClient({ initialStats }) {
     const auth = localStorage.getItem('isAdmin')
     if (auth === 'true') {
       setIsAuthorized(true)
+      // Check query parameter for default active tab
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search)
+        const tab = params.get('tab')
+        if (tab) {
+          setActiveTab(tab)
+        }
+      }
     } else {
       router.push('/login')
     }
@@ -395,78 +403,106 @@ export default function AdminClient({ initialStats }) {
                 <p style={{ fontSize: '14px', margin: 0 }}>No feedbacks received yet.</p>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: '16px' }}>
-                {feedbacks.map((fb) => (
-                  <div 
-                    key={fb.id} 
-                    style={{ 
-                      padding: '20px', 
-                      background: 'var(--bg-subtle)', 
-                      borderRadius: '12px', 
-                      border: '1px solid var(--border-light)',
-                      display: 'grid',
-                      gap: '12px'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star 
-                            key={s} 
-                            size={16} 
-                            fill={s <= fb.rating ? 'var(--accent-gold)' : 'none'} 
-                            stroke={s <= fb.rating ? 'var(--accent-gold)' : 'var(--text-faint)'} 
-                          />
+              <>
+                {/* Stats Row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                  <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '10px', border: '1px solid var(--border-light)', textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Feedbacks</p>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>{feedbacks.length}</p>
+                  </div>
+                  <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '10px', border: '1px solid var(--border-light)', textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Average Rating</p>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 800, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                      {(feedbacks.reduce((sum, f) => sum + f.rating, 0) / feedbacks.length).toFixed(1)} <Star size={20} fill="var(--accent-gold)" stroke="var(--accent-gold)" />
+                    </p>
+                  </div>
+                  <div style={{ padding: '16px', background: 'var(--bg-subtle)', borderRadius: '10px', border: '1px solid var(--border-light)', textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Positive Reviews (4-5★)</p>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '24px', fontWeight: 800, color: 'var(--success)' }}>
+                      {Math.round((feedbacks.filter(f => f.rating >= 4).length / feedbacks.length) * 100)}%
+                    </p>
+                  </div>
+                </div>
+
+                {/* Feedbacks Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                  {feedbacks.map((fb) => (
+                    <div 
+                      key={fb.id} 
+                      style={{ 
+                        padding: '24px', 
+                        background: 'var(--bg-surface)', 
+                        borderRadius: '12px', 
+                        border: '1px solid var(--border-light)',
+                        display: 'grid',
+                        gap: '16px',
+                        boxShadow: 'var(--shadow-sm)',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        cursor: 'default'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '3px' }}>
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star 
+                              key={s} 
+                              size={16} 
+                              fill={s <= fb.rating ? 'var(--accent-gold)' : 'none'} 
+                              stroke={s <= fb.rating ? 'var(--accent-gold)' : 'var(--text-faint)'} 
+                            />
+                          ))}
+                        </div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                          {new Date(fb.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          Phone: {fb.phone}
+                        </span>
+                        {fb.highlights && fb.highlights.length > 0 && fb.highlights.map((h) => (
+                          <span 
+                            key={h} 
+                            style={{ 
+                              fontSize: '11px', 
+                              padding: '4px 10px', 
+                              borderRadius: '999px', 
+                              background: 'var(--accent-brown-dim)', 
+                              color: 'var(--accent-brown)', 
+                              fontWeight: 600,
+                              textTransform: 'capitalize' 
+                            }}
+                          >
+                            {h.replace('_', ' ')}
+                          </span>
                         ))}
                       </div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                        {new Date(fb.created_at).toLocaleString()}
-                      </span>
-                    </div>
 
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        Phone: {fb.phone}
-                      </span>
-                      {fb.highlights && fb.highlights.length > 0 && fb.highlights.map((h) => (
-                        <span 
-                          key={h} 
-                          style={{ 
-                            fontSize: '11px', 
-                            padding: '4px 10px', 
-                            borderRadius: '999px', 
-                            background: 'var(--accent-brown-dim)', 
-                            color: 'var(--accent-brown)', 
-                            fontWeight: 600,
-                            textTransform: 'capitalize' 
-                          }}
-                        >
-                          {h.replace('_', ' ')}
-                        </span>
-                      ))}
+                      {fb.suggestion ? (
+                        <p style={{ 
+                          margin: 0, 
+                          fontSize: '13px', 
+                          color: 'var(--text-secondary)', 
+                          background: 'var(--bg-subtle)', 
+                          padding: '12px 16px', 
+                          borderRadius: '8px', 
+                          borderLeft: '3px solid var(--accent-brown)',
+                          lineHeight: 1.5
+                        }}>
+                          {fb.suggestion}
+                        </p>
+                      ) : (
+                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-faint)', fontStyle: 'italic' }}>
+                          No comments left.
+                        </p>
+                      )}
                     </div>
-
-                    {fb.suggestion ? (
-                      <p style={{ 
-                        margin: 0, 
-                        fontSize: '13px', 
-                        color: 'var(--text-secondary)', 
-                        background: 'var(--bg-surface)', 
-                        padding: '12px 16px', 
-                        borderRadius: '8px', 
-                        borderLeft: '3px solid var(--accent-brown)',
-                        lineHeight: 1.5
-                      }}>
-                        {fb.suggestion}
-                      </p>
-                    ) : (
-                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-faint)', fontStyle: 'italic' }}>
-                        No general suggestion provided.
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
