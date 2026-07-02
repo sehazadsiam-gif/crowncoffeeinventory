@@ -36,7 +36,7 @@ export default function PayrollPage() {
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
-    if (!token || role !== 'admin') {
+    if (!token || (role !== 'admin' && role !== 'sub_admin')) {
       router.replace('/')
       return
     }

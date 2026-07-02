@@ -30,7 +30,7 @@ export default function AdminQueriesPage() {
       
       const token = localStorage.getItem('cc_token')
       const role = localStorage.getItem('cc_role')
-      if (!token || role !== 'admin') {
+      if (!token || (role !== 'admin' && role !== 'sub_admin')) {
         router.push('/admin/login')
         return
       }

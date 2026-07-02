@@ -12,7 +12,7 @@ export async function POST(request) {
     const token = authHeader?.replace('Bearer ', '')
     const session = await validateSession(token)
 
-    if (!session || (session.role !== 'admin' && session.role !== 'manager')) {
+    if (!session || ((session.role !== 'admin' && session.role !== 'sub_admin') && session.role !== 'manager')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

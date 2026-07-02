@@ -55,7 +55,7 @@ export default function BalanceSheetPage() {
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
-    if (!token || role !== 'admin') { router.replace('/'); return }
+    if (!token || (role !== 'admin' && role !== 'sub_admin')) { router.replace('/'); return }
     fetchSheets()
   }, [month, year])
 

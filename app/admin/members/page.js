@@ -17,7 +17,7 @@ export default function MembersPage() {
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
-    if (!token || role !== 'admin') {
+    if (!token || (role !== 'admin' && role !== 'sub_admin')) {
       router.replace('/admin/login')
       return
     }

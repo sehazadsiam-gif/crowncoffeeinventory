@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Shield, Eye, EyeOff, AlertCircle } from 'lucide-react'
 
-export default function AdminLoginPage() {
+export default function SubAdminLoginPage() {
   const router = useRouter()
   const [form, setForm] = useState({ username: '', password: '' })
   const [loading, setLoading] = useState(false)
@@ -11,9 +11,10 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
+    document.title = 'Admin Sign In | Crown Coffee'
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
-    if (token && (role === 'admin' || role === 'sub_admin')) router.replace('/dashboard')
+    if (token && ((role === 'admin' || role === 'sub_admin') || role === 'sub_admin')) router.replace('/dashboard')
   }, [router])
 
   async function handleLogin() {
@@ -24,7 +25,7 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/auth/admin-login', {
+      const res = await fetch('/api/auth/sub-admin-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)
@@ -35,7 +36,7 @@ export default function AdminLoginPage() {
         return
       }
       localStorage.setItem('cc_token', data.token)
-      localStorage.setItem('cc_role', 'admin')
+      localStorage.setItem('cc_role', 'sub_admin')
       localStorage.setItem('cc_username', data.username)
       router.replace('/dashboard')
     } catch (err) {

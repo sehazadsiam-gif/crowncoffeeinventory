@@ -20,7 +20,7 @@ export default function ManagerDashboard() {
   const checkAuth = useCallback(() => {
     const role = localStorage.getItem('cc_role')
     const user = localStorage.getItem('cc_username')
-    if (role !== 'manager' && role !== 'admin') {
+    if (role !== 'manager' && (role !== 'admin' && role !== 'sub_admin')) {
       router.replace('/manager/login')
       return false
     }

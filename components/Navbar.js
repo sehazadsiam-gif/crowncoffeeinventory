@@ -49,7 +49,7 @@ export default function Navbar() {
     const role = localStorage.getItem('cc_role')
     const user = localStorage.getItem('cc_username') || localStorage.getItem('cc_staff_name')
 
-    if (!token && !['/', '/admin/login', '/staff/login'].includes(pathname) && !pathname.startsWith('/membership')) {
+    if (!token && !['/', '/admin/login', '/staff/login', '/sub-admin/login'].includes(pathname) && !pathname.startsWith('/membership')) {
       router.replace('/')
       return
     }
@@ -118,9 +118,9 @@ export default function Navbar() {
     { href: '/balance-sheet', label: 'Balance', icon: <CalcIcon size={16} /> },
   ]
 
-  const navItems = userRole === 'admin' ? adminItems : []
+  const navItems = (userRole === 'admin' || userRole === 'sub_admin') ? adminItems : []
 
-  if (!userRole && !['/', '/admin/login', '/staff/login'].includes(pathname) && !pathname.startsWith('/membership')) return null
+  if (!userRole && !['/', '/admin/login', '/staff/login', '/sub-admin/login'].includes(pathname) && !pathname.startsWith('/membership')) return null
 
   return (
     <>
