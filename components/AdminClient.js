@@ -7,7 +7,8 @@ import { useToast } from '../components/Toast'
 import { 
   TrendingUp, Package, Trash2, LogOut, ShieldCheck, 
   Activity, FileText, AlertCircle, Database, Users, 
-  Coffee, ShoppingCart, Receipt, Eraser, AlertTriangle
+  Coffee, ShoppingCart, Receipt, Eraser, AlertTriangle,
+  MessageSquare, Star
 } from 'lucide-react'
 
 export default function AdminClient({ initialStats }) {
@@ -16,6 +17,8 @@ export default function AdminClient({ initialStats }) {
   const [loading, setLoading] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [showConfirmModal, setShowConfirmModal] = useState(null) // table name or 'all'
+  const [feedbacks, setFeedbacks] = useState([])
+  const [feedbacksLoading, setFeedbacksLoading] = useState(false)
   const router = useRouter()
   const { addToast } = useToast()
 
@@ -27,6 +30,29 @@ export default function AdminClient({ initialStats }) {
       router.push('/login')
     }
   }, [router])
+
+  const fetchFeedbacks = async () => {
+    setFeedbacksLoading(true)
+    try {
+      const res = await fetch('/api/guest-feedbacks')
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setFeedbacks(data.data)
+      } else {
+        throw new Error(data.error || 'Failed to load feedbacks')
+      }
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally {
+      setFeedbacksLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'feedbacks') {
+      fetchFeedbacks()
+    }
+  }, [activeTab])
 
   const handleLogout = () => {
     localStorage.removeItem('isAdmin')
@@ -139,6 +165,7 @@ export default function AdminClient({ initialStats }) {
         <div onClick={() => setActiveTab('overview')} style={tabStyle('overview')}><Activity size={16} /> Overview</div>
         <div onClick={() => setActiveTab('db')} style={tabStyle('db')}><Database size={16} /> Database Manager</div>
         <div onClick={() => setActiveTab('entities')} style={tabStyle('entities')}><Users size={16} /> Management</div>
+        <div onClick={() => setActiveTab('feedbacks')} style={tabStyle('feedbacks')}><MessageSquare size={16} /> Guest Feedbacks</div>
       </div>
 
       {/* Tab Content: Overview */}
@@ -244,9 +271,119 @@ export default function AdminClient({ initialStats }) {
                <button onClick={() => router.push('/menu')} className="btn-secondary"><Coffee size={16} /> Manage Menu</button>
                <button onClick={() => router.push('/stock')} className="btn-secondary"><Package size={16} /> Inventory Control</button>
                <button onClick={() => router.push('/portal')} className="btn-secondary"><FileText size={16} /> Staff Portal View</button>
+               <button onClick={() => setActiveTab('feedbacks')} className="btn-secondary" style={{ borderColor: 'var(--accent-brown)', color: 'var(--accent-brown)' }}><MessageSquare size={16} /> Guest Feedbacks</button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tab Content: Guest Feedbacks */}
+      {activeTab === 'feedbacks' && (
+        <div className="animate-in" style={{ display: 'grid', gap: '24px' }}>
+          <div className="card-premium">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                  <MessageSquare size={18} style={{ color: 'var(--accent-brown)' }} /> Guest Feedbacks
+                </h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px', margin: 0 }}>
+                  Customer reviews, ratings, and feedback collected from ccadmin.online/guest-feedbacks
+                </p>
+              </div>
+              <button 
+                onClick={fetchFeedbacks} 
+                className="btn-secondary" 
+                style={{ padding: '8px 16px', fontSize: '12px' }}
+                disabled={feedbacksLoading}
+              >
+                Refresh List
+              </button>
+            </div>
+
+            {feedbacksLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                <div className="loader" />
+              </div>
+            ) : feedbacks.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', background: 'var(--bg-subtle)', borderRadius: '12px', color: 'var(--text-muted)' }}>
+                <MessageSquare size={36} style={{ opacity: 0.3, marginBottom: '8px' }} />
+                <p style={{ fontSize: '14px', margin: 0 }}>No feedbacks received yet.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '16px' }}>
+                {feedbacks.map((fb) => (
+                  <div 
+                    key={fb.id} 
+                    style={{ 
+                      padding: '20px', 
+                      background: 'var(--bg-subtle)', 
+                      borderRadius: '12px', 
+                      border: '1px solid var(--border-light)',
+                      display: 'grid',
+                      gap: '12px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star 
+                            key={s} 
+                            size={16} 
+                            fill={s <= fb.rating ? 'var(--accent-gold)' : 'none'} 
+                            stroke={s <= fb.rating ? 'var(--accent-gold)' : 'var(--text-faint)'} 
+                          />
+                        ))}
+                      </div>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                        {new Date(fb.created_at).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        Phone: {fb.phone}
+                      </span>
+                      {fb.highlights && fb.highlights.length > 0 && fb.highlights.map((h) => (
+                        <span 
+                          key={h} 
+                          style={{ 
+                            fontSize: '11px', 
+                            padding: '4px 10px', 
+                            borderRadius: '999px', 
+                            background: 'var(--accent-brown-dim)', 
+                            color: 'var(--accent-brown)', 
+                            fontWeight: 600,
+                            textTransform: 'capitalize' 
+                          }}
+                        >
+                          {h.replace('_', ' ')}
+                        </span>
+                      ))}
+                    </div>
+
+                    {fb.suggestion ? (
+                      <p style={{ 
+                        margin: 0, 
+                        fontSize: '13px', 
+                        color: 'var(--text-secondary)', 
+                        background: 'var(--bg-surface)', 
+                        padding: '12px 16px', 
+                        borderRadius: '8px', 
+                        borderLeft: '3px solid var(--accent-brown)',
+                        lineHeight: 1.5
+                      }}>
+                        {fb.suggestion}
+                      </p>
+                    ) : (
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-faint)', fontStyle: 'italic' }}>
+                        No general suggestion provided.
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
       )}
 
