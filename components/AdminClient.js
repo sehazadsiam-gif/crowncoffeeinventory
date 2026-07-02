@@ -384,7 +384,7 @@ export default function AdminClient({ initialStats }) {
               </div>
             )}
           </div>
-
+        </div>
       )}
 
       {/* Confirmation Modal */}
