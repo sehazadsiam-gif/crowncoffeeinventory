@@ -60,9 +60,7 @@ export default function AdminPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
       <Navbar />
-      <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '48px 24px 60px' }}>
-        <AdminClient initialStats={data} />
-      </main>
+      <AdminClient initialStats={data} />
     </div>
   )
 }

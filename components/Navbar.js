@@ -135,23 +135,26 @@ export default function Navbar() {
         transition: 'all 0.3s ease',
         boxShadow: scrolled ? '0 4px 24px rgba(0,0,0,0.07)' : 'none',
       }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 20px', height: '62px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: '1520px', margin: '0 auto', padding: '0 24px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
 
           {/* Brand */}
           <Link href={userRole === 'admin' ? '/dashboard' : '/'} style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
             <div style={{
               background: 'linear-gradient(135deg, #7C3A1E 0%, #D4933A 100%)',
-              padding: '8px',
-              borderRadius: '10px',
+              padding: '9px',
+              borderRadius: '12px',
               color: 'white',
               display: 'flex',
-              boxShadow: '0 3px 10px rgba(124,58,30,0.30)'
+              boxShadow: '0 4px 14px rgba(124,58,30,0.35), 0 0 0 3px rgba(124,58,30,0.12)'
             }}>
-              <Coffee size={18} />
+              <Coffee size={20} />
             </div>
-            <span style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em', fontFamily: 'var(--font-sans)' }}>
-              Crown Coffee
-            </span>
+            <div>
+              <span style={{ fontSize: '17px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.03em', fontFamily: 'var(--font-sans)', display: 'block', lineHeight: 1.1 }}>
+                Crown Coffee
+              </span>
+              <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: 'var(--font-sans)' }}>Admin Portal</span>
+            </div>
           </Link>
 
           {/* Desktop Nav */}
@@ -241,39 +244,51 @@ export default function Navbar() {
               onClick={toggleTheme}
               title={theme === 'light' ? 'Dark Mode' : 'Light Mode'}
               style={{
-                width: '34px', height: '34px', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', borderRadius: '8px', border: '1.5px solid var(--border-light)',
-                background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer',
-                transition: 'all 0.2s', marginLeft: '6px'
+                width: '36px', height: '36px', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', borderRadius: '10px', border: '1.5px solid var(--border-light)',
+                background: 'var(--bg-subtle)', color: 'var(--text-muted)', cursor: 'pointer',
+                transition: 'all 0.2s', marginLeft: '6px', flexShrink: 0
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-subtle)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-blue-dim)'; e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.borderColor = 'var(--border-accent)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-subtle)'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-light)' }}
             >
               {theme === 'light' ? <Moon size={16} /> : <Sun size={16} style={{ color: '#FBBF24' }} />}
             </button>
 
-            {/* User + Logout */}
+            {/* User Chip + Logout */}
             {userRole && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '12px', paddingLeft: '12px', borderLeft: '1px solid var(--border-light)' }}>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, fontFamily: 'var(--font-sans)' }}>{username}</p>
-                  <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{userRole}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '12px', paddingLeft: '14px', borderLeft: '1px solid var(--border-light)' }}>
+                {/* Avatar Chip */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 12px 5px 6px', background: 'var(--bg-subtle)', borderRadius: '999px', border: '1px solid var(--border-light)' }}>
+                  <div style={{
+                    width: '28px', height: '28px', borderRadius: '50%',
+                    background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-blue-hover))',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white', fontSize: '12px', fontWeight: 800, fontFamily: 'var(--font-sans)',
+                    flexShrink: 0
+                  }}>
+                    {(username || 'A').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, fontFamily: 'var(--font-sans)', lineHeight: 1.2 }}>{username || 'Admin'}</p>
+                    <p style={{ fontSize: '9px', color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-sans)' }}>{userRole}</p>
+                  </div>
                 </div>
                 <button
                   onClick={handleLogout}
                   title="Logout"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    padding: '7px 12px', borderRadius: '8px',
-                    border: '1.5px solid var(--danger-bg)',
-                    background: 'var(--danger-bg)', color: 'var(--danger)',
-                    cursor: 'pointer', fontWeight: 700, fontSize: '12.5px',
-                    transition: 'all 0.2s', fontFamily: 'var(--font-sans)'
+                    display: 'flex', alignItems: 'center', gap: '5px',
+                    padding: '7px 13px', borderRadius: '10px',
+                    border: '1.5px solid rgba(239,68,68,0.3)',
+                    background: 'rgba(239,68,68,0.07)', color: 'var(--danger)',
+                    cursor: 'pointer', fontWeight: 700, fontSize: '12px',
+                    transition: 'all 0.2s', fontFamily: 'var(--font-sans)', flexShrink: 0
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'var(--danger)'; e.currentTarget.style.color = 'white'; e.currentTarget.style.borderColor = 'var(--danger)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--danger-bg)'; e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.borderColor = 'var(--danger-bg)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.07)'; e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)' }}
                 >
-                  <LogOut size={14} /> Logout
+                  <LogOut size={13} /> Logout
                 </button>
               </div>
             )}
