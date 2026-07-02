@@ -262,16 +262,101 @@ export default function AdminClient({ initialStats }) {
           </div>
 
           <div className="card-premium">
-            <h3 style={{ fontSize: '18px', marginBottom: '16px' }}>Manage Project Access</h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '20px' }}>
-              Add or remove core system entities. Use specific pages for detailed management.
+            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>System Management</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginBottom: '24px' }}>
+              Navigate to system directories, configure options, and review telemetry.
             </p>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-               <button onClick={() => router.push('/staff')} className="btn-primary"><Users size={16} /> Go to Staff Directory</button>
-               <button onClick={() => router.push('/menu')} className="btn-secondary"><Coffee size={16} /> Manage Menu</button>
-               <button onClick={() => router.push('/stock')} className="btn-secondary"><Package size={16} /> Inventory Control</button>
-               <button onClick={() => router.push('/portal')} className="btn-secondary"><FileText size={16} /> Staff Portal View</button>
-               <button onClick={() => setActiveTab('feedbacks')} className="btn-secondary" style={{ borderColor: 'var(--accent-brown)', color: 'var(--accent-brown)' }}><MessageSquare size={16} /> Guest Feedbacks</button>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+              <div 
+                onClick={() => router.push('/staff')}
+                style={{
+                  padding: '24px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)',
+                  borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', gap: '12px'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
+              >
+                <div style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-dim)', padding: '10px', borderRadius: '8px', width: 'fit-content' }}>
+                  <Users size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Staff Directory</h4>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>Manage staff payroll and roles.</p>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => router.push('/menu')}
+                style={{
+                  padding: '24px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)',
+                  borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', gap: '12px'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--accent-gold)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
+              >
+                <div style={{ color: 'var(--accent-gold)', background: 'var(--accent-gold-dim)', padding: '10px', borderRadius: '8px', width: 'fit-content' }}>
+                  <Coffee size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Manage Menu</h4>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>Update menu items and recipes.</p>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => router.push('/stock')}
+                style={{
+                  padding: '24px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)',
+                  borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', gap: '12px'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--success)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
+              >
+                <div style={{ color: 'var(--success)', background: 'var(--success-bg)', padding: '10px', borderRadius: '8px', width: 'fit-content' }}>
+                  <Package size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Inventory Control</h4>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>Track raw stocks and movements.</p>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => router.push('/portal')}
+                style={{
+                  padding: '24px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)',
+                  borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', gap: '12px'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border-light)'; }}
+              >
+                <div style={{ color: 'var(--accent-blue)', background: 'var(--accent-blue-dim)', padding: '10px', borderRadius: '8px', width: 'fit-content' }}>
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Staff Portal View</h4>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>Access the portal dashboard view.</p>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => setActiveTab('feedbacks')}
+                style={{
+                  padding: '24px', background: 'var(--accent-brown-dim)', border: '1px solid var(--accent-brown-glow)',
+                  borderRadius: '12px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', flexDirection: 'column', gap: '12px'
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'var(--accent-brown)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--accent-brown-glow)'; }}
+              >
+                <div style={{ color: 'var(--accent-brown)', background: 'var(--accent-brown-glow)', padding: '10px', borderRadius: '8px', width: 'fit-content' }}>
+                  <MessageSquare size={20} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--accent-brown)' }}>Guest Feedbacks</h4>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>View customer reviews & ratings.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

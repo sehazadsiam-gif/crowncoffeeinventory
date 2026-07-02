@@ -1,6 +1,5 @@
 import './globals.css'
 import { ToastProvider } from '../components/Toast'
-import AIAssistant from '../components/AIAssistant'
 import EnvCheck from '../components/EnvCheck'
 import LoginGate from '../components/LoginGate'
 
@@ -63,7 +62,6 @@ export default function RootLayout({ children }) {
           <LoginGate>
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
               {children}
-              <AIAssistant />
             </div>
           </LoginGate>
         </ToastProvider>
