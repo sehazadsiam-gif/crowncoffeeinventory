@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 
 export async function POST(request) {
   try {
-    const { messages, system } = await request.json()
+    const { messages, system, attachment } = await request.json()
     
     // 1. Try Gemini first (fully verified and working)
     if (process.env.GEMINI_API_KEY) {
@@ -21,10 +21,24 @@ export async function POST(request) {
         })
 
         // Map Anthropic style messages to Gemini style
-        const contents = messages.map(m => ({
-          role: m.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: m.content }]
-        }))
+        const contents = messages.map((m, idx) => {
+          const parts = [{ text: m.content || '' }]
+          
+          // Append the attachment to the last message if role matches user
+          if (idx === messages.length - 1 && attachment && m.role === 'user') {
+            parts.push({
+              inlineData: {
+                data: attachment.base64,
+                mimeType: attachment.type
+              }
+            })
+          }
+          
+          return {
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts
+          }
+        })
 
         const result = await model.generateContent({ contents })
         const responseText = result.response.text()
@@ -53,10 +67,43 @@ export async function POST(request) {
     }
 
     // Filter messages for Anthropic (first message must have role 'user')
-    let anthropicMessages = messages.map(m => ({
-      role: m.role,
-      content: m.content
-    }))
+    let anthropicMessages = messages.map((m, idx) => {
+      let content = m.content
+      
+      if (idx === messages.length - 1 && attachment && m.role === 'user') {
+        const contentBlocks = [{ type: 'text', text: m.content || '' }]
+        if (attachment.type.startsWith('image/')) {
+          contentBlocks.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: attachment.type,
+              data: attachment.base64
+            }
+          })
+        } else if (attachment.type === 'application/pdf') {
+          contentBlocks.push({
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: attachment.base64
+            }
+          })
+        } else {
+          // Append raw text content if not media file
+          const decodedText = Buffer.from(attachment.base64, 'base64').toString('utf-8')
+          contentBlocks[0].text += `\n\nAttached File Context (${attachment.name}):\n${decodedText}`
+        }
+        content = contentBlocks
+      }
+      
+      return {
+        role: m.role,
+        content
+      }
+    })
+
     if (anthropicMessages.length > 0 && anthropicMessages[0].role === 'assistant') {
       anthropicMessages = anthropicMessages.slice(1)
     }

@@ -8,7 +8,7 @@ import {
   CheckCircle2, Wallet, TrendingUp, AlertTriangle, Calendar,
   Users, UserCheck, FileText, Send, MessageSquare, Clock,
   BellRing, Box, Zap, CalendarDays, ArrowUpRight, Activity,
-  RefreshCw, Coffee, BarChart2, ArrowUp, ArrowDown
+  RefreshCw, Coffee, BarChart2, ArrowUp, ArrowDown, Calculator
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────────────────
@@ -43,6 +43,8 @@ export default function DashboardClient() {
   const [broadcast, setBroadcast] = useState({ subject: '', message: '', sending: false, status: null })
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [historyData, setHistoryData] = useState([])
+  const [hoveredChartIdx, setHoveredChartIdx] = useState(null)
 
   const greeting = useGreeting()
   const clock = useLiveClock()
@@ -56,7 +58,17 @@ export default function DashboardClient() {
     try {
       const currentMonth = new Date(selectedDate).getMonth() + 1
       const currentYear = new Date(selectedDate).getFullYear()
-      const [salesRes, bazarRes, ingRes, staffRes, attRes, advRes, leaveRes, msgRes] = await Promise.all([
+      
+      // Calculate 7-day date range ending on selected date
+      const dateRange = []
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(selectedDate)
+        d.setDate(d.getDate() - i)
+        dateRange.push(d.toISOString().split('T')[0])
+      }
+      const startDate = dateRange[0]
+
+      const [salesRes, bazarRes, ingRes, staffRes, attRes, advRes, leaveRes, msgRes, weekSalesRes, weekBazarRes] = await Promise.all([
         supabase.from('sales').select('total_revenue').eq('date', selectedDate),
         supabase.from('bazar_entries').select('total_cost').eq('date', selectedDate),
         supabase.from('ingredients').select('name, current_stock, cost_per_unit, min_stock'),
@@ -65,7 +77,10 @@ export default function DashboardClient() {
         supabase.from('advance_log').select('amount').eq('month', currentMonth).eq('year', currentYear),
         supabase.from('leave_requests').select('*, staff:staff_id(name)').eq('status', 'pending'),
         supabase.from('staff_queries').select('*, staff:staff_id(name)').eq('status', 'Pending'),
+        supabase.from('sales').select('date, total_revenue').gte('date', startDate).lte('date', selectedDate),
+        supabase.from('bazar_entries').select('date, total_cost').gte('date', startDate).lte('date', selectedDate),
       ])
+
       const totalSales = (salesRes.data || []).reduce((s, r) => s + (r.total_revenue || 0), 0)
       const totalBazar = (bazarRes.data || []).reduce((s, r) => s + (r.total_cost || 0), 0)
       const ingredients = ingRes.data || []
@@ -78,6 +93,15 @@ export default function DashboardClient() {
       const pendingAdvances = (advRes.data || []).reduce((s, r) => s + (Number(r.amount) || 0), 0)
       setHrStats({ activeStaff, presentToday, payrollEstimate, pendingAdvances })
       setAlerts({ pendingLeaves: leaveRes.data || [], unreadMessages: msgRes.data || [], lowStockItems: lowStockItems.slice(0, 5) })
+
+      // Aggregate chart data
+      const chartData = dateRange.map(dStr => {
+        const daySales = (weekSalesRes.data || []).filter(s => s.date === dStr).reduce((s, r) => s + (r.total_revenue || 0), 0)
+        const dayBazar = (weekBazarRes.data || []).filter(b => b.date === dStr).reduce((s, r) => s + (r.total_cost || 0), 0)
+        const label = new Date(dStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+        return { date: dStr, label, sales: daySales, bazar: dayBazar }
+      })
+      setHistoryData(chartData)
     } catch (err) {
       console.error(err)
     } finally {
@@ -125,6 +149,7 @@ export default function DashboardClient() {
     { href: '/menu',               icon: <BookOpen size={22} />,      title: 'Menu',            color: '#3B82F6', desc: 'Manage items' },
     { href: '/bazar',              icon: <ClipboardList size={22} />, title: 'Bazar',           color: '#EF4444', desc: 'Log expenses' },
     { href: '/stock',              icon: <Box size={22} />,            title: 'Inventory',       color: '#F59E0B', desc: 'Track stock',      badge: stats.lowStockCount > 0 ? stats.lowStockCount : null },
+    { href: '/stock-audit',        icon: <Calculator size={22} />,    title: 'Stock Audit',     color: '#10B981', desc: 'Monthly bazar ratio' },
     { href: '/staff/attendance',   icon: <UserCheck size={22} />,     title: 'Attendance',      color: '#8B5CF6', desc: 'Mark attendance' },
     { href: '/staff/payroll',      icon: <FileText size={22} />,      title: 'Payroll',         color: '#2563EB', desc: 'Process salaries' },
     { href: '/staff/leave-requests', icon: <CalendarDays size={22} />, title: 'Leave',          color: '#D97706', desc: 'Review leaves',    badge: alerts.pendingLeaves.length > 0 ? alerts.pendingLeaves.length : null },
@@ -271,6 +296,197 @@ export default function DashboardClient() {
 
           {/* LEFT COLUMN */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+            {/* Weekly SVG Line Chart */}
+            {historyData.length > 0 && (
+              <div className="panel" style={{ overflow: 'visible' }}>
+                <div className="panel-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '30px', height: '30px', borderRadius: '9px', background: 'var(--accent-blue-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <BarChart2 size={15} style={{ color: 'var(--accent-blue)' }} />
+                    </div>
+                    <div>
+                      <h2 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>Weekly Financial Trends</h2>
+                      <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>Sales vs. Bazar Expenses comparison (last 7 days)</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', fontSize: '11px', fontWeight: 700 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10B981' }}>● Sales</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#EF4444' }}>● Expenses</span>
+                  </div>
+                </div>
+                <div className="panel-body" style={{ padding: '20px 22px 14px', position: 'relative' }}>
+                  {(() => {
+                    const maxVal = Math.max(...historyData.map(d => Math.max(d.sales, d.bazar)), 1000)
+                    const paddingX = 40
+                    const paddingY = 20
+                    const chartW = 600
+                    const chartH = 180
+                    const stepX = (chartW - paddingX * 2) / (historyData.length - 1)
+                    
+                    const pointsSales = historyData.map((d, i) => ({
+                      x: paddingX + i * stepX,
+                      y: chartH - paddingY - (d.sales / maxVal) * (chartH - paddingY * 2)
+                    }))
+                    
+                    const pointsBazar = historyData.map((d, i) => ({
+                      x: paddingX + i * stepX,
+                      y: chartH - paddingY - (d.bazar / maxVal) * (chartH - paddingY * 2)
+                    }))
+
+                    const salesPath = pointsSales.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+                    const salesArea = salesPath + ` L ${pointsSales[pointsSales.length-1].x} ${chartH - paddingY} L ${pointsSales[0].x} ${chartH - paddingY} Z`
+                    
+                    const bazarPath = pointsBazar.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
+                    const bazarArea = bazarPath + ` L ${pointsBazar[pointsBazar.length-1].x} ${chartH - paddingY} L ${pointsBazar[0].x} ${chartH - paddingY} Z`
+
+                    return (
+                      <div style={{ position: 'relative' }}>
+                        <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width: '100%', height: 'auto', overflow: 'visible' }}>
+                          <defs>
+                            <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#10B981" stopOpacity="0.25" />
+                              <stop offset="100%" stopColor="#10B981" stopOpacity="0.0" />
+                            </linearGradient>
+                            <linearGradient id="bazarGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#EF4444" stopOpacity="0.2" />
+                              <stop offset="100%" stopColor="#EF4444" stopOpacity="0.0" />
+                            </linearGradient>
+                          </defs>
+
+                          {/* Grid Lines */}
+                          {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
+                            const y = chartH - paddingY - ratio * (chartH - paddingY * 2)
+                            return (
+                              <g key={idx}>
+                                <line x1={paddingX} y1={y} x2={chartW - paddingX} y2={y} stroke="var(--border-light)" strokeDasharray="4 4" strokeWidth="1" />
+                                <text x={paddingX - 8} y={y + 4} textAnchor="end" fontSize="9" fill="var(--text-faint)" fontWeight="600">
+                                  ৳{Math.round((ratio * maxVal) / 100) * 100}
+                                </text>
+                              </g>
+                            )
+                          })}
+
+                          {/* Colored Areas */}
+                          <path d={salesArea} fill="url(#salesGrad)" />
+                          <path d={bazarArea} fill="url(#bazarGrad)" />
+
+                          {/* Highlight Columns for hover */}
+                          {historyData.map((d, i) => {
+                            const x = paddingX + i * stepX
+                            return (
+                              <rect
+                                key={i}
+                                x={x - stepX / 2}
+                                y={paddingY}
+                                width={stepX}
+                                height={chartH - paddingY * 2}
+                                fill="transparent"
+                                style={{ cursor: 'pointer' }}
+                                onMouseEnter={() => setHoveredChartIdx(i)}
+                                onMouseLeave={() => setHoveredChartIdx(null)}
+                              />
+                            )
+                          })}
+
+                          {/* Sales Line */}
+                          <path d={salesPath} fill="none" stroke="#10B981" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                          {/* Bazar Line */}
+                          <path d={bazarPath} fill="none" stroke="#EF4444" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+                          {/* Vertices & Vertical cursor line on hover */}
+                          {hoveredChartIdx !== null && (
+                            <line
+                              x1={paddingX + hoveredChartIdx * stepX}
+                              y1={paddingY}
+                              x2={paddingX + hoveredChartIdx * stepX}
+                              y2={chartH - paddingY}
+                              stroke="var(--border-medium)"
+                              strokeWidth="1.5"
+                              strokeDasharray="2 2"
+                            />
+                          )}
+
+                          {pointsSales.map((p, i) => (
+                            <circle
+                              key={i}
+                              cx={p.x}
+                              cy={p.y}
+                              r={hoveredChartIdx === i ? 6 : 4}
+                              fill="#10B981"
+                              stroke="var(--bg-surface)"
+                              strokeWidth="2"
+                              style={{ transition: 'r 0.15s' }}
+                            />
+                          ))}
+
+                          {pointsBazar.map((p, i) => (
+                            <circle
+                              key={i}
+                              cx={p.x}
+                              cy={p.y}
+                              r={hoveredChartIdx === i ? 6 : 4}
+                              fill="#EF4444"
+                              stroke="var(--bg-surface)"
+                              strokeWidth="2"
+                              style={{ transition: 'r 0.15s' }}
+                            />
+                          ))}
+
+                          {/* X Labels */}
+                          {historyData.map((d, i) => (
+                            <text
+                              key={i}
+                              x={paddingX + i * stepX}
+                              y={chartH - paddingY + 14}
+                              textAnchor="middle"
+                              fontSize="9.5"
+                              fontWeight="700"
+                              fill="var(--text-muted)"
+                            >
+                              {d.label}
+                            </text>
+                          ))}
+                        </svg>
+
+                        {/* Interactive Tooltip Element */}
+                        {hoveredChartIdx !== null && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '10px',
+                            left: `${(paddingX + hoveredChartIdx * stepX) / 6}%`,
+                            transform: 'translateX(-50%)',
+                            background: 'var(--bg-surface)',
+                            border: '1px solid var(--border-medium)',
+                            borderRadius: '8px',
+                            padding: '8px 12px',
+                            boxShadow: 'var(--shadow-md)',
+                            pointerEvents: 'none',
+                            zIndex: 10,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            minWidth: '120px'
+                          }}>
+                            <span style={{ fontSize: '10.5px', fontWeight: 800, color: 'var(--text-secondary)' }}>
+                              {historyData[hoveredChartIdx].label}
+                            </span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#10B981', fontWeight: 700 }}>
+                              <span>Sales:</span>
+                              <span>৳{historyData[hoveredChartIdx].sales.toLocaleString()}</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#EF4444', fontWeight: 700 }}>
+                              <span>Bazar:</span>
+                              <span>৳{historyData[hoveredChartIdx].bazar.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+              </div>
+            )}
 
             {/* Quick Modules */}
             <div className="panel">

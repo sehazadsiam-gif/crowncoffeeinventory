@@ -6,8 +6,10 @@ import {
   Coffee, Menu as MenuIcon, X, 
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
   Upload, FileSpreadsheet, UserCheck, Sun, Moon, Receipt, Package,
-  TrendingUp, Calculator as CalcIcon, ShoppingBag, MessageSquare
+  TrendingUp, Calculator as CalcIcon, ShoppingBag, MessageSquare,
+  BellRing
 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -18,6 +20,8 @@ export default function Navbar() {
   const [username, setUsername] = useState('')
   const [theme, setTheme] = useState('light')
   const [scrolled, setScrolled] = useState(false)
+  const [isBellOpen, setIsBellOpen] = useState(false)
+  const [bellAlerts, setBellAlerts] = useState({ lowStockCount: 0, pendingLeavesCount: 0, pendingQueriesCount: 0 })
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -43,6 +47,43 @@ export default function Navbar() {
     localStorage.setItem('cc_theme_mode', next)
     document.body.classList.toggle('dark-mode', next === 'dark')
   }
+
+  useEffect(() => {
+    if (!userRole || (userRole !== 'admin' && userRole !== 'sub_admin')) return
+
+    async function fetchNavbarAlerts() {
+      try {
+        const [ingRes, leaveRes, queryRes] = await Promise.all([
+          supabase.from('ingredients').select('current_stock, min_stock'),
+          supabase.from('leave_requests').select('id').eq('status', 'pending'),
+          supabase.from('staff_queries').select('id').eq('status', 'Pending')
+        ])
+
+        const lowStockCount = ingRes.data?.filter(i => Number(i.current_stock) <= Number(i.min_stock)).length || 0
+        const pendingLeavesCount = leaveRes.data?.length || 0
+        const pendingQueriesCount = queryRes.data?.length || 0
+
+        setBellAlerts({
+          lowStockCount,
+          pendingLeavesCount,
+          pendingQueriesCount
+        })
+      } catch (e) {
+        console.error('Navbar alerts fetch error:', e)
+      }
+    }
+
+    fetchNavbarAlerts()
+    const interval = setInterval(fetchNavbarAlerts, 60000)
+    return () => clearInterval(interval)
+  }, [userRole])
+
+  useEffect(() => {
+    if (!isBellOpen) return
+    const handleOutsideClick = () => setIsBellOpen(false)
+    window.addEventListener('click', handleOutsideClick)
+    return () => window.removeEventListener('click', handleOutsideClick)
+  }, [isBellOpen])
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -87,6 +128,7 @@ export default function Navbar() {
       children: [
         { href: '/stock', label: 'Stock Manager' },
         { href: '/stock-import', label: 'Stock Import' },
+        { href: '/stock-audit', label: 'Stock Audit & Costing' },
       ]
     },
     {
@@ -238,6 +280,93 @@ export default function Navbar() {
                 </div>
               )
             })}
+
+            {/* Notification Bell */}
+            {userRole && (userRole === 'admin' || userRole === 'sub_admin') && (
+              <div style={{ position: 'relative', marginLeft: '6px' }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setIsBellOpen(!isBellOpen); }}
+                  title="Notifications & Alerts"
+                  style={{
+                    width: '36px', height: '36px', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', borderRadius: '10px', border: '1.5px solid var(--border-light)',
+                    background: isBellOpen ? 'var(--accent-blue-dim)' : 'var(--bg-subtle)', 
+                    color: isBellOpen ? 'var(--accent-blue)' : 'var(--text-muted)', cursor: 'pointer',
+                    transition: 'all 0.2s', position: 'relative', outline: 'none'
+                  }}
+                  onMouseEnter={e => { if(!isBellOpen) { e.currentTarget.style.background = 'var(--accent-blue-dim)'; e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.borderColor = 'var(--border-accent)' }}}
+                  onMouseLeave={e => { if(!isBellOpen) { e.currentTarget.style.background = 'var(--bg-subtle)'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-light)' }}}
+                >
+                  <BellRing size={16} />
+                  {(bellAlerts.lowStockCount + bellAlerts.pendingLeavesCount + bellAlerts.pendingQueriesCount) > 0 && (
+                    <span style={{
+                      position: 'absolute', top: '-4px', right: '-4px',
+                      background: 'var(--danger)', color: 'white',
+                      fontSize: '9px', fontWeight: 800, padding: '2px 5px',
+                      borderRadius: '10px', boxShadow: '0 2px 6px rgba(239,68,68,0.4)',
+                      lineHeight: 1
+                    }}>
+                      {bellAlerts.lowStockCount + bellAlerts.pendingLeavesCount + bellAlerts.pendingQueriesCount}
+                    </span>
+                  )}
+                </button>
+                {isBellOpen && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                    width: '280px', background: 'var(--bg-surface)',
+                    borderRadius: '12px', border: '1px solid var(--border-light)',
+                    padding: '8px 0', boxShadow: 'var(--shadow-lg)', zIndex: 1001,
+                    animation: 'dropdownFadeIn 0.18s ease forwards'
+                  }} onClick={e => e.stopPropagation()}>
+                    {/* Header */}
+                    <div style={{ padding: '8px 14px 10px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Alerts Center</span>
+                      {(bellAlerts.lowStockCount + bellAlerts.pendingLeavesCount + bellAlerts.pendingQueriesCount) > 0 && (
+                        <span style={{ fontSize: '10px', color: 'var(--danger)', fontWeight: 800 }}>
+                          {bellAlerts.lowStockCount + bellAlerts.pendingLeavesCount + bellAlerts.pendingQueriesCount} Pending
+                        </span>
+                      )}
+                    </div>
+                    {/* Items */}
+                    <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
+                      {bellAlerts.lowStockCount > 0 && (
+                        <Link href="/stock" onClick={() => setIsBellOpen(false)} style={{ display: 'flex', gap: '10px', padding: '10px 14px', textDecoration: 'none', borderBottom: '1px solid var(--border-light)' }}>
+                          <span style={{ color: 'var(--danger)' }}>⚠️</span>
+                          <div>
+                            <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'left' }}>Low Stock Alert</p>
+                            <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'left' }}>{bellAlerts.lowStockCount} items are running low.</p>
+                          </div>
+                        </Link>
+                      )}
+                      {bellAlerts.pendingLeavesCount > 0 && (
+                        <Link href="/staff/leave-requests" onClick={() => setIsBellOpen(false)} style={{ display: 'flex', gap: '10px', padding: '10px 14px', textDecoration: 'none', borderBottom: '1px solid var(--border-light)' }}>
+                          <span style={{ color: 'var(--warning)' }}>📅</span>
+                          <div>
+                            <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'left' }}>Pending Leaves</p>
+                            <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'left' }}>{bellAlerts.pendingLeavesCount} requests require review.</p>
+                          </div>
+                        </Link>
+                      )}
+                      {bellAlerts.pendingQueriesCount > 0 && (
+                        <Link href="/admin/queries" onClick={() => setIsBellOpen(false)} style={{ display: 'flex', gap: '10px', padding: '10px 14px', textDecoration: 'none', borderBottom: '1px solid var(--border-light)' }}>
+                          <span style={{ color: 'var(--accent-blue)' }}>✉️</span>
+                          <div>
+                            <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'left' }}>Staff Request</p>
+                            <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'left' }}>{bellAlerts.pendingQueriesCount} new staff queries in inbox.</p>
+                          </div>
+                        </Link>
+                      )}
+                      {(bellAlerts.lowStockCount + bellAlerts.pendingLeavesCount + bellAlerts.pendingQueriesCount) === 0 && (
+                        <div style={{ padding: '24px 14px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          <p style={{ margin: 0, fontSize: '12.5px', fontWeight: 700, color: 'var(--text-primary)' }}>All Clear! ✅</p>
+                          <p style={{ margin: '3px 0 0', fontSize: '11px' }}>No active inventory warnings.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Theme Toggle */}
             <button
