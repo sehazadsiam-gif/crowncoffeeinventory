@@ -1,18 +1,22 @@
 import { NextResponse } from 'next/server'
-import { loginCostingUser, setSessionCookie, COOKIE_NAME, getTokenFromRequest, validateCostingSession, clearSessionCookie } from '../../../../../lib/costing-auth'
+import { loginCostingUser, loginCostingRolePassword, setSessionCookie, COOKIE_NAME, getTokenFromRequest, validateCostingSession, clearSessionCookie } from '../../../../../lib/costing-auth'
 
 // POST /api/costing/auth/login
 export async function POST(request) {
   try {
-    const { email, password } = await request.json()
-    if (!email || !password) {
-      return NextResponse.json({ error: 'Email and password required' }, { status: 400 })
+    const { role, email, password } = await request.json()
+
+    let result
+    if (role && password) {
+      result = await loginCostingRolePassword(role, password)
+    } else if (email && password) {
+      result = await loginCostingUser(email, password)
+    } else {
+      return NextResponse.json({ error: 'Password required' }, { status: 400 })
     }
 
-    const { token, user } = await loginCostingUser(email, password)
-
-    const response = NextResponse.json({ ok: true, user })
-    response.headers.set('Set-Cookie', setSessionCookie(token))
+    const response = NextResponse.json({ ok: true, user: result.user })
+    response.headers.set('Set-Cookie', setSessionCookie(result.token))
     return response
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 401 })
