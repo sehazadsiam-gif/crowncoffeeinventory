@@ -116,6 +116,9 @@ export default function MenuEngineeringClient() {
 
         <div style={styles.sidebarFooter}>
           <div style={styles.chefLink}>
+            <a href="/dashboard" style={{ fontSize: 12, color: 'var(--accent-brown)', textDecoration: 'none', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+              ← Main Admin Dashboard
+            </a>
             <a href="/menu-costings" style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>
               ↗ Go to Menu Costings
             </a>

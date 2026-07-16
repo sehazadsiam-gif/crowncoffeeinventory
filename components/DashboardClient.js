@@ -147,6 +147,7 @@ export default function DashboardClient() {
   const quickModules = [
     { href: '/admin?tab=feedbacks', icon: <MessageSquare size={22} />, title: 'Guest Feedbacks', color: '#B0633E', desc: 'Reviews & ratings' },
     { href: '/menu',               icon: <BookOpen size={22} />,      title: 'Menu',            color: '#3B82F6', desc: 'Manage items' },
+    { href: '/admin/menu-engineering', icon: <BarChart2 size={22} />, title: 'Menu Engineering', color: '#7C3A1E', desc: 'Costing & Profitability' },
     { href: '/bazar',              icon: <ClipboardList size={22} />, title: 'Bazar',           color: '#EF4444', desc: 'Log expenses' },
     { href: '/stock',              icon: <Box size={22} />,            title: 'Inventory',       color: '#F59E0B', desc: 'Track stock',      badge: stats.lowStockCount > 0 ? stats.lowStockCount : null },
     { href: '/stock-audit',        icon: <Calculator size={22} />,    title: 'Stock Audit',     color: '#10B981', desc: 'Monthly bazar ratio' },

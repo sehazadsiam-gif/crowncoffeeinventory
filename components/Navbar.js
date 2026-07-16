@@ -137,6 +137,7 @@ export default function Navbar() {
       children: [
         { href: '/menu', label: 'Menu List' },
         { href: '/menu-import', label: 'Menu Import' },
+        { href: '/admin/menu-engineering', label: 'Menu Costing & Engineering' },
       ]
     },
     {
