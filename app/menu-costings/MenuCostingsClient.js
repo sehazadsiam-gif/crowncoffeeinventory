@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { calculateLineCost, calculateItemCOGS, formatBDT, UNITS, PRICE_BASIS_UNITS, compatiblePriceBasisUnits } from '../../lib/costing-calculations'
 import PricingCalculatorModal from './PricingCalculatorModal'
+import ThemeToggle from '../../components/ThemeToggle'
 
 // ─── Constants ───────────────────────────────────────────────
 const EMPTY_ROW = () => ({
@@ -320,6 +321,7 @@ export default function MenuCostingsClient({ sessionRole }) {
             </p>
           </div>
         <div style={styles.headerActions}>
+          <ThemeToggle />
           <button id="calc-btn" onClick={() => setShowCalculator(true)} style={styles.outlineBtn}>
             <Calculator size={14} /> Calculator
           </button>

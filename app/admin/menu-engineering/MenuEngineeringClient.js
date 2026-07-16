@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Coffee, BarChart2, LogOut, ChevronDown } from 'lucide-react'
+import ThemeToggle from '../../../components/ThemeToggle'
 import SectionA from './SectionA'
 import SectionB from './SectionB'
 import SectionC from './SectionC'
@@ -141,28 +142,31 @@ export default function MenuEngineeringClient() {
             </h1>
           </div>
 
-          {/* Month/Year Picker */}
-          <div style={styles.monthPicker}>
-            <div style={styles.monthPickerWrap}>
-              <select
-                id="month-select"
-                value={month}
-                onChange={e => setMonth(parseInt(e.target.value))}
-                style={styles.monthSelect}
-              >
-                {MONTH_NAMES.map((m, i) => (
-                  <option key={i} value={i+1}>{m}</option>
-                ))}
-              </select>
-              <input
-                id="year-input"
-                type="number"
-                min="2020"
-                max="2040"
-                value={year}
-                onChange={e => setYear(parseInt(e.target.value) || now.getFullYear())}
-                style={styles.yearInput}
-              />
+          {/* Month/Year Picker & Theme Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ThemeToggle />
+            <div style={styles.monthPicker}>
+              <div style={styles.monthPickerWrap}>
+                <select
+                  id="month-select"
+                  value={month}
+                  onChange={e => setMonth(parseInt(e.target.value))}
+                  style={styles.monthSelect}
+                >
+                  {MONTH_NAMES.map((m, i) => (
+                    <option key={i} value={i+1}>{m}</option>
+                  ))}
+                </select>
+                <input
+                  id="year-input"
+                  type="number"
+                  min="2020"
+                  max="2040"
+                  value={year}
+                  onChange={e => setYear(parseInt(e.target.value) || now.getFullYear())}
+                  style={styles.yearInput}
+                />
+              </div>
             </div>
           </div>
         </div>

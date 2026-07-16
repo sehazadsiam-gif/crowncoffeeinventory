@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Coffee, Eye, EyeOff, ArrowRight, ChefHat, Shield, ArrowLeft, Lock } from 'lucide-react'
 
+import ThemeToggle from '../../../components/ThemeToggle'
+
 export default function CostingLoginPage() {
   const [selectedRole, setSelectedRole] = useState(null) // 'chef' | 'admin' | null
   const [password, setPassword]         = useState('')
@@ -59,6 +61,10 @@ export default function CostingLoginPage() {
 
   return (
     <div style={styles.page}>
+      <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 100 }}>
+        <ThemeToggle />
+      </div>
+
       <div style={styles.card}>
         {/* Logo */}
         <div style={styles.logoWrap}>
