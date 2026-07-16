@@ -31,9 +31,16 @@ export async function GET(request) {
     .select('menu_item_id, dine_in_price')
 
   // Fetch channel pricing
-  const { data: channelPrices } = await supabase
+  let { data: channelPrices, error: cpErr } = await supabase
     .from('costing_item_channel_pricing')
-    .select('menu_item_id, channel_id, selling_price, commission_pct')
+    .select('menu_item_id, channel_id, selling_price, commission_pct, discount_pct')
+
+  if (cpErr) {
+    const fallback = await supabase
+      .from('costing_item_channel_pricing')
+      .select('menu_item_id, channel_id, selling_price, commission_pct')
+    channelPrices = fallback.data
+  }
 
   // Fetch channels
   const { data: channels } = await supabase
@@ -47,7 +54,11 @@ export async function GET(request) {
   const channelMap = {}
   ;(channelPrices || []).forEach(r => {
     if (!channelMap[r.menu_item_id]) channelMap[r.menu_item_id] = {}
-    channelMap[r.menu_item_id][r.channel_id] = { selling_price: r.selling_price, commission_pct: r.commission_pct }
+    channelMap[r.menu_item_id][r.channel_id] = {
+      selling_price: r.selling_price,
+      commission_pct: r.commission_pct,
+      discount_pct: r.discount_pct ?? 0,
+    }
   })
 
   const enriched = (items || []).map(item => ({
@@ -62,7 +73,7 @@ export async function GET(request) {
 /**
  * POST /api/admin/pricing
  * Upsert dine-in price and/or channel prices for an item.
- * Body: { menuItemId, dineInPrice, channelPrices: [{channelId, sellingPrice, commissionPct}] }
+ * Body: { menuItemId, dineInPrice, channelPrices: [{channelId, sellingPrice, commissionPct, discountPct}] }
  */
 export async function POST(request) {
   const { error, status } = await requireRole(request, 'admin')
@@ -81,15 +92,25 @@ export async function POST(request) {
 
   // Upsert channel prices
   for (const cp of channelPrices) {
+    const payload = {
+      menu_item_id:   menuItemId,
+      channel_id:     cp.channelId,
+      selling_price:  parseFloat(cp.sellingPrice) || 0,
+      commission_pct: parseFloat(cp.commissionPct) || 0,
+      discount_pct:   parseFloat(cp.discountPct) || 0,
+    }
     const { error: e } = await supabase
       .from('costing_item_channel_pricing')
-      .upsert({
-        menu_item_id:   menuItemId,
-        channel_id:     cp.channelId,
-        selling_price:  parseFloat(cp.sellingPrice) || 0,
-        commission_pct: parseFloat(cp.commissionPct) || 0,
-      }, { onConflict: 'menu_item_id,channel_id' })
-    if (e) return NextResponse.json({ error: e.message }, { status: 500 })
+      .upsert(payload, { onConflict: 'menu_item_id,channel_id' })
+
+    if (e && e.message.includes('discount_pct')) {
+      delete payload.discount_pct
+      await supabase
+        .from('costing_item_channel_pricing')
+        .upsert(payload, { onConflict: 'menu_item_id,channel_id' })
+    } else if (e) {
+      return NextResponse.json({ error: e.message }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ ok: true })

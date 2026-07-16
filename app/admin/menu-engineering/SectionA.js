@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react'
 import {
   contributionMargin, foodCostPercent, netMarginAfterCommission,
   netFoodCostPctAfterCommission, foodCostColor, formatBDT, formatPct,
-  calculateFixedCostPricing, calculatePriceFromTargetProfit
+  calculateFixedCostPricing, calculatePriceFromTargetProfit, calculateOnlineChannelMetrics
 } from '../../../lib/costing-calculations'
 import { Save, AlertTriangle, Settings, X, Plus, Trash2, Calculator, Info } from 'lucide-react'
 import PricingCalculatorModal from '../../menu-costings/PricingCalculatorModal'
@@ -26,7 +26,7 @@ function FCBadge({ pct }) {
 }
 
 export default function SectionA({ items, channels, onSave }) {
-  // localPrices: { [itemId]: { dineIn: '', channelPrices: { [channelId]: { price:'', commission:'' } } } }
+  // localPrices: { [itemId]: { dineIn: '', channelPrices: { [channelId]: { price:'', commission:'', discount:'' } } } }
   const [localPrices, setLocalPrices] = useState(() => {
     const m = {}
     items.forEach(item => {
@@ -36,6 +36,7 @@ export default function SectionA({ items, channels, onSave }) {
           channels.map(ch => [ch.id, {
             price:      item.channel_prices?.[ch.id]?.selling_price ?? '',
             commission: item.channel_prices?.[ch.id]?.commission_pct ?? '',
+            discount:   item.channel_prices?.[ch.id]?.discount_pct ?? '',
           }])
         ),
       }
@@ -79,6 +80,7 @@ export default function SectionA({ items, channels, onSave }) {
       channelId:    ch.id,
       sellingPrice: parseFloat(local.channelPrices?.[ch.id]?.price) || 0,
       commissionPct: parseFloat(local.channelPrices?.[ch.id]?.commission) || 0,
+      discountPct:   parseFloat(local.channelPrices?.[ch.id]?.discount) || 0,
     }))
     await fetch('/api/admin/pricing', {
       method: 'POST',
@@ -119,12 +121,23 @@ export default function SectionA({ items, channels, onSave }) {
       const cp = local?.channelPrices?.[ch.id]
       const sp = parseFloat(cp?.price) || 0
       const com = parseFloat(cp?.commission) || 0
+      const disc = parseFloat(cp?.discount) || 0
       if (!sp) return []
-      const nm = netMarginAfterCommission(sp, item.current_cogs, com)
-      if (nm <= losingThreshold) return [{ item: item.name, channel: ch.name, nm, sp, com, cogs: item.current_cogs }]
+      const om = calculateOnlineChannelMetrics(sp, item.current_cogs, com, disc)
+      if (om.onlineProfit <= losingThreshold || om.isLoss) {
+        return [{
+          item: item.name,
+          channel: ch.name,
+          profit: om.onlineProfit,
+          sp, com, disc,
+          netPayout: om.netPayout,
+          baseCost: om.baseCost,
+          isLoss: om.isLoss
+        }]
+      }
       return []
     })
-  }).sort((a, b) => a.nm - b.nm)
+  }).sort((a, b) => a.profit - b.profit)
 
   return (
     <div>
@@ -141,7 +154,7 @@ export default function SectionA({ items, channels, onSave }) {
             <Calculator size={14} /> Open Calculator
           </button>
           <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            Alert if Net Margin &lt;
+            Alert if Online Profit &lt;
             <input type="number" value={losingThreshold}
               onChange={e => setLosingThreshold(parseFloat(e.target.value)||0)}
               style={{ ...inS, width: 70 }} />
@@ -157,13 +170,17 @@ export default function SectionA({ items, channels, onSave }) {
       {losingItems.length > 0 && (
         <div style={styles.alertBox}>
           <div style={styles.alertTitle}>
-            <AlertTriangle size={16} /> Losing Money Online ({losingItems.length} item/channel)
+            <AlertTriangle size={16} /> Losing Money / Low Profit Online ({losingItems.length} item/channel)
           </div>
           <div style={styles.alertList}>
             {losingItems.map((a, i) => (
               <div key={i} style={styles.alertRow}>
-                <span><strong>{a.item}</strong> · {a.channel}</span>
-                <span style={{ color: 'var(--danger)', fontWeight: 700 }}>Net {formatBDT(a.nm)}</span>
+                <span>
+                  <strong>{a.item}</strong> · {a.channel} (Disc {a.disc}% · Comm {a.com}% · Payout {formatBDT(a.netPayout)} vs Base Cost {formatBDT(a.baseCost)})
+                </span>
+                <span style={{ color: a.isLoss ? 'var(--danger)' : 'var(--warning)', fontWeight: 700 }}>
+                  {a.isLoss ? `LOSS ${formatBDT(a.profit)}` : `Net ${formatBDT(a.profit)}`}
+                </span>
               </div>
             ))}
           </div>
@@ -184,12 +201,14 @@ export default function SectionA({ items, channels, onSave }) {
               <th style={styles.th}>Net Profit (৳)</th>
               <th style={styles.th}>FC% (Dine)</th>
               {channelList.map(ch => (
-                <>
-                  <th key={`${ch.id}-p`} style={{ ...styles.th, minWidth: 110 }}>{ch.name} Price</th>
-                  <th key={`${ch.id}-c`} style={{ ...styles.th, minWidth: 80 }}>Comm%</th>
-                  <th key={`${ch.id}-nm`} style={styles.th}>Net Margin</th>
-                  <th key={`${ch.id}-nfc`} style={styles.th}>Net FC%</th>
-                </>
+                <tr key={ch.id} style={{ display: 'contents' }}>
+                  <th style={{ ...styles.th, minWidth: 110, background: 'var(--bg-subtle)' }}>{ch.name} Price</th>
+                  <th style={{ ...styles.th, minWidth: 75, background: 'var(--bg-subtle)' }}>Disc %</th>
+                  <th style={{ ...styles.th, minWidth: 75, background: 'var(--bg-subtle)' }}>Comm %</th>
+                  <th style={{ ...styles.th, minWidth: 95, background: 'var(--bg-subtle)' }}>Net Payout</th>
+                  <th style={{ ...styles.th, minWidth: 100, background: 'var(--bg-subtle)' }}>Online Profit</th>
+                  <th style={{ ...styles.th, minWidth: 80, background: 'var(--bg-subtle)' }}>Net FC%</th>
+                </tr>
               ))}
               <th style={styles.th}></th>
             </tr>
@@ -270,12 +289,15 @@ export default function SectionA({ items, channels, onSave }) {
                     const cp   = local.channelPrices?.[ch.id]
                     const sp   = parseFloat(cp?.price) || 0
                     const com  = parseFloat(cp?.commission) || 0
-                    const nm   = sp ? netMarginAfterCommission(sp, cogs, com) : null
-                    const nfc  = sp ? netFoodCostPctAfterCommission(cogs, sp, com) : null
-                    const nmColor = nm !== null ? (nm < 0 ? 'var(--danger)' : nm < 10 ? 'var(--warning)' : 'var(--success)') : 'var(--text-muted)'
+                    const disc = parseFloat(cp?.discount) || 0
+
+                    const om   = sp ? calculateOnlineChannelMetrics(sp, cogs, com, disc) : null
+                    const profitColor = om !== null ? (om.isLoss ? 'var(--danger)' : om.isThinProfit ? 'var(--warning)' : 'var(--success)') : 'var(--text-muted)'
+
                     return (
-                      <>
-                        <td key={`${ch.id}-p`} style={styles.td}>
+                      <tr key={ch.id} style={{ display: 'contents' }}>
+                        {/* App Listed Price */}
+                        <td style={styles.td}>
                           <div style={styles.priceInputWrap}>
                             <span style={styles.currencyPrefix}>৳</span>
                             <input type="number" min="0" step="0.01"
@@ -286,21 +308,51 @@ export default function SectionA({ items, channels, onSave }) {
                             />
                           </div>
                         </td>
-                        <td key={`${ch.id}-c`} style={styles.td}>
+
+                        {/* Customer Discount % */}
+                        <td style={styles.td}>
+                          <input type="number" min="0" max="100" step="0.5"
+                            value={cp?.discount ?? ''}
+                            onChange={e => setChannelPrice(item.id, ch.id, 'discount', e.target.value)}
+                            style={{ ...inS, width: 55 }}
+                            placeholder="0%"
+                          />
+                        </td>
+
+                        {/* Platform Commission % */}
+                        <td style={styles.td}>
                           <input type="number" min="0" max="100" step="0.5"
                             value={cp?.commission ?? ''}
                             onChange={e => setChannelPrice(item.id, ch.id, 'commission', e.target.value)}
-                            style={{ ...inS, width: 60 }}
-                            placeholder="0"
+                            style={{ ...inS, width: 55 }}
+                            placeholder="0%"
                           />
                         </td>
-                        <td key={`${ch.id}-nm`} style={{ ...styles.td, color: nmColor, fontWeight: 600 }}>
-                          {nm !== null ? formatBDT(nm) : '—'}
+
+                        {/* Net Payout from App */}
+                        <td style={{ ...styles.td, fontWeight: 600 }}>
+                          {om ? formatBDT(om.netPayout) : '—'}
                         </td>
-                        <td key={`${ch.id}-nfc`} style={styles.td}>
-                          {nfc !== null ? <FCBadge pct={nfc} /> : '—'}
+
+                        {/* Online Profit (Taka) */}
+                        <td style={{ ...styles.td, color: profitColor, fontWeight: 700 }}>
+                          {om ? (
+                            <div>
+                              <div>{formatBDT(om.onlineProfit)}</div>
+                              {om.isLoss && (
+                                <div style={{ fontSize: 10, color: 'var(--danger)', fontWeight: 800 }}>
+                                  LOSS!
+                                </div>
+                              )}
+                            </div>
+                          ) : '—'}
                         </td>
-                      </>
+
+                        {/* Net FC% */}
+                        <td style={styles.td}>
+                          {om ? <FCBadge pct={om.netFoodCostPct} /> : '—'}
+                        </td>
+                      </tr>
                     )
                   })}
 
