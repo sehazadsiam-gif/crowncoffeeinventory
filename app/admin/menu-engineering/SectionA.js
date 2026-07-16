@@ -1,0 +1,328 @@
+'use client'
+import { useState, useCallback } from 'react'
+import {
+  contributionMargin, foodCostPercent, netMarginAfterCommission,
+  netFoodCostPctAfterCommission, foodCostColor, formatBDT, formatPct
+} from '../../../lib/costing-calculations'
+import { Save, AlertTriangle, Settings, X, Plus, Trash2 } from 'lucide-react'
+
+// Food cost badge
+function FCBadge({ pct }) {
+  const color = foodCostColor(pct)
+  const map = { green: { bg: 'var(--success-bg)', text: 'var(--success)' }, yellow: { bg: 'var(--warning-bg)', text: 'var(--warning)' }, red: { bg: 'var(--danger-bg)', text: 'var(--danger)' }, neutral: { bg: 'var(--bg-subtle)', text: 'var(--text-muted)' } }
+  const { bg, text } = map[color]
+  return (
+    <span style={{ background: bg, color: text, borderRadius: 6, padding: '2px 8px', fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+      {formatPct(pct)}
+    </span>
+  )
+}
+
+export default function SectionA({ items, channels, onSave }) {
+  // localPrices: { [itemId]: { dineIn: '', channelPrices: { [channelId]: { price:'', commission:'' } } } }
+  const [localPrices, setLocalPrices] = useState(() => {
+    const m = {}
+    items.forEach(item => {
+      m[item.id] = {
+        dineIn: item.dine_in_price ?? '',
+        channelPrices: Object.fromEntries(
+          channels.map(ch => [ch.id, {
+            price:      item.channel_prices?.[ch.id]?.selling_price ?? '',
+            commission: item.channel_prices?.[ch.id]?.commission_pct ?? '',
+          }])
+        ),
+      }
+    })
+    return m
+  })
+
+  const [saving, setSaving]           = useState({})
+  const [showChannelMgr, setShowChannelMgr] = useState(false)
+  const [newChanName, setNewChanName] = useState('')
+  const [channelList, setChannelList] = useState(channels)
+  const [losingThreshold, setLosingThreshold] = useState(0) // min net margin
+
+  function setDineIn(itemId, val) {
+    setLocalPrices(p => ({ ...p, [itemId]: { ...p[itemId], dineIn: val } }))
+  }
+
+  function setChannelPrice(itemId, chanId, field, val) {
+    setLocalPrices(p => ({
+      ...p,
+      [itemId]: {
+        ...p[itemId],
+        channelPrices: {
+          ...p[itemId].channelPrices,
+          [chanId]: { ...p[itemId].channelPrices[chanId], [field]: val },
+        },
+      },
+    }))
+  }
+
+  async function saveItem(item) {
+    setSaving(s => ({ ...s, [item.id]: true }))
+    const local = localPrices[item.id] || {}
+    const channelPrices = channelList.map(ch => ({
+      channelId:    ch.id,
+      sellingPrice: parseFloat(local.channelPrices?.[ch.id]?.price) || 0,
+      commissionPct: parseFloat(local.channelPrices?.[ch.id]?.commission) || 0,
+    }))
+    await fetch('/api/admin/pricing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        menuItemId:   item.id,
+        dineInPrice:  parseFloat(local.dineIn) || 0,
+        channelPrices,
+      }),
+    })
+    if (onSave) onSave()
+    setSaving(s => ({ ...s, [item.id]: false }))
+  }
+
+  async function addChannel() {
+    if (!newChanName.trim()) return
+    const res = await fetch('/api/admin/channels', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newChanName.trim() }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setChannelList(c => [...c, data])
+      setNewChanName('')
+    }
+  }
+
+  async function deleteChannel(id) {
+    await fetch(`/api/admin/channels?id=${id}`, { method: 'DELETE' })
+    setChannelList(c => c.filter(ch => ch.id !== id))
+  }
+
+  // Compute "Losing Money Online" list
+  const losingItems = items.flatMap(item => {
+    const local = localPrices[item.id]
+    return channelList.flatMap(ch => {
+      const cp = local?.channelPrices?.[ch.id]
+      const sp = parseFloat(cp?.price) || 0
+      const com = parseFloat(cp?.commission) || 0
+      if (!sp) return []
+      const nm = netMarginAfterCommission(sp, item.current_cogs, com)
+      if (nm <= losingThreshold) return [{ item: item.name, channel: ch.name, nm, sp, com, cogs: item.current_cogs }]
+      return []
+    })
+  }).sort((a, b) => a.nm - b.nm)
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={styles.secHeader}>
+        <div>
+          <h2 style={styles.secTitle}>Items & Pricing</h2>
+          <p style={styles.secSub}>Set selling prices and view profitability by channel. COGS is read-only (from chef inputs).</p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            Alert if Net Margin &lt;
+            <input type="number" value={losingThreshold}
+              onChange={e => setLosingThreshold(parseFloat(e.target.value)||0)}
+              style={{ ...inS, width: 70 }} />
+            ৳
+          </label>
+          <button onClick={() => setShowChannelMgr(true)} style={styles.outlineBtn}>
+            <Settings size={14} /> Channels
+          </button>
+        </div>
+      </div>
+
+      {/* Losing Money Alert */}
+      {losingItems.length > 0 && (
+        <div style={styles.alertBox}>
+          <div style={styles.alertTitle}>
+            <AlertTriangle size={16} /> Losing Money Online ({losingItems.length} item/channel)
+          </div>
+          <div style={styles.alertList}>
+            {losingItems.map((a, i) => (
+              <div key={i} style={styles.alertRow}>
+                <span><strong>{a.item}</strong> · {a.channel}</span>
+                <span style={{ color: 'var(--danger)', fontWeight: 700 }}>Net {formatBDT(a.nm)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Items Table */}
+      <div style={styles.tableWrapper}>
+        <table style={styles.table}>
+          <thead>
+            <tr style={styles.thead}>
+              <th style={{ ...styles.th, minWidth: 180 }}>Item</th>
+              <th style={styles.th}>COGS</th>
+              <th style={{ ...styles.th, minWidth: 110 }}>Dine-in Price</th>
+              <th style={styles.th}>CM (Dine)</th>
+              <th style={styles.th}>FC% (Dine)</th>
+              {channelList.map(ch => (
+                <>
+                  <th key={`${ch.id}-p`} style={{ ...styles.th, minWidth: 110 }}>{ch.name} Price</th>
+                  <th key={`${ch.id}-c`} style={{ ...styles.th, minWidth: 80 }}>Comm%</th>
+                  <th key={`${ch.id}-nm`} style={styles.th}>Net Margin</th>
+                  <th key={`${ch.id}-nfc`} style={styles.th}>Net FC%</th>
+                </>
+              ))}
+              <th style={styles.th}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(item => {
+              const local   = localPrices[item.id] || {}
+              const cogs    = item.current_cogs || 0
+              const dineIn  = parseFloat(local.dineIn) || 0
+              const dineCM  = contributionMargin(dineIn, cogs)
+              const dineFC  = foodCostPercent(cogs, dineIn)
+
+              return (
+                <tr key={item.id} style={styles.tr}>
+                  <td style={{ ...styles.td, fontWeight: 600 }}>{item.name}</td>
+                  <td style={styles.td}>{formatBDT(cogs)}</td>
+                  {/* Dine-in price input */}
+                  <td style={styles.td}>
+                    <div style={styles.priceInputWrap}>
+                      <span style={styles.currencyPrefix}>৳</span>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={local.dineIn}
+                        onChange={e => setDineIn(item.id, e.target.value)}
+                        style={{ ...inS, width: 80, paddingLeft: 22 }}
+                        placeholder="0"
+                      />
+                    </div>
+                  </td>
+                  <td style={styles.td}>{dineIn ? formatBDT(dineCM) : '—'}</td>
+                  <td style={styles.td}><FCBadge pct={dineFC} /></td>
+
+                  {/* Channel columns */}
+                  {channelList.map(ch => {
+                    const cp   = local.channelPrices?.[ch.id]
+                    const sp   = parseFloat(cp?.price) || 0
+                    const com  = parseFloat(cp?.commission) || 0
+                    const nm   = sp ? netMarginAfterCommission(sp, cogs, com) : null
+                    const nfc  = sp ? netFoodCostPctAfterCommission(cogs, sp, com) : null
+                    const nmColor = nm !== null ? (nm < 0 ? 'var(--danger)' : nm < 10 ? 'var(--warning)' : 'var(--success)') : 'var(--text-muted)'
+                    return (
+                      <>
+                        <td key={`${ch.id}-p`} style={styles.td}>
+                          <div style={styles.priceInputWrap}>
+                            <span style={styles.currencyPrefix}>৳</span>
+                            <input type="number" min="0" step="0.01"
+                              value={cp?.price ?? ''}
+                              onChange={e => setChannelPrice(item.id, ch.id, 'price', e.target.value)}
+                              style={{ ...inS, width: 80, paddingLeft: 22 }}
+                              placeholder="0"
+                            />
+                          </div>
+                        </td>
+                        <td key={`${ch.id}-c`} style={styles.td}>
+                          <input type="number" min="0" max="100" step="0.5"
+                            value={cp?.commission ?? ''}
+                            onChange={e => setChannelPrice(item.id, ch.id, 'commission', e.target.value)}
+                            style={{ ...inS, width: 60 }}
+                            placeholder="0"
+                          />
+                        </td>
+                        <td key={`${ch.id}-nm`} style={{ ...styles.td, color: nmColor, fontWeight: 600 }}>
+                          {nm !== null ? formatBDT(nm) : '—'}
+                        </td>
+                        <td key={`${ch.id}-nfc`} style={styles.td}>
+                          {nfc !== null ? <FCBadge pct={nfc} /> : '—'}
+                        </td>
+                      </>
+                    )
+                  })}
+
+                  <td style={styles.td}>
+                    <button
+                      onClick={() => saveItem(item)}
+                      disabled={saving[item.id]}
+                      style={{ ...styles.saveBtnSm, opacity: saving[item.id] ? 0.6 : 1 }}
+                    >
+                      <Save size={12} /> {saving[item.id] ? '…' : 'Save'}
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+            {items.length === 0 && (
+              <tr><td colSpan={99} style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
+                No menu items found. Ask the chef to add items in Menu Costings first.
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Channel Manager Modal */}
+      {showChannelMgr && (
+        <div style={styles.overlay} onClick={() => setShowChannelMgr(false)}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <span style={{ fontWeight: 700, fontSize: 16 }}>Manage Delivery Channels</span>
+              <button onClick={() => setShowChannelMgr(false)} style={styles.closeBtn}><X size={16}/></button>
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              {channelList.map(ch => (
+                <div key={ch.id} style={styles.chanRow}>
+                  <span style={{ fontSize: 14 }}>{ch.name}</span>
+                  <button onClick={() => deleteChannel(ch.id)} style={styles.deleteBtn}><Trash2 size={13}/></button>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <input type="text" value={newChanName} onChange={e => setNewChanName(e.target.value)}
+                  placeholder="New channel name" style={{ ...inS, flex: 1 }} />
+                <button onClick={addChannel} style={styles.saveBtnSm}><Plus size={13}/> Add</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Inline input style
+const inS = {
+  padding: '7px 10px',
+  borderRadius: 'var(--radius-sm)',
+  border: '1px solid var(--border-medium)',
+  background: 'var(--bg-subtle)',
+  color: 'var(--text-primary)',
+  fontSize: 13,
+  fontFamily: 'var(--font-sans)',
+  outline: 'none',
+}
+
+const styles = {
+  secHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
+  secTitle:  { fontSize: 20, fontWeight: 700, marginBottom: 4 },
+  secSub:    { fontSize: 13, color: 'var(--text-muted)' },
+  alertBox:  { background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginBottom: 20 },
+  alertTitle:{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: 'var(--danger)', marginBottom: 10, fontSize: 14 },
+  alertList: { display: 'flex', flexDirection: 'column', gap: 6 },
+  alertRow:  { display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-secondary)' },
+  tableWrapper: { overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' },
+  table:     { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
+  thead:     { background: 'var(--bg-subtle)' },
+  th:        { padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border-light)' },
+  tr:        { borderBottom: '1px solid var(--border-light)' },
+  td:        { padding: '10px 12px', color: 'var(--text-primary)', verticalAlign: 'middle', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' },
+  priceInputWrap: { position: 'relative', display: 'inline-block' },
+  currencyPrefix: { position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)', pointerEvents: 'none' },
+  saveBtnSm: { display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--accent-brown)', color: '#fff', fontWeight: 600, fontSize: 12, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' },
+  outlineBtn:{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'none', border: '1px solid var(--border-medium)', color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' },
+  overlay:   { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modal:     { background: 'var(--bg-surface)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-xl)', width: '100%', maxWidth: 440 },
+  modalHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border-light)' },
+  closeBtn:  { width: 28, height: 28, borderRadius: 6, border: 'none', background: 'var(--bg-subtle)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' },
+  chanRow:   { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-light)' },
+  deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', padding: 4 },
+}
