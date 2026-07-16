@@ -4,9 +4,10 @@ import { useRouter } from 'next/navigation'
 import {
   Plus, Trash2, Save, History, LogOut, ChefHat,
   Coffee, Search, RefreshCw, AlertCircle, CheckCircle,
-  ChevronDown, X, Clock, TrendingDown
+  ChevronDown, X, Clock, TrendingDown, Calculator
 } from 'lucide-react'
 import { calculateLineCost, calculateItemCOGS, formatBDT, UNITS, PRICE_BASIS_UNITS, compatiblePriceBasisUnits } from '../../lib/costing-calculations'
+import PricingCalculatorModal from './PricingCalculatorModal'
 
 // ─── Constants ───────────────────────────────────────────────
 const EMPTY_ROW = () => ({
@@ -99,6 +100,7 @@ export default function MenuCostingsClient({ sessionRole }) {
   const [showHistory, setShowHistory]   = useState(false)
   const [history, setHistory]           = useState([])
   const [showBulkModal, setShowBulkModal] = useState(false)
+  const [showCalculator, setShowCalculator] = useState(false)
   const [bulkIng, setBulkIng]           = useState({ name: '', price: '', priceBasisUnit: 'per kg' })
   const [bulkResult, setBulkResult]     = useState(null)
 
@@ -317,22 +319,25 @@ export default function MenuCostingsClient({ sessionRole }) {
               {selectedItem ? 'Edit ingredient breakdown' : 'Enter item name and add ingredients'}
             </p>
           </div>
-          <div style={styles.headerActions}>
-            {selectedItem && (
-              <button id="history-btn" onClick={loadHistory} style={styles.outlineBtn}>
-                <History size={14} /> Cost History
-              </button>
-            )}
-            <button
-              id="save-btn"
-              onClick={handleSave}
-              disabled={saving || !itemName.trim()}
-              style={{ ...styles.saveBtn, opacity: (saving || !itemName.trim()) ? 0.6 : 1 }}
-            >
-              <Save size={14} />
-              {saving ? 'Saving…' : 'Save Costing'}
+        <div style={styles.headerActions}>
+          <button id="calc-btn" onClick={() => setShowCalculator(true)} style={styles.outlineBtn}>
+            <Calculator size={14} /> Calculator
+          </button>
+          {selectedItem && (
+            <button id="history-btn" onClick={loadHistory} style={styles.outlineBtn}>
+              <History size={14} /> Cost History
             </button>
-          </div>
+          )}
+          <button
+            id="save-btn"
+            onClick={handleSave}
+            disabled={saving || !itemName.trim()}
+            style={{ ...styles.saveBtn, opacity: (saving || !itemName.trim()) ? 0.6 : 1 }}
+          >
+            <Save size={14} />
+            {saving ? 'Saving…' : 'Save Costing'}
+          </button>
+        </div>
         </div>
 
         {/* Save Status Banner */}
@@ -603,6 +608,14 @@ export default function MenuCostingsClient({ sessionRole }) {
           </div>
         </div>
       )}
+
+      {/* ── PRICING CALCULATOR MODAL ───────────────────── */}
+      <PricingCalculatorModal
+        isOpen={showCalculator}
+        onClose={() => setShowCalculator(false)}
+        initialCogs={totalCogs || 25}
+        initialPrice={totalCogs ? totalCogs * 3 : 75}
+      />
     </div>
   )
 }

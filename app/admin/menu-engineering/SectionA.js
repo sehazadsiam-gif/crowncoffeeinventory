@@ -2,15 +2,22 @@
 import { useState, useCallback } from 'react'
 import {
   contributionMargin, foodCostPercent, netMarginAfterCommission,
-  netFoodCostPctAfterCommission, foodCostColor, formatBDT, formatPct
+  netFoodCostPctAfterCommission, foodCostColor, formatBDT, formatPct,
+  calculateFixedCostPricing, calculatePriceFromTargetProfit
 } from '../../../lib/costing-calculations'
-import { Save, AlertTriangle, Settings, X, Plus, Trash2 } from 'lucide-react'
+import { Save, AlertTriangle, Settings, X, Plus, Trash2, Calculator, Info } from 'lucide-react'
+import PricingCalculatorModal from '../../menu-costings/PricingCalculatorModal'
 
 // Food cost badge
 function FCBadge({ pct }) {
   const color = foodCostColor(pct)
-  const map = { green: { bg: 'var(--success-bg)', text: 'var(--success)' }, yellow: { bg: 'var(--warning-bg)', text: 'var(--warning)' }, red: { bg: 'var(--danger-bg)', text: 'var(--danger)' }, neutral: { bg: 'var(--bg-subtle)', text: 'var(--text-muted)' } }
-  const { bg, text } = map[color]
+  const map = {
+    green:   { bg: 'var(--success-bg)', text: 'var(--success)' },
+    yellow:  { bg: 'var(--warning-bg)', text: 'var(--warning)' },
+    red:     { bg: 'var(--danger-bg)', text: 'var(--danger)' },
+    neutral: { bg: 'var(--bg-subtle)', text: 'var(--text-muted)' }
+  }
+  const { bg, text } = map[color] || map.neutral
   return (
     <span style={{ background: bg, color: text, borderRadius: 6, padding: '2px 8px', fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
       {formatPct(pct)}
@@ -36,14 +43,20 @@ export default function SectionA({ items, channels, onSave }) {
     return m
   })
 
-  const [saving, setSaving]           = useState({})
+  const [saving, setSaving]                 = useState({})
   const [showChannelMgr, setShowChannelMgr] = useState(false)
-  const [newChanName, setNewChanName] = useState('')
-  const [channelList, setChannelList] = useState(channels)
+  const [newChanName, setNewChanName]       = useState('')
+  const [channelList, setChannelList]       = useState(channels)
   const [losingThreshold, setLosingThreshold] = useState(0) // min net margin
+  const [calcModalItem, setCalcModalItem]   = useState(null) // item object for calculator
 
   function setDineIn(itemId, val) {
     setLocalPrices(p => ({ ...p, [itemId]: { ...p[itemId], dineIn: val } }))
+  }
+
+  function setTargetProfitForDineIn(itemId, cogs, profitVal) {
+    const newPrice = calculatePriceFromTargetProfit(cogs, parseFloat(profitVal) || 0)
+    setDineIn(itemId, newPrice)
   }
 
   function setChannelPrice(itemId, chanId, field, val) {
@@ -118,10 +131,15 @@ export default function SectionA({ items, channels, onSave }) {
       {/* Header */}
       <div style={styles.secHeader}>
         <div>
-          <h2 style={styles.secTitle}>Items & Pricing</h2>
-          <p style={styles.secSub}>Set selling prices and view profitability by channel. COGS is read-only (from chef inputs).</p>
+          <h2 style={styles.secTitle}>Items &amp; Pricing</h2>
+          <p style={styles.secSub}>
+            Fixed Anchor Model: <strong>Price = Making Cost + Utilities (1:1) + Net Profit</strong>
+          </p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button onClick={() => setCalcModalItem(items[0] || { current_cogs: 25, dine_in_price: 75 })} style={styles.calcBtn}>
+            <Calculator size={14} /> Open Calculator
+          </button>
           <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
             Alert if Net Margin &lt;
             <input type="number" value={losingThreshold}
@@ -152,15 +170,18 @@ export default function SectionA({ items, channels, onSave }) {
         </div>
       )}
 
-      {/* Items Table */}
+      {/* Items Table — Fully Responsive */}
       <div style={styles.tableWrapper}>
         <table style={styles.table}>
           <thead>
             <tr style={styles.thead}>
-              <th style={{ ...styles.th, minWidth: 180 }}>Item</th>
-              <th style={styles.th}>COGS</th>
+              <th style={{ ...styles.th, minWidth: 160 }}>Item</th>
+              <th style={styles.th}>Making Cost</th>
+              <th style={styles.th}>Utilities (1:1)</th>
+              <th style={styles.th}>Base Cost</th>
               <th style={{ ...styles.th, minWidth: 110 }}>Dine-in Price</th>
-              <th style={styles.th}>CM (Dine)</th>
+              <th style={{ ...styles.th, minWidth: 100 }}>Target Profit (৳)</th>
+              <th style={styles.th}>Net Profit (৳)</th>
               <th style={styles.th}>FC% (Dine)</th>
               {channelList.map(ch => (
                 <>
@@ -178,13 +199,25 @@ export default function SectionA({ items, channels, onSave }) {
               const local   = localPrices[item.id] || {}
               const cogs    = item.current_cogs || 0
               const dineIn  = parseFloat(local.dineIn) || 0
-              const dineCM  = contributionMargin(dineIn, cogs)
-              const dineFC  = foodCostPercent(cogs, dineIn)
+
+              const anchor  = calculateFixedCostPricing(cogs, dineIn)
 
               return (
                 <tr key={item.id} style={styles.tr}>
-                  <td style={{ ...styles.td, fontWeight: 600 }}>{item.name}</td>
-                  <td style={styles.td}>{formatBDT(cogs)}</td>
+                  <td style={{ ...styles.td, fontWeight: 600 }}>
+                    <div>{item.name}</div>
+                    <button
+                      onClick={() => setCalcModalItem(item)}
+                      style={styles.inlineCalcBtn}
+                      title="Calculate margins for this item"
+                    >
+                      <Calculator size={11} /> Calc
+                    </button>
+                  </td>
+                  <td style={styles.td}>{formatBDT(anchor.makingCost)}</td>
+                  <td style={styles.td}>{formatBDT(anchor.utilitiesCharge)}</td>
+                  <td style={{ ...styles.td, fontWeight: 600 }}>{formatBDT(anchor.baseCost)}</td>
+
                   {/* Dine-in price input */}
                   <td style={styles.td}>
                     <div style={styles.priceInputWrap}>
@@ -193,13 +226,44 @@ export default function SectionA({ items, channels, onSave }) {
                         type="number" min="0" step="0.01"
                         value={local.dineIn}
                         onChange={e => setDineIn(item.id, e.target.value)}
+                        style={{ ...inS, width: 85, paddingLeft: 22, fontWeight: 700 }}
+                        placeholder="0"
+                      />
+                    </div>
+                  </td>
+
+                  {/* Target Profit Input (auto-syncs with Selling Price!) */}
+                  <td style={styles.td}>
+                    <div style={styles.priceInputWrap}>
+                      <span style={styles.currencyPrefix}>৳</span>
+                      <input
+                        type="number" step="0.01"
+                        value={dineIn ? Math.round(anchor.netProfit) : ''}
+                        onChange={e => setTargetProfitForDineIn(item.id, cogs, e.target.value)}
                         style={{ ...inS, width: 80, paddingLeft: 22 }}
                         placeholder="0"
                       />
                     </div>
                   </td>
-                  <td style={styles.td}>{dineIn ? formatBDT(dineCM) : '—'}</td>
-                  <td style={styles.td}><FCBadge pct={dineFC} /></td>
+
+                  {/* Net Profit Display */}
+                  <td style={{
+                    ...styles.td,
+                    color: anchor.isLoss ? 'var(--danger)' : anchor.profitSacrificed > 0 ? 'var(--warning)' : 'var(--success)',
+                    fontWeight: 700,
+                  }}>
+                    {dineIn ? formatBDT(anchor.netProfit) : '—'}
+                    {anchor.profitSacrificed > 0 && (
+                      <div style={{ fontSize: 10, fontWeight: 500, color: 'var(--warning)' }}>
+                        (-{formatBDT(anchor.profitSacrificed)} promo)
+                      </div>
+                    )}
+                  </td>
+
+                  {/* FC% (Dine) */}
+                  <td style={styles.td}>
+                    <FCBadge pct={anchor.foodCostPct} />
+                  </td>
 
                   {/* Channel columns */}
                   {channelList.map(ch => {
@@ -261,6 +325,14 @@ export default function SectionA({ items, channels, onSave }) {
         </table>
       </div>
 
+      {/* Pricing Calculator Modal */}
+      <PricingCalculatorModal
+        isOpen={!!calcModalItem}
+        onClose={() => setCalcModalItem(null)}
+        initialCogs={calcModalItem?.current_cogs || 25}
+        initialPrice={localPrices[calcModalItem?.id]?.dineIn || calcModalItem?.dine_in_price || 75}
+      />
+
       {/* Channel Manager Modal */}
       {showChannelMgr && (
         <div style={styles.overlay} onClick={() => setShowChannelMgr(false)}>
@@ -305,11 +377,13 @@ const styles = {
   secHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
   secTitle:  { fontSize: 20, fontWeight: 700, marginBottom: 4 },
   secSub:    { fontSize: 13, color: 'var(--text-muted)' },
+  calcBtn:   { display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'linear-gradient(135deg, var(--accent-brown), var(--accent-brown-dark))', color: '#fff', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)' },
+  inlineCalcBtn: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 4, background: 'var(--accent-brown-dim)', color: 'var(--accent-brown)', fontSize: 10, fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: 4, fontFamily: 'var(--font-sans)' },
   alertBox:  { background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginBottom: 20 },
   alertTitle:{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: 'var(--danger)', marginBottom: 10, fontSize: 14 },
   alertList: { display: 'flex', flexDirection: 'column', gap: 6 },
   alertRow:  { display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-secondary)' },
-  tableWrapper: { overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' },
+  tableWrapper: { overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', maxWidth: '100%' },
   table:     { width: '100%', borderCollapse: 'collapse', fontSize: 13 },
   thead:     { background: 'var(--bg-subtle)' },
   th:        { padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', borderBottom: '1px solid var(--border-light)' },
