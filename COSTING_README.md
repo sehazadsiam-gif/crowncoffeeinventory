@@ -98,7 +98,7 @@ curl -X POST https://www.ccadmin.online/api/costing/auth/setup \
     "password": "YourSecurePassword123!",
     "name":     "Admin",
     "role":     "admin",
-    "setupKey": "your-COSTING_SETUP_KEY-value"
+    "setupKey": d2a0b15fc5d4b533914626deb0f8e17aabafd1b903fa0d39b0bdcc0356c751c3    
   }'
 ```
 

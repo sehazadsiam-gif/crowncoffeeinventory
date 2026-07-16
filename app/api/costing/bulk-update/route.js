@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '../../../../lib/supabase'
+import { supabaseAdmin as supabase } from '../../../../lib/supabase'
 import { requireRole } from '../../../../lib/costing-auth'
 import { calculateLineCost, round4 } from '../../../../lib/costing-calculations'
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '../../../../lib/supabase'
+import { supabaseAdmin as supabase } from '../../../../lib/supabase'
 import { requireRole } from '../../../../lib/costing-auth'
 
 // GET /api/admin/fixed-costs?year=2025&month=7  (single month)
