@@ -13,24 +13,17 @@ export async function POST(request) {
       manualForm = {}
     } = body
 
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
+    const geminiKey = process.env.GEMINI_API_KEY
+    const anthropicKey = process.env.ANTHROPIC_API_KEY
+
+    if (!geminiKey && !anthropicKey) {
       return NextResponse.json(
-        { error: 'GEMINI_API_KEY environment variable is not configured.' },
+        { error: 'Neither GEMINI_API_KEY nor ANTHROPIC_API_KEY is configured in environment variables. Please add GEMINI_API_KEY (free from https://aistudio.google.com) to your Vercel / environment settings.' },
         { status: 500 }
       )
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-      generationConfig: { responseMimeType: 'application/json' }
-    })
-
-    // Prepare prompt parts including image inline data
-    const parts = [
-      {
-        text: `You are an expert financial auditor for Crown Coffee cafe. 
+    const systemPrompt = `You are an expert financial auditor for Crown Coffee cafe. 
 Your task is to analyze uploaded operational screenshots & receipts and extract precise numerical financial data into a JSON object.
 
 Extract values into the following JSON schema:
@@ -62,30 +55,6 @@ Instructions:
 5. "bazar_receipts" comes from photos of bazaar purchase vouchers, memos, or receipts. Extract vendor name, line items, and total amount spent for each receipt photo.
 6. If a specific screenshot is missing or unreadable, default its numerical value to 0. All currency values are in BDT (Bangladeshi Taka).
 7. Respond ONLY with valid JSON.`
-      }
-    ]
-
-    // Attach images with clear category labels
-    const appendImages = (imgList, label) => {
-      imgList.forEach((base64Data, idx) => {
-        const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '')
-        parts.push({
-          text: `[IMAGE CATEGORY: ${label} #${idx + 1}]`
-        })
-        parts.push({
-          inlineData: {
-            data: cleanBase64,
-            mimeType: 'image/jpeg'
-          }
-        })
-      })
-    }
-
-    appendImages(posImages, 'POS_REPORT')
-    appendImages(staffImages, 'STAFF_REPORT')
-    appendImages(foodpandaImages, 'FOODPANDA_PORTAL')
-    appendImages(pathaoImages, 'PATHAO_PORTAL')
-    appendImages(bazarImages, 'BAZAAR_RECEIPT')
 
     let extractedData = {
       pos_total_sales: 0,
@@ -101,14 +70,106 @@ Instructions:
       raw_notes: ''
     }
 
-    try {
-      const aiResult = await model.generateContent({ contents: [{ role: 'user', parts }] })
-      const text = aiResult.response.text()
-      const parsed = JSON.parse(text)
-      extractedData = { ...extractedData, ...parsed }
-    } catch (aiErr) {
-      console.error('Gemini extraction error:', aiErr)
-      extractedData.raw_notes = 'AI extraction encountered an issue: ' + aiErr.message
+    let aiSuccess = false
+
+    // 1. Try Gemini Vision AI first
+    if (geminiKey) {
+      try {
+        const genAI = new GoogleGenerativeAI(geminiKey)
+        const model = genAI.getGenerativeModel({
+          model: 'gemini-1.5-flash',
+          generationConfig: { responseMimeType: 'application/json' }
+        })
+
+        const parts = [{ text: systemPrompt }]
+
+        const appendImages = (imgList, label) => {
+          imgList.forEach((base64Data, idx) => {
+            const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '')
+            parts.push({ text: `[IMAGE CATEGORY: ${label} #${idx + 1}]` })
+            parts.push({
+              inlineData: {
+                data: cleanBase64,
+                mimeType: 'image/jpeg'
+              }
+            })
+          })
+        }
+
+        appendImages(posImages, 'POS_REPORT')
+        appendImages(staffImages, 'STAFF_REPORT')
+        appendImages(foodpandaImages, 'FOODPANDA_PORTAL')
+        appendImages(pathaoImages, 'PATHAO_PORTAL')
+        appendImages(bazarImages, 'BAZAAR_RECEIPT')
+
+        const aiResult = await model.generateContent({ contents: [{ role: 'user', parts }] })
+        const text = aiResult.response.text()
+        const parsed = JSON.parse(text)
+        extractedData = { ...extractedData, ...parsed }
+        aiSuccess = true
+      } catch (geminiErr) {
+        console.warn('Gemini extraction failed, attempting Anthropic fallback:', geminiErr.message)
+      }
+    }
+
+    // 2. Fallback to Anthropic Claude 3.5 Sonnet Vision if Gemini failed or key missing
+    if (!aiSuccess && anthropicKey) {
+      try {
+        const contentBlocks = []
+
+        const appendAnthropicImages = (imgList, label) => {
+          imgList.forEach((base64Data, idx) => {
+            const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '')
+            contentBlocks.push({ type: 'text', text: `[IMAGE CATEGORY: ${label} #${idx + 1}]` })
+            contentBlocks.push({
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/jpeg',
+                data: cleanBase64
+              }
+            })
+          })
+        }
+
+        appendAnthropicImages(posImages, 'POS_REPORT')
+        appendAnthropicImages(staffImages, 'STAFF_REPORT')
+        appendAnthropicImages(foodpandaImages, 'FOODPANDA_PORTAL')
+        appendAnthropicImages(pathaoImages, 'PATHAO_PORTAL')
+        appendAnthropicImages(bazarImages, 'BAZAAR_RECEIPT')
+
+        contentBlocks.push({ type: 'text', text: systemPrompt })
+
+        const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-sonnet-latest',
+            max_tokens: 4000,
+            messages: [{ role: 'user', content: contentBlocks }]
+          })
+        })
+
+        const data = await anthropicRes.json()
+        if (anthropicRes.ok && data.content && data.content[0]?.text) {
+          let text = data.content[0].text.trim()
+          if (text.startsWith('```json')) text = text.slice(7)
+          if (text.startsWith('```')) text = text.slice(3)
+          if (text.endsWith('```')) text = text.slice(0, -3)
+          const parsed = JSON.parse(text.trim())
+          extractedData = { ...extractedData, ...parsed }
+          aiSuccess = true
+        } else {
+          throw new Error(data.error?.message || 'Anthropic API failed')
+        }
+      } catch (anthropicErr) {
+        console.error('Anthropic extraction error:', anthropicErr.message)
+        extractedData.raw_notes = 'AI extraction encountered an issue: ' + anthropicErr.message
+      }
     }
 
     // Merge manual form inputs if provided
@@ -127,7 +188,6 @@ Instructions:
     const bazarExpenseTotal = bazarReceiptsList.reduce((sum, r) => sum + Number(r.total || 0), 0)
 
     // Cash Audit Formula (Zero Tolerance)
-    // Expected Cash = Opening Cash + POS Cash Sales - AI Verified Bazaar Receipts
     const expectedCash = openingCash + posCashSales - bazarExpenseTotal
     const cashShortage = actualCashSubmitted - expectedCash
 
