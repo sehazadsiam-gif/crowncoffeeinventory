@@ -72,9 +72,12 @@ export default function AdminClient({ initialStats }) {
 
   useEffect(() => {
     const auth = localStorage.getItem('isAdmin')
+    const token = localStorage.getItem('cc_token')
+    const role = localStorage.getItem('cc_role')
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
     const tab = params ? params.get('tab') : null
-    if (auth === 'true') {
+
+    if (auth === 'true' || (token && (role === 'admin' || role === 'super_admin' || role === 'sub_admin'))) {
       setIsAuthorized(true)
       if (tab) setActiveTab(tab)
     } else if (tab === 'feedbacks') {
@@ -841,14 +844,19 @@ export default function AdminClient({ initialStats }) {
             MOBILE BOTTOM NAV
         ════════════════════════════════════════ */}
         <nav className="admin-bottom-nav">
-          {NAV_ITEMS.map(({ id, icon: Icon, label }) => (
+          {NAV_ITEMS.map(({ id, icon: Icon, label, badge, badgeColor }) => (
             <div
               key={id}
               className={`nav-item${activeTab === id ? ' active' : ''}`}
               onClick={() => setActiveTab(id)}
             >
-              <Icon size={20} strokeWidth={activeTab === id ? 2.2 : 1.8} />
+              <Icon size={18} strokeWidth={activeTab === id ? 2.2 : 1.8} />
               <span className="nav-label">{label}</span>
+              {badge && (
+                <span className="nav-badge" style={{ background: badgeColor }}>
+                  {typeof badge === 'number' ? (badge > 99 ? '99+' : badge) : badge}
+                </span>
+              )}
             </div>
           ))}
         </nav>
