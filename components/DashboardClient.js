@@ -8,7 +8,7 @@ import {
   CheckCircle2, Wallet, TrendingUp, AlertTriangle, Calendar,
   Users, UserCheck, FileText, Send, MessageSquare, Clock,
   BellRing, Box, Zap, CalendarDays, ArrowUpRight, Activity,
-  RefreshCw, Coffee, BarChart2, ArrowUp, ArrowDown, Calculator
+  RefreshCw, Coffee, BarChart2, ArrowUp, ArrowDown, Calculator, ShieldAlert
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────────────────
@@ -145,6 +145,7 @@ export default function DashboardClient() {
   const attendancePct = hrStats.activeStaff > 0 ? Math.round((hrStats.presentToday / hrStats.activeStaff) * 100) : 0
 
   const quickModules = [
+    { href: '/sales-reconciliation', icon: <ShieldAlert size={22} />, title: 'Daily Sales Audit', color: '#E11D48', desc: 'AI sales & cash audit' },
     { href: '/admin?tab=feedbacks', icon: <MessageSquare size={22} />, title: 'Guest Feedbacks', color: '#B0633E', desc: 'Reviews & ratings' },
     { href: '/menu',               icon: <BookOpen size={22} />,      title: 'Menu',            color: '#3B82F6', desc: 'Manage items' },
     { href: '/admin/menu-engineering', icon: <BarChart2 size={22} />, title: 'Menu Engineering', color: '#7C3A1E', desc: 'Costing & Profitability' },
@@ -290,6 +291,54 @@ export default function DashboardClient() {
             subtitle="Monthly base salaries"
             loading={loading}
           />
+        </div>
+
+        {/* ── FEATURED AI SALES & CASH AUDIT BANNER IN COMMAND CENTER ── */}
+        <div style={{
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+          borderRadius: '16px',
+          padding: '20px 24px',
+          marginBottom: '28px',
+          border: '1px solid rgba(255,255,255,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justify: 'space-between',
+          flexWrap: 'wrap',
+          gap: '16px',
+          boxShadow: '0 8px 24px rgba(15,23,42,0.2)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ background: 'rgba(59,130,246,0.2)', padding: '12px', borderRadius: '12px', display: 'flex' }}>
+              <ShieldAlert size={26} color="#60A5FA" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'white', fontFamily: 'var(--font-sans)' }}>
+                AI Daily Sales & Cash Audit Engine
+              </h3>
+              <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-sans)' }}>
+                Upload POS report, staff closing sheet, delivery app earnings & bazaar receipts for zero-tolerance cash shortage detection.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/sales-reconciliation"
+            style={{
+              background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+              color: 'white',
+              padding: '10px 20px',
+              borderRadius: '10px',
+              textDecoration: 'none',
+              fontWeight: 800,
+              fontSize: '13px',
+              boxShadow: '0 4px 14px rgba(37,99,235,0.4)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontFamily: 'var(--font-sans)'
+            }}
+          >
+            Open Audit Engine →
+          </Link>
         </div>
 
         {/* ── MAIN GRID ── */}

@@ -7,7 +7,7 @@ import {
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
   Upload, FileSpreadsheet, UserCheck, Sun, Moon, Receipt, Package,
   TrendingUp, Calculator as CalcIcon, ShoppingBag, MessageSquare,
-  BellRing
+  BellRing, ShieldAlert
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -119,6 +119,7 @@ export default function Navbar() {
 
   const adminItems = [
     { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
+    { href: '/sales-reconciliation', label: 'Sales Audit', icon: <ShieldAlert size={16} /> },
     { href: '/admin?tab=feedbacks', label: 'Feedbacks', icon: <MessageSquare size={16} /> },
 
     { href: '/bazar', label: 'Bazar', icon: <TrendingUp size={16} /> },
