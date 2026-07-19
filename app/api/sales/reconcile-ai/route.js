@@ -1,0 +1,175 @@
+import { NextResponse } from 'next/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+
+export async function POST(request) {
+  try {
+    const body = await request.json()
+    const {
+      posImages = [],
+      staffImages = [],
+      foodpandaImages = [],
+      pathaoImages = [],
+      bazarImages = [],
+      manualForm = {}
+    } = body
+
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'GEMINI_API_KEY environment variable is not configured.' },
+        { status: 500 }
+      )
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      generationConfig: { responseMimeType: 'application/json' }
+    })
+
+    // Prepare prompt parts including image inline data
+    const parts = [
+      {
+        text: `You are an expert financial auditor for Crown Coffee cafe. 
+Your task is to analyze uploaded operational screenshots & receipts and extract precise numerical financial data into a JSON object.
+
+Extract values into the following JSON schema:
+{
+  "pos_total_sales": number,
+  "pos_cash_sales": number,
+  "pos_card_sales": number,
+  "staff_declared_cash": number,
+  "staff_declared_card": number,
+  "foodpanda_declared": number,
+  "foodpanda_portal_total": number,
+  "pathao_declared": number,
+  "pathao_portal_total": number,
+  "bazar_receipts": [
+    {
+      "vendor": string,
+      "total": number,
+      "items": string[]
+    }
+  ],
+  "raw_notes": string
+}
+
+Instructions:
+1. "pos_total_sales", "pos_cash_sales", "pos_card_sales" come from POS sales report screenshots.
+2. "staff_declared_cash", "staff_declared_card", "foodpanda_declared", "pathao_declared" come from staff shift closing reports.
+3. "foodpanda_portal_total" comes from Foodpanda merchant portal income/payout screenshots.
+4. "pathao_portal_total" comes from Pathao merchant portal screenshots.
+5. "bazar_receipts" comes from photos of bazaar purchase vouchers, memos, or receipts. Extract vendor name, line items, and total amount spent for each receipt photo.
+6. If a specific screenshot is missing or unreadable, default its numerical value to 0. All currency values are in BDT (Bangladeshi Taka).
+7. Respond ONLY with valid JSON.`
+      }
+    ]
+
+    // Attach images with clear category labels
+    const appendImages = (imgList, label) => {
+      imgList.forEach((base64Data, idx) => {
+        const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '')
+        parts.push({
+          text: `[IMAGE CATEGORY: ${label} #${idx + 1}]`
+        })
+        parts.push({
+          inlineData: {
+            data: cleanBase64,
+            mimeType: 'image/jpeg'
+          }
+        })
+      })
+    }
+
+    appendImages(posImages, 'POS_REPORT')
+    appendImages(staffImages, 'STAFF_REPORT')
+    appendImages(foodpandaImages, 'FOODPANDA_PORTAL')
+    appendImages(pathaoImages, 'PATHAO_PORTAL')
+    appendImages(bazarImages, 'BAZAAR_RECEIPT')
+
+    let extractedData = {
+      pos_total_sales: 0,
+      pos_cash_sales: 0,
+      pos_card_sales: 0,
+      staff_declared_cash: 0,
+      staff_declared_card: 0,
+      foodpanda_declared: 0,
+      foodpanda_portal_total: 0,
+      pathao_declared: 0,
+      pathao_portal_total: 0,
+      bazar_receipts: [],
+      raw_notes: ''
+    }
+
+    try {
+      const aiResult = await model.generateContent({ contents: [{ role: 'user', parts }] })
+      const text = aiResult.response.text()
+      const parsed = JSON.parse(text)
+      extractedData = { ...extractedData, ...parsed }
+    } catch (aiErr) {
+      console.error('Gemini extraction error:', aiErr)
+      extractedData.raw_notes = 'AI extraction encountered an issue: ' + aiErr.message
+    }
+
+    // Merge manual form inputs if provided
+    const openingCash = Number(manualForm.openingCash || 0)
+    const actualCashSubmitted = Number(manualForm.actualCashSubmitted ?? extractedData.staff_declared_cash ?? 0)
+    const posTotalSales = Number(manualForm.posTotalSales ?? extractedData.pos_total_sales ?? 0)
+    const posCashSales = Number(manualForm.posCashSales ?? extractedData.pos_cash_sales ?? 0)
+    const posCardSales = Number(manualForm.posCardSales ?? extractedData.pos_card_sales ?? 0)
+    const foodpandaDeclared = Number(manualForm.foodpandaDeclared ?? extractedData.foodpanda_declared ?? 0)
+    const foodpandaPortalTotal = Number(manualForm.foodpandaPortalTotal ?? extractedData.foodpanda_portal_total ?? 0)
+    const pathaoDeclared = Number(manualForm.pathaoDeclared ?? extractedData.pathao_declared ?? 0)
+    const pathaoPortalTotal = Number(manualForm.pathaoPortalTotal ?? extractedData.pathao_portal_total ?? 0)
+
+    // Calculate Bazaar Receipts Total
+    const bazarReceiptsList = Array.isArray(extractedData.bazar_receipts) ? extractedData.bazar_receipts : []
+    const bazarExpenseTotal = bazarReceiptsList.reduce((sum, r) => sum + Number(r.total || 0), 0)
+
+    // Cash Audit Formula (Zero Tolerance)
+    // Expected Cash = Opening Cash + POS Cash Sales - AI Verified Bazaar Receipts
+    const expectedCash = openingCash + posCashSales - bazarExpenseTotal
+    const cashShortage = actualCashSubmitted - expectedCash
+
+    // Check zero-tolerance discrepancies
+    const fpDiff = foodpandaDeclared - foodpandaPortalTotal
+    const pathaoDiff = pathaoDeclared - pathaoPortalTotal
+    
+    // Status: ANY non-zero variance triggers DISCREPANCY
+    const isDiscrepancy = (cashShortage !== 0) || (fpDiff !== 0) || (pathaoDiff !== 0)
+    const status = isDiscrepancy ? 'DISCREPANCY' : 'MATCHED'
+
+    const auditSummary = {
+      openingCash,
+      posTotalSales,
+      posCashSales,
+      posCardSales,
+      foodpandaDeclared,
+      foodpandaPortalTotal,
+      foodpandaDiff: fpDiff,
+      pathaoDeclared,
+      pathaoPortalTotal,
+      pathaoDiff: pathaoDiff,
+      bazarExpenseTotal,
+      bazarReceiptsCount: bazarReceiptsList.length,
+      bazarReceipts: bazarReceiptsList,
+      actualCashSubmitted,
+      expectedCash,
+      cashShortage,
+      status,
+      extractedRawJson: extractedData,
+      rawNotes: extractedData.raw_notes || ''
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: auditSummary
+    })
+  } catch (err) {
+    console.error('Reconcile AI Route error:', err)
+    return NextResponse.json(
+      { error: err.message || 'Failed to process AI reconciliation.' },
+      { status: 500 }
+    )
+  }
+}

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
+import DailySalesAudit from './DailySalesAudit'
 import {
   TrendingUp, Package, Trash2, LogOut, ShieldCheck,
   Activity, FileText, AlertCircle, Database, Users,
@@ -150,10 +151,11 @@ export default function AdminClient({ initialStats }) {
   const { stats } = initialStats
 
   const NAV_ITEMS = [
-    { id: 'overview',   icon: BarChart2,     label: 'Overview',        badge: null },
-    { id: 'db',         icon: Database,      label: 'Database',        badge: '!', badgeColor: 'var(--danger)' },
-    { id: 'entities',   icon: Settings,      label: 'Management',      badge: null },
-    { id: 'feedbacks',  icon: MessageSquare, label: 'Guest Feedbacks', badge: feedbacks.length || null, badgeColor: 'var(--accent-brown)' },
+    { id: 'overview',    icon: BarChart2,     label: 'Overview',          badge: null },
+    { id: 'sales-audit', icon: Receipt,       label: 'Daily Sales Audit', badge: 'AI', badgeColor: 'var(--accent-blue)' },
+    { id: 'db',          icon: Database,      label: 'Database',          badge: '!', badgeColor: 'var(--danger)' },
+    { id: 'entities',    icon: Settings,      label: 'Management',        badge: null },
+    { id: 'feedbacks',   icon: MessageSquare, label: 'Guest Feedbacks',   badge: feedbacks.length || null, badgeColor: 'var(--accent-brown)' },
   ]
 
   return (
@@ -490,6 +492,11 @@ export default function AdminClient({ initialStats }) {
         ════════════════════════════════════════ */}
         <main className="admin-content" key={activeTab}>
 
+          {/* ── DAILY SALES AUDIT ── */}
+          {activeTab === 'sales-audit' && (
+            <DailySalesAudit />
+          )}
+
           {/* ── OVERVIEW ── */}
           {activeTab === 'overview' && (
             <div style={{ display: 'grid', gap: '24px' }}>
@@ -646,6 +653,7 @@ export default function AdminClient({ initialStats }) {
                 <p style={{ margin: '0 0 16px 0', fontSize: '11px', fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: 'var(--font-sans)' }}>System Modules</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '14px' }}>
                   {[
+                    { label: 'Daily Sales Audit', desc: 'AI sales & cash shortage verification', icon: Receipt, color: 'var(--accent-blue)', bg: 'var(--accent-blue-dim)', border: 'var(--accent-blue)', action: () => setActiveTab('sales-audit') },
                     { label: 'Staff Directory', desc: 'Manage staff payroll & roles', icon: Users, color: 'var(--accent-blue)', bg: 'var(--accent-blue-dim)', border: 'var(--accent-blue)', action: () => router.push('/staff') },
                     { label: 'Manage Menu', desc: 'Update menu items & recipes', icon: Coffee, color: 'var(--accent-gold)', bg: 'var(--accent-gold-dim)', border: 'var(--accent-gold)', action: () => router.push('/menu') },
                     { label: 'Inventory Control', desc: 'Track raw stocks & movements', icon: Package, color: 'var(--success)', bg: 'var(--success-bg)', border: 'var(--success)', action: () => router.push('/stock') },
