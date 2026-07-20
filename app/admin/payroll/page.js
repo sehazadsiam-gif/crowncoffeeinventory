@@ -43,7 +43,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div style={{ padding: '32px' }}>
+    <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', padding: '32px 40px' }}>
       <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#1F1F1F', marginBottom: '8px' }}>
         Payroll Management
       </h1>

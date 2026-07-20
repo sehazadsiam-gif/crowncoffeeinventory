@@ -461,9 +461,9 @@ export default function PayrollPage() {
   const totalRemainingAll = grandTotal - totalPaidAll
 
   const inputStyle = {
-    width: '60px', padding: '6px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border-medium)',
+    width: '100%', maxWidth: '85px', minWidth: '55px', padding: '6px 4px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border-medium)',
     outline: 'none', background: 'var(--bg-surface)', color: 'var(--text-primary)', textAlign: 'center',
-    transition: 'all 0.15s ease'
+    transition: 'all 0.15s ease', boxSizing: 'border-box'
   }
 
   const colHeaders = [
@@ -486,7 +486,7 @@ export default function PayrollPage() {
   return (
     <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, color 0.3s ease' }}>
       <Navbar />
-      <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '24px' }}>
+      <main style={{ width: '100%', maxWidth: '100%', margin: '0 auto', padding: '24px 32px', boxSizing: 'border-box' }}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <div>
@@ -514,7 +514,7 @@ export default function PayrollPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '20px' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
             <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Total Salary</p>
             <p style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>৳{grandTotal.toLocaleString()}</p>
@@ -556,11 +556,11 @@ export default function PayrollPage() {
 
         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto', position: 'relative' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '1400px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '100%' }}>
               <thead>
                 <tr style={{ background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-medium)' }}>
                   {colHeaders.map(h => h === 'Staff' ? (
-                    <th key={h} style={{ padding: '12px 8px', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'left', cursor: 'pointer', userSelect: 'none', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-medium)' }}
+                    <th key={h} style={{ padding: '12px 12px', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, whiteSpace: 'nowrap', textAlign: 'left', cursor: 'pointer', userSelect: 'none', position: 'sticky', top: 0, left: 0, zIndex: 25, background: 'var(--bg-subtle)', borderBottom: '2px solid var(--border-medium)', boxShadow: '2px 0 5px rgba(0,0,0,0.05)' }}
                       onClick={() => setNameSort(nameSort === 'asc' ? 'desc' : 'asc')}
                     >
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -592,7 +592,7 @@ export default function PayrollPage() {
 
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                      <td style={{ padding: '12px 8px', textAlign: 'left' }}>
+                      <td style={{ padding: '12px 12px', textAlign: 'left', position: 'sticky', left: 0, zIndex: 15, background: 'var(--bg-surface)', boxShadow: '2px 0 5px rgba(0,0,0,0.05)' }}>
                         <p style={{ fontWeight: 700, fontSize: '13px', margin: 0, color: 'var(--text-primary)' }}>{s.name}</p>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>{s.designation}</p>
                         {Number(row.present_days) > 0 && <p style={{ fontSize: '11px', color: '#34D399', marginTop: '3px', fontWeight: 600 }}>Present: {row.present_days}d</p>}
@@ -751,7 +751,7 @@ export default function PayrollPage() {
                       </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.miscellaneous} onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px', fontWeight: 800, color: '#34D399', fontSize: '14px' }}>৳{finalSalary.toLocaleString()}</td>
-                      <td style={{ padding: '12px 8px' }}>
+                      <td style={{ padding: '12px 8px', position: 'relative' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '6px' }}>
                           <span style={{ fontSize: '11px', fontWeight: 700, color: '#34D399' }}>Paid: ৳{paid.toLocaleString()}</span>
                           {rem > 0 && <span style={{ fontSize: '10px', fontWeight: 600, color: '#F87171' }}>Due: ৳{rem.toLocaleString()}</span>}
@@ -767,7 +767,8 @@ export default function PayrollPage() {
                           <div style={{ 
                             display: showHistory === s.id ? 'block' : 'none',
                             position: 'absolute', 
-                            right: '60px', 
+                            right: '10px', 
+                            top: 'calc(100% + 4px)',
                             background: '#1C2233', 
                             border: '1px solid #2D3A52', 
                             padding: '12px', 
@@ -797,7 +798,7 @@ export default function PayrollPage() {
                         )}
 
                         {showPaymentForm === s.id && (
-                          <div style={{ position: 'absolute', right: '100px', background: '#1C2233', border: '1px solid #2D3A52', padding: '12px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 100, width: '200px', textAlign: 'left' }}>
+                          <div style={{ position: 'absolute', right: '10px', top: 'calc(100% + 4px)', background: '#1C2233', border: '1px solid #2D3A52', padding: '12px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', zIndex: 100, width: '220px', textAlign: 'left' }}>
                             <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 700, color: '#E2E8F0' }}>Record Payment</h4>
                             <input type="number" className="input" placeholder="Amount" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} style={{ marginBottom: '8px' }} />
                             <input type="date" className="input" value={paymentForm.date} onChange={e => setPaymentForm({ ...paymentForm, date: e.target.value })} style={{ marginBottom: '10px' }} />
