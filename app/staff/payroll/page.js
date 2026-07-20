@@ -461,7 +461,7 @@ export default function PayrollPage() {
   const totalRemainingAll = grandTotal - totalPaidAll
 
   const inputStyle = {
-    width: '100%', maxWidth: '85px', minWidth: '55px', padding: '6px 4px', fontSize: '12px', borderRadius: '6px', border: '1px solid var(--border-medium)',
+    width: '100%', maxWidth: '85px', minWidth: '60px', height: '34px', padding: '6px 8px', fontSize: '13px', fontWeight: '600', borderRadius: '6px', border: '1.5px solid var(--border-medium)',
     outline: 'none', background: 'var(--bg-surface)', color: 'var(--text-primary)', textAlign: 'center',
     transition: 'all 0.15s ease', boxSizing: 'border-box'
   }
@@ -694,25 +694,27 @@ export default function PayrollPage() {
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
 
                       <td style={{ padding: '14px 8px' }}>
-                         <div style={{ fontSize: '11px', color: '#94A3B8' }}>
-                          <p style={{ margin: 0 }}>Auto: {autoUnpaid}d (-৳{(autoUnpaid * perDay).toLocaleString()})</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+                          <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                            Auto: <span style={{ color: '#F87171' }}>{autoUnpaid}d</span> <span style={{ opacity: 0.8 }}>(-৳{(autoUnpaid * perDay).toLocaleString()})</span>
+                          </p>
                           
-                          <div style={{ marginTop: '8px', borderTop: '1px dashed var(--border-medium)', paddingTop: '8px' }}>
-                            <label style={{ display: 'block', fontSize: '10px' }}>Waive:</label>
-                            <input type="number" min="0" style={{ width: '50px', padding: '3px', fontSize: '11px', border: '1px solid var(--border-medium)', borderRadius: '4px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+                          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                            <label style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Waive</label>
+                            <input type="number" min="0" style={inputStyle}
                               value={row.waived_unpaid_days || ''} placeholder="0"
                               onChange={e => handleInput(s.id, 'waived_unpaid_days', e.target.value)}
                               onBlur={() => handleBlur(s.id)} />
                           </div>
  
-                          <div style={{ marginTop: '8px' }}>
-                            <label style={{ display: 'block', fontSize: '10px' }}>Override Result:</label>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                              <input type="number" min="0" style={{ width: '50px', padding: '3px', fontSize: '11px', border: '1px solid var(--border-medium)', borderRadius: '4px', background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+                          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
+                            <label style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Override</label>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%' }}>
+                              <input type="number" min="0" style={inputStyle}
                                 placeholder="Auto" value={row.manual_unpaid_days ?? ''}
                                 onChange={e => handleInput(s.id, 'manual_unpaid_days', e.target.value === '' ? null : Number(e.target.value))}
                                 onBlur={() => handleBlur(s.id)} />
-                              {row.manual_unpaid_days !== null && <button onClick={() => { handleInput(s.id, 'manual_unpaid_days', null); setTimeout(() => handleBlur(s.id), 100) }} style={{ fontSize: '9px', color: '#F87171', background: 'none', border: 'none', cursor: 'pointer' }}>Reset</button>}
+                              {row.manual_unpaid_days !== null && <button onClick={() => { handleInput(s.id, 'manual_unpaid_days', null); setTimeout(() => handleBlur(s.id), 100) }} style={{ fontSize: '10px', color: '#F87171', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Reset</button>}
                             </div>
                           </div>
                         </div>
