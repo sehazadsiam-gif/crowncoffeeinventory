@@ -226,7 +226,9 @@ export default function PayrollPage() {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
     const perHourRate = s.hourly_rate || Math.floor(Math.floor(base / 30) / 10)
-    const ot = Number(p.overtime_pay) || (Number(p.overtime_hours) || 0) * perHourRate
+    const ot = p.overtime_pay !== undefined && p.overtime_pay !== null && p.overtime_pay !== ''
+      ? Number(p.overtime_pay)
+      : (Number(p.overtime_hours) || 0) * perHourRate
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
     const lunch = Number(p.lunch_dinner) || 0
@@ -236,25 +238,21 @@ export default function PayrollPage() {
     const others = Number(p.others_taken) || 0
     const perDay = Math.round(base / 30)
 
-    // Absent days from summary or payroll
     const absentDays = Number(p.absent_days) || 0
     const freeAbsentDays = 4
     const autoUnpaidDays = Math.max(0, absentDays - freeAbsentDays)
     const waivedDays = Number(p.waived_unpaid_days) || 0
-    const finalUnpaidDays = Math.max(0, autoUnpaidDays - waivedDays)
+    const finalUnpaidDays = p.manual_unpaid_days !== undefined && p.manual_unpaid_days !== null
+      ? Number(p.manual_unpaid_days)
+      : Math.max(0, autoUnpaidDays - waivedDays)
     const unpaidDeduction = finalUnpaidDays * perDay
 
-    // Manual override takes priority if set
-    const manualUnpaid = p.manual_unpaid_days !== undefined
-      && p.manual_unpaid_days !== null
-      ? Number(p.manual_unpaid_days) * perDay
-      : unpaidDeduction
-
-    const late = isLateWaived ? 0 : (Number(p.late_deduction) || 0)
+    const isWaived = isLateWaived !== undefined ? isLateWaived : Boolean(p.late_waived)
+    const late = isWaived ? 0 : (Number(p.late_deduction) || 0)
 
     return Math.round(
       base + ot + sc + bonus + lunch + morn + misc
-      - adv - others - manualUnpaid - late
+      - adv - others - unpaidDeduction - late
     )
   }
 
@@ -456,8 +454,11 @@ export default function PayrollPage() {
       : b.name.localeCompare(a.name)
   })
 
-  const grandTotal = staff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id] || {}, waivedStaff[s.id]), 0)
-  const totalPaidAll = Object.values(payments).flat().reduce((s, p) => s + Number(p.amount), 0)
+  const grandTotal = sortedStaff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id] || {}, waivedStaff[s.id]), 0)
+  const totalPaidAll = sortedStaff.reduce((acc, s) => {
+    const staffPayments = payments[s.id] || []
+    return acc + staffPayments.reduce((pAcc, p) => pAcc + Number(p.amount), 0)
+  }, 0)
   const totalRemainingAll = grandTotal - totalPaidAll
 
   const inputStyle = {

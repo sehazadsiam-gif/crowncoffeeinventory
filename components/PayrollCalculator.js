@@ -85,7 +85,9 @@ export default function PayrollCalculator({ staff, payroll, waivedStaff, month, 
     const base = Number(s.base_salary) || 0
     const perDay = Math.round(base / 30)
     const perHourRate = s.hourly_rate || Math.floor(Math.floor(base / 30) / 10)
-    const ot = Number(p.overtime_pay) || (Number(p.overtime_hours) || 0) * perHourRate
+    const ot = p.overtime_pay !== undefined && p.overtime_pay !== null && p.overtime_pay !== ''
+      ? Number(p.overtime_pay)
+      : (Number(p.overtime_hours) || 0) * perHourRate
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
     const lunch = Number(p.lunch_dinner) || 0
@@ -100,7 +102,7 @@ export default function PayrollCalculator({ staff, payroll, waivedStaff, month, 
       ? Number(p.manual_unpaid_days)
       : Math.max(0, autoUnpaid - waivedDays)
     const unpaidDeduction = finalUnpaidDays * perDay
-    const lateDeduction = isWaived ? 0 : (Number(p.late_deduction) || 0)
+    const lateDeduction = (isWaived !== undefined ? isWaived : Boolean(p.late_waived)) ? 0 : (Number(p.late_deduction) || 0)
     const gross = base + ot + sc + bonus + lunch + morn + misc
     const deductions = adv + others + unpaidDeduction + lateDeduction
     const net = Math.round(gross - deductions)
