@@ -124,6 +124,23 @@ export default function AttendanceCheckPage() {
           onChange={(e) => setYear(parseInt(e.target.value))}
           style={{ padding: '10px 12px', border: '1px solid #E0E0E0', borderRadius: '6px', width: '100px', fontFamily: 'inherit' }}
         />
+        <button
+          onClick={async () => {
+            const dateStr = prompt('Enter Date to run Auto-Close / Auto-Flag (YYYY-MM-DD):', new Date().toISOString().split('T')[0])
+            if (!dateStr) return
+            const res = await fetch(`/api/attendance/auto-flag?date=${dateStr}`)
+            const json = await res.json()
+            if (res.ok) {
+              alert(`Auto-Flag Complete!\nFlagged Absent: ${json.result?.flagged || 0}\nAuto-Closed Forgotten Checkouts: ${json.result?.autoClosed || 0}`)
+              fetchAttendanceData()
+            } else {
+              alert('Error: ' + json.error)
+            }
+          }}
+          style={{ background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 16px', fontWeight: 700, cursor: 'pointer' }}
+        >
+          ⚡ Run Auto-Close Routine
+        </button>
       </div>
 
       {loading ? (
