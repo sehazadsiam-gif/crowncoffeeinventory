@@ -1,44 +1,115 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Navbar from '../../../components/Navbar'
 import { supabase } from '../../../lib/supabase'
+import { useToast } from '../../../components/Toast'
+import {
+  Clock, CheckCircle2, AlertTriangle, Users, Calendar,
+  Radio, Sparkles, RefreshCw, Coffee, Monitor, ShieldCheck,
+  Check, Edit3, Award, DollarSign
+} from 'lucide-react'
 
 export default function AttendanceCheckPage() {
+  const { addToast } = useToast()
+  const [activeTab, setActiveTab] = useState('live') // 'live' | 'monthly'
+
+  // Today Live Data state
+  const [todayData, setTodayData] = useState({ date: '', summary: {}, records: [] })
+  const [liveLoading, setLiveLoading] = useState(true)
+  const [lastTapEvent, setLastTapEvent] = useState(null)
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  // Monthly Diagnostic Data state
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [year, setYear] = useState(new Date().getFullYear())
-  const [attendanceData, setAttendanceData] = useState([])
+  const [monthlyData, setMonthlyData] = useState([])
   const [calculations, setCalculations] = useState({})
-  const [loading, setLoading] = useState(false)
+  const [monthlyLoading, setMonthlyLoading] = useState(false)
+
+  // Manual Override Modal state
+  const [selectedStaffForOverride, setSelectedStaffForOverride] = useState(null)
+  const [overrideForm, setOverrideForm] = useState({ date: '', check_in_time: '08:00', check_out_time: '18:00', status: 'present', notes: '' })
+  const [overrideSubmitting, setOverrideSubmitting] = useState(false)
 
   useEffect(() => {
-    fetchAttendanceData()
+    // 1. Live Ticker Clock
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
 
-    const channel = supabase.channel('admin_attendance_check_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, () => {
-        fetchAttendanceData()
+    // 2. Fetch today's live data
+    fetchTodayData()
+
+    // 3. Supabase Realtime Subscription on attendance_log for instant sync with PWA
+    const channel = supabase.channel('admin_live_attendance_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, (payload) => {
+        fetchTodayData(true)
+        if (payload.new) {
+          triggerLiveBanner(payload.new)
+        }
       })
       .subscribe()
 
+    // Fallback polling every 10 seconds
+    const poll = setInterval(() => fetchTodayData(true), 10000)
+
     return () => {
+      clearInterval(timer)
+      clearInterval(poll)
       supabase.removeChannel(channel)
     }
-  }, [month, year])
+  }, [])
 
-  const fetchAttendanceData = async () => {
-    setLoading(true)
+  useEffect(() => {
+    if (activeTab === 'monthly') {
+      fetchMonthlyDiagnostic()
+    }
+  }, [activeTab, month, year])
+
+  async function fetchTodayData(silent = false) {
     try {
-      const res = await fetch(`/api/attendance/diagnostic?month=${month}&year=${year}`)
-      const data = await res.json()
-      setAttendanceData(data.attendance || [])
-      calculateMetrics(data.attendance || [])
-    } catch (error) {
-      console.error('Error:', error)
+      if (!silent) setLiveLoading(true)
+      const res = await fetch('/api/attendance/today')
+      const json = await res.json()
+      if (res.ok) {
+        setTodayData(json)
+      }
+    } catch (err) {
+      console.error('Failed to fetch today live attendance', err)
     } finally {
-      setLoading(false)
+      if (!silent) setLiveLoading(false)
     }
   }
 
-  const calculateMetrics = (records) => {
+  function triggerLiveBanner(entry) {
+    const timeStr = entry.check_in_at
+      ? new Date(entry.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+      : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+
+    setLastTapEvent({
+      name: entry.employee_id || 'Staff Member',
+      status: (entry.status || 'present').toUpperCase(),
+      time: timeStr
+    })
+
+    setTimeout(() => setLastTapEvent(null), 8000)
+  }
+
+  async function fetchMonthlyDiagnostic() {
+    setMonthlyLoading(true)
+    try {
+      const res = await fetch(`/api/attendance/diagnostic?month=${month}&year=${year}`)
+      const data = await res.json()
+      setMonthlyData(data.attendance || [])
+      calculateMetrics(data.attendance || [])
+    } catch (error) {
+      console.error('Error fetching diagnostic:', error)
+      addToast('Error loading monthly diagnostic data', 'error')
+    } finally {
+      setMonthlyLoading(false)
+    }
+  }
+
+  function calculateMetrics(records) {
     const metrics = {}
 
     records.forEach(record => {
@@ -55,14 +126,11 @@ export default function AttendanceCheckPage() {
       }
 
       const stat = metrics[record.staff_id]
-
       if (record.status === 'present') stat.present++
       if (record.status === 'late') stat.late++
       if (record.status === 'absent') stat.absent++
 
-      // Morning food calculation
-      // Logic: Check-in between 7:30 AM - 9:00 AM = 40 TK
-      // Must be PRESENT or LATE (not ABSENT)
+      // Morning food calculation: Check-in between 7:30 AM - 9:00 AM = 40 TK
       if (record.check_in_time && (record.status === 'present' || record.status === 'late')) {
         const time = parseTime(record.check_in_time)
         if (time >= 7.5 && time <= 9.0) {
@@ -76,7 +144,6 @@ export default function AttendanceCheckPage() {
         }
       }
 
-      // Late details
       if (record.status === 'late') {
         stat.late_details.push({
           date: record.date,
@@ -89,227 +156,545 @@ export default function AttendanceCheckPage() {
     setCalculations(metrics)
   }
 
-  const parseTime = (timeStr) => {
+  function parseTime(timeStr) {
     if (!timeStr) return 0
-    // Handle both "7:30 AM" and "07:30 AM" formats
     const [time, period] = timeStr.split(' ')
     if (!time || !period) return 0
-    
     let [hours, mins] = time.split(':').map(Number)
     if (period === 'PM' && hours < 12) hours += 12
     if (period === 'AM' && hours === 12) hours = 0
-    return hours + mins / 60
+    return hours + (mins || 0) / 60
   }
+
+  async function handleRunAutoClose() {
+    const dateStr = prompt('Enter Date for Auto-Close & Absent Flag (YYYY-MM-DD):', new Date().toISOString().split('T')[0])
+    if (!dateStr) return
+    try {
+      const res = await fetch(`/api/attendance/auto-flag?date=${dateStr}`)
+      const json = await res.json()
+      if (res.ok) {
+        addToast(`Auto-Close Complete! Flagged Absent: ${json.result?.flagged || 0}, Auto-Closed Checkouts: ${json.result?.autoClosed || 0}`, 'success')
+        fetchTodayData(true)
+        if (activeTab === 'monthly') fetchMonthlyDiagnostic()
+      } else {
+        addToast(json.error || 'Auto-Close routine failed', 'error')
+      }
+    } catch (err) {
+      addToast('Error running auto-close routine', 'error')
+    }
+  }
+
+  async function handleSaveOverride(e) {
+    e.preventDefault()
+    if (!selectedStaffForOverride) return
+    try {
+      setOverrideSubmitting(true)
+      const res = await fetch('/api/attendance/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: selectedStaffForOverride.staff_id,
+          timestamp: `${overrideForm.date || new Date().toISOString().split('T')[0]}T${overrideForm.check_in_time}:00`,
+          source: 'manual',
+          notes: overrideForm.notes || 'Admin manual override',
+          adminOverride: true,
+          forceStatus: overrideForm.status
+        })
+      })
+
+      const json = await res.json()
+      if (res.ok) {
+        addToast(`Successfully set attendance for ${selectedStaffForOverride.name}!`, 'success')
+        setSelectedStaffForOverride(null)
+        fetchTodayData(true)
+      } else {
+        addToast(json.error || 'Failed to save attendance override', 'error')
+      }
+    } catch (err) {
+      addToast('Error saving override', 'error')
+    } finally {
+      setOverrideSubmitting(false)
+    }
+  }
+
+  const records = todayData.records || []
+  const presentCount = records.filter(r => r.status === 'present').length
+  const lateCount = records.filter(r => r.status === 'late').length
+  const totalCount = records.length
 
   return (
-    <div style={{ padding: '32px', background: '#FAFAFA', minHeight: '100vh' }}>
-      <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#1F1F1F', marginBottom: '8px', fontFamily: 'Segoe UI, sans-serif' }}>
-        Attendance Diagnostic
-      </h1>
-      <p style={{ color: '#9C8A76', marginBottom: '32px', fontFamily: 'Segoe UI, sans-serif' }}>
-        Verify morning food, late calculations, and check_in_time data
-      </p>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-base, #FAF7F2)', color: 'var(--text-primary, #1C1410)' }}>
+      <Navbar />
 
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '32px' }}>
-        <select 
-          value={month}
-          onChange={(e) => setMonth(parseInt(e.target.value))}
-          style={{ padding: '10px 12px', border: '1px solid #E0E0E0', borderRadius: '6px', fontFamily: 'inherit' }}
-        >
-          {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <input 
-          type="number" 
-          value={year}
-          onChange={(e) => setYear(parseInt(e.target.value))}
-          style={{ padding: '10px 12px', border: '1px solid #E0E0E0', borderRadius: '6px', width: '100px', fontFamily: 'inherit' }}
-        />
-        <button
-          onClick={async () => {
-            const dateStr = prompt('Enter Date to run Auto-Close / Auto-Flag (YYYY-MM-DD):', new Date().toISOString().split('T')[0])
-            if (!dateStr) return
-            const res = await fetch(`/api/attendance/auto-flag?date=${dateStr}`)
-            const json = await res.json()
-            if (res.ok) {
-              alert(`Auto-Flag Complete!\nFlagged Absent: ${json.result?.flagged || 0}\nAuto-Closed Forgotten Checkouts: ${json.result?.autoClosed || 0}`)
-              fetchAttendanceData()
-            } else {
-              alert('Error: ' + json.error)
-            }
-          }}
-          style={{ background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 16px', fontWeight: 700, cursor: 'pointer' }}
-        >
-          ⚡ Run Auto-Close Routine
-        </button>
-      </div>
-
-      {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#9C8A76' }}>Loading diagnostic data...</div>
-      ) : (
-        <div style={{ display: 'grid', gap: '24px' }}>
-          {Object.entries(calculations).length === 0 ? (
-            <div style={{ padding: '40px', textAlign: 'center', background: '#FFF', border: '1px solid #E0E0E0', borderRadius: '12px', color: '#9C8A76' }}>
-              No attendance records found for this period.
+      <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '32px 24px 60px' }}>
+        
+        {/* Header Title & Clock */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h1 style={{ fontSize: '28px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>
+                Live Attendance Command Center
+              </h1>
+              <span style={{ background: '#059669', color: 'white', padding: '3px 10px', borderRadius: '16px', fontSize: '11px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Radio size={14} className="pulse-dot" /> LIVE PWA SYNC
+              </span>
             </div>
-          ) : (
-            Object.entries(calculations).map(([staffId, data]) => (
-              <div key={staffId} style={{ background: '#FFFFFF', border: '1px solid #E0E0E0', borderRadius: '12px', padding: '24px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1F1F1F', marginBottom: '20px', borderBottom: '1px solid #F5F5F5', paddingBottom: '12px' }}>
-                  {data.staff_name}
-                </h2>
+            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-muted, #786C60)' }}>
+              Real-time monitoring synced with cafe RFID readers & PWA public display kiosk.
+            </p>
+          </div>
 
-                {/* Summary */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-                  <div style={{ background: '#E8F5E9', padding: '16px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '11px', color: '#2E7D32', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>PRESENT</div>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: '#2E7D32' }}>{data.present}</div>
-                  </div>
-                  <div style={{ background: '#FFF3E0', padding: '16px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '11px', color: '#F57C00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>LATE</div>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: '#F57C00' }}>{data.late}</div>
-                  </div>
-                  <div style={{ background: '#FFEBEE', padding: '16px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '11px', color: '#D32F2F', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>ABSENT</div>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: '#D32F2F' }}>{data.absent}</div>
-                  </div>
-                  <div style={{ background: '#E3F2FD', padding: '16px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '11px', color: '#1976D2', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>MORNING FOOD</div>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: '#1976D2' }}>৳ {data.morning_food}</div>
-                  </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={handleRunAutoClose}
+              style={{ background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Sparkles size={16} /> Run Midnight Auto-Close
+            </button>
+
+            <div style={{ background: 'var(--bg-surface, #FFF)', border: '1px solid var(--border-light, #E8E0D4)', borderRadius: '10px', padding: '8px 16px', textAlign: 'right' }}>
+              <div style={{ fontSize: '18px', fontWeight: 900, fontFamily: 'monospace', color: '#6B3A2A' }}>
+                {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+              </div>
+              <div style={{ fontSize: '11px', color: '#888', fontWeight: 600 }}>
+                {currentTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Tap Flash Banner */}
+        {lastTapEvent && (
+          <div style={{
+            background: '#065F46',
+            color: 'white',
+            borderRadius: '12px',
+            padding: '14px 24px',
+            marginBottom: '24px',
+            fontWeight: 800,
+            fontSize: '16px',
+            boxShadow: '0 4px 20px rgba(16,185,129,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <Sparkles size={20} />
+            <span>🟢 REALTIME RFID SCAN: <strong>{lastTapEvent.name}</strong> — {lastTapEvent.status} at {lastTapEvent.time}</span>
+          </div>
+        )}
+
+        {/* Tab Navigation */}
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '2px solid var(--border-light, #E8E0D4)', paddingBottom: '12px' }}>
+          <button
+            onClick={() => setActiveTab('live')}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '10px',
+              border: 'none',
+              background: activeTab === 'live' ? '#6B3A2A' : 'transparent',
+              color: activeTab === 'live' ? 'white' : 'var(--text-muted, #786C60)',
+              fontWeight: 800,
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <Monitor size={18} /> Today's Live Realtime Feed
+          </button>
+
+          <button
+            onClick={() => setActiveTab('monthly')}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '10px',
+              border: 'none',
+              background: activeTab === 'monthly' ? '#6B3A2A' : 'transparent',
+              color: activeTab === 'monthly' ? 'white' : 'var(--text-muted, #786C60)',
+              fontWeight: 800,
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <Award size={18} /> Monthly Diagnostic & Morning Allowance
+          </button>
+        </div>
+
+        {/* TAB 1: TODAY LIVE FEED */}
+        {activeTab === 'live' && (
+          <div>
+            {/* KPI Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+              <div style={{ background: 'var(--bg-surface, #FFF)', border: '1px solid var(--border-light, #E8E0D4)', borderRadius: '14px', padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ background: 'rgba(56, 189, 248, 0.15)', color: '#0284C7', padding: '12px', borderRadius: '10px' }}><Users size={24} /></div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase' }}>Active Staff</div>
+                  <div style={{ fontSize: '24px', fontWeight: 900 }}>{totalCount}</div>
                 </div>
+              </div>
 
-                {/* Lunch & Dinner Summary */}
-                <div style={{ marginBottom: '20px', padding: '16px', background: '#F5F5F5', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '8px', textTransform: 'uppercase' }}>
-                    Lunch + Dinner Calculation
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#5C4A36' }}>
-                    Present Days: <strong>{data.present}</strong> (Late days excluded)<br/>
-                    Total (৳ 120/day): <strong>৳ {(data.present * 120).toLocaleString()}</strong>
-                  </div>
+              <div style={{ background: 'var(--bg-surface, #FFF)', border: '1px solid var(--border-light, #E8E0D4)', borderRadius: '14px', padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#059669', padding: '12px', borderRadius: '10px' }}><CheckCircle2 size={24} /></div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase' }}>Present Today</div>
+                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#059669' }}>{presentCount + lateCount}</div>
                 </div>
+              </div>
 
-                {/* Late Deduction */}
-                <div style={{ marginBottom: '24px', padding: '16px', background: '#FFF3E0', borderRadius: '8px', borderLeft: '4px solid #F57C00' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#F57C00', marginBottom: '8px', textTransform: 'uppercase' }}>
-                    Late Deduction Rule
-                  </div>
-                  <div style={{ fontSize: '14px', color: '#5C4A36' }}>
-                    Late Count: <strong>{data.late}</strong><br/>
-                    Calculated Cut: <strong>{Math.floor(data.late / 3)} day(s)</strong> salary<br/>
-                    <span style={{ fontSize: '12px', color: '#9C8A76' }}>(Every 3 late days = 1 day salary deduction)</span>
-                  </div>
+              <div style={{ background: 'var(--bg-surface, #FFF)', border: '1px solid var(--border-light, #E8E0D4)', borderRadius: '14px', padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#D97706', padding: '12px', borderRadius: '10px' }}><Clock size={24} /></div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase' }}>Late Arrivals</div>
+                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#D97706' }}>{lateCount}</div>
                 </div>
+              </div>
 
-                {/* Morning Food Details */}
-                {data.morning_food_details.length > 0 && (
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Morning Food Eligible Days (7:30 - 9:00 AM)
-                    </div>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '400px' }}>
-                        <thead>
-                          <tr style={{ background: '#F8F9FA' }}>
-                            <th style={tableHeaderStyle}>Date</th>
-                            <th style={tableHeaderStyle}>Check-in</th>
-                            <th style={tableHeaderStyle}>Status</th>
-                            <th style={{ ...tableHeaderStyle, textAlign: 'right' }}>Amount</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.morning_food_details.map((detail, idx) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid #F0F0F0' }}>
-                              <td style={tableCellStyle}>{detail.date}</td>
-                              <td style={{ ...tableCellStyle, fontWeight: 700 }}>{detail.time}</td>
-                              <td style={tableCellStyle}>
-                                <span style={{ ...badgeStyle, background: detail.status === 'late' ? '#FFF3E0' : '#E8F5E9', color: detail.status === 'late' ? '#F57C00' : '#2E7D32' }}>
-                                  {detail.status.toUpperCase()}
-                                </span>
-                              </td>
-                              <td style={{ ...tableCellStyle, textAlign: 'right', fontWeight: 700, color: '#1976D2' }}>৳ {detail.amount}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+              <div style={{ background: 'var(--bg-surface, #FFF)', border: '1px solid var(--border-light, #E8E0D4)', borderRadius: '14px', padding: '18px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#DC2626', padding: '12px', borderRadius: '10px' }}><AlertTriangle size={24} /></div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#888', fontWeight: 700, textTransform: 'uppercase' }}>Not Checked In</div>
+                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#DC2626' }}>{totalCount - (presentCount + lateCount)}</div>
+                </div>
+              </div>
+            </div>
 
-                {/* Late Details */}
-                {data.late_details.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#1F1F1F', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Late Record Details
+            {/* Live Staff Cards Grid */}
+            {liveLoading ? (
+              <div style={{ padding: '60px', textAlign: 'center', color: '#888' }}>
+                Fetching Live RFID & Attendance Feed…
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+                {records.map(r => {
+                  const isPresent = r.status === 'present'
+                  const isLate = r.status === 'late'
+                  const isOff = r.status === 'off'
+                  const isLeave = r.status === 'on_leave'
+                  const isCheckedIn = isPresent || isLate
+
+                  let statusBg = '#F3F4F6'
+                  let statusColor = '#6B7280'
+                  let statusText = 'Not Checked In'
+
+                  if (isPresent) { statusBg = '#D1FAE5'; statusColor = '#065F46'; statusText = 'PRESENT' }
+                  else if (isLate) { statusBg = '#FEF3C7'; statusColor = '#92400E'; statusText = `LATE (${r.minutes_late || 0}m)` }
+                  else if (isLeave) { statusBg = '#DBEAFE'; statusColor = '#1E40AF'; statusText = 'ON LEAVE' }
+                  else if (isOff) { statusBg = '#F3E8FF'; statusColor = '#6B21A8'; statusText = 'DAY OFF' }
+
+                  return (
+                    <div key={r.staff_id} style={{
+                      background: 'var(--bg-surface, #FFF)',
+                      border: isCheckedIn ? '2px solid #059669' : '1px solid var(--border-light, #E8E0D4)',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justify: 'space-between',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                    }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <div style={{ fontSize: '18px', fontWeight: 800 }}>{r.name}</div>
+                            <div style={{ fontSize: '12px', color: '#786C60', marginTop: '2px' }}>
+                              {r.employee_id} • {r.designation}
+                            </div>
+                          </div>
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            background: statusBg,
+                            color: statusColor
+                          }}>
+                            {statusText}
+                          </span>
+                        </div>
+
+                        {/* Department Tag & RFID Indicator */}
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+                          <span style={{
+                            fontSize: '11px',
+                            padding: '3px 10px',
+                            borderRadius: '12px',
+                            background: r.department === 'kitchen' ? '#FEF3C7' : '#E0F2FE',
+                            color: r.department === 'kitchen' ? '#92400E' : '#0369A1',
+                            fontWeight: 700
+                          }}>
+                            {r.department === 'kitchen' ? '🍳 Kitchen Staff' : '☕ Front Staff'}
+                          </span>
+
+                          {r.rfid_code ? (
+                            <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              💳 RFID Paired
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: '11px', color: '#D97706', fontWeight: 600 }}>
+                              ⚠️ No Card Paired
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Timings & Override Button */}
+                      <div style={{ borderTop: '1px solid var(--border-light, #E8E0D4)', paddingTop: '14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ color: '#888', fontSize: '10px', display: 'block' }}>CHECK-IN</span>
+                            <strong style={{ fontSize: '13px' }}>
+                              {r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                            </strong>
+                          </div>
+
+                          <div>
+                            <span style={{ color: '#888', fontSize: '10px', display: 'block' }}>CHECK-OUT</span>
+                            <strong style={{ fontSize: '13px' }}>
+                              {r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                            </strong>
+                          </div>
+
+                          {r.hours_worked > 0 && (
+                            <div>
+                              <span style={{ color: '#888', fontSize: '10px', display: 'block' }}>DUTY</span>
+                              <strong style={{ fontSize: '13px', color: '#059669' }}>{r.hours_worked}h</strong>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setSelectedStaffForOverride(r)
+                            setOverrideForm({
+                              date: new Date().toISOString().split('T')[0],
+                              check_in_time: '08:00',
+                              check_out_time: '18:00',
+                              status: 'present',
+                              notes: 'Admin manual time override'
+                            })
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: '#FAF7F2',
+                            border: '1px solid #6B3A2A',
+                            color: '#6B3A2A',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Edit3 size={14} /> Manual Override / Fix Time
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '400px' }}>
-                        <thead>
-                          <tr style={{ background: '#F8F9FA' }}>
-                            <th style={tableHeaderStyle}>Date</th>
-                            <th style={tableHeaderStyle}>Check-in Time</th>
-                            <th style={tableHeaderStyle}>Shift</th>
-                            <th style={{ ...tableHeaderStyle, textAlign: 'center' }}>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.late_details.map((detail, idx) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid #F0F0F0' }}>
-                              <td style={tableCellStyle}>{detail.date}</td>
-                              <td style={{ ...tableCellStyle, fontWeight: 700 }}>{detail.check_in}</td>
-                              <td style={tableCellStyle}>
-                                {getShift(detail.check_in)}
-                              </td>
-                              <td style={{ ...tableCellStyle, textAlign: 'center' }}>
-                                <span style={{ ...badgeStyle, background: '#FFF3E0', color: '#F57C00' }}>
-                                  LATE
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 2: MONTHLY DIAGNOSTICS & MORNING ALLOWANCE */}
+        {activeTab === 'monthly' && (
+          <div>
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', alignItems: 'center' }}>
+              <label style={{ fontWeight: 700, fontSize: '14px' }}>Select Month:</label>
+              <select
+                value={month}
+                onChange={(e) => setMonth(parseInt(e.target.value))}
+                style={{ padding: '8px 12px', border: '1px solid #E0E0E0', borderRadius: '8px', fontWeight: 700 }}
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(2026, i, 1).toLocaleString('default', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="number"
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value))}
+                style={{ padding: '8px 12px', border: '1px solid #E0E0E0', borderRadius: '8px', width: '90px', fontWeight: 700 }}
+              />
+            </div>
+
+            {monthlyLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>Loading monthly diagnostic metrics…</div>
+            ) : (
+              <div style={{ display: 'grid', gap: '24px' }}>
+                {Object.entries(calculations).length === 0 ? (
+                  <div style={{ padding: '40px', textAlign: 'center', background: '#FFF', borderRadius: '12px', color: '#888' }}>
+                    No diagnostic records found for this month.
                   </div>
+                ) : (
+                  Object.entries(calculations).map(([staffId, data]) => (
+                    <div key={staffId} style={{ background: '#FFFFFF', border: '1px solid #E0E0E0', borderRadius: '14px', padding: '24px', boxShadow: '0 2px 6px rgba(0,0,0,0.02)' }}>
+                      <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1F1F1F', marginBottom: '16px', borderBottom: '1px solid #F5F5F5', paddingBottom: '12px' }}>
+                        {data.staff_name}
+                      </h2>
+
+                      {/* Summary Cards */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                        <div style={{ background: '#E8F5E9', padding: '14px', borderRadius: '10px' }}>
+                          <div style={{ fontSize: '10px', color: '#2E7D32', fontWeight: 800, textTransform: 'uppercase' }}>PRESENT</div>
+                          <div style={{ fontSize: '24px', fontWeight: 900, color: '#2E7D32' }}>{data.present}</div>
+                        </div>
+
+                        <div style={{ background: '#FFF3E0', padding: '14px', borderRadius: '10px' }}>
+                          <div style={{ fontSize: '10px', color: '#F57C00', fontWeight: 800, textTransform: 'uppercase' }}>LATE</div>
+                          <div style={{ fontSize: '24px', fontWeight: 900, color: '#F57C00' }}>{data.late}</div>
+                        </div>
+
+                        <div style={{ background: '#FFEBEE', padding: '14px', borderRadius: '10px' }}>
+                          <div style={{ fontSize: '10px', color: '#D32F2F', fontWeight: 800, textTransform: 'uppercase' }}>ABSENT</div>
+                          <div style={{ fontSize: '24px', fontWeight: 900, color: '#D32F2F' }}>{data.absent}</div>
+                        </div>
+
+                        <div style={{ background: '#E3F2FD', padding: '14px', borderRadius: '10px' }}>
+                          <div style={{ fontSize: '10px', color: '#1976D2', fontWeight: 800, textTransform: 'uppercase' }}>MORNING FOOD</div>
+                          <div style={{ fontSize: '24px', fontWeight: 900, color: '#1976D2' }}>৳ {data.morning_food}</div>
+                        </div>
+                      </div>
+
+                      {/* Morning Food Breakdown */}
+                      {data.morning_food_details.length > 0 && (
+                        <div style={{ marginBottom: '16px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 800, color: '#555', textTransform: 'uppercase', marginBottom: '8px' }}>
+                            Morning Food Allowance History (7:30 AM - 9:00 AM)
+                          </div>
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                              <thead>
+                                <tr style={{ background: '#F8F9FA', textTransform: 'uppercase', fontSize: '10px', color: '#888' }}>
+                                  <th style={{ padding: '8px', textAlign: 'left' }}>Date</th>
+                                  <th style={{ padding: '8px', textAlign: 'left' }}>Check-In Time</th>
+                                  <th style={{ padding: '8px', textAlign: 'left' }}>Status</th>
+                                  <th style={{ padding: '8px', textAlign: 'right' }}>Allowance</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {data.morning_food_details.map((detail, idx) => (
+                                  <tr key={idx} style={{ borderBottom: '1px solid #F0F0F0' }}>
+                                    <td style={{ padding: '8px' }}>{detail.date}</td>
+                                    <td style={{ padding: '8px', fontWeight: 700 }}>{detail.time}</td>
+                                    <td style={{ padding: '8px' }}>
+                                      <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 800, background: detail.status === 'late' ? '#FFF3E0' : '#E8F5E9', color: detail.status === 'late' ? '#F57C00' : '#2E7D32' }}>
+                                        {detail.status.toUpperCase()}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '8px', textAlign: 'right', fontWeight: 800, color: '#1976D2' }}>৳ {detail.amount}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
                 )}
               </div>
-            ))
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+
+        {/* MANUAL OVERRIDE MODAL */}
+        {selectedStaffForOverride && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }}>
+            <div style={{ background: 'white', width: '100%', maxWidth: '450px', borderRadius: '16px', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#6B3A2A' }}>
+                  Manual Time Override / Fix
+                </h3>
+                <button onClick={() => setSelectedStaffForOverride(null)} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#888' }}>✕</button>
+              </div>
+
+              <div style={{ background: '#FAF7F2', padding: '12px', borderRadius: '10px', marginBottom: '16px', fontSize: '13px' }}>
+                <strong>Staff Member:</strong> {selectedStaffForOverride.name} ({selectedStaffForOverride.employee_id})
+              </div>
+
+              <form onSubmit={handleSaveOverride} style={{ display: 'grid', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#555', marginBottom: '4px' }}>Date</label>
+                  <input
+                    type="date"
+                    value={overrideForm.date}
+                    onChange={e => setOverrideForm({ ...overrideForm, date: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '10px', border: '1px solid #CCC', borderRadius: '8px', fontSize: '14px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#555', marginBottom: '4px' }}>Check-In Time</label>
+                    <input
+                      type="time"
+                      value={overrideForm.check_in_time}
+                      onChange={e => setOverrideForm({ ...overrideForm, check_in_time: e.target.value })}
+                      required
+                      style={{ width: '100%', padding: '10px', border: '1px solid #CCC', borderRadius: '8px', fontSize: '14px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#555', marginBottom: '4px' }}>Status Override</label>
+                    <select
+                      value={overrideForm.status}
+                      onChange={e => setOverrideForm({ ...overrideForm, status: e.target.value })}
+                      style={{ width: '100%', padding: '10px', border: '1px solid #CCC', borderRadius: '8px', fontSize: '14px', fontWeight: 700 }}
+                    >
+                      <option value="present">Present (On Time)</option>
+                      <option value="late">Late Arrival</option>
+                      <option value="absent">Absent</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#555', marginBottom: '4px' }}>Reason / Admin Note</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Forgot RFID card at home"
+                    value={overrideForm.notes}
+                    onChange={e => setOverrideForm({ ...overrideForm, notes: e.target.value })}
+                    style={{ width: '100%', padding: '10px', border: '1px solid #CCC', borderRadius: '8px', fontSize: '14px' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStaffForOverride(null)}
+                    style={{ flex: 1, padding: '10px', background: '#E2E8F0', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={overrideSubmitting}
+                    style={{ flex: 1, padding: '10px', background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {overrideSubmitting ? 'Saving…' : 'Save Attendance'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+      </main>
     </div>
   )
-
-  function getShift(timeStr) {
-    if (!timeStr) return 'Unknown'
-    const [time, period] = timeStr.split(' ')
-    let [hours] = time.split(':').map(Number)
-    if (period === 'PM' && hours < 12) hours += 12
-    if (period === 'AM' && hours === 12) hours = 0
-    return hours < 14 ? 'Morning' : 'Afternoon'
-  }
-}
-
-const tableHeaderStyle = {
-  padding: '12px 8px',
-  textAlign: 'left',
-  fontSize: '11px',
-  fontWeight: 700,
-  color: '#9C8A76',
-  textTransform: 'uppercase',
-  borderBottom: '2px solid #F0F0F0'
-}
-
-const tableCellStyle = {
-  padding: '12px 8px',
-  fontSize: '13px',
-  color: '#1F1F1F'
-}
-
-const badgeStyle = {
-  padding: '4px 10px',
-  borderRadius: '20px',
-  fontSize: '10px',
-  fontWeight: 700,
-  display: 'inline-block'
 }
