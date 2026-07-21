@@ -25,14 +25,9 @@ export default function StaffDirectory() {
   const [isSorting, setIsSorting] = useState(false)
   const [tempSerials, setTempSerials] = useState({})
 
-    useEffect(() => {
-    const token = localStorage.getItem('cc_token')
-    const role = localStorage.getItem('cc_role')
-    if (!token || (role !== 'admin' && role !== 'sub_admin')) {
-      router.replace('/')
-      return
-    }
-     fetchStaff() }, [])
+  useEffect(() => {
+    router.replace('/admin/staff')
+  }, [router])
 
   async function fetchStaff() {
     try {
