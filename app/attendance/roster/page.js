@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '../../components/Navbar'
-import { useToast } from '../../components/Toast'
+import Navbar from '../../../components/Navbar'
+import { useToast } from '../../../components/Toast'
 import { Calendar, ChevronLeft, ChevronRight, Sparkles, Save, CheckCircle } from 'lucide-react'
 
 export default function WeeklyRosterPage() {

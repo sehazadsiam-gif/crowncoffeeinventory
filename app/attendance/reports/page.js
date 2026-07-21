@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '../../components/Navbar'
-import { useToast } from '../../components/Toast'
+import Navbar from '../../../components/Navbar'
+import { useToast } from '../../../components/Toast'
 import { Download, FileSpreadsheet, FileText, Calendar, Filter } from 'lucide-react'
 import * as xlsx from 'xlsx'
 import html2canvas from 'html2canvas'
