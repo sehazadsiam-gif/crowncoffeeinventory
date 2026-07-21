@@ -658,13 +658,41 @@ export default function StaffDirectory() {
               </select>
             </div>
             <div>
-              <label className="label" style={{ color: 'var(--text-secondary)' }}>Photo URL</label>
-              <input
-                className="input"
-                placeholder="Image URL (optional)"
-                value={form.photo_url}
-                onChange={e => setForm({ ...form, photo_url: e.target.value })}
-              />
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Staff Photo</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  className="input"
+                  placeholder="Image URL or upload below"
+                  value={form.photo_url}
+                  onChange={e => setForm({ ...form, photo_url: e.target.value })}
+                />
+                <label style={{
+                  padding: '8px 12px',
+                  background: '#6B3A2A',
+                  color: 'white',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  Upload
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const reader = new FileReader()
+                      reader.onload = ev => setForm({ ...form, photo_url: ev.target.result })
+                      reader.readAsDataURL(file)
+                    }}
+                  />
+                </label>
+              </div>
             </div>
           </div>
 
@@ -804,13 +832,41 @@ export default function StaffDirectory() {
                 </select>
               </div>
               <div>
-                <label className="label">Photo URL</label>
-                <input
-                  className="input"
-                  placeholder="Image URL"
-                  value={editingStaff.photo_url || ''}
-                  onChange={e => setEditingStaff({ ...editingStaff, photo_url: e.target.value })}
-                />
+                <label className="label">Staff Photo</label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    className="input"
+                    placeholder="Image URL or upload"
+                    value={editingStaff.photo_url || ''}
+                    onChange={e => setEditingStaff({ ...editingStaff, photo_url: e.target.value })}
+                  />
+                  <label style={{
+                    padding: '6px 10px',
+                    background: '#6B3A2A',
+                    color: 'white',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    Upload
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        const reader = new FileReader()
+                        reader.onload = ev => setEditingStaff({ ...editingStaff, photo_url: ev.target.result })
+                        reader.readAsDataURL(file)
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -1024,13 +1080,52 @@ export default function StaffDirectory() {
               <div style={{ fontSize: '9px', color: '#999', marginTop: '4px' }}>Scan for attendance / check-in</div>
             </div>
 
-            <button
-              onClick={() => window.print()}
-              className="btn-primary"
-              style={{ background: '#6B3A2A', color: 'white', border: 'none', width: '100%', padding: '12px' }}
-            >
-              Print Staff ID Card
-            </button>
+            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              <label style={{
+                flex: 1,
+                padding: '10px',
+                background: '#FAF7F2',
+                border: '1px solid #6B3A2A',
+                color: '#6B3A2A',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}>
+                📷 Upload / Change Photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={async e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const reader = new FileReader()
+                    reader.onload = async ev => {
+                      const newPhotoUrl = ev.target.result
+                      setSelectedCardStaff({ ...selectedCardStaff, photo_url: newPhotoUrl })
+                      setStaff(staff.map(s => s.id === selectedCardStaff.id ? { ...s, photo_url: newPhotoUrl } : s))
+                      await supabase.from('staff').update({ photo_url: newPhotoUrl }).eq('id', selectedCardStaff.id)
+                      addToast('Photo updated on Staff ID Card!', 'success')
+                    }
+                    reader.readAsDataURL(file)
+                  }}
+                />
+              </label>
+
+              <button
+                onClick={() => window.print()}
+                className="btn-primary"
+                style={{ flex: 1, background: '#6B3A2A', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 700 }}
+              >
+                🖨️ Print Staff ID Card
+              </button>
+            </div>
           </div>
         </Modal>
       )}
