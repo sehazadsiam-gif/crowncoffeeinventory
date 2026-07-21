@@ -458,21 +458,23 @@ export default function AttendanceDashboardPage() {
 
                     <button
                       onClick={() => handleCheckin(r.staff_id, null, 'manual')}
-                      disabled={checkingIn}
+                      disabled={checkingIn || (r.check_in_at && r.check_out_at)}
                       style={{
                         width: '100%',
                         padding: '10px',
-                        background: isCheckedIn ? '#F1F5F9' : '#0F172A',
-                        color: isCheckedIn ? '#0F172A' : 'white',
-                        border: isCheckedIn ? '1px solid #CBD5E1' : 'none',
+                        background: r.check_in_at && !r.check_out_at ? '#DC2626' : (r.check_out_at ? '#F1F5F9' : '#0F172A'),
+                        color: r.check_out_at ? '#64748B' : 'white',
+                        border: r.check_out_at ? '1px solid #CBD5E1' : 'none',
                         borderRadius: '10px',
                         fontSize: '13px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
+                        fontWeight: 800,
+                        cursor: r.check_in_at && r.check_out_at ? 'default' : 'pointer',
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      {isCheckedIn ? 'Clock Out' : 'Clock In Now'}
+                      {r.check_in_at && !r.check_out_at
+                        ? '🔴 Clock Out Now'
+                        : (r.check_out_at ? '✅ Shift Completed' : '🟢 Clock In Now')}
                     </button>
                   </div>
                 </div>
@@ -488,7 +490,7 @@ export default function AttendanceDashboardPage() {
               <div style={{ background: '#F1F5F9', border: '2px dashed #CBD5E1', borderRadius: '16px', padding: '24px', marginBottom: '20px' }}>
                 <Wifi size={40} color="#0F172A" style={{ marginBottom: '8px' }} />
                 <div style={{ fontWeight: 800, fontSize: '16px', color: '#0F172A' }}>Ready for RFID Card Tap</div>
-                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>Tap your 24 Tk card on the USB reader or enter code manually</div>
+                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>Tap your RFID card on the USB reader or enter code manually</div>
               </div>
 
               <input

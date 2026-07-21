@@ -592,7 +592,7 @@ export default function AdminClient({ initialStats }) {
                       👥 Staff Directory & ID Cards
                     </div>
                     <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748B' }}>
-                      Add/edit staff, set Front/Kitchen roles, pair 24 Tk RFID cards, print official ID cards.
+                      Add/edit staff, set Front/Kitchen roles, pair RFID cards, print official ID cards.
                     </p>
                   </a>
 
