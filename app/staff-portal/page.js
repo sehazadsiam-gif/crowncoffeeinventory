@@ -11,6 +11,8 @@ import {
 import dynamic from 'next/dynamic'
 import { translations } from '../../lib/i18n'
 
+import Modal from '../../components/Modal'
+
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
 
 export default function StaffPortalPage() {
@@ -21,6 +23,7 @@ export default function StaffPortalPage() {
   const [attendance, setAttendance] = useState([])
   const [advances, setAdvances] = useState([])
   const [notes, setNotes] = useState([])
+  const [showIdCard, setShowIdCard] = useState(false)
   const [leave, setLeave] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
@@ -586,9 +589,26 @@ export default function StaffPortalPage() {
                   </h2>
                 </div>
 
-                <div style={{ background: 'rgba(255,255,255,0.1)', padding: '12px 20px', borderRadius: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8 }}>{t.nextOff}</div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#D4933A', marginTop: '2px' }}>{staff?.weekly_off || 'Friday'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.1)', padding: '12px 20px', borderRadius: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8 }}>{t.nextOff}</div>
+                    <div style={{ fontSize: '18px', fontWeight: 800, color: '#D4933A', marginTop: '2px' }}>{staff?.weekly_off || 'Friday'}</div>
+                  </div>
+                  <button
+                    onClick={() => setShowIdCard(true)}
+                    style={{
+                      background: 'rgba(212, 147, 58, 0.2)',
+                      border: '1px solid #D4933A',
+                      color: '#D4933A',
+                      padding: '10px 16px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {lang === 'bn' ? 'আমার আইডি কার্ড দেখুন' : 'View My ID Card'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1346,6 +1366,134 @@ export default function StaffPortalPage() {
       </main>
 
       {printData && <PaySlip data={printData} onClose={() => setPrintData(null)} />}
+
+      {/* Staff ID Card Modal */}
+      {showIdCard && staff && (
+        <Modal
+          isOpen={showIdCard}
+          onClose={() => setShowIdCard(false)}
+          title={lang === 'bn' ? 'স্টাফ আইডি কার্ড' : 'Official Staff ID Card'}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            <div id="printable-staff-card" style={{
+              width: '320px',
+              background: '#FFFFFF',
+              border: '2px solid #6B3A2A',
+              borderRadius: '16px',
+              padding: '20px',
+              color: '#1C1410',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+              textAlign: 'center',
+              position: 'relative',
+              fontFamily: 'system-ui, -apple-system, sans-serif'
+            }}>
+              {/* Header Banner */}
+              <div style={{
+                background: '#6B3A2A',
+                color: 'white',
+                margin: '-20px -20px 16px -20px',
+                padding: '14px 12px',
+                borderTopLeftRadius: '14px',
+                borderTopRightRadius: '14px'
+              }}>
+                <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '1px', color: '#D4933A' }}>CROWN COFFEE</div>
+                <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '2px', opacity: 0.9 }}>Official Staff ID Card</div>
+              </div>
+
+              {/* Photo */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                {staff.photo_url ? (
+                  <img
+                    src={staff.photo_url}
+                    alt={staff.name}
+                    style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #6B3A2A' }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: '#FAF7F2',
+                    border: '3px solid #6B3A2A',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px',
+                    fontWeight: 800,
+                    color: '#6B3A2A'
+                  }}>
+                    {staff.name ? staff.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'CC'}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#1C1410', marginBottom: '2px' }}>{staff.name}</div>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#6B3A2A', fontWeight: 700, marginBottom: '10px' }}>
+                {staff.designation}
+              </div>
+
+              <div style={{
+                display: 'inline-block',
+                background: '#FAF7F2',
+                border: '1px dashed #6B3A2A',
+                padding: '4px 12px',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                color: '#6B3A2A',
+                marginBottom: '14px'
+              }}>
+                ID: {staff.employee_id || 'CC-001'}
+              </div>
+
+              {/* Details Grid */}
+              <div style={{
+                background: '#F9F6F0',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                fontSize: '11px',
+                textAlign: 'left',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                marginBottom: '14px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#777' }}>NID:</span>
+                  <span style={{ fontWeight: 600 }}>{staff.nid || 'N/A'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#777' }}>Blood Group:</span>
+                  <span style={{ fontWeight: 700, color: '#d32f2f' }}>{staff.blood_group || 'N/A'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#777' }}>Emergency Contact:</span>
+                  <span style={{ fontWeight: 600 }}>{staff.emergency_phone || staff.emergency_contact || 'N/A'}</span>
+                </div>
+              </div>
+
+              {/* QR Code */}
+              <div style={{ background: 'white', padding: '8px', borderRadius: '8px', display: 'inline-block', border: '1px solid #E8E0D4' }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(staff.employee_id || staff.id)}`}
+                  alt="Staff QR Code"
+                  style={{ width: '90px', height: '90px', display: 'block' }}
+                />
+              </div>
+              <div style={{ fontSize: '9px', color: '#999', marginTop: '4px' }}>Scan for attendance / check-in</div>
+            </div>
+
+            <button
+              onClick={() => window.print()}
+              className="btn-primary"
+              style={{ background: '#6B3A2A', color: 'white', border: 'none', width: '100%', padding: '12px' }}
+            >
+              {lang === 'bn' ? 'আইডি কার্ড প্রিন্ট করুন' : 'Print Staff ID Card'}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       <style>{`
         @media (max-width: 480px) {

@@ -21,7 +21,8 @@ export default function StaffDirectory() {
     base_salary: '', join_date: new Date().toISOString().split('T')[0],
     emergency_contact: '', emergency_phone: '', notes: '',
     serial: 999, email: '', employee_id: '',
-    shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true
+    shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true,
+    nid: '', blood_group: '', photo_url: ''
   })
   const [selectedCardStaff, setSelectedCardStaff] = useState(null)
   const [editingStaff, setEditingStaff] = useState(null)
@@ -74,7 +75,10 @@ export default function StaffDirectory() {
         shift_start: form.shift_start || '08:00',
         weekly_off: form.weekly_off || 'Friday',
         grace_minutes: parseInt(form.grace_minutes) || 15,
-        is_rostered: form.is_rostered !== false
+        is_rostered: form.is_rostered !== false,
+        nid: form.nid,
+        blood_group: form.blood_group,
+        photo_url: form.photo_url
       }]).select()
 
       if (error) throw error
@@ -94,7 +98,8 @@ export default function StaffDirectory() {
         base_salary: '', join_date: new Date().toISOString().split('T')[0],
         emergency_contact: '', emergency_phone: '', notes: '',
         serial: 999, email: '', employee_id: '',
-        shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true
+        shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true,
+        nid: '', blood_group: '', photo_url: ''
       })
       fetchStaff()
     } catch (err) {
@@ -115,7 +120,12 @@ export default function StaffDirectory() {
           weekly_off: editingStaff.weekly_off || 'Friday',
           grace_minutes: parseInt(editingStaff.grace_minutes) || 15,
           is_rostered: editingStaff.is_rostered !== false,
-          base_salary: parseFloat(editingStaff.base_salary) || 0
+          base_salary: parseFloat(editingStaff.base_salary) || 0,
+          nid: editingStaff.nid || null,
+          blood_group: editingStaff.blood_group || null,
+          photo_url: editingStaff.photo_url || null,
+          emergency_contact: editingStaff.emergency_contact || null,
+          emergency_phone: editingStaff.emergency_phone || null
         })
         .eq('id', editingStaff.id)
 
@@ -582,6 +592,66 @@ export default function StaffDirectory() {
             </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>NID Number</label>
+              <input
+                className="input"
+                placeholder="National ID"
+                value={form.nid}
+                onChange={e => setForm({ ...form, nid: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Blood Group</label>
+              <select
+                className="input"
+                value={form.blood_group}
+                onChange={e => setForm({ ...form, blood_group: e.target.value })}
+              >
+                <option value="">Select</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Photo URL</label>
+              <input
+                className="input"
+                placeholder="Image URL (optional)"
+                value={form.photo_url}
+                onChange={e => setForm({ ...form, photo_url: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Emergency Contact Name</label>
+              <input
+                className="input"
+                placeholder="e.g. Spouse / Relative"
+                value={form.emergency_contact}
+                onChange={e => setForm({ ...form, emergency_contact: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Emergency Phone</label>
+              <input
+                className="input"
+                placeholder="Emergency phone number"
+                value={form.emergency_phone}
+                onChange={e => setForm({ ...form, emergency_phone: e.target.value })}
+              />
+            </div>
+          </div>
+
           <div style={{ background: '#FAF7F2', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E8E0D4' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, color: '#6B3A2A', fontSize: '13px' }}>
               <input
@@ -648,6 +718,63 @@ export default function StaffDirectory() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
               <div>
+                <label className="label">NID Number</label>
+                <input
+                  className="input"
+                  value={editingStaff.nid || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, nid: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">Blood Group</label>
+                <select
+                  className="input"
+                  value={editingStaff.blood_group || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, blood_group: e.target.value })}
+                >
+                  <option value="">Select</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Photo URL</label>
+                <input
+                  className="input"
+                  placeholder="Image URL"
+                  value={editingStaff.photo_url || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, photo_url: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label className="label">Emergency Contact Name</label>
+                <input
+                  className="input"
+                  value={editingStaff.emergency_contact || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, emergency_contact: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">Emergency Phone</label>
+                <input
+                  className="input"
+                  value={editingStaff.emergency_phone || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, emergency_phone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div>
                 <label className="label">Shift Start</label>
                 <input
                   className="input"
@@ -696,41 +823,122 @@ export default function StaffDirectory() {
         </Modal>
       )}
 
-      {/* ID Card / QR Sticker Modal */}
+      {/* Printable Staff ID Card Modal */}
       {selectedCardStaff && (
         <Modal
           isOpen={!!selectedCardStaff}
           onClose={() => setSelectedCardStaff(null)}
-          title="Employee Printable ID Card / QR Sticker"
+          title="Printable Staff ID Card"
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
-            {/* Card Preview Container */}
+            {/* Simple ID Card Container */}
             <div id="printable-id-card" style={{
               width: '320px',
-              background: 'linear-gradient(135deg, #6B3A2A 0%, #3D1E15 100%)',
+              background: '#FFFFFF',
+              border: '2px solid #6B3A2A',
               borderRadius: '16px',
-              padding: '24px',
-              color: 'white',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+              padding: '20px',
+              color: '#1C1410',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
               textAlign: 'center',
-              position: 'relative'
+              position: 'relative',
+              fontFamily: 'system-ui, -apple-system, sans-serif'
             }}>
-              <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-1px', color: '#D4933A' }}>CC</div>
-              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px', opacity: 0.8, marginBottom: '16px' }}>Crown Coffee Staff ID</div>
-              
-              <div style={{ background: 'white', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(selectedCardStaff.employee_id || selectedCardStaff.id)}`}
-                  alt="QR Code"
-                  style={{ width: '130px', height: '130px', display: 'block' }}
-                />
+              {/* Header Banner */}
+              <div style={{
+                background: '#6B3A2A',
+                color: 'white',
+                margin: '-20px -20px 16px -20px',
+                padding: '14px 12px',
+                borderTopLeftRadius: '14px',
+                borderTopRightRadius: '14px'
+              }}>
+                <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '1px', color: '#D4933A' }}>CROWN COFFEE</div>
+                <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '2px', opacity: 0.9 }}>Official Staff ID Card</div>
               </div>
 
-              <div style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px 0' }}>{selectedCardStaff.name}</div>
-              <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', color: '#D4933A', fontWeight: 700 }}>{selectedCardStaff.designation}</div>
-              <div style={{ marginTop: '12px', fontSize: '16px', fontFamily: 'monospace', fontWeight: 700, background: 'rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '6px', display: 'inline-block' }}>
-                {selectedCardStaff.employee_id || 'CC-001'}
+              {/* Photo & Main Badges */}
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+                {selectedCardStaff.photo_url ? (
+                  <img
+                    src={selectedCardStaff.photo_url}
+                    alt={selectedCardStaff.name}
+                    style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #6B3A2A' }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: '#FAF7F2',
+                    border: '3px solid #6B3A2A',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px',
+                    fontWeight: 800,
+                    color: '#6B3A2A'
+                  }}>
+                    {selectedCardStaff.name ? selectedCardStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'CC'}
+                  </div>
+                )}
               </div>
+
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#1C1410', marginBottom: '2px' }}>{selectedCardStaff.name}</div>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#6B3A2A', fontWeight: 700, marginBottom: '10px' }}>
+                {selectedCardStaff.designation}
+              </div>
+
+              <div style={{
+                display: 'inline-block',
+                background: '#FAF7F2',
+                border: '1px dashed #6B3A2A',
+                padding: '4px 12px',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                color: '#6B3A2A',
+                marginBottom: '14px'
+              }}>
+                ID: {selectedCardStaff.employee_id || 'CC-001'}
+              </div>
+
+              {/* Details Grid */}
+              <div style={{
+                background: '#F9F6F0',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                fontSize: '11px',
+                textAlign: 'left',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                marginBottom: '14px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#777' }}>NID:</span>
+                  <span style={{ fontWeight: 600 }}>{selectedCardStaff.nid || 'N/A'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#777' }}>Blood Group:</span>
+                  <span style={{ fontWeight: 700, color: '#d32f2f' }}>{selectedCardStaff.blood_group || 'N/A'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#777' }}>Emergency Contact:</span>
+                  <span style={{ fontWeight: 600 }}>{selectedCardStaff.emergency_phone || selectedCardStaff.emergency_contact || 'N/A'}</span>
+                </div>
+              </div>
+
+              {/* QR Code */}
+              <div style={{ background: 'white', padding: '8px', borderRadius: '8px', display: 'inline-block', border: '1px solid #E8E0D4' }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(selectedCardStaff.employee_id || selectedCardStaff.id)}`}
+                  alt="Staff QR Code"
+                  style={{ width: '90px', height: '90px', display: 'block' }}
+                />
+              </div>
+              <div style={{ fontSize: '9px', color: '#999', marginTop: '4px' }}>Scan for attendance / check-in</div>
             </div>
 
             <button
@@ -738,7 +946,7 @@ export default function StaffDirectory() {
               className="btn-primary"
               style={{ background: '#6B3A2A', color: 'white', border: 'none', width: '100%', padding: '12px' }}
             >
-              Print ID Card / Sticker
+              Print Staff ID Card
             </button>
           </div>
         </Modal>
