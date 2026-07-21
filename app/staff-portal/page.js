@@ -30,6 +30,9 @@ export default function StaffPortalPage() {
   const [leaveRequests, setLeaveRequests] = useState([])
   const [newLeave, setNewLeave] = useState({ start_date: '', end_date: '', leave_type: 'sick', reason: '' })
   const [submittingLeave, setSubmittingLeave] = useState(false)
+  const [dutyRequests, setDutyRequests] = useState([])
+  const [newDutyChange, setNewDutyChange] = useState({ request_date: '', request_type: 'day_off_swap', new_shift_start: '10:00', reason: '' })
+  const [submittingDutyChange, setSubmittingDutyChange] = useState(false)
   const [printData, setPrintData] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
@@ -76,7 +79,7 @@ export default function StaffPortalPage() {
     try {
       setLoading(true)
       const currentYear = new Date().getFullYear()
-      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes, msgRes, tasksRes] = await Promise.all([
+      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes, msgRes, tasksRes, dutyReqRes] = await Promise.all([
         supabase.from('staff').select('*').eq('id', staffId).single(),
         supabase.from('payroll_entries').select('*').eq('staff_id', staffId).order('year', { ascending: false }).order('month', { ascending: false }).limit(24),
         supabase.from('salary_payments').select('*').eq('staff_id', staffId).order('payment_date', { ascending: false }),
@@ -87,7 +90,8 @@ export default function StaffPortalPage() {
         supabase.from('monthly_attendance_summary').select('*').eq('staff_id', staffId),
         supabase.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
         supabase.from('staff_queries').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
-        fetch(`/api/tasks/list?staff_id=${staffId}`).then(res => res.json()).then(data => ({ data: data.tasks || [], error: null }))
+        fetch(`/api/tasks/list?staff_id=${staffId}`).then(res => res.json()).then(data => ({ data: data.tasks || [], error: null })),
+        fetch(`/api/attendance/duty-change?staff_id=${staffId}`).then(res => res.json()).then(data => ({ data: data.requests || [], error: null }))
       ])
       setStaff(staffRes.data)
       setPayroll(payRes.data || [])
@@ -100,10 +104,44 @@ export default function StaffPortalPage() {
       setLeaveRequests(leaveReqRes.data || [])
       setMessages(msgRes.data || [])
       setTasks(tasksRes.data || [])
+      setDutyRequests(dutyReqRes.data || [])
     } catch (err) {
       console.error('Error fetching staff data:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleDutyChangeSubmit(e) {
+    e.preventDefault()
+    if (!newDutyChange.request_date) return alert('Please select a date')
+
+    try {
+      setSubmittingDutyChange(true)
+      const res = await fetch('/api/attendance/duty-change', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          staff_id: staff.id,
+          request_date: newDutyChange.request_date,
+          request_type: newDutyChange.request_type,
+          new_shift_start: newDutyChange.new_shift_start,
+          reason: newDutyChange.reason
+        })
+      })
+
+      const json = await res.json()
+      if (res.ok) {
+        alert(lang === 'bn' ? 'আবেদন সফলভাবে জমা হয়েছে!' : 'Request submitted successfully!')
+        setNewDutyChange({ request_date: '', request_type: 'day_off_swap', new_shift_start: '10:00', reason: '' })
+        fetchStaffData(staff.id)
+      } else {
+        alert(json.error || 'Submission failed')
+      }
+    } catch (err) {
+      alert('Error submitting duty change request')
+    } finally {
+      setSubmittingDutyChange(false)
     }
   }
 
@@ -225,6 +263,7 @@ export default function StaffPortalPage() {
 
   const tabs = [
     { key: 'overview', icon: <Home size={15} />, label: lang === 'bn' ? 'ওভারভিউ' : 'Overview' },
+    { key: 'schedule', icon: <Clock size={15} />, label: t.scheduleTab },
     { key: 'tasks', icon: <CheckSquare size={15} />, label: lang === 'bn' ? 'কাজসমূহ' : 'Tasks' },
     { key: 'salary', icon: <Wallet size={15} />, label: lang === 'bn' ? 'বেতন' : 'Salary' },
     { key: 'attendance', icon: <CalendarDays size={15} />, label: lang === 'bn' ? 'উপস্থিতি' : 'Attendance' },
@@ -525,6 +564,127 @@ export default function StaffPortalPage() {
             </button>
           ))}
         </div>
+
+        {/* ── MY SCHEDULE TAB ── */}
+        {activeTab === 'schedule' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className="animate-in">
+            {/* Zero-click Quick Answer Banner */}
+            <div className="card" style={{ background: 'linear-gradient(135deg, #6B3A2A 0%, #3D1E15 100%)', color: 'white', padding: '24px', borderRadius: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8, color: '#D4933A', fontWeight: 700 }}>
+                    {lang === 'bn' ? 'আজকের ডিউটি স্ট্যাটাস' : "Today's Work Status"}
+                  </div>
+                  <h2 style={{ fontSize: '26px', fontWeight: 900, margin: '6px 0 0 0', color: 'white' }}>
+                    {(() => {
+                      const today = new Date().toISOString().split('T')[0]
+                      const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+                      const isDefaultOff = staff?.weekly_off && dayName.toLowerCase() === staff.weekly_off.toLowerCase()
+                      if (isDefaultOff) return lang === 'bn' ? 'আজ আপনার সাপ্তাহিক ছুটি 🎉' : 'Today is your Weekly Off Day 🎉'
+                      return (lang === 'bn' ? 'আজ ডিউটি আছে: ' : 'Working Today: ') + (staff?.shift_start ? staff.shift_start.slice(0, 5) : '10:00') + ' AM'
+                    })()}
+                  </h2>
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.1)', padding: '12px 20px', borderRadius: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', textTransform: 'uppercase', opacity: 0.8 }}>{t.nextOff}</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#D4933A', marginTop: '2px' }}>{staff?.weekly_off || 'Friday'}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Duty Change Request Form */}
+            <div className="card" style={{ padding: '24px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
+                {t.dutyChangeTitle}
+              </h3>
+
+              <form onSubmit={handleDutyChangeSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div>
+                  <label className="label">{t.swapType}</label>
+                  <select
+                    className="input"
+                    value={newDutyChange.request_type}
+                    onChange={e => setNewDutyChange({ ...newDutyChange, request_type: e.target.value })}
+                  >
+                    <option value="day_off_swap">{t.dayOffSwap}</option>
+                    <option value="shift_swap">{t.shiftSwap}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="label">{t.requestDate}</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={newDutyChange.request_date}
+                    onChange={e => setNewDutyChange({ ...newDutyChange, request_date: e.target.value })}
+                    required
+                  />
+                </div>
+
+                {newDutyChange.request_type === 'shift_swap' && (
+                  <div>
+                    <label className="label">{t.newTime}</label>
+                    <input
+                      type="time"
+                      className="input"
+                      value={newDutyChange.new_shift_start}
+                      onChange={e => setNewDutyChange({ ...newDutyChange, new_shift_start: e.target.value })}
+                    />
+                  </div>
+                )}
+
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label className="label">{lang === 'bn' ? 'কারণ' : 'Reason'}</label>
+                  <textarea
+                    rows={2}
+                    className="input"
+                    placeholder={lang === 'bn' ? 'আবেদনের কারণ সংক্ষেপে লিখুন...' : 'Write reason for change request...'}
+                    value={newDutyChange.reason}
+                    onChange={e => setNewDutyChange({ ...newDutyChange, reason: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <button
+                    type="submit"
+                    disabled={submittingDutyChange}
+                    className="btn-primary"
+                    style={{ background: '#6B3A2A', color: 'white', border: 'none', padding: '10px 24px' }}
+                  >
+                    {submittingDutyChange ? (lang === 'bn' ? 'জমা হচ্ছে...' : 'Submitting...') : t.submitDutyChange}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Submitted Requests List */}
+            {dutyRequests.length > 0 && (
+              <div className="card" style={{ padding: '24px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
+                  {lang === 'bn' ? 'আমার আবেদনসমূহ' : 'My Submitted Duty Change Requests'}
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {dutyRequests.map(req => (
+                    <div key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderRadius: '8px', background: 'var(--bg-subtle)', border: '1px solid var(--border-light)' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '14px' }}>
+                          {req.request_type === 'day_off_swap' ? (lang === 'bn' ? 'ছুটির দিন পরিবর্তন' : 'Day Off Swap') : (lang === 'bn' ? 'শিফট পরিবর্তন' : 'Shift Swap')} — {req.request_date}
+                        </div>
+                        {req.reason && <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>"{req.reason}"</div>}
+                      </div>
+
+                      <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 700, background: req.status === 'pending' ? '#FFF3E0' : req.status === 'approved' ? '#E8F5E9' : '#FFEBEE', color: req.status === 'pending' ? '#E65100' : req.status === 'approved' ? '#2E7D32' : '#C62828', textTransform: 'capitalize' }}>
+                        {req.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── OVERVIEW TAB ── */}
         {activeTab === 'overview' && (

@@ -7,7 +7,7 @@ import Navbar from '../../../components/Navbar'
 import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
 import Link from 'next/link'
-import { Users, Plus, UserX, UserCheck, Trash2 } from 'lucide-react'
+import { Users, Plus, UserX, UserCheck, Trash2, QrCode } from 'lucide-react'
 
 export default function StaffDirectory() {
   const router = useRouter()
@@ -20,8 +20,10 @@ export default function StaffDirectory() {
     name: '', designation: '', contract_type: 'full_time',
     base_salary: '', join_date: new Date().toISOString().split('T')[0],
     emergency_contact: '', emergency_phone: '', notes: '',
-    serial: 999, email: ''
+    serial: 999, email: '',
+    shift_start: '10:00', weekly_off: 'Friday', grace_minutes: 15
   })
+  const [selectedCardStaff, setSelectedCardStaff] = useState(null)
   const [isSorting, setIsSorting] = useState(false)
   const [tempSerials, setTempSerials] = useState({})
 
@@ -52,6 +54,10 @@ export default function StaffDirectory() {
       return addToast('Please fill required fields', 'error')
     }
     try {
+      // Auto generate CC-001 format ID
+      const nextNum = (staff.length || 0) + 1
+      const generatedEmpId = `CC-${String(nextNum).padStart(3, '0')}`
+
       const { data, error } = await supabase.from('staff').insert([{
         name: form.name,
         designation: form.designation,
@@ -62,7 +68,11 @@ export default function StaffDirectory() {
         emergency_phone: form.emergency_phone,
         notes: form.notes,
         serial: parseInt(form.serial) || 999,
-        email: form.email
+        email: form.email,
+        employee_id: generatedEmpId,
+        shift_start: form.shift_start || '10:00',
+        weekly_off: form.weekly_off || 'Friday',
+        grace_minutes: parseInt(form.grace_minutes) || 15
       }]).select()
 
       if (error) throw error
@@ -72,15 +82,18 @@ export default function StaffDirectory() {
           staff_id: data[0].id,
           year: new Date().getFullYear()
         }])
+        // Auto-open ID card modal for immediate printing
+        setSelectedCardStaff(data[0])
       }
 
-      addToast('Staff member added successfully', 'success')
+      addToast(`Staff member added! ID: ${generatedEmpId}`, 'success')
       setShowAddForm(false)
       setForm({
         name: '', designation: '', contract_type: 'full_time',
         base_salary: '', join_date: new Date().toISOString().split('T')[0],
         emergency_contact: '', emergency_phone: '', notes: '',
-        serial: 999, email: ''
+        serial: 999, email: '',
+        shift_start: '10:00', weekly_off: 'Friday', grace_minutes: 15
       })
       fetchStaff()
     } catch (err) {
@@ -340,24 +353,25 @@ export default function StaffDirectory() {
                     paddingTop: '16px',
                     borderTop: '1px solid var(--border-light)'
                   }}>
-                    <Link
-                      href={'/staff/' + s.id}
+                    <button
+                      onClick={() => setSelectedCardStaff(s)}
+                      title="Generate ID Card / QR Sticker"
                       style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        padding: '8px',
-                        background: 'var(--bg-subtle)',
+                        padding: '8px 12px',
+                        background: '#FAF7F2',
+                        border: '1px solid #E8E0D4',
                         borderRadius: '6px',
-                        color: 'var(--accent-blue)',
-                        textDecoration: 'none',
+                        color: '#6B3A2A',
                         fontSize: '13px',
-                        fontWeight: 500,
-                        fontFamily: 'var(--font-body)',
-                        transition: 'background 0.15s ease'
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
                       }}
                     >
-                      View Profile
-                    </Link>
+                      <QrCode size={14} /> ID Card
+                    </button>
                     <button
                       onClick={() => toggleStatus(s.id, s.is_active)}
                       title={s.is_active ? 'Deactivate' : 'Activate'}
@@ -487,6 +501,43 @@ export default function StaffDirectory() {
             </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Shift Start</label>
+              <input
+                className="input"
+                type="time"
+                value={form.shift_start}
+                onChange={e => setForm({ ...form, shift_start: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Weekly Off</label>
+              <select
+                className="input"
+                value={form.weekly_off}
+                onChange={e => setForm({ ...form, weekly_off: e.target.value })}
+              >
+                <option value="Friday">Friday</option>
+                <option value="Saturday">Saturday</option>
+                <option value="Sunday">Sunday</option>
+                <option value="Monday">Monday</option>
+                <option value="Tuesday">Tuesday</option>
+                <option value="Wednesday">Wednesday</option>
+                <option value="Thursday">Thursday</option>
+              </select>
+            </div>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Grace (Mins)</label>
+              <input
+                className="input"
+                type="number"
+                value={form.grace_minutes}
+                onChange={e => setForm({ ...form, grace_minutes: e.target.value })}
+              />
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label className="label" style={{ color: 'var(--text-secondary)' }}>Emergency Contact</label>
@@ -520,6 +571,54 @@ export default function StaffDirectory() {
           </div>
         </div>
       </Modal>
+
+      {/* ID Card / QR Sticker Modal */}
+      {selectedCardStaff && (
+        <Modal
+          isOpen={!!selectedCardStaff}
+          onClose={() => setSelectedCardStaff(null)}
+          title="Employee Printable ID Card / QR Sticker"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            {/* Card Preview Container */}
+            <div id="printable-id-card" style={{
+              width: '320px',
+              background: 'linear-gradient(135deg, #6B3A2A 0%, #3D1E15 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              color: 'white',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+              textAlign: 'center',
+              position: 'relative'
+            }}>
+              <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-1px', color: '#D4933A' }}>CC</div>
+              <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px', opacity: 0.8, marginBottom: '16px' }}>Crown Coffee Staff ID</div>
+              
+              <div style={{ background: 'white', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(selectedCardStaff.employee_id || selectedCardStaff.id)}`}
+                  alt="QR Code"
+                  style={{ width: '130px', height: '130px', display: 'block' }}
+                />
+              </div>
+
+              <div style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px 0' }}>{selectedCardStaff.name}</div>
+              <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px', color: '#D4933A', fontWeight: 700 }}>{selectedCardStaff.designation}</div>
+              <div style={{ marginTop: '12px', fontSize: '16px', fontFamily: 'monospace', fontWeight: 700, background: 'rgba(255,255,255,0.1)', padding: '6px 12px', borderRadius: '6px', display: 'inline-block' }}>
+                {selectedCardStaff.employee_id || 'CC-001'}
+              </div>
+            </div>
+
+            <button
+              onClick={() => window.print()}
+              className="btn-primary"
+              style={{ background: '#6B3A2A', color: 'white', border: 'none', width: '100%', padding: '12px' }}
+            >
+              Print ID Card / Sticker
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

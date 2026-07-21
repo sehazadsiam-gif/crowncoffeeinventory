@@ -146,13 +146,14 @@ export default function Navbar() {
       icon: <Users size={16} />,
       children: [
         { href: '/staff', label: 'Directory' },
+        { href: '/attendance', label: '⚡ Live Attendance' },
+        { href: '/attendance/roster', label: '📅 Duty Roster' },
+        { href: '/attendance/requests', label: '📩 Duty & Leave Requests' },
+        { href: '/attendance/reports', label: '📊 Attendance Reports' },
         { href: '/admin/tasks', label: 'Assign Tasks' },
-        { href: '/staff/attendance', label: 'Attendance' },
-        { href: '/attendance-import', label: 'Attendance Import' },
         { href: '/admin/overtime', label: 'Overtime' },
         { href: '/staff/payroll', label: 'Payroll' },
         { href: '/staff/advances', label: 'Advances' },
-        { href: '/staff/leave-requests', label: 'Leave Requests' },
         { href: '/staff/service-charge', label: 'Service Charge' },
         { href: '/staff/history', label: 'Payment History' },
       ]
