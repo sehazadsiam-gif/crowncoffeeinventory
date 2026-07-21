@@ -29,6 +29,12 @@ export default function StaffDirectory() {
   const [editingStaff, setEditingStaff] = useState(null)
   const [isSorting, setIsSorting] = useState(false)
   const [tempSerials, setTempSerials] = useState({})
+  
+  // Image Adjustment States
+  const [photoZoom, setPhotoZoom] = useState(100)
+  const [photoOffsetX, setPhotoOffsetX] = useState(0)
+  const [photoOffsetY, setPhotoOffsetY] = useState(0)
+  const [photoFit, setPhotoFit] = useState('cover')
 
     useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -996,31 +1002,48 @@ export default function StaffDirectory() {
                 <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '2px', opacity: 0.9 }}>Official Staff ID Card</div>
               </div>
 
-              {/* Photo & Main Badges */}
+              {/* Photo & Main Badges with HD Print Adjustments */}
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
-                {selectedCardStaff.photo_url ? (
-                  <img
-                    src={selectedCardStaff.photo_url}
-                    alt={selectedCardStaff.name}
-                    style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #6B3A2A' }}
-                  />
-                ) : (
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '50%',
-                    background: '#FAF7F2',
-                    border: '3px solid #6B3A2A',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '24px',
-                    fontWeight: 800,
-                    color: '#6B3A2A'
-                  }}>
-                    {selectedCardStaff.name ? selectedCardStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'CC'}
-                  </div>
-                )}
+                <div style={{
+                  width: '84px',
+                  height: '84px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '3.5px solid #6B3A2A',
+                  position: 'relative',
+                  background: '#FAF7F2',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                }}>
+                  {selectedCardStaff.photo_url ? (
+                    <img
+                      src={selectedCardStaff.photo_url}
+                      alt={selectedCardStaff.name}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: photoFit,
+                        transform: `scale(${photoZoom / 100}) translate(${photoOffsetX}px, ${photoOffsetY}px)`,
+                        transformOrigin: 'center center',
+                        imageRendering: '-webkit-optimize-contrast',
+                        WebkitPrintColorAdjust: 'exact',
+                        printColorAdjust: 'exact'
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '24px',
+                      fontWeight: 800,
+                      color: '#6B3A2A'
+                    }}>
+                      {selectedCardStaff.name ? selectedCardStaff.name.split(' ').map(n => n[0]).join('').slice(0, 2) : 'CC'}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div style={{ fontSize: '18px', fontWeight: 800, color: '#1C1410', marginBottom: '2px' }}>{selectedCardStaff.name}</div>
@@ -1114,6 +1137,86 @@ export default function StaffDirectory() {
               </div>
             </div>
 
+            {/* Photo Adjuster Controls */}
+            {selectedCardStaff.photo_url && (
+              <div style={{
+                width: '100%',
+                background: '#FAF7F2',
+                border: '1px solid #E8E0D4',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                fontSize: '11px',
+                display: 'grid',
+                gap: '10px'
+              }}>
+                <div style={{ fontWeight: 800, color: '#6B3A2A', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>🎛️ Adjust Photo Size & Position</span>
+                  <span style={{ fontSize: '10px', background: '#6B3A2A', color: 'white', padding: '2px 8px', borderRadius: '10px' }}>
+                    Zoom: {photoZoom}%
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', color: '#666', fontWeight: 600, marginBottom: '2px' }}>Zoom / Size</label>
+                    <input
+                      type="range"
+                      min="50"
+                      max="250"
+                      value={photoZoom}
+                      onChange={e => setPhotoZoom(Number(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', color: '#666', fontWeight: 600, marginBottom: '2px' }}>Crop Mode</label>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setPhotoFit('cover')}
+                        style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 700, borderRadius: '4px', border: '1px solid #6B3A2A', background: photoFit === 'cover' ? '#6B3A2A' : 'white', color: photoFit === 'cover' ? 'white' : '#6B3A2A', cursor: 'pointer' }}
+                      >
+                        Cover
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPhotoFit('contain')}
+                        style={{ flex: 1, padding: '4px', fontSize: '10px', fontWeight: 700, borderRadius: '4px', border: '1px solid #6B3A2A', background: photoFit === 'contain' ? '#6B3A2A' : 'white', color: photoFit === 'contain' ? 'white' : '#6B3A2A', cursor: 'pointer' }}
+                      >
+                        Contain
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', color: '#666', fontWeight: 600, marginBottom: '2px' }}>Move Horizontal (X)</label>
+                    <input
+                      type="range"
+                      min="-50"
+                      max="50"
+                      value={photoOffsetX}
+                      onChange={e => setPhotoOffsetX(Number(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', color: '#666', fontWeight: 600, marginBottom: '2px' }}>Move Vertical (Y)</label>
+                    <input
+                      type="range"
+                      min="-50"
+                      max="50"
+                      value={photoOffsetY}
+                      onChange={e => setPhotoOffsetY(Number(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
               <label style={{
                 flex: 1,
@@ -1157,7 +1260,7 @@ export default function StaffDirectory() {
                 className="btn-primary"
                 style={{ flex: 1, background: '#6B3A2A', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 700 }}
               >
-                🖨️ Print Staff ID Card
+                🖨️ Print HD Staff ID Card
               </button>
             </div>
           </div>
