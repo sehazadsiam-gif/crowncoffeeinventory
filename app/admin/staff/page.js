@@ -35,6 +35,45 @@ export default function StaffDirectory() {
   const [photoOffsetX, setPhotoOffsetX] = useState(0)
   const [photoOffsetY, setPhotoOffsetY] = useState(0)
   const [photoFit, setPhotoFit] = useState('cover')
+  const [pdfLoading, setPdfLoading] = useState(false)
+
+  async function downloadPdfCard() {
+    if (!selectedCardStaff) return
+    const cardEl = document.getElementById('printable-id-card')
+    if (!cardEl) return
+
+    setPdfLoading(true)
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const { jsPDF } = await import('jspdf')
+
+      const canvas = await html2canvas(cardEl, {
+        scale: 4, // 300 DPI ultra sharpness
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#FFFFFF',
+        logging: false
+      })
+
+      const imgData = canvas.toDataURL('image/png', 1.0)
+      // Standard CR80 ID Card dimensions: 85mm x 53.5mm landscape
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: [85, 53.5]
+      })
+
+      pdf.addImage(imgData, 'PNG', 0, 0, 85, 53.5, undefined, 'FAST')
+      const fileName = `${(selectedCardStaff.name || 'Staff').replace(/\s+/g, '_')}_ID_Card_85x53.5mm.pdf`
+      pdf.save(fileName)
+      addToast('ID Card PDF downloaded (85×53.5mm)!', 'success')
+    } catch (err) {
+      console.error('PDF download error:', err)
+      addToast('Failed to generate PDF', 'error')
+    } finally {
+      setPdfLoading(false)
+    }
+  }
 
     useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -1256,11 +1295,44 @@ export default function StaffDirectory() {
               </label>
 
               <button
+                onClick={downloadPdfCard}
+                disabled={pdfLoading}
+                className="btn-primary"
+                style={{
+                  flex: 1,
+                  background: '#059669',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: pdfLoading ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                {pdfLoading ? '⏳ Generating PDF...' : '📄 Download PDF (85×53.5mm)'}
+              </button>
+
+              <button
                 onClick={() => window.print()}
                 className="btn-primary"
-                style={{ flex: 1, background: '#6B3A2A', color: 'white', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 700 }}
+                style={{
+                  flex: 1,
+                  background: '#6B3A2A',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
               >
-                🖨️ Print HD Staff ID Card
+                🖨️ Print HD Card
               </button>
             </div>
           </div>
