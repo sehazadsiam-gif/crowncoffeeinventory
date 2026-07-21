@@ -7,9 +7,8 @@ import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
 import { 
   Users, CheckCircle2, Clock, XCircle, Calendar, AlertTriangle, 
-  QrCode, RefreshCw, Sparkles, Send, ShieldAlert, FileText, Check, X
+  Wifi, RefreshCw, Sparkles, Search, ShieldCheck, Edit3, Check
 } from 'lucide-react'
-
 import { supabase } from '../../lib/supabase'
 
 export default function AttendanceDashboardPage() {
@@ -22,14 +21,17 @@ export default function AttendanceDashboardPage() {
   const [qrCodeInput, setQrCodeInput] = useState('')
   const [checkingIn, setCheckingIn] = useState(false)
   const [isKioskMode, setIsKioskMode] = useState(false)
+  const [currentTime, setCurrentTime] = useState(new Date())
 
-  // AI Assistant Chat & Anomalies state
-  const [anomalies, setAnomalies] = useState([])
-  const [aiQuery, setAiQuery] = useState('')
-  const [aiAnswer, setAiAnswer] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
+  // Department & Search Filters
+  const [departmentFilter, setDepartmentFilter] = useState('all') // 'all' | 'front' | 'kitchen'
+  const [searchQuery, setSearchQuery] = useState('')
+  const [lastTapEvent, setLastTapEvent] = useState(null)
 
   useEffect(() => {
+    // Clock Ticker
+    const clockTimer = setInterval(() => setCurrentTime(new Date()), 1000)
+
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
     const isKiosk = typeof window !== 'undefined' && (window.location.search.includes('kiosk=true') || role === 'kiosk')
@@ -37,25 +39,23 @@ export default function AttendanceDashboardPage() {
 
     if (!isKiosk && (!token || (role !== 'admin' && role !== 'sub_admin' && role !== 'manager'))) {
       router.replace('/')
-      return
+      return () => clearInterval(clockTimer)
     }
 
     fetchTodayData()
-    if (!isKiosk) fetchAnomalies()
 
     // Supabase Realtime WebSocket subscription for live updates
     const channel = supabase.channel('attendance_kiosk_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, (payload) => {
         fetchTodayData(true)
+        if (payload.new) triggerTapToast(payload.new)
       })
       .subscribe()
 
-    // Real-time live polling fallback every 15s
-    const timer = setInterval(() => {
-      fetchTodayData(true)
-    }, 15000)
+    const timer = setInterval(() => fetchTodayData(true), 12000)
 
     return () => {
+      clearInterval(clockTimer)
       supabase.removeChannel(channel)
       clearInterval(timer)
     }
@@ -74,7 +74,7 @@ export default function AttendanceDashboardPage() {
 
       const currentTime = Date.now()
       if (currentTime - lastKeyTime > 120) {
-        buffer = '' // Reset buffer if typing speed is too slow (human typing)
+        buffer = ''
       }
       lastKeyTime = currentTime
 
@@ -100,352 +100,422 @@ export default function AttendanceDashboardPage() {
       const json = await res.json()
       if (res.ok) {
         setData(json)
-      } else {
-        if (!silent) addToast(json.error || 'Failed to load attendance', 'error')
       }
     } catch (err) {
-      if (!silent) addToast('Error fetching attendance data', 'error')
+      console.error('Failed to fetch today attendance:', err)
     } finally {
       if (!silent) setLoading(false)
     }
   }
 
-  async function fetchAnomalies() {
-    try {
-      const res = await fetch('/api/attendance/agent/anomalies')
-      const json = await res.json()
-      if (res.ok) setAnomalies(json.anomalies || [])
-    } catch (e) {
-      console.error('Failed to fetch anomalies', e)
-    }
+  function triggerTapToast(entry) {
+    const timeStr = entry.check_in_at
+      ? new Date(entry.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+      : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+
+    setLastTapEvent({
+      name: entry.employee_id || 'Staff Member',
+      status: (entry.status || 'present').toUpperCase(),
+      time: timeStr
+    })
+    setTimeout(() => setLastTapEvent(null), 6000)
   }
 
-  async function handleCheckin(identifier, statusOverride = null, source = 'manual') {
+  async function handleCheckin(identifier, overrideStatus = null, source = 'manual') {
+    if (!identifier) {
+      return addToast('Please enter an Employee ID or RFID card code', 'error')
+    }
+
     try {
       setCheckingIn(true)
-      const payload = {
-        identifier,
-        source: source || (isKioskMode ? 'rfid' : 'manual'),
-        adminOverride: !!statusOverride,
-        forceStatus: statusOverride
-      }
-
       const res = await fetch('/api/attendance/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          identifier,
+          source,
+          adminOverride: !!overrideStatus,
+          forceStatus: overrideStatus
+        })
       })
 
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Check-in failed')
-
-      addToast(`Logged: ${json.staff.name} is ${json.status.toUpperCase()}`, 'success')
-      setQrCodeInput('')
-      setQrModalOpen(false)
-      fetchTodayData()
+      if (res.ok) {
+        addToast(
+          json.alreadyCheckedOut
+            ? `Checked OUT: ${json.staff.name} (${json.hoursWorked} hrs duty)`
+            : `Checked IN: ${json.staff.name} (${json.status.toUpperCase()})`,
+          'success'
+        )
+        setQrCodeInput('')
+        setQrModalOpen(false)
+        fetchTodayData(true)
+      } else {
+        addToast(json.error || 'Check-in failed', 'error')
+      }
     } catch (err) {
-      addToast(err.message, 'error')
+      addToast('Error logging attendance', 'error')
     } finally {
       setCheckingIn(false)
     }
   }
 
-  async function handleAskAI(e) {
-    e.preventDefault()
-    if (!aiQuery.trim()) return
+  const records = data.records || []
+  
+  // Filter by department & search
+  const filteredRecords = records.filter(r => {
+    const matchesDept = departmentFilter === 'all' || (r.department || 'front') === departmentFilter
+    const matchesSearch = !searchQuery || 
+      r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (r.employee_id && r.employee_id.toLowerCase().includes(searchQuery.toLowerCase()))
+    return matchesDept && matchesSearch
+  })
 
-    try {
-      setAiLoading(true)
-      setAiAnswer('')
-      const res = await fetch('/api/attendance/agent/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: aiQuery })
-      })
-      const json = await res.json()
-      if (res.ok) {
-        setAiAnswer(json.answer)
-      } else {
-        addToast(json.error || 'AI Query failed', 'error')
-      }
-    } catch (err) {
-      addToast('Error asking AI assistant', 'error')
-    } finally {
-      setAiLoading(false)
-    }
-  }
-
-  async function handleDismissAnomaly(id) {
-    try {
-      await fetch('/api/attendance/agent/anomalies', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id })
-      })
-      setAnomalies(anomalies.filter(a => a.id !== id))
-    } catch (err) {
-      addToast('Error dismissing anomaly', 'error')
-    }
-  }
-
-  const statusCards = [
-    { title: 'Present', count: data.summary?.present || 0, icon: <CheckCircle2 size={24} color="#2e7d32" />, bg: '#e8f5e9', border: '#2e7d32', color: '#1b5e20' },
-    { title: 'Late', count: data.summary?.late || 0, icon: <Clock size={24} color="#ed6c02" />, bg: '#fff3e0', border: '#ed6c02', color: '#e65100' },
-    { title: 'Absent', count: data.summary?.absent || 0, icon: <XCircle size={24} color="#d32f2f" />, bg: '#ffebee', border: '#d32f2f', color: '#c62828' },
-    { title: 'On Leave', count: data.summary?.on_leave || 0, icon: <Calendar size={24} color="#0288d1" />, bg: '#e1f5fe', border: '#0288d1', color: '#01579b' }
-  ]
+  const presentCount = records.filter(r => r.status === 'present').length
+  const lateCount = records.filter(r => r.status === 'late').length
+  const totalCount = records.length
+  const absentCount = totalCount - (presentCount + lateCount)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-main, #faf7f2)' }}>
-      <Navbar />
+    <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {!isKioskMode && <Navbar />}
 
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px 60px' }}>
+      <main style={{ maxWidth: '1600px', margin: '0 auto', padding: isKioskMode ? '24px' : '32px 24px 60px' }}>
         
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+        {/* Top Header & Live Clock */}
+        <div style={{
+          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+          borderRadius: '20px',
+          padding: '24px 32px',
+          color: 'white',
+          marginBottom: '28px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '20px',
+          boxShadow: '0 10px 30px rgba(15,23,42,0.12)'
+        }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-                Live Attendance Dashboard
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ background: '#D4933A', color: '#0F172A', padding: '6px 14px', borderRadius: '10px', fontWeight: 900, fontSize: '15px', letterSpacing: '1px' }}>
+                CROWN COFFEE
+              </div>
+              <h1 style={{ fontSize: '24px', fontWeight: 900, margin: 0, color: '#F8FAFC' }}>
+                Attendance & RFID Kiosk
               </h1>
-              <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '12px', background: '#e8f5e9', color: '#2e7d32', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2e7d32', display: 'inline-block' }}></span> Realtime
-              </span>
             </div>
-            <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '14px' }}>
-              Today is {data.date ? new Date(data.date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }) : '...'}
+            <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#94A3B8' }}>
+              Tap RFID card anytime on USB reader to check in/out. Realtime WebSocket sync enabled.
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={() => fetchTodayData()}
-              className="btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white' }}
-            >
-              <RefreshCw size={16} /> Refresh
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button
               onClick={() => setQrModalOpen(true)}
-              className="btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#6B3A2A', border: 'none', color: 'white' }}
+              style={{
+                background: '#D4933A',
+                color: '#0F172A',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '12px',
+                fontWeight: 800,
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
             >
-              <QrCode size={18} /> Quick Check-In / Scan
+              <Wifi size={18} /> Tap Card / Manual Code
             </button>
+
+            <div style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '14px', padding: '10px 20px', textAlign: 'right' }}>
+              <div style={{ fontSize: '20px', fontWeight: 900, fontFamily: 'monospace', letterSpacing: '1px', color: '#38BDF8' }}>
+                {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+              </div>
+              <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>
+                {currentTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* AI Anomalies Digest Banner */}
-        {anomalies.length > 0 && (
-          <div style={{ background: '#FFF8E1', border: '1px solid #FFE082', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#B78103', fontWeight: 700, fontSize: '15px' }}>
-              <ShieldAlert size={20} /> AI Attendance Anomaly Digest ({anomalies.length})
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {anomalies.map(a => (
-                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '10px 14px', borderRadius: '8px', border: '1px solid #FFF3E0', fontSize: '13px' }}>
-                  <div>
-                    <span style={{ fontWeight: 700, color: '#333' }}>{a.staff?.name || a.detail?.staff_name}: </span>
-                    <span style={{ color: '#555' }}>
-                      {a.type === 'repeated_lateness' && `Late ${a.detail?.late_count} times in last 30 days`}
-                      {a.type === 'overtime_risk' && `High hours (${a.detail?.hours_worked}h in 30 days) — overtime risk`}
-                      {a.type === 'high_absence' && `Absent ${a.detail?.absent_count} times in last 30 days`}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleDismissAnomaly(a.id)}
-                    style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '12px', padding: '2px 8px' }}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              ))}
-            </div>
+        {/* Live RFID Tap Alert Toast */}
+        {lastTapEvent && (
+          <div style={{
+            background: '#065F46',
+            color: 'white',
+            borderRadius: '14px',
+            padding: '16px 24px',
+            marginBottom: '24px',
+            fontWeight: 800,
+            fontSize: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 4px 20px rgba(6,95,70,0.3)'
+          }}>
+            <Sparkles size={22} />
+            <span>🟢 REALTIME CARD TAP: <strong>{lastTapEvent.name}</strong> — {lastTapEvent.status} at {lastTapEvent.time}</span>
           </div>
         )}
 
-        {/* 4 Status Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-          {statusCards.map((c, i) => (
-            <div key={i} style={{ background: c.bg, border: `2px solid ${c.border}`, borderRadius: '16px', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-              <div>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: c.color }}>{c.title}</p>
-                <h2 style={{ margin: '8px 0 0 0', fontSize: '36px', fontWeight: 900, color: c.color, lineHeight: 1 }}>{c.count}</h2>
-              </div>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                {c.icon}
-              </div>
+        {/* Stats Row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+          <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ background: '#F1F5F9', color: '#475569', padding: '12px', borderRadius: '12px' }}><Users size={24} /></div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Active Staff</div>
+              <div style={{ fontSize: '26px', fontWeight: 900, color: '#0F172A' }}>{totalCount}</div>
             </div>
-          ))}
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ background: '#DCFCE7', color: '#166534', padding: '12px', borderRadius: '12px' }}><CheckCircle2 size={24} /></div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Present Today</div>
+              <div style={{ fontSize: '26px', fontWeight: 900, color: '#166534' }}>{presentCount + lateCount}</div>
+            </div>
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ background: '#FEF3C7', color: '#92400E', padding: '12px', borderRadius: '12px' }}><Clock size={24} /></div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Late Arrivals</div>
+              <div style={{ fontSize: '26px', fontWeight: 900, color: '#92400E' }}>{lateCount}</div>
+            </div>
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ background: '#FEE2E2', color: '#991B1B', padding: '12px', borderRadius: '12px' }}><AlertTriangle size={24} /></div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Not Checked In</div>
+              <div style={{ fontSize: '26px', fontWeight: 900, color: '#991B1B' }}>{absentCount}</div>
+            </div>
+          </div>
         </div>
 
-        {/* Main Content: Live Staff Status Grid + Natural Language AI Box */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '24px' }}>
+        {/* Filter Toolbar: Department Tabs & Search Bar */}
+        <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '16px 20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           
-          {/* Left: Live Staff Table */}
-          <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #E8E0D4', padding: '24px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1C1410', margin: '0 0 16px 0' }}>
-              Today's Roster & Live Status
-            </h3>
-
-            {loading ? (
-              <div style={{ padding: '40px', textAlign: 'center' }}><div className="loader"></div></div>
-            ) : data.records?.length === 0 ? (
-              <p style={{ color: '#999', textAlign: 'center', padding: '40px' }}>No active staff found.</p>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid #F0EAE1', color: '#8C7A6B', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <th style={{ padding: '12px' }}>Employee</th>
-                      <th style={{ padding: '12px' }}>Shift</th>
-                      <th style={{ padding: '12px' }}>Check In</th>
-                      <th style={{ padding: '12px' }}>Status</th>
-                      <th style={{ padding: '12px', textAlign: 'right' }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.records.map(r => {
-                      let badgeBg = '#f5f5f5'
-                      let badgeColor = '#666'
-                      if (r.status === 'present') { badgeBg = '#e8f5e9'; badgeColor = '#2e7d32'; }
-                      if (r.status === 'late') { badgeBg = '#fff3e0'; badgeColor = '#e65100'; }
-                      if (r.status === 'absent') { badgeBg = '#ffebee'; badgeColor = '#c62828'; }
-                      if (r.status === 'on_leave') { badgeBg = '#e1f5fe'; badgeColor = '#01579b'; }
-                      if (r.status === 'off') { badgeBg = '#f3e5f5'; badgeColor = '#7b1fa2'; }
-
-                      return (
-                        <tr key={r.staff_id} style={{ borderBottom: '1px solid #F7F3EE' }}>
-                          <td style={{ padding: '12px' }}>
-                            <div style={{ fontWeight: 700, color: '#1C1410' }}>{r.name}</div>
-                            <div style={{ fontSize: '11px', color: '#9C8A76' }}>{r.employee_id} • {r.designation}</div>
-                          </td>
-                          <td style={{ padding: '12px', color: '#555', fontWeight: 500 }}>
-                            {r.shift_start ? r.shift_start.slice(0, 5) : '10:00'}
-                          </td>
-                          <td style={{ padding: '12px', color: '#333' }}>
-                            {r.check_in_at ? (
-                              <div>
-                                <div style={{ fontWeight: 600 }}>{new Date(r.check_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                                {r.minutes_late > 0 && <span style={{ fontSize: '11px', color: '#e65100' }}>({r.minutes_late}m late)</span>}
-                              </div>
-                            ) : (
-                              <span style={{ color: '#ccc', fontStyle: 'italic' }}>Not logged</span>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            <span style={{ padding: '4px 10px', borderRadius: '12px', background: badgeBg, color: badgeColor, fontWeight: 700, fontSize: '12px', textTransform: 'capitalize' }}>
-                              {r.status.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                              <button
-                                onClick={() => handleCheckin(r.staff_id, 'present')}
-                                title="Mark Present"
-                                style={{ background: '#e8f5e9', border: '1px solid #a5d6a7', borderRadius: '6px', padding: '4px 8px', color: '#2e7d32', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-                              >
-                                Present
-                              </button>
-                              <button
-                                onClick={() => handleCheckin(r.staff_id, 'late')}
-                                title="Mark Late"
-                                style={{ background: '#fff3e0', border: '1px solid #ffe0b2', borderRadius: '6px', padding: '4px 8px', color: '#e65100', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
-                              >
-                                Late
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[
+              { id: 'all', label: 'All Staff' },
+              { id: 'front', label: '☕ Front Staff' },
+              { id: 'kitchen', label: '🍳 Kitchen Staff' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setDepartmentFilter(tab.id)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: departmentFilter === tab.id ? '#0F172A' : '#F1F5F9',
+                  color: departmentFilter === tab.id ? 'white' : '#475569',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
-          {/* Right: AI Natural Language Coordinator Widget */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #E8E0D4', padding: '20px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Sparkles size={20} color="#C9943A" />
-                <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#1C1410' }}>AI Assistant Query</h4>
-              </div>
-              <p style={{ fontSize: '12px', color: '#8C7A6B', margin: '0 0 16px 0' }}>
-                Ask natural language questions about lateness, hours, or attendance trends.
-              </p>
-
-              <form onSubmit={handleAskAI} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <textarea
-                  value={aiQuery}
-                  onChange={e => setAiQuery(e.target.value)}
-                  placeholder="e.g. Who was late more than 2 times this month?"
-                  rows={3}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #E0D6C8', fontSize: '13px', fontFamily: 'inherit', resize: 'vertical' }}
-                />
-                <button
-                  type="submit"
-                  disabled={aiLoading}
-                  className="btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#6B3A2A', color: 'white', border: 'none', padding: '10px' }}
-                >
-                  <Send size={14} /> {aiLoading ? 'Analyzing...' : 'Ask Assistant'}
-                </button>
-              </form>
-
-              {aiAnswer && (
-                <div style={{ marginTop: '16px', background: '#FAF7F2', borderRadius: '8px', padding: '12px', border: '1px solid #E8E0D4', fontSize: '13px', color: '#4A3B32', lineHeight: '1.5' }}>
-                  <strong>AI Response:</strong>
-                  <p style={{ margin: '6px 0 0 0', whiteSpace: 'pre-wrap' }}>{aiAnswer}</p>
-                </div>
-              )}
-            </div>
+          <div style={{ position: 'relative', width: '280px' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+            <input
+              type="text"
+              placeholder="Search staff by name or ID..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px 8px 36px',
+                borderRadius: '10px',
+                border: '1px solid #CBD5E1',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
           </div>
-
         </div>
+
+        {/* Staff Grid */}
+        {loading ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: '#64748B' }}>Loading Staff Directory & RFID Attendance…</div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+            {filteredRecords.map(r => {
+              const isPresent = r.status === 'present'
+              const isLate = r.status === 'late'
+              const isOff = r.status === 'off'
+              const isLeave = r.status === 'on_leave'
+              const isCheckedIn = isPresent || isLate
+
+              let statusBg = '#F1F5F9'
+              let statusColor = '#475569'
+              let statusText = 'NOT CHECKED IN'
+
+              if (isPresent) { statusBg = '#DCFCE7'; statusColor = '#15803D'; statusText = 'PRESENT' }
+              else if (isLate) { statusBg = '#FEF3C7'; statusColor = '#B45309'; statusText = `LATE (${r.minutes_late || 0}m)` }
+              else if (isLeave) { statusBg = '#DBEAFE'; statusColor = '#1D4ED8'; statusText = 'ON LEAVE' }
+              else if (isOff) { statusBg = '#F3E8FF'; statusColor = '#7E22CE'; statusText = 'DAY OFF' }
+
+              return (
+                <div key={r.staff_id} style={{
+                  background: 'white',
+                  border: isCheckedIn ? '2px solid #16A34A' : '1px solid #E2E8F0',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justify: 'space-between',
+                  boxShadow: isCheckedIn ? '0 4px 14px rgba(22,163,74,0.08)' : '0 2px 6px rgba(0,0,0,0.02)',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        {r.photo_url ? (
+                          <img src={r.photo_url} alt={r.name} style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E2E8F0' }} />
+                        ) : (
+                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#F1F5F9', border: '2px solid #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#475569', fontSize: '16px' }}>
+                            {r.name ? r.name.slice(0, 2).toUpperCase() : 'CC'}
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>{r.name}</div>
+                          <div style={{ fontSize: '12px', color: '#64748B' }}>{r.employee_id} • {r.designation}</div>
+                        </div>
+                      </div>
+
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        background: statusBg,
+                        color: statusColor,
+                        letterSpacing: '0.03em'
+                      }}>
+                        {statusText}
+                      </span>
+                    </div>
+
+                    {/* Department Tag & Card Status */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+                      <span style={{
+                        fontSize: '11px',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        background: r.department === 'kitchen' ? '#FEF3C7' : '#E0F2FE',
+                        color: r.department === 'kitchen' ? '#92400E' : '#0369A1',
+                        fontWeight: 700
+                      }}>
+                        {r.department === 'kitchen' ? '🍳 Kitchen Staff' : '☕ Front Staff'}
+                      </span>
+
+                      {r.rfid_code ? (
+                        <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 700 }}>
+                          💳 RFID Active
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: '#D97706', fontWeight: 600 }}>
+                          ⚠️ Card Unpaired
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Timing & Check In Action */}
+                  <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '14px', color: '#334155' }}>
+                      <div>
+                        <span style={{ color: '#94A3B8', fontSize: '10px', display: 'block', fontWeight: 700 }}>CHECK-IN</span>
+                        <strong style={{ fontSize: '13px' }}>
+                          {r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span style={{ color: '#94A3B8', fontSize: '10px', display: 'block', fontWeight: 700 }}>CHECK-OUT</span>
+                        <strong style={{ fontSize: '13px' }}>
+                          {r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                        </strong>
+                      </div>
+
+                      {r.hours_worked > 0 && (
+                        <div>
+                          <span style={{ color: '#94A3B8', fontSize: '10px', display: 'block', fontWeight: 700 }}>DUTY</span>
+                          <strong style={{ fontSize: '13px', color: '#16A34A' }}>{r.hours_worked}h</strong>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleCheckin(r.staff_id, null, 'manual')}
+                      disabled={checkingIn}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        background: isCheckedIn ? '#F1F5F9' : '#0F172A',
+                        color: isCheckedIn ? '#0F172A' : 'white',
+                        border: isCheckedIn ? '1px solid #CBD5E1' : 'none',
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {isCheckedIn ? 'Clock Out' : 'Clock In Now'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Modal: Manual RFID Tap Input */}
+        {qrModalOpen && (
+          <Modal isOpen={qrModalOpen} onClose={() => setQrModalOpen(false)} title="Tap RFID Card or Enter Code">
+            <div style={{ textAlign: 'center', padding: '16px' }}>
+              <div style={{ background: '#F1F5F9', border: '2px dashed #CBD5E1', borderRadius: '16px', padding: '24px', marginBottom: '20px' }}>
+                <Wifi size={40} color="#0F172A" style={{ marginBottom: '8px' }} />
+                <div style={{ fontWeight: 800, fontSize: '16px', color: '#0F172A' }}>Ready for RFID Card Tap</div>
+                <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>Tap your 24 Tk card on the USB reader or enter code manually</div>
+              </div>
+
+              <input
+                id="rfid-kiosk-input"
+                type="text"
+                placeholder="RFID Code or Employee ID..."
+                value={qrCodeInput}
+                onChange={e => setQrCodeInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleCheckin(qrCodeInput, null, 'rfid')
+                }}
+                autoFocus
+                style={{ width: '100%', padding: '12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '16px', textAlign: 'center', marginBottom: '16px', outline: 'none' }}
+              />
+
+              <button
+                onClick={() => handleCheckin(qrCodeInput, null, 'rfid')}
+                disabled={checkingIn}
+                style={{ width: '100%', padding: '12px', background: '#0F172A', color: 'white', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                {checkingIn ? 'Processing...' : 'Submit Check-In'}
+              </button>
+            </div>
+          </Modal>
+        )}
 
       </main>
-
-      {/* QR Checkin Modal */}
-      <Modal
-        isOpen={qrModalOpen}
-        onClose={() => setQrModalOpen(false)}
-        title="Check-In via QR Code / Employee ID"
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{ fontSize: '13px', color: '#666', margin: 0 }}>
-            Enter or scan the Employee ID (e.g. <code>CC-001</code>) to record check-in instantly.
-          </p>
-
-          <input
-            type="text"
-            placeholder="Enter Employee ID (e.g. CC-001)"
-            value={qrCodeInput}
-            onChange={e => setQrCodeInput(e.target.value)}
-            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '16px', width: '100%', textTransform: 'uppercase' }}
-            onKeyDown={e => { if (e.key === 'Enter' && qrCodeInput) handleCheckin(qrCodeInput) }}
-          />
-
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <button
-              onClick={() => setQrModalOpen(false)}
-              className="btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleCheckin(qrCodeInput)}
-              disabled={checkingIn || !qrCodeInput}
-              className="btn-primary"
-              style={{ background: '#6B3A2A', color: 'white', border: 'none' }}
-            >
-              {checkingIn ? 'Logging...' : 'Submit Check-In'}
-            </button>
-          </div>
-        </div>
-      </Modal>
-
     </div>
   )
 }
