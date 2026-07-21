@@ -96,7 +96,7 @@ export default function AttendanceDashboardPage() {
   async function fetchTodayData(silent = false) {
     try {
       if (!silent) setLoading(true)
-      const res = await fetch('/api/attendance/today')
+      const res = await fetch(`/api/attendance/today?t=${Date.now()}`, { cache: 'no-store' })
       const json = await res.json()
       if (res.ok) {
         setData(json)

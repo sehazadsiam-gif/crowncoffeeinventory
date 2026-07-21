@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request) {
   try {
     const today = new Date().toISOString().split('T')[0]
@@ -92,7 +95,10 @@ export async function GET(request) {
       off: records.filter(r => r.status === 'off').length
     }
 
-    return NextResponse.json({ date: today, summary, records })
+    return NextResponse.json(
+      { date: today, summary, records },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate' } }
+    )
   } catch (err) {
     console.error('[GET /api/attendance/today]', err)
     return NextResponse.json({ error: err.message || 'Failed to fetch today attendance' }, { status: 500 })
