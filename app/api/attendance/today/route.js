@@ -5,14 +5,25 @@ export async function GET(request) {
   try {
     const today = new Date().toISOString().split('T')[0]
 
-    // Fetch all active staff
-    const { data: staff, error: staffErr } = await supabaseAdmin
+    // Fetch all active staff (fallback if is_rostered column not yet created)
+    let staff = []
+    let { data: sData, error: staffErr } = await supabaseAdmin
       .from('staff')
       .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes, is_rostered')
       .eq('is_active', true)
       .order('serial', { ascending: true })
 
-    if (staffErr) throw staffErr
+    if (staffErr) {
+      const fallback = await supabaseAdmin
+        .from('staff')
+        .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes')
+        .eq('is_active', true)
+        .order('serial', { ascending: true })
+      if (fallback.error) throw fallback.error
+      staff = (fallback.data || []).map(s => ({ ...s, is_rostered: true }))
+    } else {
+      staff = sData || []
+    }
 
     // Fetch today's attendance logs
     const { data: logs, error: logsErr } = await supabaseAdmin

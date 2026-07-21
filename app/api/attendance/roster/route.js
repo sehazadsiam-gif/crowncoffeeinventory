@@ -18,14 +18,25 @@ export async function GET(request) {
 
     if (rErr) throw rErr
 
-    // Fetch active staff
-    const { data: staff, error: sErr } = await supabaseAdmin
+    // Fetch active staff (fallback if is_rostered column not yet created)
+    let staff = []
+    let { data: sData, error: sErr } = await supabaseAdmin
       .from('staff')
       .select('id, name, employee_id, designation, shift_start, weekly_off, is_rostered')
       .eq('is_active', true)
       .order('serial', { ascending: true })
 
-    if (sErr) throw sErr
+    if (sErr) {
+      const fallback = await supabaseAdmin
+        .from('staff')
+        .select('id, name, employee_id, designation, shift_start, weekly_off')
+        .eq('is_active', true)
+        .order('serial', { ascending: true })
+      if (fallback.error) throw fallback.error
+      staff = (fallback.data || []).map(s => ({ ...s, is_rostered: true }))
+    } else {
+      staff = sData || []
+    }
 
     // Fetch AI draft for this week if any
     const { data: draft } = await supabaseAdmin
