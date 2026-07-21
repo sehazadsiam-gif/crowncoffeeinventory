@@ -7,7 +7,7 @@ import {
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
   Upload, FileSpreadsheet, UserCheck, Sun, Moon, Receipt, Package,
   TrendingUp, Calculator as CalcIcon, ShoppingBag, MessageSquare,
-  BellRing, ShieldAlert
+  BellRing, ShieldAlert, AlertTriangle, Calendar, Mail
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -146,10 +146,10 @@ export default function Navbar() {
       icon: <Users size={16} />,
       children: [
         { href: '/staff', label: 'Directory' },
-        { href: '/attendance', label: '⚡ Live Attendance' },
-        { href: '/attendance/roster', label: '📅 Duty Roster' },
-        { href: '/attendance/requests', label: '📩 Duty & Leave Requests' },
-        { href: '/attendance/reports', label: '📊 Attendance Reports' },
+        { href: '/attendance', label: 'Live Attendance' },
+        { href: '/attendance/roster', label: 'Duty Roster' },
+        { href: '/attendance/requests', label: 'Duty & Leave Requests' },
+        { href: '/attendance/reports', label: 'Attendance Reports' },
         { href: '/admin/tasks', label: 'Assign Tasks' },
         { href: '/admin/overtime', label: 'Overtime' },
         { href: '/staff/payroll', label: 'Payroll' },
@@ -334,7 +334,7 @@ export default function Navbar() {
                     <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
                       {bellAlerts.lowStockCount > 0 && (
                         <Link href="/stock" onClick={() => setIsBellOpen(false)} style={{ display: 'flex', gap: '10px', padding: '10px 14px', textDecoration: 'none', borderBottom: '1px solid var(--border-light)' }}>
-                          <span style={{ color: 'var(--danger)' }}>⚠️</span>
+                          <AlertTriangle size={16} style={{ color: 'var(--danger)', marginTop: '2px' }} />
                           <div>
                             <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'left' }}>Low Stock Alert</p>
                             <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'left' }}>{bellAlerts.lowStockCount} items are running low.</p>
@@ -343,7 +343,7 @@ export default function Navbar() {
                       )}
                       {bellAlerts.pendingLeavesCount > 0 && (
                         <Link href="/staff/leave-requests" onClick={() => setIsBellOpen(false)} style={{ display: 'flex', gap: '10px', padding: '10px 14px', textDecoration: 'none', borderBottom: '1px solid var(--border-light)' }}>
-                          <span style={{ color: 'var(--warning)' }}>📅</span>
+                          <Calendar size={16} style={{ color: 'var(--warning)', marginTop: '2px' }} />
                           <div>
                             <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'left' }}>Pending Leaves</p>
                             <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'left' }}>{bellAlerts.pendingLeavesCount} requests require review.</p>
@@ -352,7 +352,7 @@ export default function Navbar() {
                       )}
                       {bellAlerts.pendingQueriesCount > 0 && (
                         <Link href="/admin/queries" onClick={() => setIsBellOpen(false)} style={{ display: 'flex', gap: '10px', padding: '10px 14px', textDecoration: 'none', borderBottom: '1px solid var(--border-light)' }}>
-                          <span style={{ color: 'var(--accent-blue)' }}>✉️</span>
+                          <Mail size={16} style={{ color: 'var(--accent-blue)', marginTop: '2px' }} />
                           <div>
                             <p style={{ margin: 0, fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'left' }}>Staff Request</p>
                             <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)', textAlign: 'left' }}>{bellAlerts.pendingQueriesCount} new staff queries in inbox.</p>

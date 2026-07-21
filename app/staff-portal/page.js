@@ -580,8 +580,8 @@ export default function StaffPortalPage() {
                       const today = new Date().toISOString().split('T')[0]
                       const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
                       const isDefaultOff = staff?.weekly_off && dayName.toLowerCase() === staff.weekly_off.toLowerCase()
-                      if (isDefaultOff) return lang === 'bn' ? 'আজ আপনার সাপ্তাহিক ছুটি 🎉' : 'Today is your Weekly Off Day 🎉'
-                      return (lang === 'bn' ? 'আজ ডিউটি আছে: ' : 'Working Today: ') + (staff?.shift_start ? staff.shift_start.slice(0, 5) : '10:00') + ' AM'
+                      if (isDefaultOff) return lang === 'bn' ? 'আজ আপনার সাপ্তাহিক ছুটি' : 'Today is your Weekly Off Day'
+                      return (lang === 'bn' ? 'আজ ডিউটি আছে: ' : 'Working Today: ') + (staff?.shift_start ? staff.shift_start.slice(0, 5) : '08:00') + ' AM'
                     })()}
                   </h2>
                 </div>
@@ -1164,10 +1164,10 @@ export default function StaffPortalPage() {
                   <div>
                     <label className="label">{lang === 'bn' ? 'ছুটির ধরন' : 'Leave Type'}</label>
                     <select value={newLeave.leave_type} onChange={e => setNewLeave({ ...newLeave, leave_type: e.target.value })} className="input">
-                      <option value="sick">🤒 {lang === 'bn' ? 'অসুস্থ ছুটি' : 'Sick Leave'}</option>
-                      <option value="casual">☕ {lang === 'bn' ? 'নৈমিত্তিক ছুটি' : 'Casual Leave'}</option>
-                      <option value="annual">✈️ {lang === 'bn' ? 'বার্ষিক ছুটি' : 'Annual Leave'}</option>
-                      <option value="unpaid">📋 {lang === 'bn' ? 'বিনা বেতনে ছুটি' : 'Unpaid Leave'}</option>
+                      <option value="sick">{lang === 'bn' ? 'অসুস্থ ছুটি' : 'Sick Leave'}</option>
+                      <option value="casual">{lang === 'bn' ? 'নৈমিত্তিক ছুটি' : 'Casual Leave'}</option>
+                      <option value="annual">{lang === 'bn' ? 'বার্ষিক ছুটি' : 'Annual Leave'}</option>
+                      <option value="unpaid">{lang === 'bn' ? 'বিনা বেতনে ছুটি' : 'Unpaid Leave'}</option>
                     </select>
                   </div>
                   <div>
