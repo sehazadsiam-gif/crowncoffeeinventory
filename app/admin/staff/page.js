@@ -22,6 +22,7 @@ export default function StaffDirectory() {
     emergency_contact: '', emergency_phone: '', notes: '',
     serial: 999, email: '', employee_id: '',
     shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true,
+    department: 'front', rfid_code: '',
     nid: '', blood_group: '', photo_url: ''
   })
   const [selectedCardStaff, setSelectedCardStaff] = useState(null)
@@ -76,6 +77,8 @@ export default function StaffDirectory() {
         weekly_off: form.weekly_off || 'Friday',
         grace_minutes: parseInt(form.grace_minutes) || 15,
         is_rostered: form.is_rostered !== false,
+        department: form.department || 'front',
+        rfid_code: form.rfid_code ? form.rfid_code.trim() : null,
         nid: form.nid,
         blood_group: form.blood_group,
         photo_url: form.photo_url
@@ -99,6 +102,7 @@ export default function StaffDirectory() {
         emergency_contact: '', emergency_phone: '', notes: '',
         serial: 999, email: '', employee_id: '',
         shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true,
+        department: 'front', rfid_code: '',
         nid: '', blood_group: '', photo_url: ''
       })
       fetchStaff()
@@ -120,6 +124,8 @@ export default function StaffDirectory() {
           weekly_off: editingStaff.weekly_off || 'Friday',
           grace_minutes: parseInt(editingStaff.grace_minutes) || 15,
           is_rostered: editingStaff.is_rostered !== false,
+          department: editingStaff.department || 'front',
+          rfid_code: editingStaff.rfid_code ? editingStaff.rfid_code.trim() : null,
           base_salary: parseFloat(editingStaff.base_salary) || 0,
           nid: editingStaff.nid || null,
           blood_group: editingStaff.blood_group || null,
@@ -339,6 +345,37 @@ export default function StaffDirectory() {
                           {s.designation} {s.serial !== 999 && <span style={{ marginLeft: '8px', opacity: 0.6 }}>#{s.serial}</span>}
                         </p>
                       )}
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                        <span style={{
+                          fontSize: '10px',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          background: s.department === 'kitchen' ? '#FFF3E0' : '#E3F2FD',
+                          color: s.department === 'kitchen' ? '#E65100' : '#1565C0',
+                          fontWeight: 700,
+                          textTransform: 'uppercase'
+                        }}>
+                          {s.department === 'kitchen' ? '🍳 Kitchen Staff' : '☕ Front Staff'}
+                        </span>
+
+                        <span style={{
+                          fontSize: '10px',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          background: s.rfid_code ? '#E8F5E9' : '#F5F5F5',
+                          color: s.rfid_code ? '#2E7D32' : '#757575',
+                          fontWeight: 600
+                        }}>
+                          💳 {s.rfid_code ? `RFID: ${s.rfid_code}` : 'No RFID'}
+                        </span>
+
+                        {s.is_rostered === false && (
+                          <span style={{ fontSize: '10px', color: '#9E9E9E', fontStyle: 'italic' }}>
+                            (Unrostered)
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <span style={{
                       fontSize: '11px',
@@ -652,16 +689,39 @@ export default function StaffDirectory() {
             </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Department / Role</label>
+              <select
+                className="input"
+                value={form.department}
+                onChange={e => setForm({ ...form, department: e.target.value, is_rostered: e.target.value === 'front' })}
+              >
+                <option value="front">Front Staff (Service / Barista / Counter)</option>
+                <option value="kitchen">Kitchen Staff (Cook / Chef / Kitchen)</option>
+              </select>
+            </div>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>💳 RFID Card Code</label>
+              <input
+                className="input"
+                placeholder="Tap card on reader or enter code"
+                value={form.rfid_code || ''}
+                onChange={e => setForm({ ...form, rfid_code: e.target.value })}
+              />
+            </div>
+          </div>
+
           <div style={{ background: '#FAF7F2', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E8E0D4' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, color: '#6B3A2A', fontSize: '13px' }}>
               <input
                 type="checkbox"
                 checked={form.is_rostered}
                 onChange={e => setForm({ ...form, is_rostered: e.target.checked })}
-              /> Include in Duty Roster & Attendance Tracking (Front Service)
+              /> Include in Duty Roster & Attendance Tracking
             </label>
             <p style={{ fontSize: '11px', color: '#888', margin: '4px 0 0 24px' }}>
-              Uncheck for Kitchen/Back-office staff who should not appear in weekly rosters.
+              Toggle to control whether this employee appears on weekly duty rosters.
             </p>
           </div>
         </div>
@@ -810,13 +870,36 @@ export default function StaffDirectory() {
               </div>
             </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label className="label">Department / Role</label>
+                <select
+                  className="input"
+                  value={editingStaff.department || 'front'}
+                  onChange={e => setEditingStaff({ ...editingStaff, department: e.target.value })}
+                >
+                  <option value="front">Front Staff (Service / Barista / Counter)</option>
+                  <option value="kitchen">Kitchen Staff (Cook / Chef / Kitchen)</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">💳 RFID Card Code</label>
+                <input
+                  className="input"
+                  placeholder="Tap card on reader or enter code"
+                  value={editingStaff.rfid_code || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, rfid_code: e.target.value })}
+                />
+              </div>
+            </div>
+
             <div style={{ background: '#FAF7F2', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E8E0D4' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, color: '#6B3A2A', fontSize: '13px' }}>
                 <input
                   type="checkbox"
                   checked={editingStaff.is_rostered !== false}
                   onChange={e => setEditingStaff({ ...editingStaff, is_rostered: e.target.checked })}
-                /> Include in Duty Roster & Attendance Tracking (Front Service)
+                /> Include in Duty Roster & Attendance Tracking
               </label>
             </div>
           </div>

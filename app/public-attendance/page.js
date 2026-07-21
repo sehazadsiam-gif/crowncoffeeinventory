@@ -1,0 +1,387 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { supabase } from '../../lib/supabase'
+import { Clock, CheckCircle2, AlertTriangle, Users, Calendar, ShieldCheck, Sparkles, HelpCircle, Monitor } from 'lucide-react'
+
+export default function PublicAttendancePage() {
+  const [loading, setLoading] = useState(true)
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [data, setData] = useState({ date: '', summary: {}, records: [] })
+  const [lastTapEvent, setLastTapEvent] = useState(null)
+  const [showAutoStartGuide, setShowAutoStartGuide] = useState(false)
+
+  useEffect(() => {
+    // 1. Live digital clock ticker (every second)
+    const clockTimer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+
+    // 2. Initial fetch of today's attendance
+    fetchTodayData()
+
+    // 3. Supabase Realtime WebSocket subscription on attendance_log table
+    const channel = supabase.channel('public_attendance_kiosk_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, (payload) => {
+        fetchTodayData(true)
+        if (payload.new && payload.new.employee_id) {
+          triggerTapBanner(payload.new)
+        }
+      })
+      .subscribe()
+
+    // 4. Polling fallback every 12 seconds
+    const pollTimer = setInterval(() => {
+      fetchTodayData(true)
+    }, 12000)
+
+    return () => {
+      clearInterval(clockTimer)
+      clearInterval(pollTimer)
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // USB RFID Hardware Reader Keydown Listener
+  useEffect(() => {
+    let buffer = ''
+    let lastKeyTime = Date.now()
+
+    function handleGlobalKeyDown(e) {
+      const activeTag = document.activeElement?.tagName
+      if (activeTag === 'TEXTAREA' || activeTag === 'INPUT') return
+
+      const currentTime = Date.now()
+      if (currentTime - lastKeyTime > 120) {
+        buffer = '' // Reset buffer if typing speed is too slow (human typing)
+      }
+      lastKeyTime = currentTime
+
+      if (e.key === 'Enter') {
+        if (buffer.length >= 3) {
+          e.preventDefault()
+          handleRfidCheckin(buffer.trim())
+          buffer = ''
+        }
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        buffer += e.key
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
+
+  async function fetchTodayData(silent = false) {
+    try {
+      if (!silent) setLoading(true)
+      const res = await fetch('/api/attendance/today')
+      const json = await res.json()
+      if (res.ok) {
+        setData(json)
+      }
+    } catch (err) {
+      console.error('Failed to fetch public attendance', err)
+    } finally {
+      if (!silent) setLoading(false)
+    }
+  }
+
+  async function handleRfidCheckin(identifier) {
+    try {
+      const res = await fetch('/api/attendance/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, source: 'rfid' })
+      })
+
+      const json = await res.json()
+      if (res.ok) {
+        setLastTapEvent({
+          name: json.staff?.name || 'Staff Member',
+          status: json.status || 'present',
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }),
+          success: true
+        })
+        fetchTodayData(true)
+      } else {
+        setLastTapEvent({
+          name: 'RFID Tap',
+          status: json.error || 'Check-in failed',
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }),
+          success: false
+        })
+      }
+
+      setTimeout(() => {
+        setLastTapEvent(null)
+      }, 7000)
+    } catch (err) {
+      console.error('RFID checkin error', err)
+    }
+  }
+
+  function triggerTapBanner(entry) {
+    const timeStr = entry.check_in_at
+      ? new Date(entry.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+      : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+
+    setLastTapEvent({
+      name: entry.employee_id || 'Staff Member',
+      status: (entry.status || 'present').toUpperCase(),
+      time: timeStr,
+      success: true
+    })
+
+    setTimeout(() => {
+      setLastTapEvent(null)
+    }, 7000)
+  }
+
+  const records = data.records || []
+  const presentCount = records.filter(r => r.status === 'present').length
+  const lateCount = records.filter(r => r.status === 'late').length
+  const totalCount = records.length
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#0F172A', color: '#F8FAFC', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      
+      {/* Top Banner Header */}
+      <header style={{ background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)', borderBottom: '1px solid #334155', padding: '20px 32px' }}>
+        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ background: '#6B3A2A', color: 'white', padding: '8px 12px', borderRadius: '12px', fontWeight: 900, fontSize: '18px', letterSpacing: '1px' }}>
+                CROWN COFFEE
+              </div>
+              <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#F8FAFC', margin: 0 }}>
+                Live Attendance Kiosk
+              </h1>
+              <span style={{ background: '#1E293B', color: '#10B981', border: '1px solid #059669', padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }}></span>
+                REALTIME SYNC
+              </span>
+            </div>
+            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#94A3B8' }}>
+              Tap your RFID Card on the reader to clock in live. Read-only shop display.
+            </p>
+          </div>
+
+          {/* Clock & Date */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <button
+              onClick={() => setShowAutoStartGuide(!showAutoStartGuide)}
+              style={{ background: '#334155', color: '#E2E8F0', border: '1px solid #475569', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Monitor size={16} /> PC Auto-Start Guide
+            </button>
+
+            <div style={{ textAlign: 'right', background: '#1E293B', border: '1px solid #334155', borderRadius: '12px', padding: '10px 20px' }}>
+              <div style={{ fontSize: '22px', fontWeight: 900, color: '#F8FAFC', fontFamily: 'monospace', letterSpacing: '1px' }}>
+                {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+              </div>
+              <div style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600 }}>
+                {currentTime.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </header>
+
+      {/* Instant RFID Tap Alert Banner */}
+      {lastTapEvent && (
+        <div style={{
+          background: lastTapEvent.success ? '#065F46' : '#991B1B',
+          borderBottom: `2px solid ${lastTapEvent.success ? '#10B981' : '#EF4444'}`,
+          color: 'white',
+          padding: '16px 32px',
+          textAlign: 'center',
+          fontSize: '18px',
+          fontWeight: 800,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+          display: 'flex',
+          justify: 'center',
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          <Sparkles size={24} />
+          <span>
+            {lastTapEvent.success ? '🟢 RFID TAP RECORDED: ' : '⚠️ CHECKIN NOTICE: '}
+            <strong>{lastTapEvent.name}</strong> — {lastTapEvent.status} at {lastTapEvent.time}
+          </span>
+        </div>
+      )}
+
+      {/* Main Container */}
+      <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '32px' }}>
+
+        {/* Auto-Start PC Guide Drawer */}
+        {showAutoStartGuide && (
+          <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '16px', padding: '24px', marginBottom: '32px', color: '#E2E8F0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: '#F8FAFC', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Monitor size={20} color="#38BDF8" /> How to Set Up Auto-Start on Cafe PC / Tablet
+              </h3>
+              <button onClick={() => setShowAutoStartGuide(false)} style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', fontSize: '13px', lineHeight: '1.6' }}>
+              <div style={{ background: '#0F172A', padding: '16px', borderRadius: '10px', border: '1px solid #334155' }}>
+                <strong style={{ color: '#38BDF8', fontSize: '14px' }}>💻 Windows PC Auto-Startup:</strong>
+                <ol style={{ paddingLeft: '20px', margin: '8px 0 0 0' }}>
+                  <li>Press <kbd>Win + R</kbd>, type <kbd>shell:startup</kbd> and press Enter.</li>
+                  <li>Create a shortcut to Chrome with target:<br />
+                    <code style={{ background: '#334155', padding: '2px 6px', borderRadius: '4px', color: '#F8FAFC' }}>chrome.exe --app=https://ccadmin.online/public-attendance</code>
+                  </li>
+                  <li>Whenever the Windows PC turns on, Chrome opens in full-screen app mode!</li>
+                </ol>
+              </div>
+              <div style={{ background: '#0F172A', padding: '16px', borderRadius: '10px', border: '1px solid #334155' }}>
+                <strong style={{ color: '#10B981', fontSize: '14px' }}>📱 Tablet / PWA App Install:</strong>
+                <ol style={{ paddingLeft: '20px', margin: '8px 0 0 0' }}>
+                  <li>Open Chrome/Safari on your tablet/PC.</li>
+                  <li>Click Chrome menu ➔ <strong>"Install App"</strong> or <strong>"Add to Home Screen"</strong>.</li>
+                  <li>Enable "Kiosk Mode" or "Single App Mode" in Tablet Settings.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stats Summary Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+          <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38BDF8', padding: '14px', borderRadius: '12px' }}><Users size={28} /></div>
+            <div>
+              <div style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Active Staff</div>
+              <div style={{ fontSize: '28px', fontWeight: 900, color: '#F8FAFC' }}>{totalCount}</div>
+            </div>
+          </div>
+
+          <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '14px', borderRadius: '12px' }}><CheckCircle2 size={28} /></div>
+            <div>
+              <div style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Present Today</div>
+              <div style={{ fontSize: '28px', fontWeight: 900, color: '#10B981' }}>{presentCount + lateCount}</div>
+            </div>
+          </div>
+
+          <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', padding: '14px', borderRadius: '12px' }}><Clock size={28} /></div>
+            <div>
+              <div style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Late Arrivals</div>
+              <div style={{ fontSize: '28px', fontWeight: 900, color: '#F59E0B' }}>{lateCount}</div>
+            </div>
+          </div>
+
+          <div style={{ background: '#1E293B', border: '1px solid #334155', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '14px', borderRadius: '12px' }}><AlertTriangle size={28} /></div>
+            <div>
+              <div style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Not Checked In</div>
+              <div style={{ fontSize: '28px', fontWeight: 900, color: '#EF4444' }}>{totalCount - (presentCount + lateCount)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Staff Cards Grid */}
+        {loading ? (
+          <div style={{ padding: '80px', textAlign: 'center', color: '#94A3B8' }}>
+            Loading Live Attendance Kiosk...
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+            {records.map(r => {
+              const isPresent = r.status === 'present'
+              const isLate = r.status === 'late'
+              const isOff = r.status === 'off'
+              const isLeave = r.status === 'on_leave'
+              const isCheckedIn = isPresent || isLate
+
+              let statusBg = '#334155'
+              let statusColor = '#94A3B8'
+              let statusText = 'Not Checked In'
+
+              if (isPresent) { statusBg = '#065F46'; statusColor = '#34D399'; statusText = 'PRESENT' }
+              else if (isLate) { statusBg = '#78350F'; statusColor = '#FBBF24'; statusText = `LATE (${r.minutes_late || 0} min)` }
+              else if (isLeave) { statusBg = '#1E3A8A'; statusColor = '#60A5FA'; statusText = 'ON LEAVE' }
+              else if (isOff) { statusBg = '#4C1D95'; statusColor = '#C084FC'; statusText = 'DAY OFF' }
+
+              return (
+                <div key={r.staff_id} style={{
+                  background: '#1E293B',
+                  border: isCheckedIn ? '2px solid #059669' : '1px solid #334155',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justify: 'space-between',
+                  boxShadow: isCheckedIn ? '0 4px 20px rgba(16,185,129,0.1)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: 800, color: '#F8FAFC' }}>{r.name}</div>
+                        <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                          {r.employee_id} • {r.designation}
+                        </div>
+                      </div>
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        fontWeight: 800,
+                        background: statusBg,
+                        color: statusColor,
+                        letterSpacing: '0.05em'
+                      }}>
+                        {statusText}
+                      </span>
+                    </div>
+
+                    {/* Department Tag */}
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+                      <span style={{
+                        fontSize: '11px',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        background: r.department === 'kitchen' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+                        color: r.department === 'kitchen' ? '#FBBF24' : '#38BDF8',
+                        fontWeight: 700
+                      }}>
+                        {r.department === 'kitchen' ? '🍳 Kitchen Staff' : '☕ Front Staff'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Timing Details */}
+                  <div style={{ borderTop: '1px solid #334155', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: '#CBD5E1' }}>
+                    <div>
+                      <span style={{ color: '#64748B', fontSize: '11px' }}>CHECK-IN</span>
+                      <div style={{ fontWeight: 700 }}>
+                        {r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748B', fontSize: '11px' }}>CHECK-OUT</span>
+                      <div style={{ fontWeight: 700 }}>
+                        {r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                      </div>
+                    </div>
+                    {r.hours_worked > 0 && (
+                      <div>
+                        <span style={{ color: '#64748B', fontSize: '11px' }}>DUTY</span>
+                        <div style={{ fontWeight: 700, color: '#34D399' }}>{r.hours_worked} hrs</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}

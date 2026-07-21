@@ -173,11 +173,26 @@ export default function WeeklyRosterPage() {
     }))
   }
 
+  const [deptFilter, setDeptFilter] = useState('all') // 'all' | 'front' | 'kitchen'
+
   function changeWeek(offset) {
     const current = new Date(weekStart)
     current.setDate(current.getDate() + offset * 7)
-    setWeekStart(getMondayOf(current))
+    setWeekStart(getSaturdayOf(current))
   }
+
+  const todaySat = getSaturdayOf(new Date())
+  const isFutureWeek = weekStart > todaySat
+  const isPastWeek = weekStart < todaySat
+
+  const filteredStaff = staff.filter(s => {
+    if (deptFilter === 'front') return s.department === 'front'
+    if (deptFilter === 'kitchen') return s.department === 'kitchen'
+    if (!showKitchenStaff && (s.department === 'kitchen' || s.is_rostered === false)) {
+      return false
+    }
+    return true
+  })
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-main, #faf7f2)' }}>
@@ -188,25 +203,49 @@ export default function WeeklyRosterPage() {
         {/* Top Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
-              Weekly Duty Roster
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h1 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>
+                Weekly Duty Roster
+              </h1>
+              {isFutureWeek && (
+                <span style={{ background: '#E8F5E9', color: '#2E7D32', border: '1px solid #C8E6C9', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}>
+                  Future Roster
+                </span>
+              )}
+              {isPastWeek && (
+                <span style={{ background: '#F5F5F5', color: '#757575', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 600 }}>
+                  Past Roster
+                </span>
+              )}
+            </div>
             <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '14px' }}>
-              Assign 10-hour shifts & off-days for each employee.
+              Assign 10-hour shifts & off-days for Front and Kitchen employees.
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {/* Week Selector */}
             <div style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '4px 12px', gap: '8px' }}>
               <button onClick={() => changeWeek(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
                 <ChevronLeft size={18} />
               </button>
               <span style={{ fontWeight: 700, fontSize: '14px', color: '#333' }}>
-                Week of {new Date(weekStart).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                Week of {new Date(weekStart).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
               <button onClick={() => changeWeek(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
                 <ChevronRight size={18} />
               </button>
+            </div>
+
+            {/* Jump to Date Picker */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #E8E0D4', borderRadius: '10px', padding: '4px 10px' }}>
+              <span style={{ fontSize: '12px', color: '#777', fontWeight: 600 }}>Select Date:</span>
+              <input
+                type="date"
+                value={weekStart}
+                onChange={e => e.target.value && setWeekStart(getSaturdayOf(e.target.value))}
+                style={{ border: 'none', outline: 'none', fontSize: '13px', color: '#333', cursor: 'pointer' }}
+              />
             </div>
 
             <button
@@ -256,16 +295,61 @@ export default function WeeklyRosterPage() {
             <div style={{ padding: '60px', textAlign: 'center' }}><div className="loader"></div></div>
           ) : (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ fontSize: '13px', color: '#666' }}>
-                  Showing <strong>{staff.filter(s => showKitchenStaff || s.is_rostered !== false).length}</strong> staff members
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={() => setDeptFilter('all')}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #E8E0D4',
+                      background: deptFilter === 'all' ? '#6B3A2A' : 'white',
+                      color: deptFilter === 'all' ? 'white' : '#666',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    All Staff ({staff.length})
+                  </button>
+                  <button
+                    onClick={() => setDeptFilter('front')}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #E8E0D4',
+                      background: deptFilter === 'front' ? '#1565C0' : 'white',
+                      color: deptFilter === 'front' ? 'white' : '#666',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ☕ Front Staff ({staff.filter(s => s.department === 'front' || s.is_rostered !== false).length})
+                  </button>
+                  <button
+                    onClick={() => setDeptFilter('kitchen')}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      border: '1px solid #E8E0D4',
+                      background: deptFilter === 'kitchen' ? '#E65100' : 'white',
+                      color: deptFilter === 'kitchen' ? 'white' : '#666',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🍳 Kitchen Staff ({staff.filter(s => s.department === 'kitchen' || s.is_rostered === false).length})
+                  </button>
                 </div>
+
                 <label style={{ fontSize: '12px', color: '#6B3A2A', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <input
                     type="checkbox"
                     checked={showKitchenStaff}
                     onChange={e => setShowKitchenStaff(e.target.checked)}
-                  /> Show Non-Rostered / Kitchen Staff
+                  /> Include Kitchen Staff on Roster Grid
                 </label>
               </div>
 
@@ -286,12 +370,24 @@ export default function WeeklyRosterPage() {
                 </tr>
               </thead>
               <tbody>
-                {staff.filter(s => showKitchenStaff || s.is_rostered !== false).map(s => (
+                {filteredStaff.map(s => (
                   <tr key={s.id} style={{ borderBottom: '1px solid #F7F3EE' }}>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ fontWeight: 700, color: '#1C1410' }}>{s.name}</div>
+                      <div style={{ fontWeight: 700, color: '#1C1410', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {s.name}
+                        <span style={{
+                          fontSize: '9px',
+                          padding: '1px 6px',
+                          borderRadius: '8px',
+                          background: s.department === 'kitchen' ? '#FFF3E0' : '#E3F2FD',
+                          color: s.department === 'kitchen' ? '#E65100' : '#1565C0',
+                          fontWeight: 700
+                        }}>
+                          {s.department === 'kitchen' ? 'Kitchen' : 'Front'}
+                        </span>
+                      </div>
                       <div style={{ fontSize: '11px', color: '#9C8A76' }}>
-                        {s.employee_id} • {s.designation} {s.is_rostered === false && <span style={{ color: '#d32f2f' }}>(Kitchen)</span>}
+                        {s.employee_id} • {s.designation}
                       </div>
                     </td>
 

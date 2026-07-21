@@ -10,6 +10,8 @@ import {
   QrCode, RefreshCw, Sparkles, Send, ShieldAlert, FileText, Check, X
 } from 'lucide-react'
 
+import { supabase } from '../../lib/supabase'
+
 export default function AttendanceDashboardPage() {
   const router = useRouter()
   const { addToast } = useToast()
@@ -19,6 +21,7 @@ export default function AttendanceDashboardPage() {
   const [qrModalOpen, setQrModalOpen] = useState(false)
   const [qrCodeInput, setQrCodeInput] = useState('')
   const [checkingIn, setCheckingIn] = useState(false)
+  const [isKioskMode, setIsKioskMode] = useState(false)
 
   // AI Assistant Chat & Anomalies state
   const [anomalies, setAnomalies] = useState([])
@@ -29,21 +32,66 @@ export default function AttendanceDashboardPage() {
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
-    if (!token || (role !== 'admin' && role !== 'sub_admin')) {
+    const isKiosk = typeof window !== 'undefined' && (window.location.search.includes('kiosk=true') || role === 'kiosk')
+    setIsKioskMode(isKiosk)
+
+    if (!isKiosk && (!token || (role !== 'admin' && role !== 'sub_admin' && role !== 'manager'))) {
       router.replace('/')
       return
     }
 
     fetchTodayData()
-    fetchAnomalies()
+    if (!isKiosk) fetchAnomalies()
 
-    // Real-time live polling every 15s
+    // Supabase Realtime WebSocket subscription for live updates
+    const channel = supabase.channel('attendance_kiosk_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, () => {
+        fetchTodayData(true)
+      })
+      .subscribe()
+
+    // Real-time live polling fallback every 15s
     const timer = setInterval(() => {
       fetchTodayData(true)
     }, 15000)
 
-    return () => clearInterval(timer)
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(timer)
+    }
   }, [router])
+
+  // USB RFID Hardware Reader Keydown Listener
+  useEffect(() => {
+    let buffer = ''
+    let lastKeyTime = Date.now()
+
+    function handleGlobalKeyDown(e) {
+      const activeTag = document.activeElement?.tagName
+      if (activeTag === 'TEXTAREA' || (activeTag === 'INPUT' && document.activeElement?.id !== 'rfid-kiosk-input')) {
+        return
+      }
+
+      const currentTime = Date.now()
+      if (currentTime - lastKeyTime > 120) {
+        buffer = '' // Reset buffer if typing speed is too slow (human typing)
+      }
+      lastKeyTime = currentTime
+
+      if (e.key === 'Enter') {
+        if (buffer.length >= 3) {
+          e.preventDefault()
+          handleCheckin(buffer.trim(), null, 'rfid')
+          buffer = ''
+        }
+      } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        buffer += e.key
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
 
   async function fetchTodayData(silent = false) {
     try {
@@ -72,12 +120,12 @@ export default function AttendanceDashboardPage() {
     }
   }
 
-  async function handleCheckin(identifier, statusOverride = null) {
+  async function handleCheckin(identifier, statusOverride = null, source = 'manual') {
     try {
       setCheckingIn(true)
       const payload = {
         identifier,
-        source: 'manual',
+        source: source || (isKioskMode ? 'rfid' : 'manual'),
         adminOverride: !!statusOverride,
         forceStatus: statusOverride
       }

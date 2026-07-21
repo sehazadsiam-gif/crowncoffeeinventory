@@ -22,7 +22,7 @@ export async function GET(request) {
     let staff = []
     let { data: sData, error: sErr } = await supabaseAdmin
       .from('staff')
-      .select('id, name, employee_id, designation, shift_start, weekly_off, is_rostered')
+      .select('id, name, employee_id, designation, shift_start, weekly_off, is_rostered, department, rfid_code')
       .eq('is_active', true)
       .order('serial', { ascending: true })
 

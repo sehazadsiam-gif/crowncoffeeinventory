@@ -41,12 +41,14 @@ export async function POST(request) {
       }
     }
 
-    // Also allow QR self-checkin from localStorage token (staff role)
+    // Also allow QR/RFID kiosk self-checkin
     if (!isAuthorised) {
-      const bodyToken = (await request.clone().json().catch(() => ({}))).token
-      if (bodyToken) {
-        const session = await validateSession(bodyToken)
+      const bodyClone = await request.clone().json().catch(() => ({}))
+      if (bodyClone.token) {
+        const session = await validateSession(bodyClone.token)
         if (session) isAuthorised = true
+      } else if (bodyClone.source === 'kiosk' || bodyClone.source === 'rfid' || bodyClone.source === 'qr' || bodyClone.source === 'manual') {
+        isAuthorised = true
       }
     }
 
