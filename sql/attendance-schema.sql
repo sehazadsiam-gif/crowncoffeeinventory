@@ -7,9 +7,10 @@
 -- ── 1. Extend staff table with roster fields ─────────────────
 ALTER TABLE staff
   ADD COLUMN IF NOT EXISTS employee_id   TEXT UNIQUE,
-  ADD COLUMN IF NOT EXISTS shift_start   TIME DEFAULT '10:00',
+  ADD COLUMN IF NOT EXISTS shift_start   TIME DEFAULT '08:00',
   ADD COLUMN IF NOT EXISTS weekly_off    TEXT DEFAULT 'Friday',
-  ADD COLUMN IF NOT EXISTS grace_minutes INT DEFAULT 15;
+  ADD COLUMN IF NOT EXISTS grace_minutes INT DEFAULT 15,
+  ADD COLUMN IF NOT EXISTS is_rostered   BOOLEAN DEFAULT TRUE;
 
 -- Auto-generate CC-001 style employee IDs for existing staff
 DO $$

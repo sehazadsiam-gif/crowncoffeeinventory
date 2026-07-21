@@ -21,7 +21,7 @@ export async function GET(request) {
     // Fetch active staff
     const { data: staff, error: sErr } = await supabaseAdmin
       .from('staff')
-      .select('id, name, employee_id, designation, shift_start, weekly_off')
+      .select('id, name, employee_id, designation, shift_start, weekly_off, is_rostered')
       .eq('is_active', true)
       .order('serial', { ascending: true })
 

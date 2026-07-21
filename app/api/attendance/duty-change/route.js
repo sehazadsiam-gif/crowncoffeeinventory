@@ -96,7 +96,7 @@ export async function PATCH(request) {
             staff_id: reqData.staff_id,
             week_start: weekStart,
             day_date: reqData.request_date,
-            shift_start: reqData.new_shift_start || '10:00',
+            shift_start: reqData.new_shift_start || '08:00',
             is_off: true,
             is_duty_change: true
           }, { onConflict: 'staff_id,day_date' })
@@ -110,7 +110,7 @@ export async function PATCH(request) {
             staff_id: reqData.staff_id,
             week_start: weekStart,
             day_date: reqData.request_date,
-            shift_start: reqData.new_shift_start || '10:00',
+            shift_start: reqData.new_shift_start || '08:00',
             is_off: false,
             is_duty_change: true
           }, { onConflict: 'staff_id,day_date' })
@@ -147,7 +147,7 @@ export async function PATCH(request) {
 function getMondayOf(dateStr) {
   const d = new Date(dateStr)
   const day = d.getDay()
-  const diff = (day === 0 ? -6 : 1 - day)
+  const diff = (day === 6 ? 0 : -(day + 1))
   d.setDate(d.getDate() + diff)
   return d.toISOString().split('T')[0]
 }

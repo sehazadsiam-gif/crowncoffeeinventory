@@ -20,10 +20,11 @@ export default function StaffDirectory() {
     name: '', designation: '', contract_type: 'full_time',
     base_salary: '', join_date: new Date().toISOString().split('T')[0],
     emergency_contact: '', emergency_phone: '', notes: '',
-    serial: 999, email: '',
-    shift_start: '10:00', weekly_off: 'Friday', grace_minutes: 15
+    serial: 999, email: '', employee_id: '',
+    shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true
   })
   const [selectedCardStaff, setSelectedCardStaff] = useState(null)
+  const [editingStaff, setEditingStaff] = useState(null)
   const [isSorting, setIsSorting] = useState(false)
   const [tempSerials, setTempSerials] = useState({})
 
@@ -54,9 +55,9 @@ export default function StaffDirectory() {
       return addToast('Please fill required fields', 'error')
     }
     try {
-      // Auto generate CC-001 format ID
+      // Custom or auto generate CC-001 format ID
       const nextNum = (staff.length || 0) + 1
-      const generatedEmpId = `CC-${String(nextNum).padStart(3, '0')}`
+      const empId = form.employee_id.trim() || `CC-${String(nextNum).padStart(3, '0')}`
 
       const { data, error } = await supabase.from('staff').insert([{
         name: form.name,
@@ -69,10 +70,11 @@ export default function StaffDirectory() {
         notes: form.notes,
         serial: parseInt(form.serial) || 999,
         email: form.email,
-        employee_id: generatedEmpId,
-        shift_start: form.shift_start || '10:00',
+        employee_id: empId,
+        shift_start: form.shift_start || '08:00',
         weekly_off: form.weekly_off || 'Friday',
-        grace_minutes: parseInt(form.grace_minutes) || 15
+        grace_minutes: parseInt(form.grace_minutes) || 15,
+        is_rostered: form.is_rostered !== false
       }]).select()
 
       if (error) throw error
@@ -82,22 +84,48 @@ export default function StaffDirectory() {
           staff_id: data[0].id,
           year: new Date().getFullYear()
         }])
-        // Auto-open ID card modal for immediate printing
         setSelectedCardStaff(data[0])
       }
 
-      addToast(`Staff member added! ID: ${generatedEmpId}`, 'success')
+      addToast(`Staff member added! ID: ${empId}`, 'success')
       setShowAddForm(false)
       setForm({
         name: '', designation: '', contract_type: 'full_time',
         base_salary: '', join_date: new Date().toISOString().split('T')[0],
         emergency_contact: '', emergency_phone: '', notes: '',
-        serial: 999, email: '',
-        shift_start: '10:00', weekly_off: 'Friday', grace_minutes: 15
+        serial: 999, email: '', employee_id: '',
+        shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true
       })
       fetchStaff()
     } catch (err) {
       addToast(err.message || 'Error adding staff', 'error')
+    }
+  }
+
+  async function handleUpdateStaff() {
+    if (!editingStaff || !editingStaff.id) return
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .update({
+          name: editingStaff.name,
+          employee_id: editingStaff.employee_id,
+          designation: editingStaff.designation,
+          shift_start: editingStaff.shift_start || '08:00',
+          weekly_off: editingStaff.weekly_off || 'Friday',
+          grace_minutes: parseInt(editingStaff.grace_minutes) || 15,
+          is_rostered: editingStaff.is_rostered !== false,
+          base_salary: parseFloat(editingStaff.base_salary) || 0
+        })
+        .eq('id', editingStaff.id)
+
+      if (error) throw error
+
+      addToast('Staff details updated successfully', 'success')
+      setEditingStaff(null)
+      fetchStaff()
+    } catch (err) {
+      addToast('Error updating staff: ' + err.message, 'error')
     }
   }
 
@@ -373,6 +401,22 @@ export default function StaffDirectory() {
                       <QrCode size={14} /> ID Card
                     </button>
                     <button
+                      onClick={() => setEditingStaff({ ...s })}
+                      title="Edit Staff / Change ID"
+                      style={{
+                        padding: '8px 12px',
+                        background: 'var(--bg-subtle)',
+                        border: '1px solid var(--border-medium)',
+                        borderRadius: '6px',
+                        color: 'var(--text-primary)',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
                       onClick={() => toggleStatus(s.id, s.is_active)}
                       title={s.is_active ? 'Deactivate' : 'Activate'}
                       style={{
@@ -424,14 +468,25 @@ export default function StaffDirectory() {
         onConfirm={handleAddStaff}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label className="label" style={{ color: 'var(--text-secondary)' }}>Full Name *</label>
-            <input
-              className="input"
-              placeholder="e.g. Shahadat Hossain"
-              value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Full Name *</label>
+              <input
+                className="input"
+                placeholder="e.g. Shahadat Hossain"
+                value={form.name}
+                onChange={e => setForm({ ...form, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Employee ID (e.g. CC-001)</label>
+              <input
+                className="input"
+                placeholder="Auto-assigned if blank"
+                value={form.employee_id}
+                onChange={e => setForm({ ...form, employee_id: e.target.value })}
+              />
+            </div>
           </div>
 
           <div>
@@ -445,23 +500,12 @@ export default function StaffDirectory() {
             />
           </div>
 
-          <div>
-            <label className="label" style={{ color: 'var(--text-secondary)' }}>Display Serial (for sorting)</label>
-            <input
-              className="input"
-              type="number"
-              placeholder="e.g. 1, 2, 3... (999 for default)"
-              value={form.serial}
-              onChange={e => setForm({ ...form, serial: e.target.value })}
-            />
-          </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label className="label" style={{ color: 'var(--text-secondary)' }}>Designation *</label>
               <input
                 className="input"
-                placeholder="e.g. Manager"
+                placeholder="e.g. Barista / Kitchen Staff"
                 value={form.designation}
                 onChange={e => setForm({ ...form, designation: e.target.value })}
               />
@@ -503,7 +547,7 @@ export default function StaffDirectory() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
             <div>
-              <label className="label" style={{ color: 'var(--text-secondary)' }}>Shift Start</label>
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Shift Start (08:00 - 23:00)</label>
               <input
                 className="input"
                 type="time"
@@ -538,39 +582,119 @@ export default function StaffDirectory() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label className="label" style={{ color: 'var(--text-secondary)' }}>Emergency Contact</label>
+          <div style={{ background: '#FAF7F2', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E8E0D4' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, color: '#6B3A2A', fontSize: '13px' }}>
               <input
-                className="input"
-                placeholder="Contact name"
-                value={form.emergency_contact}
-                onChange={e => setForm({ ...form, emergency_contact: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="label" style={{ color: 'var(--text-secondary)' }}>Emergency Phone</label>
-              <input
-                className="input"
-                placeholder="Phone number"
-                value={form.emergency_phone}
-                onChange={e => setForm({ ...form, emergency_phone: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="label" style={{ color: 'var(--text-secondary)' }}>Notes</label>
-            <textarea
-              className="input"
-              rows={3}
-              placeholder="Any additional notes..."
-              value={form.notes}
-              onChange={e => setForm({ ...form, notes: e.target.value })}
-            />
+                type="checkbox"
+                checked={form.is_rostered}
+                onChange={e => setForm({ ...form, is_rostered: e.target.checked })}
+              /> Include in Duty Roster & Attendance Tracking (Front Service)
+            </label>
+            <p style={{ fontSize: '11px', color: '#888', margin: '4px 0 0 24px' }}>
+              Uncheck for Kitchen/Back-office staff who should not appear in weekly rosters.
+            </p>
           </div>
         </div>
       </Modal>
+
+      {/* Edit Staff Modal */}
+      {editingStaff && (
+        <Modal
+          isOpen={!!editingStaff}
+          onClose={() => setEditingStaff(null)}
+          title="Edit Staff Member Details"
+          confirmLabel="Save Changes"
+          onConfirm={handleUpdateStaff}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label className="label">Full Name</label>
+                <input
+                  className="input"
+                  value={editingStaff.name || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">Employee ID (Key)</label>
+                <input
+                  className="input"
+                  value={editingStaff.employee_id || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, employee_id: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label className="label">Designation</label>
+                <input
+                  className="input"
+                  value={editingStaff.designation || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, designation: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">Base Salary (৳)</label>
+                <input
+                  className="input"
+                  type="number"
+                  value={editingStaff.base_salary || ''}
+                  onChange={e => setEditingStaff({ ...editingStaff, base_salary: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div>
+                <label className="label">Shift Start</label>
+                <input
+                  className="input"
+                  type="time"
+                  value={editingStaff.shift_start || '08:00'}
+                  onChange={e => setEditingStaff({ ...editingStaff, shift_start: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">Weekly Off</label>
+                <select
+                  className="input"
+                  value={editingStaff.weekly_off || 'Friday'}
+                  onChange={e => setEditingStaff({ ...editingStaff, weekly_off: e.target.value })}
+                >
+                  <option value="Friday">Friday</option>
+                  <option value="Saturday">Saturday</option>
+                  <option value="Sunday">Sunday</option>
+                  <option value="Monday">Monday</option>
+                  <option value="Tuesday">Tuesday</option>
+                  <option value="Wednesday">Wednesday</option>
+                  <option value="Thursday">Thursday</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Grace (Mins)</label>
+                <input
+                  className="input"
+                  type="number"
+                  value={editingStaff.grace_minutes || 15}
+                  onChange={e => setEditingStaff({ ...editingStaff, grace_minutes: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ background: '#FAF7F2', padding: '12px 16px', borderRadius: '8px', border: '1px solid #E8E0D4' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, color: '#6B3A2A', fontSize: '13px' }}>
+                <input
+                  type="checkbox"
+                  checked={editingStaff.is_rostered !== false}
+                  onChange={e => setEditingStaff({ ...editingStaff, is_rostered: e.target.checked })}
+                /> Include in Duty Roster & Attendance Tracking (Front Service)
+              </label>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* ID Card / QR Sticker Modal */}
       {selectedCardStaff && (

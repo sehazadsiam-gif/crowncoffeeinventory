@@ -8,7 +8,7 @@ export async function GET(request) {
     // Fetch all active staff
     const { data: staff, error: staffErr } = await supabaseAdmin
       .from('staff')
-      .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes')
+      .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes, is_rostered')
       .eq('is_active', true)
       .order('serial', { ascending: true })
 
@@ -41,7 +41,7 @@ export async function GET(request) {
 
       const isOff = ros ? ros.is_off : (s.weekly_off && dayName.toLowerCase() === s.weekly_off.toLowerCase())
       const isLeave = ros ? ros.is_leave : false
-      const shiftStart = ros ? ros.shift_start : (s.shift_start || '10:00')
+      const shiftStart = ros ? ros.shift_start : (s.shift_start || '08:00')
 
       let status = 'absent'
       if (log) {
@@ -58,6 +58,7 @@ export async function GET(request) {
         employee_id: s.employee_id || 'N/A',
         designation: s.designation,
         shift_start: shiftStart,
+        is_rostered: s.is_rostered !== false,
         check_in_at: log?.check_in_at || null,
         check_out_at: log?.check_out_at || null,
         status,

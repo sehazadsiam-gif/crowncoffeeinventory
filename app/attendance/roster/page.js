@@ -11,8 +11,9 @@ export default function WeeklyRosterPage() {
   const { addToast } = useToast()
 
   const [loading, setLoading] = useState(true)
-  const [weekStart, setWeekStart] = useState(getMondayOf(new Date()))
+  const [weekStart, setWeekStart] = useState(getSaturdayOf(new Date()))
   const [staff, setStaff] = useState([])
+  const [showKitchenStaff, setShowKitchenStaff] = useState(false)
   const [gridData, setGridData] = useState({}) // { staff_id: { dateStr: { shift_start, is_off, is_leave } } }
   const [aiDraft, setAiDraft] = useState(null)
   const [generatingDraft, setGeneratingDraft] = useState(false)
@@ -54,13 +55,13 @@ export default function WeeklyRosterPage() {
 
             if (existing) {
               initialGrid[s.id][d] = {
-                shift_start: existing.shift_start || '10:00',
+                shift_start: existing.shift_start || '08:00',
                 is_off: existing.is_off,
                 is_leave: existing.is_leave
               }
             } else {
               initialGrid[s.id][d] = {
-                shift_start: s.shift_start || '10:00',
+                shift_start: s.shift_start || '08:00',
                 is_off: isDefaultOff,
                 is_leave: false
               }
@@ -254,7 +255,21 @@ export default function WeeklyRosterPage() {
           {loading ? (
             <div style={{ padding: '60px', textAlign: 'center' }}><div className="loader"></div></div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '900px' }}>
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ fontSize: '13px', color: '#666' }}>
+                  Showing <strong>{staff.filter(s => showKitchenStaff || s.is_rostered !== false).length}</strong> staff members
+                </div>
+                <label style={{ fontSize: '12px', color: '#6B3A2A', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <input
+                    type="checkbox"
+                    checked={showKitchenStaff}
+                    onChange={e => setShowKitchenStaff(e.target.checked)}
+                  /> Show Non-Rostered / Kitchen Staff
+                </label>
+              </div>
+
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '900px' }}>
               <thead>
                 <tr style={{ borderBottom: '2px solid #F0EAE1' }}>
                   <th style={{ padding: '12px', textAlign: 'left', minWidth: '180px', color: '#8C7A6B' }}>Staff Member</th>
@@ -271,15 +286,17 @@ export default function WeeklyRosterPage() {
                 </tr>
               </thead>
               <tbody>
-                {staff.map(s => (
+                {staff.filter(s => showKitchenStaff || s.is_rostered !== false).map(s => (
                   <tr key={s.id} style={{ borderBottom: '1px solid #F7F3EE' }}>
                     <td style={{ padding: '12px' }}>
                       <div style={{ fontWeight: 700, color: '#1C1410' }}>{s.name}</div>
-                      <div style={{ fontSize: '11px', color: '#9C8A76' }}>{s.employee_id} • Off: {s.weekly_off || 'Fri'}</div>
+                      <div style={{ fontSize: '11px', color: '#9C8A76' }}>
+                        {s.employee_id} • {s.designation} {s.is_rostered === false && <span style={{ color: '#d32f2f' }}>(Kitchen)</span>}
+                      </div>
                     </td>
 
                     {days.map(d => {
-                      const cell = gridData[s.id]?.[d] || { shift_start: '10:00', is_off: false, is_leave: false }
+                      const cell = gridData[s.id]?.[d] || { shift_start: '08:00', is_off: false, is_leave: false }
 
                       let bg = 'white'
                       if (cell.is_leave) bg = '#e1f5fe'
@@ -295,7 +312,7 @@ export default function WeeklyRosterPage() {
                             ) : (
                               <input
                                 type="time"
-                                value={cell.shift_start || '10:00'}
+                                value={cell.shift_start || '08:00'}
                                 onChange={e => handleCellChange(s.id, d, 'shift_start', e.target.value)}
                                 style={{ padding: '4px 6px', border: '1px solid #E0D6C8', borderRadius: '6px', fontSize: '12px', textAlign: 'center' }}
                               />
@@ -317,6 +334,7 @@ export default function WeeklyRosterPage() {
                 ))}
               </tbody>
             </table>
+          </>
           )}
         </div>
 
@@ -325,18 +343,18 @@ export default function WeeklyRosterPage() {
   )
 }
 
-function getMondayOf(date) {
+function getSaturdayOf(date) {
   const d = new Date(date)
   const day = d.getDay()
-  const diff = (day === 0 ? -6 : 1 - day)
+  const diff = (day === 6 ? 0 : -(day + 1))
   d.setDate(d.getDate() + diff)
   return d.toISOString().split('T')[0]
 }
 
-function get7Days(mondayStr) {
+function get7Days(saturdayStr) {
   const res = []
   for (let i = 0; i < 7; i++) {
-    const d = new Date(mondayStr)
+    const d = new Date(saturdayStr)
     d.setDate(d.getDate() + i)
     res.push(d.toISOString().split('T')[0])
   }
