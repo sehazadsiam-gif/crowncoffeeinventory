@@ -7,7 +7,7 @@ import Navbar from '../../../components/Navbar'
 import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
 import Link from 'next/link'
-import { Users, Plus, UserX, UserCheck, Trash2, QrCode } from 'lucide-react'
+import { Users, Plus, UserX, UserCheck, Trash2, QrCode, Wifi, Radio } from 'lucide-react'
 
 export default function StaffDirectory() {
   const router = useRouter()
@@ -1069,15 +1069,49 @@ export default function StaffDirectory() {
                 </div>
               </div>
 
-              {/* QR Code */}
-              <div style={{ background: 'white', padding: '8px', borderRadius: '8px', display: 'inline-block', border: '1px solid #E8E0D4' }}>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(selectedCardStaff.employee_id || selectedCardStaff.id)}`}
-                  alt="Staff QR Code"
-                  style={{ width: '90px', height: '90px', display: 'block' }}
-                />
+              {/* RFID Contactless Wireless Badge */}
+              <div style={{
+                background: '#FAF7F2',
+                border: '1.5px solid #6B3A2A',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.03)'
+              }}>
+                <div style={{
+                  background: '#6B3A2A',
+                  color: 'white',
+                  borderRadius: '50%',
+                  width: '38px',
+                  height: '38px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Wifi size={22} style={{ transform: 'rotate(90deg)' }} />
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '1px', color: '#6B3A2A' }}>
+                    RFID SMART CARD
+                  </div>
+                  <div style={{ fontSize: '9px', color: '#64748B', fontWeight: 600 }}>
+                    Contactless Tap Attendance
+                  </div>
+                  {selectedCardStaff.rfid_code ? (
+                    <div style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
+                      CODE: {selectedCardStaff.rfid_code}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '9px', color: '#D97706', fontWeight: 700, marginTop: '2px' }}>
+                      ● Tap to pair card
+                    </div>
+                  )}
+                </div>
               </div>
-              <div style={{ fontSize: '9px', color: '#999', marginTop: '4px' }}>Scan for attendance / check-in</div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
