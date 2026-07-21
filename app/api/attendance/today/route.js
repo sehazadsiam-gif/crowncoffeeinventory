@@ -9,14 +9,14 @@ export async function GET(request) {
     let staff = []
     let { data: sData, error: staffErr } = await supabaseAdmin
       .from('staff')
-      .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes, is_rostered')
+      .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes, is_rostered, department, photo_url, rfid_code')
       .eq('is_active', true)
       .order('serial', { ascending: true })
 
     if (staffErr) {
       const fallback = await supabaseAdmin
         .from('staff')
-        .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes')
+        .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes, department, photo_url, rfid_code')
         .eq('is_active', true)
         .order('serial', { ascending: true })
       if (fallback.error) throw fallback.error
@@ -68,12 +68,16 @@ export async function GET(request) {
         name: s.name,
         employee_id: s.employee_id || 'N/A',
         designation: s.designation,
+        department: s.department || 'front',
+        photo_url: s.photo_url || null,
+        rfid_code: s.rfid_code || null,
         shift_start: shiftStart,
         is_rostered: s.is_rostered !== false,
         check_in_at: log?.check_in_at || null,
         check_out_at: log?.check_out_at || null,
         status,
         minutes_late: log?.minutes_late || 0,
+        overtime_minutes: log?.overtime_minutes || 0,
         source: log?.source || null,
         hours_worked: log?.hours_worked || null
       }
