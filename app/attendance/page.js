@@ -416,16 +416,16 @@ export default function AttendanceDashboardPage() {
                         color: r.department === 'kitchen' ? '#92400E' : '#0369A1',
                         fontWeight: 700
                       }}>
-                        {r.department === 'kitchen' ? '🍳 Kitchen Staff' : '☕ Front Staff'}
+                        {r.department === 'kitchen' ? 'Kitchen Staff' : 'Front Staff'}
                       </span>
 
                       {r.rfid_code ? (
                         <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 700 }}>
-                          💳 RFID Active
+                          RFID Active
                         </span>
                       ) : (
                         <span style={{ fontSize: '11px', color: '#D97706', fontWeight: 600 }}>
-                          ⚠️ Card Unpaired
+                          Card Unpaired
                         </span>
                       )}
                     </div>
@@ -473,8 +473,8 @@ export default function AttendanceDashboardPage() {
                       }}
                     >
                       {r.check_in_at && !r.check_out_at
-                        ? '🔴 Clock Out Now'
-                        : (r.check_out_at ? '✅ Shift Completed' : '🟢 Clock In Now')}
+                        ? 'Clock Out'
+                        : (r.check_out_at ? 'Shift Completed' : 'Clock In')}
                     </button>
                   </div>
                 </div>

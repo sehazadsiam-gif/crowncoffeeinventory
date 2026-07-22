@@ -279,8 +279,8 @@ export default function PublicAttendancePage() {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
           {[
             { id: 'all', label: 'All Staff' },
-            { id: 'front', label: '☕ Front Staff' },
-            { id: 'kitchen', label: '🍳 Kitchen Staff' }
+            { id: 'front', label: 'Front Staff' },
+            { id: 'kitchen', label: 'Kitchen Staff' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -372,7 +372,7 @@ export default function PublicAttendancePage() {
                         color: r.department === 'kitchen' ? '#FBBF24' : '#38BDF8',
                         fontWeight: 700
                       }}>
-                        {r.department === 'kitchen' ? '🍳 Kitchen Staff' : '☕ Front Staff'}
+                        {r.department === 'kitchen' ? 'Kitchen Staff' : 'Front Staff'}
                       </span>
                     </div>
                   </div>

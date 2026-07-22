@@ -426,16 +426,16 @@ export default function AttendanceCheckPage() {
                             color: r.department === 'kitchen' ? '#92400E' : '#0369A1',
                             fontWeight: 700
                           }}>
-                            {r.department === 'kitchen' ? '🍳 Kitchen Staff' : '☕ Front Staff'}
+                            {r.department === 'kitchen' ? 'Kitchen Staff' : 'Front Staff'}
                           </span>
 
                           {r.rfid_code ? (
                             <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              💳 RFID Paired
+                              RFID Paired
                             </span>
                           ) : (
                             <span style={{ fontSize: '11px', color: '#D97706', fontWeight: 600 }}>
-                              ⚠️ No Card Paired
+                              No Card Paired
                             </span>
                           )}
                         </div>

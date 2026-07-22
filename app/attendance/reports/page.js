@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '../../../components/Navbar'
 import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
-import { FileSpreadsheet, FileText, Calendar, Edit, Search, DollarSign } from 'lucide-react'
+import { FileSpreadsheet, FileText, Calendar, Edit, Search, DollarSign, Clock, CheckCircle2, AlertCircle, BarChart3, ListFilter } from 'lucide-react'
 import * as xlsx from 'xlsx'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -81,7 +81,7 @@ export default function AttendanceReportsPage() {
       })
       const json = await res.json()
       if (res.ok) {
-        addToast(`✅ ${json.message || 'Applied to Payroll successfully!'}`, 'success')
+        addToast(json.message || 'Applied to Payroll successfully!', 'success')
         setTimeout(() => {
           router.push('/staff/payroll')
         }, 1200)
@@ -279,6 +279,9 @@ export default function AttendanceReportsPage() {
             <button
               onClick={() => setActiveTab('daily')}
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
                 padding: '8px 18px',
                 borderRadius: '10px',
                 border: 'none',
@@ -290,12 +293,15 @@ export default function AttendanceReportsPage() {
                 transition: 'all 0.15s ease'
               }}
             >
-              🗓️ Daily Attendance Breakdown ({filteredLogs.length})
+              <ListFilter size={15} /> Daily Attendance Breakdown ({filteredLogs.length})
             </button>
 
             <button
               onClick={() => setActiveTab('monthly')}
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
                 padding: '8px 18px',
                 borderRadius: '10px',
                 border: 'none',
@@ -307,7 +313,7 @@ export default function AttendanceReportsPage() {
                 transition: 'all 0.15s ease'
               }}
             >
-              📊 Monthly Staff Totals ({filteredReports.length})
+              <BarChart3 size={15} /> Monthly Staff Totals ({filteredReports.length})
             </button>
           </div>
 
@@ -426,7 +432,7 @@ export default function AttendanceReportsPage() {
                             {log.staff_name} <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>({log.employee_id})</span>
                           </div>
                           <div style={{ fontSize: '13px', color: '#475569', fontWeight: 700, marginTop: '2px' }}>
-                            📅 Date: <strong style={{ color: '#0F172A' }}>{log.date_formatted}</strong>
+                            Date: <strong style={{ color: '#0F172A' }}>{log.date_formatted}</strong>
                           </div>
                         </div>
                       </div>
@@ -436,7 +442,7 @@ export default function AttendanceReportsPage() {
                         <div>
                           <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 800 }}>DUTY TIMING</div>
                           <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
-                            ⏰ {log.time_range}
+                            {log.time_range}
                           </div>
                         </div>
 
@@ -450,11 +456,11 @@ export default function AttendanceReportsPage() {
                           color: log.status === 'present' ? '#15803D' : (log.status === 'late' ? '#B91C1C' : '#475569'),
                           border: log.status === 'present' ? '1px solid #86EFAC' : (log.status === 'late' ? '1px solid #FCA5A5' : '1px solid #CBD5E1')
                         }}>
-                          {log.status === 'present' && '✅ Present'}
-                          {log.status === 'late' && `🔴 Late (${log.minutes_late} mins late)`}
-                          {log.status === 'absent' && '⚠️ Absent'}
-                          {log.status === 'on_leave' && '🏖️ On Leave'}
-                          {log.status === 'off' && '🌴 Day Off'}
+                          {log.status === 'present' && 'Present'}
+                          {log.status === 'late' && `Late (${log.minutes_late} mins late)`}
+                          {log.status === 'absent' && 'Absent'}
+                          {log.status === 'on_leave' && 'On Leave'}
+                          {log.status === 'off' && 'Day Off'}
                         </div>
 
                         {/* Overtime & Hours Worked */}
@@ -464,7 +470,7 @@ export default function AttendanceReportsPage() {
                           </div>
                           {log.overtime_hours > 0 ? (
                             <div style={{ fontSize: '12px', fontWeight: 800, color: '#D4933A' }}>
-                              ⚡ {log.overtime_hours}h Overtime
+                              {log.overtime_hours}h Overtime
                             </div>
                           ) : (
                             <div style={{ fontSize: '11px', color: '#94A3B8' }}>No Overtime</div>
@@ -552,11 +558,11 @@ export default function AttendanceReportsPage() {
                   onChange={e => setEditForm({ ...editForm, status: e.target.value })}
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px', fontWeight: 700 }}
                 >
-                  <option value="present">✅ Present</option>
-                  <option value="late">🔴 Late</option>
-                  <option value="absent">⚠️ Absent</option>
-                  <option value="on_leave">🏖️ On Leave</option>
-                  <option value="off">🌴 Day Off</option>
+                  <option value="present">Present</option>
+                  <option value="late">Late</option>
+                  <option value="absent">Absent</option>
+                  <option value="on_leave">On Leave</option>
+                  <option value="off">Day Off</option>
                 </select>
               </div>
 

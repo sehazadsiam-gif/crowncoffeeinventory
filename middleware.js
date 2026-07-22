@@ -6,11 +6,7 @@ export function middleware(request) {
   const url = request.nextUrl.clone()
   const path = url.pathname
 
-  // ── Hostname redirect (existing) ──────────────────────────
-  if (url.hostname === 'ccadmin.online') {
-    url.hostname = 'www.ccadmin.online'
-    return NextResponse.redirect(url)
-  }
+
 
   // ── Costing module route protection ──────────────────────
   const hasCostingCookie = request.cookies.has(COOKIE_NAME)
