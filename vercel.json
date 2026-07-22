@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/attendance/auto-close",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/attendance/weekly-summary",
+      "schedule": "0 2 * * 6"
+    },
+    {
+      "path": "/api/attendance/monthly-report-card",
+      "schedule": "0 2 1 * *"
+    }
+  ]
+}

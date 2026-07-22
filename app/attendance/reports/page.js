@@ -91,6 +91,30 @@ export default function AttendanceReportsPage() {
     fetchReport()
   }
 
+  async function handleBulkDayOff() {
+    const dateInput = prompt('Enter date to mark ALL staff as Day Off (YYYY-MM-DD):', new Date().toISOString().split('T')[0])
+    if (!dateInput) return
+    try {
+      setLoading(true)
+      const res = await fetch('/api/attendance/bulk-dayoff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateInput, notes: 'Cafe Closed / Holiday' })
+      })
+      const json = await res.json()
+      if (res.ok) {
+        addToast(json.message || 'Marked all staff as Day Off', 'success')
+        fetchReport()
+      } else {
+        addToast(json.error || 'Failed bulk day-off', 'error')
+      }
+    } catch (e) {
+      addToast('Bulk day-off error', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function handleApplyToPayroll() {
     try {
       setApplyLoading(true)
@@ -260,6 +284,13 @@ export default function AttendanceReportsPage() {
             </div>
 
             <button
+              onClick={handleBulkDayOff}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FEF3C7', border: '1px solid #F59E0B', color: '#B45309', fontWeight: 800, padding: '10px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}
+            >
+              <Calendar size={15} /> Mark All Day Off
+            </button>
+
+            <button
               onClick={handleApplyToPayroll}
               disabled={applyLoading}
               className="btn-primary"
@@ -319,6 +350,26 @@ export default function AttendanceReportsPage() {
               }}
             >
               <BarChart3 size={15} /> Monthly Staff Totals ({filteredReports.length})
+            </button>
+
+            <button
+              onClick={() => setActiveTab('heatmap')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: activeTab === 'heatmap' ? '#0F172A' : '#F1F5F9',
+                color: activeTab === 'heatmap' ? 'white' : '#475569',
+                fontWeight: 800,
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Calendar size={15} /> Attendance Heat Map
             </button>
           </div>
 
@@ -562,7 +613,7 @@ export default function AttendanceReportsPage() {
                 </div>
               )}
             </div>
-          ) : (
+          ) : activeTab === 'monthly' ? (
             /* TAB 2: MONTHLY SUMMARY TABLE */
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
@@ -574,6 +625,7 @@ export default function AttendanceReportsPage() {
                     <th style={{ padding: '12px', textAlign: 'center' }}>Present Days</th>
                     <th style={{ padding: '12px', textAlign: 'center' }}>Late Days</th>
                     <th style={{ padding: '12px', textAlign: 'center' }}>Absent Days</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Punctuality Score</th>
                     <th style={{ padding: '12px', textAlign: 'center' }}>Overtime Hours</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Total Worked Hours</th>
                   </tr>
@@ -587,6 +639,18 @@ export default function AttendanceReportsPage() {
                       <td style={{ padding: '12px', textAlign: 'center', color: '#16A34A', fontWeight: 800 }}>{r.present}</td>
                       <td style={{ padding: '12px', textAlign: 'center', color: '#DC2626', fontWeight: 800 }}>{r.late}</td>
                       <td style={{ padding: '12px', textAlign: 'center', color: '#94A3B8', fontWeight: 700 }}>{r.absent}</td>
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        {(() => {
+                          const totalDuty = (r.present || 0) + (r.late || 0) + (r.absent || 0)
+                          const score = totalDuty > 0 ? Math.round(((r.present || 0) / totalDuty) * 100) : 100
+                          const color = score >= 90 ? '#16A34A' : score >= 75 ? '#D97706' : '#DC2626'
+                          return (
+                            <span style={{ fontWeight: 900, color, background: `${color}15`, padding: '4px 10px', borderRadius: '12px', fontSize: '12px' }}>
+                              {score}%
+                            </span>
+                          )
+                        })()}
+                      </td>
                       <td style={{ padding: '12px', textAlign: 'center', color: '#D4933A', fontWeight: 800 }}>{r.total_overtime_hours} hrs</td>
                       <td style={{ padding: '12px', textAlign: 'right', fontWeight: 900, color: '#0F172A' }}>{r.total_hours} hrs</td>
                     </tr>
@@ -594,7 +658,78 @@ export default function AttendanceReportsPage() {
                 </tbody>
               </table>
             </div>
-          )}
+          ) : activeTab === 'heatmap' ? (
+            /* TAB 3: HEAT MAP CALENDAR GRID */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', fontSize: '12px', fontWeight: 700 }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: 12, height: 12, borderRadius: 3, background: '#16A34A' }} /> Present</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: 12, height: 12, borderRadius: 3, background: '#D97706' }} /> Late</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: 12, height: 12, borderRadius: 3, background: '#DC2626' }} /> Absent</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: 12, height: 12, borderRadius: 3, background: '#CBD5E1' }} /> Off / Leave</span>
+              </div>
+
+              {filteredReports.map(staff => {
+                const daysInMonth = new Date(year, month, 0).getDate()
+                const staffLogs = (reportData.daily_logs || []).filter(l => l.staff_id === staff.staff_id)
+                const logMap = {}
+                staffLogs.forEach(l => { logMap[l.date] = l })
+
+                return (
+                  <div key={staff.staff_id} style={{ background: '#F8FAFC', padding: '16px 20px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>
+                        {staff.name} <span style={{ color: '#64748B', fontWeight: 600, fontSize: '12px' }}>({staff.employee_id})</span>
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>
+                        Punctuality: <strong style={{ color: '#16A34A' }}>{Math.round(((staff.present || 0) / ((staff.present || 0) + (staff.late || 0) + (staff.absent || 0) || 1)) * 100)}%</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(36px, 1fr))', gap: '6px' }}>
+                      {Array.from({ length: daysInMonth }, (_, i) => {
+                        const dayNum = i + 1
+                        const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
+                        const log = logMap[dateKey]
+                        let bg = '#E2E8F0'
+                        let title = `${dayNum} ${months[month-1]}: No record`
+
+                        if (log) {
+                          if (log.status === 'present') bg = '#16A34A'
+                          else if (log.status === 'late') bg = '#D97706'
+                          else if (log.status === 'absent') bg = '#DC2626'
+                          else bg = '#94A3B8'
+                          title = `${dayNum} ${months[month-1]}: ${log.status.toUpperCase()} (${log.time_range})`
+                        }
+
+                        return (
+                          <div
+                            key={dayNum}
+                            title={title}
+                            onClick={() => log && openEditModal(log)}
+                            style={{
+                              aspectRatio: '1/1',
+                              borderRadius: '6px',
+                              background: bg,
+                              color: 'white',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: log ? 'pointer' : 'default',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                            }}
+                          >
+                            {dayNum}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
 
         </div>
 

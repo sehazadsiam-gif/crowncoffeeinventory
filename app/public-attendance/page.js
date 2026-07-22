@@ -9,10 +9,17 @@ export default function PublicAttendancePage() {
   const [data, setData] = useState({ date: '', summary: {}, records: [] })
   const [tapFlash, setTapFlash] = useState(null)
   const [departmentFilter, setDepartmentFilter] = useState('all')
+  const [isOffline, setIsOffline] = useState(false)
 
   useEffect(() => {
     const clockTimer = setInterval(() => setCurrentTime(new Date()), 1000)
     fetchTodayData()
+
+    function updateOnlineStatus() {
+      setIsOffline(!navigator.onLine)
+    }
+    window.addEventListener('online', updateOnlineStatus)
+    window.addEventListener('offline', updateOnlineStatus)
 
     const channel = supabase.channel('kiosk_v3')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, () => {
@@ -24,6 +31,8 @@ export default function PublicAttendancePage() {
     return () => {
       clearInterval(clockTimer)
       clearInterval(pollTimer)
+      window.removeEventListener('online', updateOnlineStatus)
+      window.removeEventListener('offline', updateOnlineStatus)
       supabase.removeChannel(channel)
     }
   }, [])
@@ -52,8 +61,16 @@ export default function PublicAttendancePage() {
       if (!silent) setLoading(true)
       const res = await fetch(`/api/attendance/today?t=${Date.now()}`, { cache: 'no-store' })
       const json = await res.json()
-      if (res.ok) setData(json)
-    } catch (e) { console.error(e) }
+      if (res.ok) {
+        setData(json)
+        setIsOffline(false)
+      } else {
+        setIsOffline(true)
+      }
+    } catch (e) {
+      console.error(e)
+      setIsOffline(true)
+    }
     finally { if (!silent) setLoading(false) }
   }
 
@@ -67,6 +84,7 @@ export default function PublicAttendancePage() {
       const json = await res.json()
       const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
       if (res.ok) {
+        setIsOffline(false)
         const isOut = json.alreadyCheckedOut
         const isLate = json.status === 'late'
         setTapFlash({
@@ -76,6 +94,7 @@ export default function PublicAttendancePage() {
           type: isOut ? 'out' : isLate ? 'late' : 'in'
         })
       } else if (json.blocked) {
+        setIsOffline(false)
         setTapFlash({
           name: json.staff?.name || 'Staff Member',
           id: json.staff?.employee_id || '',
@@ -87,7 +106,12 @@ export default function PublicAttendancePage() {
       }
       fetchTodayData(true)
       setTimeout(() => setTapFlash(null), 2000)
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error(e)
+      setIsOffline(true)
+      setTapFlash({ name: 'Connection Error (Offline)', id: '', time: new Date().toLocaleTimeString(), type: 'error' })
+      setTimeout(() => setTapFlash(null), 3000)
+    }
   }
 
   const records = data.records || []
@@ -109,7 +133,12 @@ export default function PublicAttendancePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#F1F5F9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* Full-screen RFID Tap Flash */}
+      {/* Offline Alert Banner */}
+      {isOffline && (
+        <div style={{ background: '#DC2626', color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 16px', textAlign: 'center', fontWeight: 800, fontSize: '13px', position: 'sticky', top: 0, zIndex: 10000, boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
+          ⚠ Offline — Taps cannot be recorded. Check your internet connection.
+        </div>
+      )}
       {tapFlash && (() => {
         const cfg = flashConfig[tapFlash.type]
         return (
