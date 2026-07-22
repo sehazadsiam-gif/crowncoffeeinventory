@@ -7,9 +7,13 @@ export async function GET(request) {
     const month = parseInt(searchParams.get('month') || (new Date().getMonth() + 1))
     const year = parseInt(searchParams.get('year') || new Date().getFullYear())
 
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    // Support optional custom date range (from/to) for daily breakdown
+    const fromParam = searchParams.get('from')
+    const toParam = searchParams.get('to')
+
+    const startDate = fromParam || `${year}-${String(month).padStart(2, '0')}-01`
     const lastDay = new Date(year, month, 0).getDate()
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    const endDate = toParam || `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
     const { data: staff, error: staffErr } = await supabaseAdmin
       .from('staff')

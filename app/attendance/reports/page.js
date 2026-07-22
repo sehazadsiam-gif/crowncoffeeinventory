@@ -18,10 +18,17 @@ export default function AttendanceReportsPage() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
   const [reportData, setReportData] = useState({ summary: {}, reports: [], daily_logs: [] })
-  
+
   const [activeTab, setActiveTab] = useState('daily') // 'daily' | 'monthly'
   const [searchQuery, setSearchQuery] = useState('')
   const [applyLoading, setApplyLoading] = useState(false)
+
+  // Date range filter (for Daily Breakdown tab)
+  const todayStr = new Date().toISOString().split('T')[0]
+  const firstOfMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`
+  const [dateFrom, setDateFrom] = useState(firstOfMonth)
+  const [dateTo, setDateTo] = useState(todayStr)
+  const [useCustomRange, setUseCustomRange] = useState(false)
 
   // Edit Log Modal State
   const [editingLog, setEditingLog] = useState(null)
@@ -46,14 +53,19 @@ export default function AttendanceReportsPage() {
       router.replace('/')
       return
     }
-
     fetchReport()
   }, [month, year, router])
 
-  async function fetchReport() {
+  async function fetchReport(customFrom, customTo) {
     try {
       setLoading(true)
-      const res = await fetch(`/api/attendance/report?month=${month}&year=${year}`)
+      let url
+      if (customFrom && customTo) {
+        url = `/api/attendance/report?from=${customFrom}&to=${customTo}`
+      } else {
+        url = `/api/attendance/report?month=${month}&year=${year}`
+      }
+      const res = await fetch(url)
       const json = await res.json()
       if (res.ok) {
         setReportData(json)
@@ -65,6 +77,18 @@ export default function AttendanceReportsPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleApplyDateRange() {
+    if (!dateFrom || !dateTo) { addToast('Please select both dates', 'error'); return }
+    if (dateFrom > dateTo) { addToast('From date must be before To date', 'error'); return }
+    setUseCustomRange(true)
+    fetchReport(dateFrom, dateTo)
+  }
+
+  function handleClearRange() {
+    setUseCustomRange(false)
+    fetchReport()
   }
 
   async function handleApplyToPayroll() {
@@ -212,20 +236,21 @@ export default function AttendanceReportsPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', gap: '8px', background: 'white', padding: '6px 12px', borderRadius: '12px', border: '1px solid #CBD5E1', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
+            {/* Month/Year Selector — used for Monthly Summary & default daily view */}
+            <div style={{ display: 'flex', gap: '8px', background: 'white', padding: '6px 12px', borderRadius: '12px', border: '1px solid #CBD5E1', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', alignItems: 'center' }}>
+              <Calendar size={14} color="#94A3B8" />
               <select
                 value={month}
-                onChange={e => setMonth(parseInt(e.target.value))}
+                onChange={e => { setMonth(parseInt(e.target.value)); setUseCustomRange(false) }}
                 style={{ border: 'none', background: 'transparent', fontWeight: 800, fontSize: '14px', cursor: 'pointer', color: '#0F172A' }}
               >
                 {months.map((m, idx) => (
                   <option key={idx} value={idx + 1}>{m}</option>
                 ))}
               </select>
-
               <select
                 value={year}
-                onChange={e => setYear(parseInt(e.target.value))}
+                onChange={e => { setYear(parseInt(e.target.value)); setUseCustomRange(false) }}
                 style={{ border: 'none', background: 'transparent', fontWeight: 800, fontSize: '14px', cursor: 'pointer', color: '#0F172A' }}
               >
                 {[2024, 2025, 2026, 2027].map(y => (
@@ -238,36 +263,16 @@ export default function AttendanceReportsPage() {
               onClick={handleApplyToPayroll}
               disabled={applyLoading}
               className="btn-primary"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                background: '#059669',
-                border: 'none',
-                color: 'white',
-                fontWeight: 800,
-                padding: '10px 18px',
-                borderRadius: '12px',
-                fontSize: '14px',
-                cursor: applyLoading ? 'wait' : 'pointer',
-                boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)'
-              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#059669', border: 'none', color: 'white', fontWeight: 800, padding: '10px 18px', borderRadius: '12px', fontSize: '14px', cursor: applyLoading ? 'wait' : 'pointer', boxShadow: '0 4px 12px rgba(5,150,105,0.25)' }}
             >
               <DollarSign size={18} />
-              {applyLoading ? 'Applying to Payroll...' : 'Apply to Monthly Payroll'}
+              {applyLoading ? 'Applying...' : 'Apply to Monthly Payroll'}
             </button>
 
-            <button
-              onClick={handleExportCSV}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F1F5F9', border: '1px solid #CBD5E1', color: '#334155', fontWeight: 700, padding: '10px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}
-            >
+            <button onClick={handleExportCSV} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F1F5F9', border: '1px solid #CBD5E1', color: '#334155', fontWeight: 700, padding: '10px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}>
               <FileSpreadsheet size={16} /> Excel
             </button>
-
-            <button
-              onClick={handleExportPDF}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0F172A', border: 'none', color: 'white', fontWeight: 700, padding: '10px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}
-            >
+            <button onClick={handleExportPDF} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0F172A', border: 'none', color: 'white', fontWeight: 700, padding: '10px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}>
               <FileText size={16} /> PDF
             </button>
           </div>
@@ -335,6 +340,61 @@ export default function AttendanceReportsPage() {
             />
           </div>
         </div>
+
+        {/* Date Range Picker — Daily Breakdown only */}
+        {activeTab === 'daily' && (
+          <div style={{ background: 'white', borderRadius: '16px', border: useCustomRange ? '2px solid #2563EB' : '1px solid #E2E8F0', padding: '16px 20px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={16} color="#2563EB" />
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>Filter by Date Range</span>
+                {useCustomRange && (
+                  <span style={{ fontSize: '11px', fontWeight: 800, background: '#DBEAFE', color: '#1D4ED8', padding: '2px 10px', borderRadius: '20px' }}>
+                    Custom Range Active
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>From</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={e => setDateFrom(e.target.value)}
+                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '7px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
+                />
+                <span style={{ color: '#94A3B8', fontWeight: 300, fontSize: '18px' }}>→</span>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>To</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={e => setDateTo(e.target.value)}
+                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '7px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
+                />
+                <button
+                  onClick={handleApplyDateRange}
+                  style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 18px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Apply
+                </button>
+                {useCustomRange && (
+                  <button
+                    onClick={handleClearRange}
+                    style={{ background: '#F1F5F9', color: '#374155', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '8px 14px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+                {useCustomRange
+                  ? `${new Date(dateFrom).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} — ${new Date(dateTo).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                  : `Full month: ${months[month - 1]} ${year}`}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main PDF Exportable Container */}
         <div id="report-pdf-container" style={{ background: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '32px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>

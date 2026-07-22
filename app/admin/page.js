@@ -4,11 +4,16 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
 import AdminClient from '../../components/AdminClient'
+import { useSessionTimeout } from '../../hooks/useSessionTimeout'
 
 export default function AdminPage() {
   const router = useRouter()
   const [data, setData] = useState({ stats: { totalRevenue: 0, totalSalesCount: 0, inventoryValue: 0, totalIngredients: 0, totalRecipes: 0 } })
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // 15-minute idle session timeout for admin
+  useSessionTimeout(isAdmin)
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -17,6 +22,7 @@ export default function AdminPage() {
       router.replace('/')
       return
     }
+    setIsAdmin(true)
     fetchAdminStats()
   }, [router])
 
