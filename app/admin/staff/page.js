@@ -56,17 +56,17 @@ export default function StaffDirectory() {
       })
 
       const imgData = canvas.toDataURL('image/png', 1.0)
-      // Standard CR80 ID Card dimensions: 85mm x 53.5mm landscape
+      // Custom ID Card dimensions: 5.5 inches (breadth) x 8.5 inches (height)
       const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: [85, 53.5]
+        orientation: 'portrait',
+        unit: 'in',
+        format: [5.5, 8.5]
       })
 
-      pdf.addImage(imgData, 'PNG', 0, 0, 85, 53.5, undefined, 'FAST')
-      const fileName = `${(selectedCardStaff.name || 'Staff').replace(/\s+/g, '_')}_ID_Card_85x53.5mm.pdf`
+      pdf.addImage(imgData, 'PNG', 0, 0, 5.5, 8.5, undefined, 'FAST')
+      const fileName = `${(selectedCardStaff.name || 'Staff').replace(/\s+/g, '_')}_ID_Card_5.5x8.5in.pdf`
       pdf.save(fileName)
-      addToast('ID Card PDF downloaded (85×53.5mm)!', 'success')
+      addToast('ID Card PDF downloaded (5.5″ × 8.5″)!', 'success')
     } catch (err) {
       console.error('PDF download error:', err)
       addToast('Failed to generate PDF', 'error')
