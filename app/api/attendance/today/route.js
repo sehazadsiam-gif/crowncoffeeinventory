@@ -6,11 +6,8 @@ export const revalidate = 0
 
 export async function GET(request) {
   try {
-    const d = new Date()
-    const localYear = d.getFullYear()
-    const localMonth = String(d.getMonth() + 1).padStart(2, '0')
-    const localDay = String(d.getDate()).padStart(2, '0')
-    const today = `${localYear}-${localMonth}-${localDay}`
+    // Ensure today date is in Asia/Dhaka timezone (UTC+6)
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' })
 
     // Fetch all active staff (fallback if is_rostered column not yet created)
     let staff = []

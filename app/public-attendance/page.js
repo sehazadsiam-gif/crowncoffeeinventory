@@ -351,7 +351,7 @@ function StaffCard({ r }) {
           padding: '4px 10px', borderRadius: '20px'
         }}>
           {statusText}
-          {isLate && r.minutes_late > 0 && ` · ${r.minutes_late}m late`}
+          {isLate && !isOut && r.minutes_late > 0 && ` · ${r.minutes_late}m late`}
         </span>
       </div>
 
