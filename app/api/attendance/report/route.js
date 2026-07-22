@@ -210,7 +210,6 @@ export async function POST(request) {
           present_days: present,
           late_days: late,
           absent_days: absent,
-          leave_days: onLeave,
           total_hours: totalHours,
           total_late_minutes: totalLateMins,
           overtime_minutes: totalOtMins,
