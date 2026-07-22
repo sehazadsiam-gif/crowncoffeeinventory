@@ -214,13 +214,42 @@ export default function PublicAttendancePage() {
           <Stat label="TOTAL" value={totalStaff} color="#94A3B8" />
         </div>
 
-        {/* Right: Clock */}
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '32px', fontWeight: 900, color: 'white', fontFamily: 'monospace', letterSpacing: '2px' }}>
-            {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-          </div>
-          <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-            {currentTime.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+        {/* Right: Clock & Refresh */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <button
+            onClick={() => fetchTodayData(false)}
+            title="Refresh Attendance Data"
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '10px',
+              padding: '10px 14px',
+              color: 'white',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '13px',
+              fontWeight: 700,
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <svg
+              width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }}
+            >
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+            Refresh
+          </button>
+
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '32px', fontWeight: 900, color: 'white', fontFamily: 'monospace', letterSpacing: '2px' }}>
+              {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+              {currentTime.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+            </div>
           </div>
         </div>
       </div>
@@ -261,6 +290,7 @@ export default function PublicAttendancePage() {
 
       <style>{`
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
       `}</style>
     </div>
   )
