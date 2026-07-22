@@ -55,7 +55,7 @@ export default function PayrollPage() {
       const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0]
       const endDate = new Date(y, m, 0).toISOString().split('T')[0]
 
-      const [staffRes, payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes] = await Promise.all([
+      const [staffRes, payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes] = await Promise.all([
         supabase.from('staff').select('*').eq('is_active', true).order('serial', { ascending: true }).order('name', { ascending: true }),
         supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y),
         supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y),
@@ -63,7 +63,8 @@ export default function PayrollPage() {
         supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate),
         supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate),
         supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y),
-        supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate)
+        supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate),
+        supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes').gte('date', startDate).lte('date', endDate)
       ])
 
       const summaryMap = {}
@@ -89,6 +90,18 @@ export default function PayrollPage() {
       const presentMap = {}
       ;(presentRes.data || []).forEach(a => {
         presentMap[a.staff_id] = (presentMap[a.staff_id] || 0) + 1
+      })
+
+      const attLogs = logRes?.data || []
+      const logLateMap = {}
+      const logPresentMap = {}
+      const logOtMap = {}
+
+      attLogs.forEach(l => {
+        if (l.status === 'late') logLateMap[l.staff_id] = (logLateMap[l.staff_id] || 0) + 1
+        if (l.status === 'present' || l.status === 'late') logPresentMap[l.staff_id] = (logPresentMap[l.staff_id] || 0) + 1
+        const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 600)
+        logOtMap[l.staff_id] = (logOtMap[l.staff_id] || 0) + (otMins / 60)
       })
 
       const otLogs = otRes?.data || []
@@ -119,8 +132,8 @@ export default function PayrollPage() {
       for (const s of activeStaff) {
         const summary = summaryMap[s.id]
 
-        const lateDays = summary ? Number(summary.late_days || 0) : (lateMap[s.id] || 0)
-        const presentCount = summary ? Number(summary.present_days || 0) : (presentMap[s.id] || 0)
+        const lateDays = summary ? Number(summary.late_days || 0) : (logLateMap[s.id] || lateMap[s.id] || 0)
+        const presentCount = summary ? Number(summary.present_days || 0) : (logPresentMap[s.id] || presentMap[s.id] || 0)
         const absentCount = summary ? Number(summary.absent_days || 0) : (unpaidMap[s.id] || 0)
         const totalPresentForFood = presentCount
 
@@ -128,13 +141,17 @@ export default function PayrollPage() {
         const lateDeductionDays = Math.floor(lateDays / 3)
         const lateDeduction = lateDeductionDays * perDay
 
+        const autoOtHours = summary ? Number(summary.overtime_hours || 0) : (otMap[s.id]?.hours || Math.round((logOtMap[s.id] || 0) * 100) / 100)
+        const hourlyRate = (Number(s.base_salary) / 30) / 10
+        const autoOtPay = otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate * 1.25)
+
         if (!payMap[s.id]) {
           payMap[s.id] = {
             staff_id: s.id, month: m, year: y,
-            overtime_hours: otMap[s.id]?.hours || 0, 
-            overtime_pay: otMap[s.id]?.pay || 0,
-            overtime_auto_hours: otMap[s.id]?.hours || 0,
-            overtime_auto_pay: otMap[s.id]?.pay || 0,
+            overtime_hours: autoOtHours, 
+            overtime_pay: autoOtPay,
+            overtime_auto_hours: autoOtHours,
+            overtime_auto_pay: autoOtPay,
             overtime_manual: false,
             service_charge: 0, bonus: 0,
             lunch_dinner: totalPresentForFood * 140, morning_food: 0,
@@ -159,12 +176,12 @@ export default function PayrollPage() {
           payMap[s.id].present_days = presentCount
           payMap[s.id].absent_days = absentCount
           // Update auto OT values
-          payMap[s.id].overtime_auto_hours = otMap[s.id]?.hours || 0
-          payMap[s.id].overtime_auto_pay = otMap[s.id]?.pay || 0
+          payMap[s.id].overtime_auto_hours = autoOtHours
+          payMap[s.id].overtime_auto_pay = autoOtPay
           // Update OT if not manually overridden
           if (!payMap[s.id].overtime_manual) {
-            payMap[s.id].overtime_hours = otMap[s.id]?.hours || 0
-            payMap[s.id].overtime_pay = otMap[s.id]?.pay || 0
+            payMap[s.id].overtime_hours = autoOtHours
+            payMap[s.id].overtime_pay = autoOtPay
           }
         }
 
