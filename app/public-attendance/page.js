@@ -75,6 +75,13 @@ export default function PublicAttendancePage() {
           time: t,
           type: isOut ? 'out' : isLate ? 'late' : 'in'
         })
+      } else if (json.blocked) {
+        setTapFlash({
+          name: json.staff?.name || 'Staff Member',
+          id: json.staff?.employee_id || '',
+          time: t,
+          type: 'done'
+        })
       } else {
         setTapFlash({ name: 'Card Not Recognised', id: '', time: t, type: 'error' })
       }
@@ -95,7 +102,8 @@ export default function PublicAttendancePage() {
     in:    { bg: '#16A34A', icon: '✓', heading: 'CHECKED IN',  sub: 'On Time' },
     late:  { bg: '#D97706', icon: '✓', heading: 'CHECKED IN',  sub: 'Late Arrival' },
     out:   { bg: '#1D4ED8', icon: '✓', heading: 'CHECKED OUT', sub: 'Duty Complete' },
-    error: { bg: '#DC2626', icon: '✗', heading: 'NOT FOUND',   sub: 'Card not paired' },
+    done:  { bg: '#475569', icon: '—', heading: 'ALREADY DONE', sub: 'Check-in & check-out recorded for today' },
+    error: { bg: '#DC2626', icon: '✗', heading: 'NOT FOUND',   sub: 'Card not paired to any staff' },
   }
 
   return (
