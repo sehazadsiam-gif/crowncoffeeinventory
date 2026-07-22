@@ -126,7 +126,7 @@ export default function PublicAttendancePage() {
     in:    { bg: '#16A34A', icon: '✓', heading: 'CHECKED IN',  sub: 'On Time' },
     late:  { bg: '#D97706', icon: '✓', heading: 'CHECKED IN',  sub: 'Late Arrival' },
     out:   { bg: '#1D4ED8', icon: '✓', heading: 'CHECKED OUT', sub: 'Duty Complete' },
-    done:  { bg: '#475569', icon: '—', heading: 'ALREADY DONE', sub: 'Check-in & check-out recorded for today' },
+    done:  { bg: '#475569', icon: '✓', heading: 'SHIFT COMPLETED', sub: 'Check-in & check-out recorded for today' },
     error: { bg: '#DC2626', icon: '✗', heading: 'NOT FOUND',   sub: 'Card not paired to any staff' },
   }
 
