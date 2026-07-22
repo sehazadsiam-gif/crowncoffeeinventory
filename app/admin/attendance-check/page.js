@@ -217,6 +217,50 @@ export default function AttendanceCheckPage() {
     }
   }
 
+  async function handleQuickCheckin(staff) {
+    try {
+      const res = await fetch('/api/attendance/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: staff.staff_id,
+          source: 'manual'
+        })
+      })
+      const json = await res.json()
+      if (res.ok) {
+        addToast(`Checked In ${staff.name}!`, 'success')
+        fetchTodayData(true)
+      } else {
+        addToast(json.error || 'Quick check-in failed', 'error')
+      }
+    } catch (e) {
+      addToast('Check-in error', 'error')
+    }
+  }
+
+  async function handleQuickCheckout(staff) {
+    try {
+      const res = await fetch('/api/attendance/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: staff.staff_id,
+          source: 'manual'
+        })
+      })
+      const json = await res.json()
+      if (res.ok) {
+        addToast(`Checked Out ${staff.name}!`, 'success')
+        fetchTodayData(true)
+      } else {
+        addToast(json.error || 'Quick check-out failed', 'error')
+      }
+    } catch (e) {
+      addToast('Check-out error', 'error')
+    }
+  }
+
   const records = todayData.records || []
   const presentCount = records.filter(r => r.status === 'present').length
   const lateCount = records.filter(r => r.status === 'late').length
@@ -466,35 +510,82 @@ export default function AttendanceCheckPage() {
                           )}
                         </div>
 
-                        <button
-                          onClick={() => {
-                            setSelectedStaffForOverride(r)
-                            setOverrideForm({
-                              date: new Date().toISOString().split('T')[0],
-                              check_in_time: '08:00',
-                              check_out_time: '18:00',
-                              status: 'present',
-                              notes: 'Admin manual time override'
-                            })
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: '#FAF7F2',
-                            border: '1px solid #6B3A2A',
-                            color: '#6B3A2A',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '4px'
-                          }}
-                        >
-                          <Edit3 size={14} /> Manual Override / Fix Time
-                        </button>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          {!r.check_in_at ? (
+                            <button
+                              onClick={() => handleQuickCheckin(r)}
+                              style={{
+                                padding: '8px',
+                                background: '#16A34A',
+                                border: 'none',
+                                color: 'white',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Check size={14} /> Check In Now
+                            </button>
+                          ) : !r.check_out_at ? (
+                            <button
+                              onClick={() => handleQuickCheckout(r)}
+                              style={{
+                                padding: '8px',
+                                background: '#2563EB',
+                                border: 'none',
+                                color: 'white',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Check size={14} /> Check Out Now
+                            </button>
+                          ) : (
+                            <div style={{ fontSize: '11px', fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              Shift Complete
+                            </div>
+                          )}
+
+                          <button
+                            onClick={() => {
+                              setSelectedStaffForOverride(r)
+                              setOverrideForm({
+                                date: new Date().toISOString().split('T')[0],
+                                check_in_time: '08:00',
+                                check_out_time: '18:00',
+                                status: 'present',
+                                notes: 'Admin manual time override'
+                              })
+                            }}
+                            style={{
+                              padding: '8px',
+                              background: '#FAF7F2',
+                              border: '1px solid #6B3A2A',
+                              color: '#6B3A2A',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Edit3 size={14} /> Edit Time
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )
