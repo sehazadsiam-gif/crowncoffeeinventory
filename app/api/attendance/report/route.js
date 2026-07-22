@@ -206,14 +206,9 @@ export async function POST(request) {
           staff_id: s.id,
           month: m,
           year: y,
-          total_days: present + late,
           present_days: present,
           late_days: late,
           absent_days: absent,
-          total_hours: totalHours,
-          total_late_minutes: totalLateMins,
-          overtime_minutes: totalOtMins,
-          overtime_hours: Math.round((totalOtMins / 60) * 100) / 100,
           updated_at: new Date().toISOString()
         }
       })
