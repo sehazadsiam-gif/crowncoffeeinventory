@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '../../../components/Navbar'
 import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
-import { FileSpreadsheet, FileText, Calendar, Edit, Search, DollarSign, Clock, CheckCircle2, AlertCircle, BarChart3, ListFilter } from 'lucide-react'
+import { FileSpreadsheet, FileText, Calendar, Edit, Search, DollarSign, Clock, CheckCircle2, AlertCircle, BarChart3, ListFilter, Users, ArrowRight } from 'lucide-react'
 import * as xlsx from 'xlsx'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -19,7 +19,7 @@ export default function AttendanceReportsPage() {
   const [loading, setLoading] = useState(true)
   const [reportData, setReportData] = useState({ summary: {}, reports: [], daily_logs: [] })
 
-  const [activeTab, setActiveTab] = useState('daily') // 'daily' | 'monthly'
+  const [activeTab, setActiveTab] = useState('daily') // 'daily' | 'monthly' | 'heatmap'
   const [searchQuery, setSearchQuery] = useState('')
   const [applyLoading, setApplyLoading] = useState(false)
 
@@ -243,46 +243,24 @@ export default function AttendanceReportsPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-main, #faf7f2)' }}>
+    <div style={{ minHeight: '100vh', background: '#F8FAFC' }}>
       <Navbar />
 
-      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px 60px' }}>
-        
-        {/* Header & Controls */}
+      <main style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px 60px' }}>
+
+        {/* Header & Main Control Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Calendar size={28} color="#D4933A" /> Monthly Attendance & Overtime Report
+            <h1 style={{ fontSize: '26px', fontWeight: 900, color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Calendar size={28} color="#D4933A" /> Attendance & Overtime Reports
             </h1>
             <p style={{ color: '#64748B', margin: '4px 0 0 0', fontSize: '14px' }}>
-              Daily log breakdowns, lateness records, overtime hours, and 1-click Payroll integration.
+              Daily log breakdowns, monthly summaries, heat maps, and 1-click Payroll sync.
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            {/* Month/Year Selector — used for Monthly Summary & default daily view */}
-            <div style={{ display: 'flex', gap: '8px', background: 'white', padding: '6px 12px', borderRadius: '12px', border: '1px solid #CBD5E1', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', alignItems: 'center' }}>
-              <Calendar size={14} color="#94A3B8" />
-              <select
-                value={month}
-                onChange={e => { setMonth(parseInt(e.target.value)); setUseCustomRange(false) }}
-                style={{ border: 'none', background: 'transparent', fontWeight: 800, fontSize: '14px', cursor: 'pointer', color: '#0F172A' }}
-              >
-                {months.map((m, idx) => (
-                  <option key={idx} value={idx + 1}>{m}</option>
-                ))}
-              </select>
-              <select
-                value={year}
-                onChange={e => { setYear(parseInt(e.target.value)); setUseCustomRange(false) }}
-                style={{ border: 'none', background: 'transparent', fontWeight: 800, fontSize: '14px', cursor: 'pointer', color: '#0F172A' }}
-              >
-                {[2024, 2025, 2026, 2027].map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-            </div>
-
+          {/* Right Action Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <button
               onClick={handleBulkDayOff}
               style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#FEF3C7', border: '1px solid #F59E0B', color: '#B45309', fontWeight: 800, padding: '10px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}
@@ -300,178 +278,166 @@ export default function AttendanceReportsPage() {
               {applyLoading ? 'Applying...' : 'Apply to Monthly Payroll'}
             </button>
 
-            <button onClick={handleExportCSV} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F1F5F9', border: '1px solid #CBD5E1', color: '#334155', fontWeight: 700, padding: '10px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}>
+            <button onClick={handleExportCSV} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #CBD5E1', color: '#334155', fontWeight: 700, padding: '10px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}>
               <FileSpreadsheet size={16} /> Excel
             </button>
+
             <button onClick={handleExportPDF} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0F172A', border: 'none', color: 'white', fontWeight: 700, padding: '10px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}>
               <FileText size={16} /> PDF
             </button>
           </div>
         </div>
 
-        {/* Tab & Search Bar */}
-        <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '16px 20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              onClick={() => setActiveTab('daily')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 18px',
-                borderRadius: '10px',
-                border: 'none',
-                background: activeTab === 'daily' ? '#0F172A' : '#F1F5F9',
-                color: activeTab === 'daily' ? 'white' : '#475569',
-                fontWeight: 800,
-                fontSize: '13px',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <ListFilter size={15} /> Daily Attendance Breakdown ({filteredLogs.length})
-            </button>
+        {/* Section Navigation & Filters Panel */}
+        <div style={{ background: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px', marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            
+            {/* View Switcher Tabs */}
+            <div style={{ display: 'flex', gap: '6px', background: '#F1F5F9', padding: '4px', borderRadius: '12px' }}>
+              <button
+                onClick={() => setActiveTab('daily')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 18px', borderRadius: '9px', border: 'none',
+                  background: activeTab === 'daily' ? '#0F172A' : 'transparent',
+                  color: activeTab === 'daily' ? 'white' : '#64748B',
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s ease'
+                }}
+              >
+                <ListFilter size={15} /> Daily Logs ({filteredLogs.length})
+              </button>
 
-            <button
-              onClick={() => setActiveTab('monthly')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 18px',
-                borderRadius: '10px',
-                border: 'none',
-                background: activeTab === 'monthly' ? '#0F172A' : '#F1F5F9',
-                color: activeTab === 'monthly' ? 'white' : '#475569',
-                fontWeight: 800,
-                fontSize: '13px',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <BarChart3 size={15} /> Monthly Staff Totals ({filteredReports.length})
-            </button>
+              <button
+                onClick={() => setActiveTab('monthly')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 18px', borderRadius: '9px', border: 'none',
+                  background: activeTab === 'monthly' ? '#0F172A' : 'transparent',
+                  color: activeTab === 'monthly' ? 'white' : '#64748B',
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s ease'
+                }}
+              >
+                <BarChart3 size={15} /> Monthly Summary ({filteredReports.length})
+              </button>
 
-            <button
-              onClick={() => setActiveTab('heatmap')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 18px',
-                borderRadius: '10px',
-                border: 'none',
-                background: activeTab === 'heatmap' ? '#0F172A' : '#F1F5F9',
-                color: activeTab === 'heatmap' ? 'white' : '#475569',
-                fontWeight: 800,
-                fontSize: '13px',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              <Calendar size={15} /> Attendance Heat Map
-            </button>
-          </div>
+              <button
+                onClick={() => setActiveTab('heatmap')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 18px', borderRadius: '9px', border: 'none',
+                  background: activeTab === 'heatmap' ? '#0F172A' : 'transparent',
+                  color: activeTab === 'heatmap' ? 'white' : '#64748B',
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s ease'
+                }}
+              >
+                <Calendar size={15} /> Attendance Heat Map
+              </button>
+            </div>
 
-          <div style={{ position: 'relative', width: '280px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
-            <input
-              type="text"
-              placeholder="Search staff name or ID..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px 8px 36px',
-                borderRadius: '10px',
-                border: '1px solid #CBD5E1',
-                fontSize: '13px',
-                outline: 'none'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Date Range Picker — Daily Breakdown only */}
-        {activeTab === 'daily' && (
-          <div style={{ background: 'white', borderRadius: '16px', border: useCustomRange ? '2px solid #2563EB' : '1px solid #E2E8F0', padding: '16px 20px', marginBottom: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Calendar size={16} color="#2563EB" />
-                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>Filter by Date Range</span>
-                {useCustomRange && (
-                  <span style={{ fontSize: '11px', fontWeight: 800, background: '#DBEAFE', color: '#1D4ED8', padding: '2px 10px', borderRadius: '20px' }}>
-                    Custom Range Active
-                  </span>
-                )}
+            {/* Filter Controls (Month/Year & Search) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '8px', background: '#F8FAFC', padding: '6px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', alignItems: 'center' }}>
+                <Calendar size={14} color="#64748B" />
+                <select
+                  value={month}
+                  onChange={e => { setMonth(parseInt(e.target.value)); setUseCustomRange(false) }}
+                  style={{ border: 'none', background: 'transparent', fontWeight: 800, fontSize: '13px', cursor: 'pointer', color: '#0F172A', outline: 'none' }}
+                >
+                  {months.map((m, idx) => (
+                    <option key={idx} value={idx + 1}>{m}</option>
+                  ))}
+                </select>
+                <select
+                  value={year}
+                  onChange={e => { setYear(parseInt(e.target.value)); setUseCustomRange(false) }}
+                  style={{ border: 'none', background: 'transparent', fontWeight: 800, fontSize: '13px', cursor: 'pointer', color: '#0F172A', outline: 'none' }}
+                >
+                  {[2024, 2025, 2026, 2027].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>From</label>
+              {/* Search Box */}
+              <div style={{ position: 'relative', width: '240px' }}>
+                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
+                <input
+                  type="text"
+                  placeholder="Search staff name or ID..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{ width: '100%', padding: '8px 12px 8px 34px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
+                />
+              </div>
+            </div>
+
+          </div>
+
+          {/* Date Range Sub-Bar (Daily Breakdown only) */}
+          {activeTab === 'daily' && (
+            <div style={{ paddingTop: '12px', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: '#475569' }}>Date Range Filter:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={e => setDateFrom(e.target.value)}
-                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '7px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
+                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '6px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
                 />
-                <span style={{ color: '#94A3B8', fontWeight: 300, fontSize: '18px' }}>→</span>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>To</label>
+                <span style={{ color: '#94A3B8' }}>→</span>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={e => setDateTo(e.target.value)}
-                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '7px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
+                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '6px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
                 />
                 <button
                   onClick={handleApplyDateRange}
-                  style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 18px', fontWeight: 800, fontSize: '13px', cursor: 'pointer' }}
+                  style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}
                 >
-                  Apply
+                  Filter Range
                 </button>
                 {useCustomRange && (
                   <button
                     onClick={handleClearRange}
-                    style={{ background: '#F1F5F9', color: '#374155', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '8px 14px', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                    style={{ background: '#F1F5F9', color: '#374155', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '7px 12px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
                   >
-                    Clear
+                    Reset
                   </button>
                 )}
               </div>
-
-              <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
+              <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
                 {useCustomRange
-                  ? `${new Date(dateFrom).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} — ${new Date(dateTo).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-                  : `Full month: ${months[month - 1]} ${year}`}
+                  ? `Showing range: ${dateFrom} to ${dateTo}`
+                  : `Showing full month: ${months[month - 1]} ${year}`}
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Main PDF Exportable Container */}
+        {/* Main PDF & View Container */}
         <div id="report-pdf-container" style={{ background: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '32px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
           
-          {/* Company Brand Header */}
+          {/* Executive Company Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #0F172A', paddingBottom: '16px', marginBottom: '24px' }}>
             <div>
-              <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A', margin: 0 }}>CROWN COFFEE</h2>
+              <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: 0 }}>CROWN COFFEE</h2>
               <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#D4933A', fontWeight: 800 }}>
-                Official Monthly Attendance & Overtime Ledger
+                Official Attendance & Payroll Ledger
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A' }}>{months[month - 1]} {year}</div>
+              <div style={{ fontSize: '16px', fontWeight: 900, color: '#0F172A' }}>{months[month - 1]} {year}</div>
               <div style={{ fontSize: '11px', color: '#64748B' }}>Generated: {new Date().toLocaleDateString('en-GB')}</div>
             </div>
           </div>
 
-          {/* Company Summary KPI Row */}
+          {/* Top KPI Metrics Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '28px', background: '#F8FAFC', padding: '20px', borderRadius: '14px', border: '1px solid #E2E8F0' }}>
             <div>
               <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>Total Staff</div>
               <div style={{ fontSize: '24px', fontWeight: 900, color: '#0F172A' }}>{reportData.summary?.total_staff || 0}</div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>Total Days Worked</div>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>Days Worked</div>
               <div style={{ fontSize: '24px', fontWeight: 900, color: '#16A34A' }}>{reportData.summary?.total_present_days || 0}</div>
             </div>
             <div>
@@ -479,7 +445,7 @@ export default function AttendanceReportsPage() {
               <div style={{ fontSize: '24px', fontWeight: 900, color: '#DC2626' }}>{reportData.summary?.total_late_occurrences || 0}</div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>Total Hours Worked</div>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748B', fontWeight: 700 }}>Total Worked Hours</div>
               <div style={{ fontSize: '24px', fontWeight: 900, color: '#2563EB' }}>{reportData.summary?.total_hours_worked || 0} hrs</div>
             </div>
             <div>
@@ -491,134 +457,89 @@ export default function AttendanceReportsPage() {
           {loading ? (
             <div style={{ padding: '60px', textAlign: 'center' }}><div className="loader"></div></div>
           ) : activeTab === 'daily' ? (
-            /* TAB 1: DAILY BREAKDOWN VIEW */
+
+            /* TAB 1: ORGANIZED DAILY BREAKDOWN TABLE */
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
-                  Daily Attendance Log Breakdown (Showing {filteredLogs.length} entries)
+                  Daily Breakdown Logs ({filteredLogs.length} entries)
                 </h3>
               </div>
 
               {filteredLogs.length === 0 ? (
                 <div style={{ padding: '40px', textAlign: 'center', color: '#94A3B8', fontSize: '14px' }}>
-                  No daily attendance logs found for {months[month - 1]} {year}.
+                  No daily attendance logs found for selected filter.
                 </div>
               ) : (
-                <div style={{ display: 'grid', gap: '12px' }}>
-                  {filteredLogs.map(log => (
-                    <div
-                      key={log.id}
-                      style={{
-                        background: '#FFFFFF',
-                        border: '1px solid #E2E8F0',
-                        borderRadius: '12px',
-                        padding: '16px 20px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: '16px',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {/* Left: Staff Name & Date */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <div style={{
-                          width: '44px',
-                          height: '44px',
-                          borderRadius: '50%',
-                          background: '#0F172A',
-                          color: '#D4933A',
-                          fontWeight: 900,
-                          fontSize: '16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          {log.staff_name.slice(0, 2).toUpperCase()}
-                        </div>
-
-                        <div>
-                          <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A' }}>
-                            {log.staff_name} <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>({log.employee_id})</span>
-                          </div>
-                          <div style={{ fontSize: '13px', color: '#475569', fontWeight: 700, marginTop: '2px' }}>
-                            Date: <strong style={{ color: '#0F172A' }}>{log.date_formatted}</strong>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Middle: Timing & Status */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
-                        <div>
-                          <div style={{ fontSize: '10px', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 800 }}>DUTY TIMING</div>
-                          <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
-                            {log.time_range}
-                          </div>
-                        </div>
-
-                        {/* Status Badge */}
-                        <div style={{
-                          padding: '6px 14px',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          background: log.status === 'present' ? '#DCFCE7' : (log.status === 'late' ? '#FEE2E2' : '#F1F5F9'),
-                          color: log.status === 'present' ? '#15803D' : (log.status === 'late' ? '#B91C1C' : '#475569'),
-                          border: log.status === 'present' ? '1px solid #86EFAC' : (log.status === 'late' ? '1px solid #FCA5A5' : '1px solid #CBD5E1')
-                        }}>
-                          {log.status === 'present' && 'Present'}
-                          {log.status === 'late' && `Late (${log.minutes_late} mins late)`}
-                          {log.status === 'absent' && 'Absent'}
-                          {log.status === 'on_leave' && 'On Leave'}
-                          {log.status === 'off' && 'Day Off'}
-                        </div>
-
-                        {/* Overtime & Hours Worked */}
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>
-                            Worked: <strong>{log.hours_worked}h</strong>
-                          </div>
-                          {log.overtime_hours > 0 ? (
-                            <div style={{ fontSize: '12px', fontWeight: 800, color: '#D4933A' }}>
-                              {log.overtime_hours}h Overtime
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: '11px', color: '#94A3B8' }}>No Overtime</div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right: Edit Button */}
-                      <button
-                        onClick={() => openEditModal(log)}
-                        style={{
-                          background: '#F8FAFC',
-                          border: '1px solid #CBD5E1',
-                          borderRadius: '8px',
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          color: '#0F172A',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <Edit size={14} /> Edit Entry
-                      </button>
-                    </div>
-                  ))}
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #0F172A', color: '#0F172A', fontSize: '12px', textTransform: 'uppercase', background: '#F8FAFC' }}>
+                        <th style={{ padding: '12px' }}>Date</th>
+                        <th style={{ padding: '12px' }}>Employee</th>
+                        <th style={{ padding: '12px' }}>Designation</th>
+                        <th style={{ padding: '12px' }}>Check In</th>
+                        <th style={{ padding: '12px' }}>Check Out</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Hours Worked</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Late Mins</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '12px', textAlign: 'right' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredLogs.map(log => (
+                        <tr key={log.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '12px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>{log.date_formatted}</td>
+                          <td style={{ padding: '12px', fontWeight: 800, color: '#0F172A' }}>
+                            {log.staff_name}
+                            <span style={{ display: 'block', fontSize: '11px', color: '#64748B', fontWeight: 600 }}>ID: {log.employee_id}</span>
+                          </td>
+                          <td style={{ padding: '12px', color: '#475569', fontWeight: 600 }}>{log.designation || '-'}</td>
+                          <td style={{ padding: '12px', fontWeight: 700, color: '#059669', whiteSpace: 'nowrap' }}>{log.check_in_formatted}</td>
+                          <td style={{ padding: '12px', fontWeight: 700, color: '#2563EB', whiteSpace: 'nowrap' }}>{log.check_out_formatted}</td>
+                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 800, color: '#0F172A' }}>{log.hours_worked}h</td>
+                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: log.minutes_late > 0 ? '#DC2626' : '#94A3B8' }}>
+                            {log.minutes_late > 0 ? `${log.minutes_late}m` : '-'}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <span style={{
+                              padding: '4px 10px',
+                              borderRadius: '20px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              background: log.status === 'present' ? '#DCFCE7' : log.status === 'late' ? '#FEE2E2' : log.status === 'on_leave' ? '#DBEAFE' : '#F1F5F9',
+                              color: log.status === 'present' ? '#15803D' : log.status === 'late' ? '#B91C1C' : log.status === 'on_leave' ? '#1D4ED8' : '#475569',
+                              border: log.status === 'present' ? '1px solid #86EFAC' : log.status === 'late' ? '1px solid #FCA5A5' : '1px solid #CBD5E1'
+                            }}>
+                              {log.status === 'present' && 'Present'}
+                              {log.status === 'late' && 'Late'}
+                              {log.status === 'absent' && 'Absent'}
+                              {log.status === 'on_leave' && 'On Leave'}
+                              {log.status === 'off' && 'Day Off'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right' }}>
+                            <button
+                              onClick={() => openEditModal(log)}
+                              style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, color: '#0F172A', cursor: 'pointer' }}
+                            >
+                              Edit
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
           ) : activeTab === 'monthly' ? (
-            /* TAB 2: MONTHLY SUMMARY TABLE */
+
+            /* TAB 2: ORGANIZED MONTHLY SUMMARY TABLE */
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #0F172A', color: '#0F172A', fontSize: '12px', textTransform: 'uppercase' }}>
+                  <tr style={{ borderBottom: '2px solid #0F172A', color: '#0F172A', fontSize: '12px', textTransform: 'uppercase', background: '#F8FAFC' }}>
                     <th style={{ padding: '12px' }}>ID</th>
                     <th style={{ padding: '12px' }}>Staff Name</th>
                     <th style={{ padding: '12px' }}>Designation</th>
@@ -659,6 +580,7 @@ export default function AttendanceReportsPage() {
               </table>
             </div>
           ) : activeTab === 'heatmap' ? (
+
             /* TAB 3: HEAT MAP CALENDAR GRID */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center', fontSize: '12px', fontWeight: 700 }}>
@@ -768,7 +690,7 @@ export default function AttendanceReportsPage() {
                     type="datetime-local"
                     value={editForm.check_in_at}
                     onChange={e => setEditForm({ ...editForm, check_in_at: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
                   />
                 </div>
 
@@ -778,45 +700,43 @@ export default function AttendanceReportsPage() {
                     type="datetime-local"
                     value={editForm.check_out_at}
                     onChange={e => setEditForm({ ...editForm, check_out_at: e.target.value })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px', color: '#475569' }}>Minutes Late (if applicable)</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px', color: '#475569' }}>Minutes Late</label>
                 <input
                   type="number"
                   value={editForm.minutes_late}
                   onChange={e => setEditForm({ ...editForm, minutes_late: parseInt(e.target.value) || 0 })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '14px' }}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px', color: '#475569' }}>Admin Notes / Reason</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px', color: '#475569' }}>Notes</label>
                 <textarea
-                  rows={2}
-                  placeholder="Optional notes for manual adjustment..."
                   value={editForm.notes}
                   onChange={e => setEditForm({ ...editForm, notes: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px', height: '60px' }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifySelf: 'end', gap: '10px', marginTop: '12px' }}>
                 <button
                   onClick={() => setEditingLog(null)}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F1F5F9', fontWeight: 700 }}
+                  style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', background: 'white', fontWeight: 700, cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveLog}
                   disabled={savingLog}
-                  style={{ flex: 1, padding: '10px', borderRadius: '8px', border: 'none', background: '#0F172A', color: 'white', fontWeight: 800 }}
+                  style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#0F172A', color: 'white', fontWeight: 800, cursor: 'pointer' }}
                 >
-                  {savingLog ? 'Saving Changes...' : 'Save Log Entry'}
+                  {savingLog ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </div>
