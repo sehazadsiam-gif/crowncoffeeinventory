@@ -2,29 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Clock, CheckCircle2, AlertTriangle, Users, TrendingUp, Shield, Wifi, Activity } from 'lucide-react'
 
 export default function PublicAttendancePage() {
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [data, setData] = useState({ date: '', summary: {}, records: [] })
-  const [lastTapEvent, setLastTapEvent] = useState(null)
+  const [tapFlash, setTapFlash] = useState(null)
   const [departmentFilter, setDepartmentFilter] = useState('all')
-  const [tapPulse, setTapPulse] = useState(false)
 
   useEffect(() => {
     const clockTimer = setInterval(() => setCurrentTime(new Date()), 1000)
     fetchTodayData()
 
-    const channel = supabase.channel('public_attendance_kiosk_v2')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, (payload) => {
+    const channel = supabase.channel('kiosk_v3')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, () => {
         fetchTodayData(true)
-        if (payload.new && payload.new.employee_id) triggerTapBanner(payload.new)
       })
       .subscribe()
 
     const pollTimer = setInterval(() => fetchTodayData(true), 10000)
-
     return () => {
       clearInterval(clockTimer)
       clearInterval(pollTimer)
@@ -35,28 +31,20 @@ export default function PublicAttendancePage() {
   useEffect(() => {
     let buffer = ''
     let lastKeyTime = Date.now()
-
-    function handleGlobalKeyDown(e) {
-      const activeTag = document.activeElement?.tagName
-      if (activeTag === 'TEXTAREA' || activeTag === 'INPUT') return
-
+    function onKey(e) {
+      const tag = document.activeElement?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
       const now = Date.now()
-      if (now - lastKeyTime > 120) buffer = ''
+      if (now - lastKeyTime > 150) buffer = ''
       lastKeyTime = now
-
       if (e.key === 'Enter') {
-        if (buffer.length >= 3) {
-          e.preventDefault()
-          handleRfidCheckin(buffer.trim())
-          buffer = ''
-        }
+        if (buffer.length >= 3) { e.preventDefault(); doCheckin(buffer.trim()); buffer = '' }
       } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         buffer += e.key
       }
     }
-
-    window.addEventListener('keydown', handleGlobalKeyDown)
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   async function fetchTodayData(silent = false) {
@@ -65,16 +53,11 @@ export default function PublicAttendancePage() {
       const res = await fetch(`/api/attendance/today?t=${Date.now()}`, { cache: 'no-store' })
       const json = await res.json()
       if (res.ok) setData(json)
-    } catch (err) {
-      console.error('Failed to fetch attendance', err)
-    } finally {
-      if (!silent) setLoading(false)
-    }
+    } catch (e) { console.error(e) }
+    finally { if (!silent) setLoading(false) }
   }
 
-  async function handleRfidCheckin(identifier) {
-    setTapPulse(true)
-    setTimeout(() => setTapPulse(false), 600)
+  async function doCheckin(identifier) {
     try {
       const res = await fetch('/api/attendance/checkin', {
         method: 'POST',
@@ -82,364 +65,280 @@ export default function PublicAttendancePage() {
         body: JSON.stringify({ identifier, source: 'rfid' })
       })
       const json = await res.json()
-      const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+      const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
       if (res.ok) {
-        setLastTapEvent({
+        const isOut = json.alreadyCheckedOut
+        const isLate = json.status === 'late'
+        setTapFlash({
           name: json.staff?.name || 'Staff Member',
-          employeeId: json.staff?.employee_id || '',
-          type: json.alreadyCheckedOut ? 'checkout' : json.status === 'late' ? 'late' : 'checkin',
-          label: json.alreadyCheckedOut
-            ? `Checked Out — ${json.hoursWorked || 0}h Duty`
-            : json.status === 'late'
-              ? `Present — Late`
-              : 'Checked In — On Time',
-          time: timeStr,
-          success: true
+          id: json.staff?.employee_id || '',
+          time: t,
+          type: isOut ? 'out' : isLate ? 'late' : 'in'
         })
       } else {
-        setLastTapEvent({ name: 'RFID Error', type: 'error', label: json.error || 'Unknown error', time: timeStr, success: false })
+        setTapFlash({ name: 'Card Not Recognised', id: '', time: t, type: 'error' })
       }
       fetchTodayData(true)
-      setTimeout(() => setLastTapEvent(null), 8000)
-    } catch (err) {
-      console.error('RFID checkin error', err)
-    }
-  }
-
-  function triggerTapBanner(entry) {
-    const timeStr = entry.check_in_at
-      ? new Date(entry.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-      : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-    setLastTapEvent({ name: entry.employee_id || 'Staff', type: entry.status === 'late' ? 'late' : 'checkin', label: (entry.status || 'present').toUpperCase(), time: timeStr, success: true })
-    setTimeout(() => setLastTapEvent(null), 8000)
+      setTimeout(() => setTapFlash(null), 6000)
+    } catch (e) { console.error(e) }
   }
 
   const records = data.records || []
-  const filteredRecords = departmentFilter === 'all' ? records : records.filter(r => (r.department || 'front') === departmentFilter)
-  const presentCount = records.filter(r => r.status === 'present').length
-  const lateCount = records.filter(r => r.status === 'late').length
-  const checkedOutCount = records.filter(r => r.check_out_at).length
-  const totalCount = records.length
-  const attendanceRate = totalCount > 0 ? Math.round(((presentCount + lateCount) / totalCount) * 100) : 0
+  const filtered = departmentFilter === 'all' ? records : records.filter(r => (r.department || 'front') === departmentFilter)
 
-  const tapColors = {
-    checkin: { bg: '#052E16', accent: '#22C55E', label: 'CHECKED IN' },
-    checkout: { bg: '#172554', accent: '#60A5FA', label: 'CHECKED OUT' },
-    late: { bg: '#431407', accent: '#FB923C', label: 'LATE ARRIVAL' },
-    error: { bg: '#450A0A', accent: '#F87171', label: 'ERROR' }
+  const totalIn = records.filter(r => r.status === 'present' || r.status === 'late').length
+  const totalStaff = records.length
+  const lateCount = records.filter(r => r.status === 'late').length
+  const absentCount = records.filter(r => r.status === 'absent').length
+
+  const flashConfig = {
+    in:    { bg: '#16A34A', icon: '✓', heading: 'CHECKED IN',  sub: 'On Time' },
+    late:  { bg: '#D97706', icon: '✓', heading: 'CHECKED IN',  sub: 'Late Arrival' },
+    out:   { bg: '#1D4ED8', icon: '✓', heading: 'CHECKED OUT', sub: 'Duty Complete' },
+    error: { bg: '#DC2626', icon: '✗', heading: 'NOT FOUND',   sub: 'Card not paired' },
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F8F9FA', fontFamily: '"Inter", "SF Pro Display", system-ui, -apple-system, sans-serif', color: '#0A0A0A' }}>
+    <div style={{ minHeight: '100vh', background: '#F1F5F9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* RFID Tap Flash Banner */}
-      {lastTapEvent && (() => {
-        const colors = tapColors[lastTapEvent.type] || tapColors.checkin
+      {/* Full-screen RFID Tap Flash */}
+      {tapFlash && (() => {
+        const cfg = flashConfig[tapFlash.type]
         return (
           <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
-            background: colors.bg,
-            borderBottom: `3px solid ${colors.accent}`,
-            padding: '16px 40px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            animation: 'slideDown 0.3s ease'
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: cfg.bg,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.2s ease'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: colors.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CheckCircle2 size={26} color="#000" />
-              </div>
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '2px', color: colors.accent, marginBottom: '2px' }}>
-                  {colors.label}
-                </div>
-                <div style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-                  {lastTapEvent.name}
-                  {lastTapEvent.employeeId && <span style={{ marginLeft: '12px', fontSize: '14px', fontWeight: 500, opacity: 0.6 }}>{lastTapEvent.employeeId}</span>}
-                </div>
-              </div>
+            <div style={{
+              width: '120px', height: '120px', borderRadius: '50%',
+              border: '4px solid rgba(255,255,255,0.4)',
+              background: 'rgba(255,255,255,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '64px', color: 'white', marginBottom: '32px'
+            }}>{cfg.icon}</div>
+
+            <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '4px', color: 'rgba(255,255,255,0.7)', marginBottom: '12px' }}>
+              {cfg.heading}
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '1px', color: colors.accent, marginBottom: '2px' }}>TIME RECORDED</div>
-              <div style={{ fontSize: '24px', fontWeight: 900, color: '#FFFFFF', fontFamily: 'monospace', letterSpacing: '2px' }}>{lastTapEvent.time}</div>
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>{lastTapEvent.label}</div>
+
+            <div style={{ fontSize: '56px', fontWeight: 900, color: 'white', letterSpacing: '-1px', marginBottom: '8px' }}>
+              {tapFlash.name}
             </div>
+
+            {tapFlash.id && (
+              <div style={{ fontSize: '20px', color: 'rgba(255,255,255,0.6)', fontWeight: 600, marginBottom: '24px' }}>
+                {tapFlash.id}
+              </div>
+            )}
+
+            <div style={{
+              background: 'rgba(0,0,0,0.2)', borderRadius: '12px',
+              padding: '12px 28px', fontSize: '24px', fontWeight: 800,
+              color: 'white', letterSpacing: '1px', fontFamily: 'monospace'
+            }}>
+              {tapFlash.time}
+            </div>
+
+            <div style={{ marginTop: '20px', fontSize: '15px', color: 'rgba(255,255,255,0.5)' }}>{cfg.sub}</div>
           </div>
         )
       })()}
 
-      {/* Header */}
-      <header style={{
-        background: '#FFFFFF',
-        borderBottom: '1px solid #E5E7EB',
+      {/* Top Header */}
+      <div style={{
+        background: '#0F172A',
         padding: '0 40px',
-        height: '72px',
+        height: '80px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: lastTapEvent ? '84px' : 0,
-        zIndex: 100,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        justifyContent: 'space-between'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '36px', height: '36px', background: '#0A0A0A', borderRadius: '8px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <Shield size={20} color="#D4933A" />
-            </div>
-            <div>
-              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0A0A0A', letterSpacing: '-0.01em' }}>Crown Coffee</div>
-              <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: 500, letterSpacing: '0.03em' }}>ATTENDANCE KIOSK</div>
-            </div>
-          </div>
-
-          <div style={{ height: '32px', width: '1px', background: '#E5E7EB' }} />
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 0 3px rgba(22,163,74,0.15)' }} />
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#16A34A', letterSpacing: '0.05em' }}>LIVE SYNC</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F3F4F6', padding: '4px 12px', borderRadius: '6px' }}>
-            <Wifi size={13} color="#6B7280" />
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280' }}>RFID Active</span>
-          </div>
-        </div>
-
-        {/* Live Clock */}
+        {/* Left: Branding */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              {currentTime.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            </div>
-            <div style={{ fontSize: '28px', fontWeight: 900, color: '#0A0A0A', fontFamily: 'monospace', letterSpacing: '2px', lineHeight: 1 }}>
-              {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '36px 40px' }}>
-
-        {/* KPI Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
-
-          {/* Total Staff */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: '#0A0A0A', borderRadius: '16px 16px 0 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div style={{ background: '#F3F4F6', padding: '10px', borderRadius: '10px' }}><Users size={20} color="#374151" /></div>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#6B7280', letterSpacing: '0.08em' }}>TOTAL STAFF</span>
-            </div>
-            <div style={{ fontSize: '40px', fontWeight: 900, color: '#0A0A0A', letterSpacing: '-0.03em', lineHeight: 1 }}>{totalCount}</div>
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px', fontWeight: 500 }}>Active employees today</div>
-          </div>
-
-          {/* Present */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: '#16A34A', borderRadius: '16px 16px 0 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div style={{ background: '#DCFCE7', padding: '10px', borderRadius: '10px' }}><CheckCircle2 size={20} color="#16A34A" /></div>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#16A34A', letterSpacing: '0.08em' }}>PRESENT</span>
-            </div>
-            <div style={{ fontSize: '40px', fontWeight: 900, color: '#16A34A', letterSpacing: '-0.03em', lineHeight: 1 }}>{presentCount + lateCount}</div>
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px', fontWeight: 500 }}>{lateCount} late arrival{lateCount !== 1 ? 's' : ''}</div>
-          </div>
-
-          {/* Checked Out */}
-          <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '16px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: '#2563EB', borderRadius: '16px 16px 0 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div style={{ background: '#DBEAFE', padding: '10px', borderRadius: '10px' }}><TrendingUp size={20} color="#2563EB" /></div>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#2563EB', letterSpacing: '0.08em' }}>CHECKED OUT</span>
-            </div>
-            <div style={{ fontSize: '40px', fontWeight: 900, color: '#2563EB', letterSpacing: '-0.03em', lineHeight: 1 }}>{checkedOutCount}</div>
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px', fontWeight: 500 }}>Duty completed</div>
-          </div>
-
-          {/* Attendance Rate */}
-          <div style={{ background: '#0A0A0A', border: '1px solid #1F2937', borderRadius: '16px', padding: '24px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: '#D4933A', borderRadius: '16px 16px 0 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div style={{ background: 'rgba(212,147,58,0.15)', padding: '10px', borderRadius: '10px' }}><Activity size={20} color="#D4933A" /></div>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#D4933A', letterSpacing: '0.08em' }}>ATTENDANCE RATE</span>
-            </div>
-            <div style={{ fontSize: '40px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '-0.03em', lineHeight: 1 }}>{attendanceRate}%</div>
-            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px', fontWeight: 500 }}>Of total staff today</div>
+          <div style={{
+            background: '#D4933A', borderRadius: '10px',
+            padding: '8px 14px', fontSize: '14px', fontWeight: 900,
+            color: '#0F172A', letterSpacing: '1px'
+          }}>CC</div>
+          <div>
+            <div style={{ color: 'white', fontWeight: 800, fontSize: '18px', letterSpacing: '-0.02em' }}>Crown Coffee</div>
+            <div style={{ color: '#64748B', fontSize: '12px', fontWeight: 600, letterSpacing: '0.05em' }}>ATTENDANCE KIOSK</div>
           </div>
         </div>
 
-        {/* Filter Tabs & Shift Info Row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', gap: '4px', background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '4px' }}>
-            {[
-              { id: 'all', label: 'All Staff' },
-              { id: 'front', label: 'Front of House' },
-              { id: 'kitchen', label: 'Kitchen' }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setDepartmentFilter(tab.id)}
-                style={{
-                  padding: '8px 20px', borderRadius: '7px', border: 'none',
-                  background: departmentFilter === tab.id ? '#0A0A0A' : 'transparent',
-                  color: departmentFilter === tab.id ? '#FFFFFF' : '#6B7280',
-                  fontWeight: 700, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s ease'
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', fontSize: '12px', fontWeight: 600 }}>
-            <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '8px 16px', color: '#374151' }}>
-              Morning Shift: <strong>8:00 AM</strong> <span style={{ color: '#D97706' }}>(Grace: 8:15 AM)</span>
-            </div>
-            <div style={{ background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '8px 16px', color: '#374151' }}>
-              Afternoon Shift: <strong>1:00 PM</strong> <span style={{ color: '#D97706' }}>(Grace: 1:15 PM)</span>
-            </div>
-          </div>
+        {/* Center: Stats */}
+        <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
+          <Stat label="IN TODAY" value={totalIn} color="#22C55E" />
+          <Stat label="LATE" value={lateCount} color="#FBBF24" />
+          <Stat label="ABSENT" value={absentCount} color="#F87171" />
+          <Stat label="TOTAL" value={totalStaff} color="#94A3B8" />
         </div>
 
-        {/* Staff Table */}
+        {/* Right: Clock */}
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '32px', fontWeight: 900, color: 'white', fontFamily: 'monospace', letterSpacing: '2px' }}>
+            {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
+            {currentTime.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Bar */}
+      <div style={{ background: 'white', borderBottom: '1px solid #E2E8F0', padding: '12px 40px', display: 'flex', gap: '8px' }}>
+        {[['all', 'All Staff'], ['front', 'Front of House'], ['kitchen', 'Kitchen']].map(([id, label]) => (
+          <button key={id} onClick={() => setDepartmentFilter(id)} style={{
+            padding: '8px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+            fontWeight: 700, fontSize: '13px', transition: 'all 0.15s',
+            background: departmentFilter === id ? '#0F172A' : '#F1F5F9',
+            color: departmentFilter === id ? 'white' : '#64748B'
+          }}>{label}</button>
+        ))}
+
+        <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '16px', fontWeight: 600 }}>
+          <span>Morning grace: <strong style={{ color: '#F59E0B' }}>8:15 AM</strong></span>
+          <span>Afternoon grace: <strong style={{ color: '#F59E0B' }}>1:15 PM</strong></span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22C55E', display: 'inline-block' }}></span>
+            Live
+          </span>
+        </div>
+      </div>
+
+      {/* Staff Grid */}
+      <main style={{ padding: '32px 40px' }}>
         {loading ? (
-          <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E5E7EB', padding: '80px', textAlign: 'center' }}>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.05em' }}>LOADING ATTENDANCE DATA...</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#94A3B8', fontSize: '16px', fontWeight: 600 }}>
+            Loading...
           </div>
         ) : (
-          <div style={{ background: '#FFFFFF', borderRadius: '16px', border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            {/* Table Header */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: '40px 1fr 130px 130px 130px 120px 110px',
-              padding: '0 24px', height: '44px', alignItems: 'center',
-              background: '#F9FAFB', borderBottom: '1px solid #E5E7EB',
-              fontSize: '11px', fontWeight: 800, color: '#6B7280', letterSpacing: '0.08em', textTransform: 'uppercase'
-            }}>
-              <div>#</div>
-              <div>Employee</div>
-              <div>Department</div>
-              <div>Check-In</div>
-              <div>Check-Out</div>
-              <div>Duty Hours</div>
-              <div>Status</div>
-            </div>
-
-            {/* Table Rows */}
-            {filteredRecords.map((r, idx) => {
-              const isPresent = r.status === 'present'
-              const isLate = r.status === 'late'
-              const isLeave = r.status === 'on_leave'
-              const isOff = r.status === 'off'
-              const isCheckedIn = isPresent || isLate
-              const isCheckedOut = !!r.check_out_at
-
-              let statusBg, statusColor, statusText
-              if (isPresent && isCheckedOut) { statusBg = '#DBEAFE'; statusColor = '#1D4ED8'; statusText = 'CHECKED OUT' }
-              else if (isPresent) { statusBg = '#DCFCE7'; statusColor = '#15803D'; statusText = 'PRESENT' }
-              else if (isLate && isCheckedOut) { statusBg = '#DBEAFE'; statusColor = '#1D4ED8'; statusText = 'CHECKED OUT' }
-              else if (isLate) { statusBg = '#FEF3C7'; statusColor = '#B45309'; statusText = 'LATE' }
-              else if (isLeave) { statusBg = '#EDE9FE'; statusColor = '#6D28D9'; statusText = 'ON LEAVE' }
-              else if (isOff) { statusBg = '#F3F4F6'; statusColor = '#374151'; statusText = 'DAY OFF' }
-              else { statusBg = '#FEE2E2'; statusColor = '#B91C1C'; statusText = 'ABSENT' }
-
-              return (
-                <div
-                  key={r.staff_id}
-                  style={{
-                    display: 'grid', gridTemplateColumns: '40px 1fr 130px 130px 130px 120px 110px',
-                    padding: '0 24px', minHeight: '60px', alignItems: 'center',
-                    borderBottom: '1px solid #F3F4F6',
-                    background: isCheckedIn ? 'rgba(22,163,74,0.02)' : '#FFFFFF',
-                    transition: 'background 0.15s ease'
-                  }}
-                >
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#9CA3AF' }}>{idx + 1}</div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    {r.photo_url ? (
-                      <img src={r.photo_url} alt={r.name} style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB' }} />
-                    ) : (
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#F3F4F6', border: '2px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 800, color: '#374151' }}>
-                        {r.name ? r.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'CC'}
-                      </div>
-                    )}
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#0A0A0A' }}>{r.name}</div>
-                      <div style={{ fontSize: '11px', color: '#9CA3AF', fontWeight: 500 }}>{r.employee_id} · {r.designation}</div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '6px',
-                      background: r.department === 'kitchen' ? '#FEF3C7' : '#EFF6FF',
-                      color: r.department === 'kitchen' ? '#92400E' : '#1D4ED8'
-                    }}>
-                      {r.department === 'kitchen' ? 'KITCHEN' : 'FRONT'}
-                    </span>
-                  </div>
-
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: isCheckedIn ? '#0A0A0A' : '#D1D5DB', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
-                    {r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'}
-                    {isLate && r.minutes_late > 0 && (
-                      <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 800, color: '#B45309', background: '#FEF3C7', padding: '1px 5px', borderRadius: '4px', fontFamily: 'system-ui' }}>
-                        +{r.minutes_late}m
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: isCheckedOut ? '#0A0A0A' : '#D1D5DB', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
-                    {r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'}
-                  </div>
-
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: r.hours_worked > 0 ? '#2563EB' : '#D1D5DB', fontFamily: 'monospace' }}>
-                    {r.hours_worked > 0 ? `${r.hours_worked}h` : '—'}
-                    {r.overtime_minutes > 0 && (
-                      <span style={{ marginLeft: '6px', fontSize: '10px', fontWeight: 800, color: '#7C3AED', background: '#EDE9FE', padding: '1px 5px', borderRadius: '4px', fontFamily: 'system-ui' }}>
-                        OT
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <span style={{
-                      fontSize: '10px', fontWeight: 800, padding: '4px 10px', borderRadius: '6px',
-                      letterSpacing: '0.06em', background: statusBg, color: statusColor
-                    }}>
-                      {statusText}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-
-            {filteredRecords.length === 0 && (
-              <div style={{ padding: '60px', textAlign: 'center', color: '#9CA3AF', fontSize: '14px', fontWeight: 500 }}>
-                No staff records found.
-              </div>
-            )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+            {filtered.map(r => <StaffCard key={r.staff_id} r={r} />)}
           </div>
         )}
-
-        {/* Footer */}
-        <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#9CA3AF', fontWeight: 500 }}>
-          <div>Auto-refreshes every 10 seconds · Resets daily at 12:00 AM midnight</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16A34A' }} />
-            Crown Coffee Attendance System · {currentTime.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </div>
-        </div>
       </main>
 
       <style>{`
-        @keyframes slideDown {
-          from { transform: translateY(-100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
+        @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
       `}</style>
+    </div>
+  )
+}
+
+function Stat({ label, value, color }) {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: '28px', fontWeight: 900, color, lineHeight: 1 }}>{value}</div>
+      <div style={{ fontSize: '10px', fontWeight: 800, color: '#475569', letterSpacing: '0.1em', marginTop: '2px' }}>{label}</div>
+    </div>
+  )
+}
+
+function StaffCard({ r }) {
+  const isIn = r.status === 'present'
+  const isLate = r.status === 'late'
+  const isOut = (isIn || isLate) && !!r.check_out_at
+  const isAbsent = r.status === 'absent'
+  const isLeave = r.status === 'on_leave'
+  const isDayOff = r.status === 'off'
+
+  let borderColor = '#E2E8F0'
+  let statusDot = '#CBD5E1'
+  let statusText = 'Not In'
+  let statusColor = '#94A3B8'
+  let bgColor = 'white'
+
+  if (isOut) {
+    borderColor = '#93C5FD'; statusDot = '#3B82F6'
+    statusText = 'Checked Out'; statusColor = '#1D4ED8'
+  } else if (isIn) {
+    borderColor = '#86EFAC'; statusDot = '#16A34A'
+    statusText = 'Present'; statusColor = '#15803D'; bgColor = '#F0FDF4'
+  } else if (isLate) {
+    borderColor = '#FCD34D'; statusDot = '#D97706'
+    statusText = 'Late'; statusColor = '#B45309'; bgColor = '#FFFBEB'
+  } else if (isAbsent) {
+    borderColor = '#FCA5A5'; statusDot = '#DC2626'
+    statusText = 'Absent'; statusColor = '#991B1B'
+  } else if (isLeave) {
+    borderColor = '#C4B5FD'; statusDot = '#7C3AED'
+    statusText = 'On Leave'; statusColor = '#6D28D9'
+  } else if (isDayOff) {
+    statusText = 'Day Off'; statusColor = '#64748B'
+  }
+
+  const fmtTime = (ts) => ts
+    ? new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    : null
+
+  return (
+    <div style={{
+      background: bgColor,
+      border: `2px solid ${borderColor}`,
+      borderRadius: '16px',
+      padding: '20px',
+      transition: 'all 0.2s ease'
+    }}>
+      {/* Top: Avatar + Name + Status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+        {r.photo_url ? (
+          <img src={r.photo_url} alt={r.name}
+            style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', border: `3px solid ${borderColor}` }} />
+        ) : (
+          <div style={{
+            width: '52px', height: '52px', borderRadius: '50%', flexShrink: 0,
+            background: '#F1F5F9', border: `3px solid ${borderColor}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 900, fontSize: '18px', color: '#475569'
+          }}>
+            {r.name ? r.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'CC'}
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+          <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 500, marginTop: '1px' }}>{r.designation}</div>
+        </div>
+        {/* Status Dot */}
+        <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 0 3px ${statusDot}22` }} />
+      </div>
+
+      {/* Status Badge */}
+      <div style={{ marginBottom: '14px' }}>
+        <span style={{
+          fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+          color: statusColor, background: `${borderColor}55`,
+          padding: '4px 10px', borderRadius: '20px'
+        }}>
+          {statusText}
+          {isLate && r.minutes_late > 0 && ` · ${r.minutes_late}m late`}
+        </span>
+      </div>
+
+      {/* Time Row */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <TimeChip label="IN" time={fmtTime(r.check_in_at)} color="#16A34A" />
+        <TimeChip label="OUT" time={fmtTime(r.check_out_at)} color="#2563EB" />
+        {r.hours_worked > 0 && <TimeChip label="DUTY" time={`${r.hours_worked}h`} color="#7C3AED" />}
+      </div>
+    </div>
+  )
+}
+
+function TimeChip({ label, time, color }) {
+  return (
+    <div style={{
+      flex: 1, background: '#F8FAFC', borderRadius: '8px',
+      padding: '8px 10px', textAlign: 'center',
+      border: time ? `1px solid ${color}33` : '1px solid #F1F5F9'
+    }}>
+      <div style={{ fontSize: '9px', fontWeight: 800, color: time ? color : '#CBD5E1', letterSpacing: '0.08em', marginBottom: '2px' }}>{label}</div>
+      <div style={{ fontSize: '13px', fontWeight: 800, color: time ? '#0F172A' : '#D1D5DB', fontFamily: 'monospace' }}>
+        {time || '—'}
+      </div>
     </div>
   )
 }
