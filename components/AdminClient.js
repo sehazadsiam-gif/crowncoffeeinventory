@@ -580,10 +580,10 @@ export default function AdminClient({ initialStats }) {
                 </div>
               </div>
 
-              {/* Staff, RFID & Roster Management Quick Actions Hub */}
+              {/* Staff & RFID Management Quick Actions Hub */}
               <div style={{ background: 'var(--bg-surface)', borderRadius: '16px', padding: '24px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
                 <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Users size={16} style={{ color: 'var(--accent-blue)' }} /> Staff, RFID & Roster Management Hub
+                  <Users size={16} style={{ color: 'var(--accent-blue)' }} /> Staff & RFID Management Hub
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
@@ -593,15 +593,6 @@ export default function AdminClient({ initialStats }) {
                     </div>
                     <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748B' }}>
                       Add/edit staff, set Front/Kitchen roles, pair RFID cards, print official ID cards.
-                    </p>
-                  </a>
-
-                  <a href="/attendance/roster" style={{ display: 'flex', flexDirection: 'column', padding: '16px', background: '#FEF8EC', borderRadius: '12px', border: '1px solid #F5D396', textDecoration: 'none', color: '#1E293B' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '14px', color: '#B78103' }}>
-                      📅 Weekly Duty Roster
-                    </div>
-                    <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748B' }}>
-                      Build future rosters (+1, +2 weeks out), toggle Kitchen staff inclusion, AI auto-draft.
                     </p>
                   </a>
 

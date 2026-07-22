@@ -787,7 +787,7 @@ export default function DashboardClient() {
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-dim)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-light)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--bg-subtle)' }}
                 >
-                  <UserCheck size={14} /> View Attendance Roster <ArrowUpRight size={13} />
+                  <UserCheck size={14} /> View Live Attendance <ArrowUpRight size={13} />
                 </Link>
               </div>
             </div>

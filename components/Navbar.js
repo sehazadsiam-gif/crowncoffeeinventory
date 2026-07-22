@@ -146,7 +146,6 @@ export default function Navbar() {
       icon: <Users size={16} />,
       children: [
         { href: '/admin/staff', label: '👥 Staff Directory & ID Cards' },
-        { href: '/attendance/roster', label: '📅 Weekly Duty Roster' },
         { href: '/admin/attendance-check', label: '⏱️ Live Attendance Check' },
         { href: '/attendance', label: '🖥️ Kiosk & RFID Checkin' },
         { href: '/public-attendance', label: '📺 Public Display Kiosk (PWA)' },
