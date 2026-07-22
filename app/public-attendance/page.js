@@ -86,7 +86,7 @@ export default function PublicAttendancePage() {
         setTapFlash({ name: 'Card Not Recognised', id: '', time: t, type: 'error' })
       }
       fetchTodayData(true)
-      setTimeout(() => setTapFlash(null), 6000)
+      setTimeout(() => setTapFlash(null), 2000)
     } catch (e) { console.error(e) }
   }
 
