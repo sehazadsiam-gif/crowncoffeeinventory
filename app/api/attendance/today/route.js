@@ -6,7 +6,11 @@ export const revalidate = 0
 
 export async function GET(request) {
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const d = new Date()
+    const localYear = d.getFullYear()
+    const localMonth = String(d.getMonth() + 1).padStart(2, '0')
+    const localDay = String(d.getDate()).padStart(2, '0')
+    const today = `${localYear}-${localMonth}-${localDay}`
 
     // Fetch all active staff (fallback if is_rostered column not yet created)
     let staff = []
