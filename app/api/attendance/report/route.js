@@ -121,7 +121,7 @@ export async function GET(request) {
       month,
       year,
       total_staff: staffReports.length,
-      total_present_days: staffReports.reduce((acc, r) => acc + r.present, 0),
+      total_present_days: staffReports.reduce((acc, r) => acc + r.total_days_worked, 0),
       total_late_occurrences: staffReports.reduce((acc, r) => acc + r.late, 0),
       total_absent_days: staffReports.reduce((acc, r) => acc + r.absent, 0),
       total_hours_worked: Math.round(staffReports.reduce((acc, r) => acc + r.total_hours, 0)),
@@ -206,7 +206,7 @@ export async function POST(request) {
           staff_id: s.id,
           month: m,
           year: y,
-          present_days: present,
+          present_days: present + late,
           late_days: late,
           absent_days: absent,
           updated_at: new Date().toISOString()
