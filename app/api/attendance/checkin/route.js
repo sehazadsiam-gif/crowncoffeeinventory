@@ -77,6 +77,11 @@ export async function POST(request) {
       forceStatus
     })
 
+    // Blocked = day already complete (both taps done). Return 200, not 400.
+    if (result.blocked) {
+      return NextResponse.json({ blocked: true, staff: result.staff }, { status: 200 })
+    }
+
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 })
     }
