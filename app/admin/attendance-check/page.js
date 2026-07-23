@@ -7,7 +7,7 @@ import { useToast } from '../../../components/Toast'
 import {
   Clock, CheckCircle2, AlertTriangle, Users, Calendar,
   Radio, Sparkles, RefreshCw, Coffee, Monitor, ShieldCheck,
-  Check, Edit3, Award, DollarSign
+  Check, Edit3, Award, DollarSign, Trash2
 } from 'lucide-react'
 
 export default function AttendanceCheckPage() {
@@ -184,6 +184,59 @@ export default function AttendanceCheckPage() {
     }
   }
 
+  async function handleDeleteDayAttendance() {
+    const defaultDate = todayData.date || new Date().toISOString().split('T')[0]
+    const dateStr = prompt('TESTING FEATURE: Enter Date to Delete ALL Check-In/Out Timings (YYYY-MM-DD):', defaultDate)
+    if (!dateStr) return
+
+    if (!confirm(`⚠️ ARE YOU SURE?\nThis will completely erase all check-in and check-out timings for ALL staff on ${dateStr} for testing.`)) {
+      return
+    }
+
+    try {
+      const res = await fetch('/api/attendance/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateStr })
+      })
+      const json = await res.json()
+      if (res.ok) {
+        addToast(`Deleted ${json.deletedCount || 0} attendance record(s) for ${dateStr}!`, 'success')
+        fetchTodayData(true)
+        if (activeTab === 'monthly') fetchMonthlyDiagnostic()
+      } else {
+        addToast(json.error || 'Failed to delete day attendance', 'error')
+      }
+    } catch (err) {
+      addToast('Error deleting day attendance', 'error')
+    }
+  }
+
+  async function handleDeleteStaffTiming(staff) {
+    const targetDate = todayData.date || new Date().toISOString().split('T')[0]
+    if (!confirm(`Delete check-in/out timing for ${staff.name} on ${targetDate}?`)) {
+      return
+    }
+
+    try {
+      const res = await fetch('/api/attendance/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: targetDate, staffId: staff.staff_id })
+      })
+      const json = await res.json()
+      if (res.ok) {
+        addToast(`Cleared attendance timing for ${staff.name}!`, 'success')
+        fetchTodayData(true)
+        if (activeTab === 'monthly') fetchMonthlyDiagnostic()
+      } else {
+        addToast(json.error || 'Failed to clear attendance timing', 'error')
+      }
+    } catch (err) {
+      addToast('Error clearing attendance timing', 'error')
+    }
+  }
+
   async function handleSaveOverride(e) {
     e.preventDefault()
     if (!selectedStaffForOverride) return
@@ -294,6 +347,14 @@ export default function AttendanceCheckPage() {
               style={{ background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Sparkles size={16} /> Run Midnight Auto-Close
+            </button>
+
+            <button
+              onClick={handleDeleteDayAttendance}
+              style={{ background: '#DC2626', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Delete check-in and check-out timings for an entire day for testing"
+            >
+              <Trash2 size={16} /> Delete Day Timings (Testing)
             </button>
 
             <div style={{ background: 'var(--bg-surface, #FFF)', border: '1px solid var(--border-light, #E8E0D4)', borderRadius: '10px', padding: '8px 16px', textAlign: 'right' }}>
@@ -510,11 +571,12 @@ export default function AttendanceCheckPage() {
                           )}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           {!r.check_in_at ? (
                             <button
                               onClick={() => handleQuickCheckin(r)}
                               style={{
+                                flex: 1,
                                 padding: '8px',
                                 background: '#16A34A',
                                 border: 'none',
@@ -535,6 +597,7 @@ export default function AttendanceCheckPage() {
                             <button
                               onClick={() => handleQuickCheckout(r)}
                               style={{
+                                flex: 1,
                                 padding: '8px',
                                 background: '#2563EB',
                                 border: 'none',
@@ -552,7 +615,7 @@ export default function AttendanceCheckPage() {
                               <Check size={14} /> Check Out Now
                             </button>
                           ) : (
-                            <div style={{ fontSize: '11px', fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ flex: 1, fontSize: '11px', fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               Shift Complete
                             </div>
                           )}
@@ -561,7 +624,7 @@ export default function AttendanceCheckPage() {
                             onClick={() => {
                               setSelectedStaffForOverride(r)
                               setOverrideForm({
-                                date: new Date().toISOString().split('T')[0],
+                                date: todayData.date || new Date().toISOString().split('T')[0],
                                 check_in_time: '08:00',
                                 check_out_time: '18:00',
                                 status: 'present',
@@ -569,7 +632,7 @@ export default function AttendanceCheckPage() {
                               })
                             }}
                             style={{
-                              padding: '8px',
+                              padding: '8px 12px',
                               background: '#FAF7F2',
                               border: '1px solid #6B3A2A',
                               color: '#6B3A2A',
@@ -585,6 +648,29 @@ export default function AttendanceCheckPage() {
                           >
                             <Edit3 size={14} /> Edit Time
                           </button>
+
+                          {(r.check_in_at || r.check_out_at) && (
+                            <button
+                              onClick={() => handleDeleteStaffTiming(r)}
+                              style={{
+                                padding: '8px 10px',
+                                background: '#FEF2F2',
+                                border: '1px solid #EF4444',
+                                color: '#DC2626',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px'
+                              }}
+                              title="Delete today check-in/out timing for testing"
+                            >
+                              <Trash2 size={14} /> Clear
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

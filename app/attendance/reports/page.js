@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '../../../components/Navbar'
 import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
-import { FileSpreadsheet, FileText, Calendar, Edit, Search, DollarSign, Clock, CheckCircle2, AlertCircle, BarChart3, ListFilter, Users, ArrowRight, Sparkles, Bot, Send, Zap, ShieldAlert, Check } from 'lucide-react'
+import { FileSpreadsheet, FileText, Calendar, Edit, Search, DollarSign, Clock, CheckCircle2, AlertCircle, BarChart3, ListFilter, Users, ArrowRight, Sparkles, Bot, Send, Zap, ShieldAlert, Check, Trash2 } from 'lucide-react'
 import * as xlsx from 'xlsx'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -258,6 +258,35 @@ export default function AttendanceReportsPage() {
       }
     } catch (err) {
       addToast('Error saving log', 'error')
+    } finally {
+      setSavingLog(false)
+    }
+  }
+
+  async function handleDeleteLog(logId) {
+    const idToDelete = logId || editingLog?.id
+    if (!idToDelete) return
+    if (!confirm('Are you sure you want to delete this attendance record?')) return
+    try {
+      setSavingLog(true)
+      const res = await fetch('/api/attendance/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete_log',
+          log_id: idToDelete
+        })
+      })
+      const json = await res.json()
+      if (res.ok) {
+        addToast('Attendance record deleted successfully!', 'success')
+        setEditingLog(null)
+        fetchReport()
+      } else {
+        addToast(json.error || 'Failed to delete record', 'error')
+      }
+    } catch (err) {
+      addToast('Error deleting record', 'error')
     } finally {
       setSavingLog(false)
     }
@@ -631,13 +660,21 @@ export default function AttendanceReportsPage() {
                                 : 'On Time'}
                             </span>
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'right' }}>
-                            <button
-                              onClick={() => openEditModal(log)}
-                              style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, color: '#0F172A', cursor: 'pointer' }}
-                            >
-                              Edit
-                            </button>
+                          <td style={{ padding: '12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                              <button
+                                onClick={() => openEditModal(log)}
+                                style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, color: '#0F172A', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Edit size={12} /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteLog(log.id)}
+                                style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 700, color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Trash2 size={12} /> Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1062,20 +1099,30 @@ export default function AttendanceReportsPage() {
                 />
               </div>
 
-              <div style={{ display: 'flex', justifySelf: 'end', gap: '10px', marginTop: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
                 <button
-                  onClick={() => setEditingLog(null)}
-                  style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', background: 'white', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveLog}
+                  onClick={() => handleDeleteLog(editingLog.id)}
                   disabled={savingLog}
-                  style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#0F172A', color: 'white', fontWeight: 800, cursor: 'pointer' }}
+                  style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#DC2626', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
                 >
-                  {savingLog ? 'Saving...' : 'Save Changes'}
+                  <Trash2 size={15} /> Delete Record
                 </button>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => setEditingLog(null)}
+                    style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', background: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveLog}
+                    disabled={savingLog}
+                    style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#0F172A', color: 'white', fontWeight: 800, cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    {savingLog ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
               </div>
             </div>
           </Modal>

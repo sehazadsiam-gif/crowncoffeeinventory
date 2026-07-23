@@ -192,6 +192,17 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'Daily attendance log updated successfully' })
     }
 
+    if (action === 'delete_log') {
+      const { error } = await supabaseAdmin
+        .from('attendance_log')
+        .delete()
+        .eq('id', log_id)
+
+      if (error) throw error
+
+      return NextResponse.json({ success: true, message: 'Attendance record deleted successfully' })
+    }
+
     if (action === 'apply_to_payroll') {
       const m = parseInt(month)
       const y = parseInt(year)
