@@ -4,7 +4,7 @@ import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
 import { useParams, useRouter } from 'next/navigation'
-import { User, Wallet, CalendarDays, Receipt, Clock, MessageSquare, Plus, Download, Lock } from 'lucide-react'
+import { User, Wallet, CalendarDays, Receipt, Clock, MessageSquare, Plus, Download, Lock, Camera } from 'lucide-react'
 
 export default function StaffProfile() {
   const router = useRouter()
@@ -144,6 +144,29 @@ export default function StaffProfile() {
     }
   }
 
+  async function handlePhotoUpload(file) {
+    if (!file) return
+    try {
+      setSavingCreds(true)
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const photoUrl = e.target.result
+        const { error } = await supabase
+          .from('staff')
+          .update({ photo_url: photoUrl })
+          .eq('id', id)
+        if (error) throw error
+        setStaff(prev => ({ ...prev, photo_url: photoUrl }))
+        addToast('Staff photo updated successfully', 'success')
+        setSavingCreds(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (err) {
+      addToast('Failed to update photo: ' + err.message, 'error')
+      setSavingCreds(false)
+    }
+  }
+
   function downloadProfilePDF() {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -175,6 +198,7 @@ export default function StaffProfile() {
       </head>
       <body>
         <div class="header">
+          ${staff.photo_url ? `<img src="${staff.photo_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #8B5E3C; margin-bottom: 12px;" />` : ''}
           <h1>Crown Coffee</h1>
           <h2>Staff Profile — ${staff.name}</h2>
           <p>Generated on ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
@@ -316,13 +340,72 @@ export default function StaffProfile() {
       <main style={{ maxWidth: '1152px', margin: '0 auto', padding: '32px 24px 60px' }}>
 
         <div className="card" style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <div style={{
-            width: '80px', height: '80px', borderRadius: '50%',
-            background: 'var(--accent-brown)', color: 'white',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0
-          }}>
-            <User size={40} />
+          <div style={{ position: 'relative', width: '84px', height: '84px', flexShrink: 0 }}>
+            <div style={{
+              width: '84px',
+              height: '84px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: '3px solid var(--accent-brown)',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              background: '#FAF7F2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              {staff.photo_url ? (
+                <img
+                  src={staff.photo_url}
+                  alt={staff.name}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div style={{
+                display: staff.photo_url ? 'none' : 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(135deg, #6B3A2A 0%, #8B5E3C 100%)',
+                color: 'white',
+                fontWeight: 700,
+                fontSize: '26px'
+              }}>
+                {staff.name ? staff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : <User size={40} />}
+              </div>
+            </div>
+            <label style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              background: 'var(--accent-brown)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+              border: '2px solid white'
+            }} title="Change Staff Photo">
+              <Camera size={14} />
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={e => {
+                  if (e.target.files && e.target.files[0]) {
+                    handlePhotoUpload(e.target.files[0])
+                  }
+                }}
+              />
+            </label>
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>

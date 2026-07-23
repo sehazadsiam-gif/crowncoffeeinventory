@@ -7,7 +7,7 @@ import Navbar from '../../components/Navbar'
 import Modal from '../../components/Modal'
 import { useToast } from '../../components/Toast'
 import Link from 'next/link'
-import { Users, Plus, UserX, UserCheck, Trash2 } from 'lucide-react'
+import { Users, Plus, UserX, UserCheck, Trash2, User } from 'lucide-react'
 
 export default function StaffDirectory() {
   const router = useRouter()
@@ -251,16 +251,78 @@ export default function StaffDirectory() {
                     borderLeft: '4px solid ' + cardBorderColor
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h2 style={{
-                        fontSize: '22px',
-                        marginBottom: '4px',
-                        fontFamily: 'var(--font-display)',
-                        color: 'var(--text-primary)'
+                  <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                    {/* Staff Photo Avatar */}
+                    <Link href={`/staff/${s.id}`} style={{ textDecoration: 'none', position: 'relative' }}>
+                      <div style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: '2.5px solid var(--accent-brown, #6B3A2A)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                        background: '#FAF7F2',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        cursor: 'pointer'
                       }}>
-                        {s.name}
-                      </h2>
+                        {s.photo_url ? (
+                          <img
+                            src={s.photo_url}
+                            alt={s.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div style={{
+                          display: s.photo_url ? 'none' : 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(135deg, #6B3A2A 0%, #8B5E3C 100%)',
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '18px'
+                        }}>
+                          {s.name ? s.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'CC'}
+                        </div>
+                      </div>
+                    </Link>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        <Link href={`/staff/${s.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          <h2 style={{
+                            fontSize: '20px',
+                            marginBottom: '2px',
+                            fontFamily: 'var(--font-display)',
+                            color: 'var(--text-primary)',
+                            cursor: 'pointer'
+                          }}>
+                            {s.name}
+                          </h2>
+                        </Link>
+                        <span style={{
+                          fontSize: '11px',
+                          padding: '3px 9px',
+                          borderRadius: '20px',
+                          background: statusBg,
+                          color: statusColor,
+                          fontWeight: 600,
+                          fontFamily: 'var(--font-body)',
+                          letterSpacing: '0.05em',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {s.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+
                       {isSorting ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>Serial:</span>
@@ -279,24 +341,13 @@ export default function StaffDirectory() {
                           letterSpacing: '0.1em',
                           color: 'var(--text-muted)',
                           fontWeight: 600,
-                          fontFamily: 'var(--font-body)'
+                          fontFamily: 'var(--font-body)',
+                          marginTop: '2px'
                         }}>
                           {s.designation} {s.serial !== 999 && <span style={{ marginLeft: '8px', opacity: 0.6 }}>#{s.serial}</span>}
                         </p>
                       )}
                     </div>
-                    <span style={{
-                      fontSize: '11px',
-                      padding: '4px 10px',
-                      borderRadius: '20px',
-                      background: statusBg,
-                      color: statusColor,
-                      fontWeight: 600,
-                      fontFamily: 'var(--font-body)',
-                      letterSpacing: '0.05em'
-                    }}>
-                      {s.is_active ? 'Active' : 'Inactive'}
-                    </span>
                   </div>
 
                   <div style={{ margin: '16px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
