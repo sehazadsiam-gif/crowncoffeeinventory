@@ -194,7 +194,7 @@ export default function AttendanceReportsPage() {
         'Check In': log.check_in_formatted,
         'Check Out': log.check_out_formatted,
         'Overtime': `${log.overtime_hours || 0} hrs`,
-        'Late': log.minutes_late > 0 ? `${log.minutes_late}m late` : 'On Time'
+        'Late': log.minutes_late > 0 ? `${(log.minutes_late / 60).toFixed(2).replace(/\.00$/, '')} hrs late` : 'On Time'
       }))
       const worksheet = xlsx.utils.json_to_sheet(rows)
       const workbook = xlsx.utils.book_new()
@@ -212,7 +212,7 @@ export default function AttendanceReportsPage() {
       'Check In': `${r.present || 0} present days`,
       'Check Out': `${r.total_hours || 0} hrs total`,
       'Overtime': `${r.total_overtime_hours || 0} hrs`,
-      'Late': `${r.late || 0} late days (${r.total_late_minutes || 0}m)`
+      'Late': `${r.late || 0} late days (${( (r.total_late_minutes || 0) / 60 ).toFixed(2).replace(/\.00$/, '')} hrs)`
     }))
 
     const worksheet = xlsx.utils.json_to_sheet(rows)
@@ -536,7 +536,9 @@ export default function AttendanceReportsPage() {
                               borderRadius: '12px',
                               fontSize: '12px'
                             }}>
-                              {log.minutes_late > 0 ? `${log.minutes_late}m late` : 'On Time'}
+                              {log.minutes_late > 0
+                                ? `${(log.minutes_late / 60).toFixed(2).replace(/\.00$/, '')} hrs late`
+                                : 'On Time'}
                             </span>
                           </td>
                           <td style={{ padding: '12px', textAlign: 'right' }}>

@@ -63,6 +63,8 @@ export async function GET(request) {
       const totalMins = Math.round((l.hours_worked || 0) * 60)
       const overtimeMins = l.overtime_minutes || Math.max(0, totalMins - 600)
       const overtimeHours = Math.round((overtimeMins / 60) * 100) / 100
+      const lateMins = l.minutes_late || 0
+      const lateHours = Math.round((lateMins / 60) * 100) / 100
 
       return {
         id: l.id,
@@ -78,7 +80,8 @@ export async function GET(request) {
         check_out_formatted: checkOutTime || '--',
         time_range: timeRange,
         status: l.status || 'present',
-        minutes_late: l.minutes_late || 0,
+        minutes_late: lateMins,
+        late_hours: lateHours,
         hours_worked: l.hours_worked || 0,
         overtime_minutes: overtimeMins,
         overtime_hours: overtimeHours,
@@ -96,6 +99,7 @@ export async function GET(request) {
       const off = sLogs.filter(l => l.status === 'off').length
       const totalHours = Math.round(sLogs.reduce((sum, l) => sum + (l.hours_worked || 0), 0) * 10) / 10
       const totalLateMinutes = sLogs.reduce((sum, l) => sum + (l.minutes_late || 0), 0)
+      const totalLateHours = Math.round((totalLateMinutes / 60) * 100) / 100
       const totalOvertimeMinutes = sLogs.reduce((sum, l) => sum + (l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 600)), 0)
       const totalOvertimeHours = Math.round((totalOvertimeMinutes / 60) * 100) / 100
 
@@ -113,6 +117,7 @@ export async function GET(request) {
         total_days_worked: present + late,
         total_hours: totalHours,
         total_late_minutes: totalLateMinutes,
+        total_late_hours: totalLateHours,
         total_overtime_hours: totalOvertimeHours
       }
     })
@@ -123,6 +128,7 @@ export async function GET(request) {
       total_staff: staffReports.length,
       total_present_days: staffReports.reduce((acc, r) => acc + r.total_days_worked, 0),
       total_late_occurrences: staffReports.reduce((acc, r) => acc + r.late, 0),
+      total_late_hours: Math.round(staffReports.reduce((acc, r) => acc + r.total_late_hours, 0) * 10) / 10,
       total_absent_days: staffReports.reduce((acc, r) => acc + r.absent, 0),
       total_hours_worked: Math.round(staffReports.reduce((acc, r) => acc + r.total_hours, 0)),
       total_overtime_hours: Math.round(staffReports.reduce((acc, r) => acc + r.total_overtime_hours, 0) * 10) / 10
