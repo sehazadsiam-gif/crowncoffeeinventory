@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '../../../components/Navbar'
 import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
-import { FileSpreadsheet, FileText, Calendar, Edit, Search, DollarSign, Clock, CheckCircle2, AlertCircle, BarChart3, ListFilter, Users, ArrowRight } from 'lucide-react'
+import { FileSpreadsheet, FileText, Calendar, Edit, Search, DollarSign, Clock, CheckCircle2, AlertCircle, BarChart3, ListFilter, Users, ArrowRight, Sparkles, Bot, Send, Zap, ShieldAlert, Check } from 'lucide-react'
 import * as xlsx from 'xlsx'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
@@ -19,9 +19,86 @@ export default function AttendanceReportsPage() {
   const [loading, setLoading] = useState(true)
   const [reportData, setReportData] = useState({ summary: {}, reports: [], daily_logs: [] })
 
-  const [activeTab, setActiveTab] = useState('daily') // 'daily' | 'monthly' | 'heatmap'
+  const [activeTab, setActiveTab] = useState('daily') // 'daily' | 'monthly' | 'heatmap' | 'ai_agent'
   const [searchQuery, setSearchQuery] = useState('')
   const [applyLoading, setApplyLoading] = useState(false)
+
+  // AI Agent States
+  const [aiQuestion, setAiQuestion] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiAnswer, setAiAnswer] = useState(null)
+  const [anomalies, setAnomalies] = useState([])
+  const [anomaliesLoading, setAnomaliesLoading] = useState(false)
+
+  useEffect(() => {
+    fetchAnomalies()
+  }, [])
+
+  async function handleAskAI(q) {
+    const queryToUse = (typeof q === 'string' ? q : aiQuestion).trim()
+    if (!queryToUse) return
+    try {
+      setAiLoading(true)
+      setAiAnswer(null)
+      const res = await fetch('/api/attendance/agent/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: queryToUse })
+      })
+      const json = await res.json()
+      if (res.ok && json.answer) {
+        setAiAnswer(json.answer)
+      } else {
+        addToast(json.error || 'AI query failed', 'error')
+      }
+    } catch (err) {
+      addToast('Network error querying AI agent', 'error')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  async function handleScanAnomalies() {
+    try {
+      setAnomaliesLoading(true)
+      const res = await fetch('/api/attendance/agent/anomalies', { method: 'POST' })
+      const json = await res.json()
+      if (res.ok) {
+        addToast('AI Anomaly & Pattern Scan completed!', 'success')
+        fetchAnomalies()
+      } else {
+        addToast(json.error || 'Anomaly scan failed', 'error')
+      }
+    } catch (err) {
+      addToast('Error running AI anomaly scan', 'error')
+    } finally {
+      setAnomaliesLoading(false)
+    }
+  }
+
+  async function fetchAnomalies() {
+    try {
+      const res = await fetch('/api/attendance/agent/anomalies')
+      const json = await res.json()
+      if (res.ok) {
+        setAnomalies(json.anomalies || [])
+      }
+    } catch (err) {}
+  }
+
+  async function handleDismissAnomaly(id) {
+    try {
+      const res = await fetch('/api/attendance/agent/anomalies', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+      if (res.ok) {
+        setAnomalies(prev => prev.filter(a => a.id !== id))
+        addToast('Anomaly dismissed', 'info')
+      }
+    } catch (err) {}
+  }
 
   // Date range filter (for Daily Breakdown tab)
   const todayStr = new Date().toISOString().split('T')[0]
@@ -340,6 +417,19 @@ export default function AttendanceReportsPage() {
                 }}
               >
                 <Calendar size={15} /> Attendance Heat Map
+              </button>
+
+              <button
+                onClick={() => setActiveTab('ai_agent')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 18px', borderRadius: '9px', border: 'none',
+                  background: activeTab === 'ai_agent' ? 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)' : 'transparent',
+                  color: activeTab === 'ai_agent' ? 'white' : '#7C3AED',
+                  fontWeight: 800, fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s ease',
+                  boxShadow: activeTab === 'ai_agent' ? '0 4px 12px rgba(124,58,237,0.3)' : 'none'
+                }}
+              >
+                <Sparkles size={15} color={activeTab === 'ai_agent' ? 'white' : '#7C3AED'} /> AI Intelligence Agent
               </button>
             </div>
 
@@ -673,6 +763,231 @@ export default function AttendanceReportsPage() {
                   </div>
                 )
               })}
+            </div>
+          ) : activeTab === 'ai_agent' ? (
+
+            /* TAB 4: AI ATTENDANCE INTELLIGENCE AGENT */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+              
+              {/* AI Agent Banner Header */}
+              <div style={{
+                background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4C1D95 100%)',
+                borderRadius: '20px',
+                padding: '28px 32px',
+                color: 'white',
+                boxShadow: '0 10px 30px rgba(76,29,149,0.25)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '20px'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.15)', padding: '6px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '12px', letterSpacing: '0.05em' }}>
+                      <Sparkles size={16} color="#A78BFA" /> GEMINI AI AGENT ACTIVE
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#C4B5FD', fontWeight: 600 }}>Privacy Guaranteed</span>
+                  </div>
+                  <h2 style={{ fontSize: '24px', fontWeight: 900, margin: 0, color: 'white' }}>
+                    AI Attendance Intelligence Agent
+                  </h2>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#DDD6FE', maxWidth: '650px' }}>
+                    Ask any question about staff attendance, late arrivals, overtime breakdown, or click below to run AI anomaly detection scans.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleScanAnomalies}
+                  disabled={anomaliesLoading}
+                  style={{
+                    background: 'white',
+                    color: '#4C1D95',
+                    border: 'none',
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    fontWeight: 900,
+                    fontSize: '13px',
+                    cursor: anomaliesLoading ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+                  }}
+                >
+                  <Zap size={18} color="#7C3AED" /> {anomaliesLoading ? 'Scanning...' : 'Run AI Anomaly Scan'}
+                </button>
+              </div>
+
+              {/* Natural Language Query Assistant */}
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '24px' }}>
+                <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Bot size={20} color="#7C3AED" /> Ask AI Attendance Assistant
+                </h3>
+                <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#64748B' }}>
+                  Ask questions in plain English about attendance records, lateness, and shift duty.
+                </p>
+
+                {/* Preset Prompt Chips */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                  {[
+                    "Who was late more than 2 times this month?",
+                    "Summarize top overtime hours for all staff",
+                    "Which staff member has the lowest punctuality score?",
+                    "Show kitchen staff attendance summary"
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { setAiQuestion(preset); handleAskAI(preset) }}
+                      style={{
+                        background: 'white',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '20px',
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: '#475569',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      💡 {preset}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Query Input Box */}
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder="Ask AI anything about attendance (e.g. Who was late on Friday?)"
+                    value={aiQuestion}
+                    onChange={e => setAiQuestion(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAskAI() }}
+                    style={{
+                      flex: 1,
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '14px',
+                      outline: 'none',
+                      background: 'white'
+                    }}
+                  />
+                  <button
+                    onClick={() => handleAskAI()}
+                    disabled={aiLoading}
+                    style={{
+                      background: '#7C3AED',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '12px',
+                      fontWeight: 800,
+                      fontSize: '14px',
+                      cursor: aiLoading ? 'wait' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <Send size={16} /> {aiLoading ? 'Thinking...' : 'Ask AI'}
+                  </button>
+                </div>
+
+                {/* AI Answer Output */}
+                {aiAnswer && (
+                  <div style={{ marginTop: '20px', background: 'white', border: '1px solid #C4B5FD', borderRadius: '14px', padding: '20px', boxShadow: '0 4px 16px rgba(124,58,237,0.08)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', color: '#7C3AED', fontWeight: 800, fontSize: '13px' }}>
+                      <Sparkles size={16} /> AI Insights Response:
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#0F172A', lineHeight: '1.6', whiteSpace: 'pre-wrap', fontWeight: 500 }}>
+                      {aiAnswer}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Anomaly & Pattern Detector Results */}
+              <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ShieldAlert size={20} color="#DC2626" /> Detected Attendance Anomalies ({anomalies.length})
+                  </h3>
+                  <button
+                    onClick={handleScanAnomalies}
+                    style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer' }}
+                  >
+                    Rescan Patterns
+                  </button>
+                </div>
+
+                {anomalies.length === 0 ? (
+                  <div style={{ padding: '32px', textAlign: 'center', background: '#F8FAFC', borderRadius: '12px', color: '#64748B', fontSize: '13px' }}>
+                    No critical attendance anomalies or burnout risks detected. All staff operating normally!
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                    {anomalies.map(item => {
+                      const isCritical = item.severity === 'critical'
+                      return (
+                        <div key={item.id} style={{
+                          background: isCritical ? '#FEF2F2' : '#FFFBEB',
+                          border: isCritical ? '1px solid #FCA5A5' : '1px solid #FCD34D',
+                          borderRadius: '12px',
+                          padding: '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justify: 'space-between'
+                        }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                              <span style={{
+                                fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em',
+                                background: isCritical ? '#DC2626' : '#D97706', color: 'white',
+                                padding: '3px 8px', borderRadius: '10px'
+                              }}>
+                                {item.severity || 'Warning'}
+                              </span>
+                              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
+                                {new Date(item.flagged_at).toLocaleDateString('en-GB')}
+                              </span>
+                            </div>
+
+                            <div style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A', marginBottom: '4px' }}>
+                              {item.detail?.staff_name || item.staff?.name || 'Staff Member'}
+                            </div>
+
+                            <div style={{ fontSize: '13px', color: isCritical ? '#991B1B' : '#92400E', fontWeight: 700, marginBottom: '6px' }}>
+                              {item.type === 'repeated_lateness' && `Repeated Lateness: ${item.detail?.late_count} times in 30 days`}
+                              {item.type === 'overtime_risk' && `Overtime Burnout Risk: ${item.detail?.hours_worked} total hours`}
+                              {item.type === 'high_absence' && `High Absence: ${item.detail?.absent_count} absent days`}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => handleDismissAnomaly(item.id)}
+                            style={{
+                              marginTop: '12px',
+                              background: 'white',
+                              border: isCritical ? '1px solid #FCA5A5' : '1px solid #FCD34D',
+                              color: isCritical ? '#991B1B' : '#92400E',
+                              borderRadius: '8px',
+                              padding: '6px 12px',
+                              fontSize: '11px',
+                              fontWeight: 800,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Dismiss Flag
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
             </div>
           ) : null}
 
