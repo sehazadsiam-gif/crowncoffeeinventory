@@ -11,6 +11,9 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('session=expired')) {
+      setError('Your session expired due to 10 minutes of inactivity. Please log in again.')
+    }
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
     if (token && (role === 'admin' || role === 'sub_admin')) router.replace('/dashboard')

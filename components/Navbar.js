@@ -10,6 +10,7 @@ import {
   BellRing, ShieldAlert, AlertTriangle, Calendar, Mail
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { useSessionTimeout } from '../hooks/useSessionTimeout'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -22,6 +23,9 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [bellAlerts, setBellAlerts] = useState({ lowStockCount: 0, pendingLeavesCount: 0, pendingQueriesCount: 0 })
+
+  // 10-minute inactivity auto-logout for admin and sub_admin
+  useSessionTimeout(userRole === 'admin' || userRole === 'sub_admin')
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
