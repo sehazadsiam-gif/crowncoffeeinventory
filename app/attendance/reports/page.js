@@ -243,7 +243,7 @@ export default function AttendanceReportsPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F8FAFC' }}>
+    <div style={{ minHeight: '100vh', background: '#F8FAFC', fontFamily: 'var(--font-sans)' }}>
       <Navbar />
 
       <main style={{ maxWidth: '1440px', margin: '0 auto', padding: '32px 24px 60px' }}>

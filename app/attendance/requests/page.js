@@ -94,7 +94,7 @@ export default function AttendanceRequestsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-main, #faf7f2)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-main, #faf7f2)', fontFamily: 'var(--font-sans)' }}>
       <Navbar />
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px 60px' }}>

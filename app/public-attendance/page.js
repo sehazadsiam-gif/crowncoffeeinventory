@@ -131,7 +131,7 @@ export default function PublicAttendancePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F1F5F9', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#F1F5F9', fontFamily: 'var(--font-sans)' }}>
 
       {/* Offline Alert Banner */}
       {isOffline && (

@@ -195,7 +195,7 @@ export default function WeeklyRosterPage() {
   })
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-main, #faf7f2)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-main, #faf7f2)', fontFamily: 'var(--font-sans)' }}>
       <Navbar />
 
       <main style={{ maxWidth: '1500px', margin: '0 auto', padding: '32px 24px 60px' }}>

@@ -177,7 +177,7 @@ export default function AttendanceDashboardPage() {
   const absentCount = totalCount - (presentCount + lateCount)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: 'var(--font-sans)' }}>
       {!isKioskMode && <Navbar />}
 
       <main style={{ maxWidth: '1600px', margin: '0 auto', padding: isKioskMode ? '24px' : '32px 24px 60px' }}>
