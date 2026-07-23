@@ -11,6 +11,105 @@ import {
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
+function AnalogClock({ size = 52, time = new Date() }) {
+  const seconds = time.getSeconds()
+  const minutes = time.getMinutes()
+  const hours = time.getHours() % 12
+
+  const secDeg = (seconds / 60) * 360
+  const minDeg = ((minutes + seconds / 60) / 60) * 360
+  const hourDeg = ((hours + minutes / 60) / 12) * 360
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '10px 18px' }}>
+      <div style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        background: '#0F172A',
+        border: '2.5px solid #D4933A',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.35), inset 0 0 8px rgba(0,0,0,0.5)',
+        position: 'relative',
+        flexShrink: 0
+      }}>
+        {[0, 90, 180, 270].map((deg) => (
+          <div
+            key={deg}
+            style={{
+              position: 'absolute',
+              width: '2px',
+              height: '5px',
+              background: '#D4933A',
+              top: '3px',
+              left: 'calc(50% - 1px)',
+              transformOrigin: `50% ${size / 2 - 3}px`,
+              transform: `rotate(${deg}deg)`
+            }}
+          />
+        ))}
+        {/* Hour Hand */}
+        <div style={{
+          position: 'absolute',
+          width: '3px',
+          height: `${size * 0.26}px`,
+          background: '#F8FAFC',
+          borderRadius: '4px',
+          top: `${size * 0.24}px`,
+          left: `calc(50% - 1.5px)`,
+          transformOrigin: '50% 100%',
+          transform: `rotate(${hourDeg}deg)`
+        }} />
+        {/* Minute Hand */}
+        <div style={{
+          position: 'absolute',
+          width: '2px',
+          height: `${size * 0.36}px`,
+          background: '#38BDF8',
+          borderRadius: '4px',
+          top: `${size * 0.14}px`,
+          left: `calc(50% - 1px)`,
+          transformOrigin: '50% 100%',
+          transform: `rotate(${minDeg}deg)`
+        }} />
+        {/* Second Hand */}
+        <div style={{
+          position: 'absolute',
+          width: '1.5px',
+          height: `${size * 0.42}px`,
+          background: '#D4933A',
+          borderRadius: '2px',
+          top: `${size * 0.08}px`,
+          left: `calc(50% - 0.75px)`,
+          transformOrigin: '50% 100%',
+          transform: `rotate(${secDeg}deg)`,
+          transition: 'transform 0.2s cubic-bezier(0.4, 2.08, 0.55, 0.44)'
+        }} />
+        {/* Pivot */}
+        <div style={{
+          position: 'absolute',
+          width: '6px',
+          height: '6px',
+          borderRadius: '50%',
+          background: '#D4933A',
+          border: '1.5px solid #0F172A',
+          top: 'calc(50% - 3px)',
+          left: 'calc(50% - 3px)',
+          zIndex: 10
+        }} />
+      </div>
+
+      <div style={{ textAlign: 'left' }}>
+        <div style={{ fontSize: '17px', fontWeight: 900, color: '#38BDF8', letterSpacing: '0.5px', fontFamily: 'var(--font-mono)' }}>
+          {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+        </div>
+        <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
+          {time.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AttendanceDashboardPage() {
   const router = useRouter()
   const { addToast } = useToast()
@@ -48,16 +147,12 @@ export default function AttendanceDashboardPage() {
     const channel = supabase.channel('attendance_kiosk_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, (payload) => {
         fetchTodayData(true)
-        if (payload.new) triggerTapToast(payload.new)
       })
       .subscribe()
-
-    const timer = setInterval(() => fetchTodayData(true), 12000)
 
     return () => {
       clearInterval(clockTimer)
       supabase.removeChannel(channel)
-      clearInterval(timer)
     }
   }, [router])
 
@@ -108,53 +203,39 @@ export default function AttendanceDashboardPage() {
     }
   }
 
-  function triggerTapToast(entry) {
-    const timeStr = entry.check_in_at
-      ? new Date(entry.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-      : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-
-    setLastTapEvent({
-      name: entry.employee_id || 'Staff Member',
-      status: (entry.status || 'present').toUpperCase(),
-      time: timeStr
-    })
-    setTimeout(() => setLastTapEvent(null), 6000)
-  }
-
-  async function handleCheckin(identifier, overrideStatus = null, source = 'manual') {
-    if (!identifier) {
-      return addToast('Please enter an Employee ID or RFID card code', 'error')
-    }
-
+  async function handleCheckin(staffIdOrRfid, manualStatus = null, method = 'manual') {
+    if (!staffIdOrRfid) return
     try {
       setCheckingIn(true)
-      const res = await fetch('/api/attendance/checkin', {
+      const res = await fetch('/api/attendance/today', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          identifier,
-          source,
-          adminOverride: !!overrideStatus,
-          forceStatus: overrideStatus
+          staff_id: staffIdOrRfid,
+          rfid_code: method === 'rfid' ? staffIdOrRfid : null,
+          manual_status: manualStatus,
+          method
         })
       })
-
       const json = await res.json()
       if (res.ok) {
-        addToast(
-          json.alreadyCheckedOut
-            ? `Checked OUT: ${json.staff.name} (${json.hoursWorked} hrs duty)`
-            : `Checked IN: ${json.staff.name} (${json.status.toUpperCase()})`,
-          'success'
-        )
-        setQrCodeInput('')
+        addToast(json.message || 'Attendance updated successfully', 'success')
         setQrModalOpen(false)
+        setQrCodeInput('')
         fetchTodayData(true)
+        if (json.record) {
+          setLastTapEvent({
+            name: json.record.name || 'Staff Member',
+            status: json.action === 'check_in' ? 'Checked In' : 'Checked Out',
+            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+          })
+          setTimeout(() => setLastTapEvent(null), 5000)
+        }
       } else {
-        addToast(json.error || 'Check-in failed', 'error')
+        addToast(json.error || 'Failed to update attendance', 'error')
       }
     } catch (err) {
-      addToast('Error logging attendance', 'error')
+      addToast('Network error updating attendance', 'error')
     } finally {
       setCheckingIn(false)
     }
@@ -164,8 +245,8 @@ export default function AttendanceDashboardPage() {
   
   // Filter by department & search
   const filteredRecords = records.filter(r => {
-    const matchesDept = departmentFilter === 'all' || (r.department || 'front') === departmentFilter
-    const matchesSearch = !searchQuery || 
+    const matchesDept = departmentFilter === 'all' || r.department === departmentFilter
+    const matchesSearch = searchQuery === '' ||
       r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       (r.employee_id && r.employee_id.toLowerCase().includes(searchQuery.toLowerCase()))
     return matchesDept && matchesSearch
@@ -173,8 +254,8 @@ export default function AttendanceDashboardPage() {
 
   const presentCount = records.filter(r => r.status === 'present').length
   const lateCount = records.filter(r => r.status === 'late').length
+  const absentCount = records.filter(r => r.status === 'absent').length
   const totalCount = records.length
-  const absentCount = totalCount - (presentCount + lateCount)
 
   return (
     <div style={{ minHeight: '100vh', background: '#F8FAFC', color: '#0F172A', fontFamily: 'var(--font-sans)' }}>
@@ -182,7 +263,7 @@ export default function AttendanceDashboardPage() {
 
       <main style={{ maxWidth: '1600px', margin: '0 auto', padding: isKioskMode ? '24px' : '32px 24px 60px' }}>
         
-        {/* Top Header & Live Clock */}
+        {/* Top Header & Live Analog Clock */}
         <div style={{
           background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
           borderRadius: '20px',
@@ -230,14 +311,8 @@ export default function AttendanceDashboardPage() {
               <Wifi size={18} /> Tap Card / Manual Code
             </button>
 
-            <div style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '14px', padding: '10px 20px', textAlign: 'right' }}>
-              <div style={{ fontSize: '20px', fontWeight: 900, fontFamily: 'monospace', letterSpacing: '1px', color: '#38BDF8' }}>
-                {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-              </div>
-              <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>
-                {currentTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-              </div>
-            </div>
+            {/* Round Ticking Analog Clock */}
+            <AnalogClock time={currentTime} />
           </div>
         </div>
 
@@ -257,7 +332,7 @@ export default function AttendanceDashboardPage() {
             boxShadow: '0 4px 20px rgba(6,95,70,0.3)'
           }}>
             <Sparkles size={22} />
-            <span>🟢 REALTIME CARD TAP: <strong>{lastTapEvent.name}</strong> — {lastTapEvent.status} at {lastTapEvent.time}</span>
+            <span>REALTIME CARD TAP: <strong>{lastTapEvent.name}</strong> — {lastTapEvent.status} at {lastTapEvent.time}</span>
           </div>
         )}
 
@@ -302,8 +377,8 @@ export default function AttendanceDashboardPage() {
           <div style={{ display: 'flex', gap: '8px' }}>
             {[
               { id: 'all', label: 'All Staff' },
-              { id: 'front', label: '☕ Front Staff' },
-              { id: 'kitchen', label: '🍳 Kitchen Staff' }
+              { id: 'front', label: 'Front Staff' },
+              { id: 'kitchen', label: 'Kitchen Staff' }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -442,7 +517,7 @@ export default function AttendanceDashboardPage() {
                         color: r.department === 'kitchen' ? '#92400E' : '#0369A1',
                         fontWeight: 700
                       }}>
-                        {r.department === 'kitchen' ? '🍳 Kitchen' : '☕ Front'}
+                        {r.department === 'kitchen' ? 'Kitchen' : 'Front'}
                       </span>
                     </div>
 

@@ -3,6 +3,105 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 
+function AnalogClock({ size = 52, time = new Date() }) {
+  const seconds = time.getSeconds()
+  const minutes = time.getMinutes()
+  const hours = time.getHours() % 12
+
+  const secDeg = (seconds / 60) * 360
+  const minDeg = ((minutes + seconds / 60) / 60) * 360
+  const hourDeg = ((hours + minutes / 60) / 12) * 360
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '10px 18px' }}>
+      <div style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        background: '#0F172A',
+        border: '2.5px solid #D4933A',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.35), inset 0 0 8px rgba(0,0,0,0.5)',
+        position: 'relative',
+        flexShrink: 0
+      }}>
+        {[0, 90, 180, 270].map((deg) => (
+          <div
+            key={deg}
+            style={{
+              position: 'absolute',
+              width: '2px',
+              height: '5px',
+              background: '#D4933A',
+              top: '3px',
+              left: 'calc(50% - 1px)',
+              transformOrigin: `50% ${size / 2 - 3}px`,
+              transform: `rotate(${deg}deg)`
+            }}
+          />
+        ))}
+        {/* Hour Hand */}
+        <div style={{
+          position: 'absolute',
+          width: '3px',
+          height: `${size * 0.26}px`,
+          background: '#F8FAFC',
+          borderRadius: '4px',
+          top: `${size * 0.24}px`,
+          left: `calc(50% - 1.5px)`,
+          transformOrigin: '50% 100%',
+          transform: `rotate(${hourDeg}deg)`
+        }} />
+        {/* Minute Hand */}
+        <div style={{
+          position: 'absolute',
+          width: '2px',
+          height: `${size * 0.36}px`,
+          background: '#38BDF8',
+          borderRadius: '4px',
+          top: `${size * 0.14}px`,
+          left: `calc(50% - 1px)`,
+          transformOrigin: '50% 100%',
+          transform: `rotate(${minDeg}deg)`
+        }} />
+        {/* Second Hand */}
+        <div style={{
+          position: 'absolute',
+          width: '1.5px',
+          height: `${size * 0.42}px`,
+          background: '#D4933A',
+          borderRadius: '2px',
+          top: `${size * 0.08}px`,
+          left: `calc(50% - 0.75px)`,
+          transformOrigin: '50% 100%',
+          transform: `rotate(${secDeg}deg)`,
+          transition: 'transform 0.2s cubic-bezier(0.4, 2.08, 0.55, 0.44)'
+        }} />
+        {/* Pivot */}
+        <div style={{
+          position: 'absolute',
+          width: '6px',
+          height: '6px',
+          borderRadius: '50%',
+          background: '#D4933A',
+          border: '1.5px solid #0F172A',
+          top: 'calc(50% - 3px)',
+          left: 'calc(50% - 3px)',
+          zIndex: 10
+        }} />
+      </div>
+
+      <div style={{ textAlign: 'left' }}>
+        <div style={{ fontSize: '17px', fontWeight: 900, color: '#38BDF8', letterSpacing: '0.5px', fontFamily: 'var(--font-mono)' }}>
+          {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+        </div>
+        <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
+          {time.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function PublicAttendancePage() {
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -123,11 +222,11 @@ export default function PublicAttendancePage() {
   const absentCount = records.filter(r => r.status === 'absent').length
 
   const flashConfig = {
-    in:    { bg: '#16A34A', icon: '✓', heading: 'CHECKED IN',  sub: 'On Time' },
-    late:  { bg: '#D97706', icon: '✓', heading: 'CHECKED IN',  sub: 'Late Arrival' },
-    out:   { bg: '#1D4ED8', icon: '✓', heading: 'CHECKED OUT', sub: 'Duty Complete' },
-    done:  { bg: '#475569', icon: '✓', heading: 'SHIFT COMPLETED', sub: 'Check-in & check-out recorded for today' },
-    error: { bg: '#DC2626', icon: '✗', heading: 'NOT FOUND',   sub: 'Card not paired to any staff' },
+    in:    { bg: '#16A34A', icon: 'Check', heading: 'CHECKED IN',  sub: 'On Time' },
+    late:  { bg: '#D97706', icon: 'Check', heading: 'CHECKED IN',  sub: 'Late Arrival' },
+    out:   { bg: '#1D4ED8', icon: 'Check', heading: 'CHECKED OUT', sub: 'Duty Complete' },
+    done:  { bg: '#475569', icon: 'Check', heading: 'SHIFT COMPLETED', sub: 'Check-in & check-out recorded for today' },
+    error: { bg: '#DC2626', icon: 'X', heading: 'NOT FOUND',   sub: 'Card not paired to any staff' },
   }
 
   return (
@@ -136,7 +235,7 @@ export default function PublicAttendancePage() {
       {/* Offline Alert Banner */}
       {isOffline && (
         <div style={{ background: '#DC2626', color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em', padding: '12px 16px', textAlign: 'center', fontWeight: 800, fontSize: '13px', position: 'sticky', top: 0, zIndex: 10000, boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
-          ⚠ Offline — Taps cannot be recorded. Check your internet connection.
+          OFFLINE — Taps cannot be recorded. Check your internet connection.
         </div>
       )}
       {tapFlash && (() => {
@@ -243,14 +342,7 @@ export default function PublicAttendancePage() {
             Refresh
           </button>
 
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '32px', fontWeight: 900, color: 'white', fontFamily: 'monospace', letterSpacing: '2px' }}>
-              {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
-            </div>
-            <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-              {currentTime.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </div>
-          </div>
+          <AnalogClock time={currentTime} />
         </div>
       </div>
 
