@@ -3,11 +3,20 @@ import { ToastProvider } from '../components/Toast'
 import EnvCheck from '../components/EnvCheck'
 import LoginGate from '../components/LoginGate'
 
+export const viewport = {
+  themeColor: '#8B5E3C',
+  width: 'device-width',
+  initialScale: 1,
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+}
+
 export const metadata = {
   title: 'Crown Coffee Staffs',
   description: 'Crown Coffee Staff Management System',
   manifest: '/manifest.json',
-  themeColor: '#8B5E3C',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
