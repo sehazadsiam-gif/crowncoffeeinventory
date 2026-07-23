@@ -187,21 +187,32 @@ export default function AttendanceReportsPage() {
   }
 
   function handleExportCSV() {
+    if (activeTab === 'daily' && filteredLogs?.length) {
+      const rows = filteredLogs.map(log => ({
+        'Name': `${log.staff_name} (${log.employee_id})`,
+        'Date(Selected Range)': log.date_formatted,
+        'Check In': log.check_in_formatted,
+        'Check Out': log.check_out_formatted,
+        'Overtime': `${log.overtime_hours || 0} hrs`,
+        'Late': log.minutes_late > 0 ? `${log.minutes_late}m late` : 'On Time'
+      }))
+      const worksheet = xlsx.utils.json_to_sheet(rows)
+      const workbook = xlsx.utils.book_new()
+      xlsx.utils.book_append_sheet(workbook, worksheet, 'Daily Logs')
+      xlsx.writeFile(workbook, `Crown_Coffee_Daily_Logs_${months[month - 1]}_${year}.xlsx`)
+      addToast('Daily Logs Excel exported successfully!', 'success')
+      return
+    }
+
     if (!reportData.reports?.length) return
 
     const rows = reportData.reports.map(r => ({
-      'Employee ID': r.employee_id,
-      'Staff Name': r.name,
-      'Designation': r.designation,
-      'Present Days': r.present,
-      'Late Days': r.late,
-      'Absent Days': r.absent,
-      'On Leave': r.on_leave,
-      'Off Days': r.off,
-      'Total Days Worked': r.total_days_worked,
-      'Total Hours Worked': r.total_hours,
-      'Total Overtime Hours': r.total_overtime_hours,
-      'Total Late Minutes': r.total_late_minutes
+      'Name': `${r.name} (${r.employee_id})`,
+      'Date(Selected Range)': `${months[month - 1]} ${year}`,
+      'Check In': `${r.present || 0} present days`,
+      'Check Out': `${r.total_hours || 0} hrs total`,
+      'Overtime': `${r.total_overtime_hours || 0} hrs`,
+      'Late': `${r.late || 0} late days (${r.total_late_minutes || 0}m)`
     }))
 
     const worksheet = xlsx.utils.json_to_sheet(rows)
@@ -475,47 +486,57 @@ export default function AttendanceReportsPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid #0F172A', color: '#0F172A', fontSize: '12px', textTransform: 'uppercase', background: '#F8FAFC' }}>
-                        <th style={{ padding: '12px' }}>Date</th>
-                        <th style={{ padding: '12px' }}>Employee</th>
-                        <th style={{ padding: '12px' }}>Designation</th>
+                        <th style={{ padding: '12px' }}>Name</th>
+                        <th style={{ padding: '12px' }}>Date (Selected Range)</th>
                         <th style={{ padding: '12px' }}>Check In</th>
                         <th style={{ padding: '12px' }}>Check Out</th>
-                        <th style={{ padding: '12px', textAlign: 'center' }}>Hours Worked</th>
-                        <th style={{ padding: '12px', textAlign: 'center' }}>Late Mins</th>
-                        <th style={{ padding: '12px', textAlign: 'center' }}>Status</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Overtime</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Late</th>
                         <th style={{ padding: '12px', textAlign: 'right' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredLogs.map(log => (
                         <tr key={log.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                          <td style={{ padding: '12px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>{log.date_formatted}</td>
                           <td style={{ padding: '12px', fontWeight: 800, color: '#0F172A' }}>
                             {log.staff_name}
-                            <span style={{ display: 'block', fontSize: '11px', color: '#64748B', fontWeight: 600 }}>ID: {log.employee_id}</span>
+                            <span style={{ display: 'block', fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
+                              ID: {log.employee_id}{log.designation ? ` • ${log.designation}` : ''}
+                            </span>
                           </td>
-                          <td style={{ padding: '12px', color: '#475569', fontWeight: 600 }}>{log.designation || '-'}</td>
-                          <td style={{ padding: '12px', fontWeight: 700, color: '#059669', whiteSpace: 'nowrap' }}>{log.check_in_formatted}</td>
-                          <td style={{ padding: '12px', fontWeight: 700, color: '#2563EB', whiteSpace: 'nowrap' }}>{log.check_out_formatted}</td>
-                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 800, color: '#0F172A' }}>{log.hours_worked}h</td>
-                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: log.minutes_late > 0 ? '#DC2626' : '#94A3B8' }}>
-                            {log.minutes_late > 0 ? `${log.minutes_late}m` : '-'}
+                          <td style={{ padding: '12px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap' }}>
+                            {log.date_formatted}
+                          </td>
+                          <td style={{ padding: '12px', fontWeight: 700, color: '#059669', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                            {log.check_in_formatted}
+                          </td>
+                          <td style={{ padding: '12px', fontWeight: 700, color: '#2563EB', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                            {log.check_out_formatted}
                           </td>
                           <td style={{ padding: '12px', textAlign: 'center' }}>
                             <span style={{
-                              padding: '4px 10px',
-                              borderRadius: '20px',
-                              fontSize: '11px',
                               fontWeight: 800,
-                              background: log.status === 'present' ? '#DCFCE7' : log.status === 'late' ? '#FEE2E2' : log.status === 'on_leave' ? '#DBEAFE' : '#F1F5F9',
-                              color: log.status === 'present' ? '#15803D' : log.status === 'late' ? '#B91C1C' : log.status === 'on_leave' ? '#1D4ED8' : '#475569',
-                              border: log.status === 'present' ? '1px solid #86EFAC' : log.status === 'late' ? '1px solid #FCA5A5' : '1px solid #CBD5E1'
+                              color: log.overtime_hours > 0 ? '#D4933A' : '#64748B',
+                              background: log.overtime_hours > 0 ? '#FFFBEB' : '#F1F5F9',
+                              border: log.overtime_hours > 0 ? '1px solid #FCD34D' : '1px solid #E2E8F0',
+                              padding: '3px 10px',
+                              borderRadius: '12px',
+                              fontSize: '12px'
                             }}>
-                              {log.status === 'present' && 'Present'}
-                              {log.status === 'late' && 'Late'}
-                              {log.status === 'absent' && 'Absent'}
-                              {log.status === 'on_leave' && 'On Leave'}
-                              {log.status === 'off' && 'Day Off'}
+                              {log.overtime_hours > 0 ? `${log.overtime_hours} hrs` : '0 hrs'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <span style={{
+                              fontWeight: 800,
+                              color: log.minutes_late > 0 ? '#DC2626' : '#16A34A',
+                              background: log.minutes_late > 0 ? '#FEE2E2' : '#DCFCE7',
+                              border: log.minutes_late > 0 ? '1px solid #FCA5A5' : '1px solid #86EFAC',
+                              padding: '3px 10px',
+                              borderRadius: '12px',
+                              fontSize: '12px'
+                            }}>
+                              {log.minutes_late > 0 ? `${log.minutes_late}m late` : 'On Time'}
                             </span>
                           </td>
                           <td style={{ padding: '12px', textAlign: 'right' }}>
