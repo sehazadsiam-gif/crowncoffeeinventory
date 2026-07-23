@@ -60,9 +60,10 @@ export async function GET(request) {
         timeRange = `${checkInTime} (Checked In)`
       }
 
-      const totalMins = Math.round((l.hours_worked || 0) * 60)
-      const overtimeMins = l.overtime_minutes || Math.max(0, totalMins - 600)
-      const overtimeHours = Math.round((overtimeMins / 60) * 100) / 100
+      const hoursWorked = l.hours_worked || 0
+      const standardShiftHours = 10
+      const overtimeHours = l.overtime_hours || (hoursWorked > standardShiftHours ? Math.round((hoursWorked - standardShiftHours) * 100) / 100 : 0)
+      const overtimeMins = Math.round(overtimeHours * 60)
       const lateMins = l.minutes_late || 0
       const lateHours = Math.round((lateMins / 60) * 100) / 100
 
@@ -82,7 +83,7 @@ export async function GET(request) {
         status: l.status || 'present',
         minutes_late: lateMins,
         late_hours: lateHours,
-        hours_worked: l.hours_worked || 0,
+        hours_worked: hoursWorked,
         overtime_minutes: overtimeMins,
         overtime_hours: overtimeHours,
         notes: l.notes || ''
@@ -100,8 +101,11 @@ export async function GET(request) {
       const totalHours = Math.round(sLogs.reduce((sum, l) => sum + (l.hours_worked || 0), 0) * 10) / 10
       const totalLateMinutes = sLogs.reduce((sum, l) => sum + (l.minutes_late || 0), 0)
       const totalLateHours = Math.round((totalLateMinutes / 60) * 100) / 100
-      const totalOvertimeMinutes = sLogs.reduce((sum, l) => sum + (l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 600)), 0)
-      const totalOvertimeHours = Math.round((totalOvertimeMinutes / 60) * 100) / 100
+      const totalOvertimeHours = Math.round(sLogs.reduce((sum, l) => {
+        const hw = l.hours_worked || 0
+        const ot = l.overtime_hours || (hw > 10 ? hw - 10 : 0)
+        return sum + ot
+      }, 0) * 100) / 100
 
       return {
         staff_id: s.id,
