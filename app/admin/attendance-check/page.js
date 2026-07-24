@@ -362,12 +362,21 @@ export default function AttendanceCheckPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <a
+              href={`/api/attendance/export-csv?month=${month}&year=${year}`}
+              download
+              style={{ background: '#059669', color: 'white', textDecoration: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Award size={16} /> Export Monthly CSV
+            </a>
+
             <button
               onClick={handleRunAutoClose}
               style={{ background: '#6B3A2A', color: 'white', border: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <Sparkles size={16} /> Run Midnight Auto-Close
             </button>
+
 
             <button
               onClick={handleDeleteDayAttendance}
