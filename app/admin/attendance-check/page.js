@@ -12,7 +12,7 @@ import {
 
 export default function AttendanceCheckPage() {
   const { addToast } = useToast()
-  const [activeTab, setActiveTab] = useState('live') // 'live' | 'monthly'
+  const [activeTab, setActiveTab] = useState('live') // 'live' | 'monthly' | 'trends'
 
   // Today Live Data state
   const [todayData, setTodayData] = useState({ date: '', summary: {}, records: [] })
@@ -26,6 +26,10 @@ export default function AttendanceCheckPage() {
   const [monthlyData, setMonthlyData] = useState([])
   const [calculations, setCalculations] = useState({})
   const [monthlyLoading, setMonthlyLoading] = useState(false)
+
+  // Late Trend Data state
+  const [trendsData, setTrendsData] = useState([])
+  const [trendsLoading, setTrendsLoading] = useState(false)
 
   // Manual Override Modal state
   const [selectedStaffForOverride, setSelectedStaffForOverride] = useState(null)
@@ -62,8 +66,24 @@ export default function AttendanceCheckPage() {
   useEffect(() => {
     if (activeTab === 'monthly') {
       fetchMonthlyDiagnostic()
+    } else if (activeTab === 'trends') {
+      fetchLateTrends()
     }
   }, [activeTab, month, year])
+
+  async function fetchLateTrends() {
+    setTrendsLoading(true)
+    try {
+      const res = await fetch(`/api/attendance/late-trend?month=${month}&year=${year}`)
+      const data = await res.json()
+      setTrendsData(data.trends || [])
+    } catch (error) {
+      console.error('Error fetching trends:', error)
+      addToast('Error loading late trend data', 'error')
+    } finally {
+      setTrendsLoading(false)
+    }
+  }
 
   async function fetchTodayData(silent = false) {
     try {
@@ -427,7 +447,27 @@ export default function AttendanceCheckPage() {
           >
             <Award size={18} /> Monthly Diagnostic & Morning Allowance
           </button>
+
+          <button
+            onClick={() => setActiveTab('trends')}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '10px',
+              border: 'none',
+              background: activeTab === 'trends' ? '#6B3A2A' : 'transparent',
+              color: activeTab === 'trends' ? 'white' : 'var(--text-muted, #786C60)',
+              fontWeight: 800,
+              fontSize: '14px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <AlertTriangle size={18} /> Late Trends & Frequency
+          </button>
         </div>
+
 
         {/* TAB 1: TODAY LIVE FEED */}
         {activeTab === 'live' && (
@@ -785,6 +825,87 @@ export default function AttendanceCheckPage() {
             )}
           </div>
         )}
+
+        {/* TAB 3: LATE TRENDS & FREQUENCY REPORT */}
+        {activeTab === 'trends' && (
+          <div>
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '24px', alignItems: 'center' }}>
+              <label style={{ fontWeight: 700, fontSize: '14px' }}>Select Month:</label>
+              <select
+                value={month}
+                onChange={(e) => setMonth(parseInt(e.target.value))}
+                style={{ padding: '8px 12px', border: '1px solid #E0E0E0', borderRadius: '8px', fontWeight: 700 }}
+              >
+                {Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(2026, i, 1).toLocaleString('default', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="number"
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value))}
+                style={{ padding: '8px 12px', border: '1px solid #E0E0E0', borderRadius: '8px', width: '90px', fontWeight: 700 }}
+              />
+            </div>
+
+            {trendsLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#888' }}>Loading late trend analytics…</div>
+            ) : (
+              <div style={{ background: '#FFF', borderRadius: '16px', border: '1px solid #E8E0D4', padding: '24px' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1C1410', marginBottom: '16px' }}>
+                  📊 Staff Punctuality & Late Frequency Analysis
+                </h3>
+                {trendsData.length === 0 ? (
+                  <div style={{ padding: '30px', textAlign: 'center', color: '#888' }}>No attendance records found for this period.</div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                    <thead>
+                      <tr style={{ background: '#F8F6F0', textAlign: 'left', fontSize: '12px', color: '#64748B', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '12px' }}>Staff Name</th>
+                        <th style={{ padding: '12px' }}>Department</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Late Count</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Late %</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Avg Late Mins</th>
+                        <th style={{ padding: '12px' }}>Recent Late Dates</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trendsData.map((row) => (
+                        <tr key={row.staff_id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '12px', fontWeight: 800 }}>
+                            {row.name}
+                            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>{row.designation}</div>
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '10px', background: row.department === 'kitchen' ? '#FEF3C7' : '#E0F2FE', color: row.department === 'kitchen' ? '#92400E' : '#0369A1', fontWeight: 700 }}>
+                              {row.department.toUpperCase()}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 900, color: row.late_count > 3 ? '#DC2626' : row.late_count > 0 ? '#D97706' : '#16A34A' }}>
+                            {row.late_count} times
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 800 }}>
+                            {row.late_percent}%
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: 700, color: '#D97706' }}>
+                            {row.avg_minutes_late > 0 ? `+${row.avg_minutes_late}m` : '0m'}
+                          </td>
+                          <td style={{ padding: '12px', fontSize: '12px', color: '#475569' }}>
+                            {row.late_dates && row.late_dates.length > 0 ? row.late_dates.join(', ') : 'None 🎉'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
 
         {/* MANUAL OVERRIDE MODAL */}
         {selectedStaffForOverride && (
