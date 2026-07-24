@@ -6,21 +6,21 @@ export const revalidate = 0
 
 export async function GET(request) {
   try {
-    // Ensure today date is in Asia/Dhaka timezone (UTC+6)
+    // ── Bangladesh Standard Time (Asia/Dhaka, UTC+6) ──────────────────────────
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' })
 
-    // Fetch all active staff (fallback if is_rostered column not yet created)
+    // Fetch all active staff
     let staff = []
     let { data: sData, error: staffErr } = await supabaseAdmin
       .from('staff')
-      .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes, is_rostered, department, photo_url, rfid_code')
+      .select('id, name, employee_id, designation, shift_start, department, photo_url, rfid_code, is_rostered')
       .eq('is_active', true)
       .order('serial', { ascending: true })
 
     if (staffErr) {
       const fallback = await supabaseAdmin
         .from('staff')
-        .select('id, name, employee_id, designation, shift_start, weekly_off, grace_minutes, department, photo_url, rfid_code')
+        .select('id, name, employee_id, designation, shift_start, department, photo_url, rfid_code')
         .eq('is_active', true)
         .order('serial', { ascending: true })
       if (fallback.error) throw fallback.error
@@ -37,35 +37,14 @@ export async function GET(request) {
 
     if (logsErr) throw logsErr
 
-    // Fetch today's duty roster
-    const { data: roster, error: rosterErr } = await supabaseAdmin
-      .from('duty_roster')
-      .select('*')
-      .eq('day_date', today)
-
-    if (rosterErr) throw rosterErr
-
     const logMap = new Map((logs || []).map(l => [l.staff_id, l]))
-    const rosterMap = new Map((roster || []).map(r => [r.staff_id, r]))
 
-    const dayName = new Date(today).toLocaleDateString('en-US', { weekday: 'long' })
-
+    // ── Business Rule: No roster, no day off. If no check-in → absent. ────────
     const records = (staff || []).map(s => {
       const log = logMap.get(s.id)
-      const ros = rosterMap.get(s.id)
 
-      const isOff = ros ? ros.is_off : (s.weekly_off && dayName.toLowerCase() === s.weekly_off.toLowerCase())
-      const isLeave = ros ? ros.is_leave : false
-      const shiftStart = ros ? ros.shift_start : (s.shift_start || '08:00')
-
-      let status = 'absent'
-      if (log) {
-        status = log.status
-      } else if (isLeave) {
-        status = 'on_leave'
-      } else if (isOff) {
-        status = 'off'
-      }
+      // Status: use logged status, or absent if no log exists
+      const status = log ? log.status : 'absent'
 
       return {
         staff_id: s.id,
@@ -75,7 +54,7 @@ export async function GET(request) {
         department: s.department || 'front',
         photo_url: s.photo_url || null,
         rfid_code: s.rfid_code || null,
-        shift_start: shiftStart,
+        shift_start: s.shift_start || '08:00',
         is_rostered: s.is_rostered !== false,
         check_in_at: log?.check_in_at || null,
         check_out_at: log?.check_out_at || null,
