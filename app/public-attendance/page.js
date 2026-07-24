@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
+import Head from 'next/head'
+
 
 function AnalogClock({ size = 52, time = new Date() }) {
   const seconds = time.getSeconds()
@@ -230,6 +232,14 @@ export default function PublicAttendancePage() {
   }
 
   return (
+    <>
+      <Head>
+        <link rel="manifest" href="/attendance-manifest.json" />
+        <meta name="theme-color" content="#D4933A" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="CC Attendance" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </Head>
     <div style={{ minHeight: '100vh', background: '#F1F5F9', fontFamily: 'var(--font-sans)' }}>
 
       {/* Offline Alert Banner */}
@@ -385,6 +395,7 @@ export default function PublicAttendancePage() {
         @keyframes spin { 100% { transform: rotate(360deg); } }
       `}</style>
     </div>
+    </>
   )
 }
 
