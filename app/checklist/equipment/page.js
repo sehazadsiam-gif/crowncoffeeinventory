@@ -273,7 +273,7 @@ export default function EquipmentChecklistPage() {
       }
     } else {
       setActionPinError(true)
-      addToast('Invalid Edit/Delete PIN (Requires 1590)', 'error')
+      addToast('Invalid Edit/Delete Security PIN', 'error')
     }
   }
 
@@ -803,7 +803,7 @@ export default function EquipmentChecklistPage() {
               Edit / Delete Security PIN
             </h3>
             <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 20px', lineHeight: 1.5 }}>
-              Enter Action PIN <strong>1590</strong> to modify or remove checklist records.
+              Enter Action PIN to modify or remove checklist records.
             </p>
 
             <form onSubmit={handleVerifyActionPin}>
@@ -825,7 +825,7 @@ export default function EquipmentChecklistPage() {
               />
               {actionPinError && (
                 <p style={{ fontSize: '11px', color: '#EF4444', fontWeight: 700, margin: '-6px 0 12px' }}>
-                  Incorrect PIN. Please enter 1590.
+                  Incorrect PIN. Access denied.
                 </p>
               )}
               <div style={{ display: 'flex', gap: '8px' }}>

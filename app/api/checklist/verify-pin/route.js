@@ -17,7 +17,7 @@ export async function POST(request) {
       if (cleanPin === '1590') {
         return NextResponse.json({ success: true, message: 'Action PIN verified' })
       }
-      return NextResponse.json({ error: 'Invalid Edit/Delete PIN (Requires 1590)' }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN' }, { status: 401 })
     }
 
     if (cleanPin === '456456') {

@@ -93,7 +93,7 @@ export async function PUT(request) {
     }
 
     if (action_pin !== undefined && String(action_pin).trim() !== '1590') {
-      return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN (Requires 1590)' }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN' }, { status: 401 })
     }
 
     const updateData = {
@@ -136,7 +136,7 @@ export async function DELETE(request) {
     }
 
     if (actionPin && String(actionPin).trim() !== '1590') {
-      return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN (Requires 1590)' }, { status: 401 })
+      return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN' }, { status: 401 })
     }
 
     const { error } = await supabaseAdmin
