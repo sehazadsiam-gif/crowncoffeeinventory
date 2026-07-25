@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import Head from 'next/head'
 
 
-function AnalogClock({ size = 120, time = new Date() }) {
+function AnalogClock({ size = 180, time = new Date() }) {
   const seconds = time.getSeconds()
   const minutes = time.getMinutes()
   const hours = time.getHours() % 12
@@ -17,213 +17,249 @@ function AnalogClock({ size = 120, time = new Date() }) {
   const timeString = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
   const dateString = time.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dhaka' })
 
-  const numbers = [
-    { num: '12', deg: 0 },
-    { num: '1', deg: 30 },
-    { num: '2', deg: 60 },
-    { num: '3', deg: 90 },
-    { num: '4', deg: 120 },
-    { num: '5', deg: 150 },
-    { num: '6', deg: 180 },
-    { num: '7', deg: 210 },
-    { num: '8', deg: 240 },
-    { num: '9', deg: 270 },
-    { num: '10', deg: 300 },
-    { num: '11', deg: 330 },
-  ]
+  const r = size / 2
 
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '20px',
-      background: '#FFFFFF',
-      border: '1.5px solid #E2E8F0',
-      borderRadius: '20px',
-      padding: '14px 24px',
-      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)'
+      gap: '28px',
+      background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+      border: '1px solid #E2E8F0',
+      borderRadius: '24px',
+      padding: '18px 32px',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0,0,0,0.04)'
     }}>
-      {/* 110px Light Mode Analog Dial */}
+
+      {/* ── 180px Premium Analog Dial ── */}
       <div style={{
         width: `${size}px`,
         height: `${size}px`,
         borderRadius: '50%',
-        background: '#F8FAFC',
-        border: '3px solid #D4933A',
-        boxShadow: '0 4px 14px rgba(212, 147, 58, 0.15), inset 0 2px 6px rgba(0, 0, 0, 0.06)',
+        background: 'linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 100%)',
+        border: '4px solid #C8983C',
+        boxShadow: '0 0 0 3px #E8D5A8, 0 8px 24px rgba(0,0,0,0.1), inset 0 2px 8px rgba(0,0,0,0.04)',
         position: 'relative',
         flexShrink: 0
       }}>
-        {/* Inner Ring Accent */}
+
+        {/* Inner chapter ring */}
         <div style={{
           position: 'absolute',
-          inset: '7px',
+          inset: '12px',
           borderRadius: '50%',
-          border: '1px dashed #CBD5E1',
+          border: '1px solid #E2E8F0',
           pointerEvents: 'none'
         }} />
 
-        {/* Hour Numbers & Ticks */}
-        {numbers.map(({ num, deg }) => {
-          const rad = (deg - 90) * (Math.PI / 180)
-          const radius = size * 0.37
-          const x = size / 2 + radius * Math.cos(rad) - (num.length > 1 ? 7 : 3.5)
-          const y = size / 2 + radius * Math.sin(rad) - 6.5
-
+        {/* 12 Hour numbers */}
+        {[
+          { n: '12', d: 0 }, { n: '1', d: 30 }, { n: '2', d: 60 }, { n: '3', d: 90 },
+          { n: '4', d: 120 }, { n: '5', d: 150 }, { n: '6', d: 180 }, { n: '7', d: 210 },
+          { n: '8', d: 240 }, { n: '9', d: 270 }, { n: '10', d: 300 }, { n: '11', d: 330 }
+        ].map(({ n, d }) => {
+          const rad = (d - 90) * (Math.PI / 180)
+          const numR = r - 24
+          const cx = r + numR * Math.cos(rad)
+          const cy = r + numR * Math.sin(rad)
+          const isCardinal = d % 90 === 0
           return (
-            <div
-              key={deg}
-              style={{
-                position: 'absolute',
-                left: `${x}px`,
-                top: `${y}px`,
-                fontSize: num % 3 === 0 || num === '12' ? '11px' : '9px',
-                fontWeight: 900,
-                color: deg % 90 === 0 ? '#B45309' : '#64748B',
-                fontFamily: 'sans-serif',
-                userSelect: 'none'
-              }}
-            >
-              {num}
-            </div>
+            <div key={d} style={{
+              position: 'absolute',
+              left: `${cx}px`,
+              top: `${cy}px`,
+              transform: 'translate(-50%, -50%)',
+              fontSize: isCardinal ? '18px' : '13px',
+              fontWeight: isCardinal ? 900 : 700,
+              color: isCardinal ? '#1E293B' : '#94A3B8',
+              fontFamily: "'Georgia', 'Times New Roman', serif",
+              userSelect: 'none',
+              lineHeight: 1
+            }}>{n}</div>
           )
         })}
 
-        {/* 60 Minute Ticks */}
+        {/* 60 tick marks */}
         {Array.from({ length: 60 }).map((_, i) => {
           const deg = i * 6
+          const isMajor = i % 5 === 0
           return (
-            <div
-              key={i}
-              style={{
-                position: 'absolute',
-                width: i % 5 === 0 ? '2px' : '1px',
-                height: i % 5 === 0 ? '5px' : '3px',
-                background: i % 5 === 0 ? '#D4933A' : '#CBD5E1',
-                top: '4px',
-                left: 'calc(50% - 0.5px)',
-                transformOrigin: `50% ${size / 2 - 4}px`,
-                transform: `rotate(${deg}deg)`
-              }}
-            />
+            <div key={i} style={{
+              position: 'absolute',
+              width: isMajor ? '2.5px' : '1px',
+              height: isMajor ? '10px' : '5px',
+              background: isMajor ? '#C8983C' : '#CBD5E1',
+              borderRadius: '1px',
+              top: '6px',
+              left: `calc(50% - ${isMajor ? 1.25 : 0.5}px)`,
+              transformOrigin: `50% ${r - 6}px`,
+              transform: `rotate(${deg}deg)`
+            }} />
           )
         })}
 
-        {/* Hour Hand */}
+        {/* Hour hand — thick, tapered */}
         <div style={{
           position: 'absolute',
-          width: '4px',
-          height: `${size * 0.27}px`,
-          background: '#0F172A',
-          borderRadius: '4px',
-          top: `${size * 0.23}px`,
-          left: 'calc(50% - 2px)',
+          width: '6px',
+          height: `${size * 0.25}px`,
+          background: '#1E293B',
+          borderRadius: '3px',
+          top: `${size * 0.25}px`,
+          left: `calc(50% - 3px)`,
           transformOrigin: '50% 100%',
           transform: `rotate(${hourDeg}deg)`,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.18)',
           zIndex: 4
         }} />
 
-        {/* Minute Hand */}
+        {/* Minute hand — long, elegant */}
         <div style={{
           position: 'absolute',
-          width: '3px',
-          height: `${size * 0.38}px`,
-          background: '#2563EB',
-          borderRadius: '4px',
-          top: `${size * 0.12}px`,
-          left: 'calc(50% - 1.5px)',
+          width: '4px',
+          height: `${size * 0.36}px`,
+          background: '#334155',
+          borderRadius: '3px',
+          top: `${size * 0.14}px`,
+          left: `calc(50% - 2px)`,
           transformOrigin: '50% 100%',
           transform: `rotate(${minDeg}deg)`,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
           zIndex: 5
         }} />
 
-        {/* Second Hand */}
+        {/* Second hand — thin with counterweight */}
         <div style={{
           position: 'absolute',
-          width: '1.5px',
-          height: `${size * 0.44}px`,
-          background: '#D4933A',
-          borderRadius: '2px',
-          top: `${size * 0.06}px`,
-          left: 'calc(50% - 0.75px)',
-          transformOrigin: '50% 100%',
+          width: '2px',
+          height: `${size * 0.52}px`,
+          background: 'transparent',
+          top: `${size * 0.05}px`,
+          left: `calc(50% - 1px)`,
+          transformOrigin: `50% ${size * 0.45}px`,
           transform: `rotate(${secDeg}deg)`,
-          transition: 'transform 0.2s cubic-bezier(0.4, 2.08, 0.55, 0.44)',
+          transition: 'transform 0.15s cubic-bezier(0.4, 2.2, 0.55, 0.44)',
           zIndex: 6
+        }}>
+          {/* Main needle */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: '0',
+            width: '2px',
+            height: `${size * 0.43}px`,
+            background: '#DC2626',
+            borderRadius: '2px'
+          }} />
+          {/* Counterweight tail */}
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: '-1px',
+            width: '4px',
+            height: `${size * 0.08}px`,
+            background: '#DC2626',
+            borderRadius: '2px'
+          }} />
+        </div>
+
+        {/* Center boss — layered */}
+        <div style={{
+          position: 'absolute',
+          width: '16px',
+          height: '16px',
+          borderRadius: '50%',
+          background: 'linear-gradient(145deg, #E8D5A8, #C8983C)',
+          border: '2px solid #FFF',
+          top: 'calc(50% - 8px)',
+          left: 'calc(50% - 8px)',
+          zIndex: 10,
+          boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
         }} />
 
-        {/* Center Golden Cap */}
+        {/* Crown Coffee branding on dial */}
         <div style={{
           position: 'absolute',
-          width: '10px',
-          height: '10px',
-          borderRadius: '50%',
-          background: '#D4933A',
-          border: '2px solid #FFFFFF',
-          top: 'calc(50% - 5px)',
-          left: 'calc(50% - 5px)',
-          zIndex: 10,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
-        }} />
+          top: `${size * 0.62}px`,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: '8px',
+          fontWeight: 800,
+          color: '#CBD5E1',
+          letterSpacing: '2px',
+          textTransform: 'uppercase',
+          userSelect: 'none',
+          whiteSpace: 'nowrap'
+        }}>CROWN</div>
       </div>
 
-      {/* Digital Readout Block */}
+      {/* ── Digital Panel ── */}
       <div style={{ textAlign: 'left' }}>
         <div style={{
-          fontSize: '24px',
+          fontSize: '32px',
           fontWeight: 900,
           color: '#0F172A',
-          letterSpacing: '0.5px',
-          fontFamily: 'monospace, ui-monospace',
+          letterSpacing: '1px',
+          fontFamily: "'SF Mono', 'Cascadia Code', 'Fira Code', monospace",
           lineHeight: 1
         }}>
           {timeString}
         </div>
 
         <div style={{
-          fontSize: '12px',
+          fontSize: '14px',
           color: '#475569',
-          fontWeight: 800,
-          letterSpacing: '0.03em',
-          marginTop: '6px'
+          fontWeight: 700,
+          marginTop: '8px'
         }}>
           {dateString}
         </div>
 
         <div style={{
-          marginTop: '8px',
+          marginTop: '12px',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px'
+          gap: '10px'
         }}>
           <span style={{
-            fontSize: '10px',
+            fontSize: '11px',
             fontWeight: 800,
             background: '#FEF3C7',
-            color: '#B45309',
-            padding: '3px 8px',
-            borderRadius: '6px',
-            border: '1px solid #FCD34D',
-            letterSpacing: '0.04em'
+            color: '#92400E',
+            padding: '4px 10px',
+            borderRadius: '8px',
+            border: '1px solid #FDE68A',
+            letterSpacing: '0.03em'
           }}>
-            ASIA/DHAKA • BST (GMT+6)
+            BST • GMT+6
           </span>
 
           <span style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            fontSize: '10px',
+            gap: '5px',
+            fontSize: '11px',
             color: '#16A34A',
             fontWeight: 800
           }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 6px #16A34A' }} />
+            <span style={{
+              width: '7px', height: '7px', borderRadius: '50%',
+              background: '#16A34A',
+              boxShadow: '0 0 8px rgba(22, 163, 74, 0.6)',
+              animation: 'pulse 2s ease-in-out infinite'
+            }} />
             LIVE
           </span>
         </div>
       </div>
+
+      {/* Pulse animation */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.8); }
+        }
+      `}</style>
     </div>
   )
 }
