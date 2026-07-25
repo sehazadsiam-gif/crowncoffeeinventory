@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import Head from 'next/head'
 
 
-function AnalogClock({ size = 52, time = new Date() }) {
+function AnalogClock({ size = 56, time = new Date() }) {
   const seconds = time.getSeconds()
   const minutes = time.getMinutes()
   const hours = time.getHours() % 12
@@ -14,90 +14,134 @@ function AnalogClock({ size = 52, time = new Date() }) {
   const minDeg = ((minutes + seconds / 60) / 60) * 360
   const hourDeg = ((hours + minutes / 60) / 12) * 360
 
+  const timeString = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+  const dateString = time.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' })
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '10px 18px' }}>
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
+      border: '1px solid rgba(212, 147, 58, 0.35)',
+      borderRadius: '20px',
+      padding: '10px 20px',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(12px)'
+    }}>
+      {/* Sleek Analog Dial */}
       <div style={{
         width: `${size}px`,
         height: `${size}px`,
         borderRadius: '50%',
-        background: '#0F172A',
-        border: '2.5px solid #D4933A',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.35), inset 0 0 8px rgba(0,0,0,0.5)',
+        background: 'radial-gradient(circle, #0F172A 40%, #020617 100%)',
+        border: '2px solid #D4933A',
+        boxShadow: '0 0 16px rgba(212, 147, 58, 0.25), inset 0 2px 6px rgba(0,0,0,0.8)',
         position: 'relative',
         flexShrink: 0
       }}>
-        {[0, 90, 180, 270].map((deg) => (
+        {/* Hour Markers */}
+        {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
           <div
             key={deg}
             style={{
               position: 'absolute',
-              width: '2px',
-              height: '5px',
-              background: '#D4933A',
+              width: deg % 90 === 0 ? '2.5px' : '1px',
+              height: deg % 90 === 0 ? '6px' : '3.5px',
+              background: deg % 90 === 0 ? '#D4933A' : 'rgba(212, 147, 58, 0.5)',
               top: '3px',
-              left: 'calc(50% - 1px)',
+              left: 'calc(50% - 0.75px)',
               transformOrigin: `50% ${size / 2 - 3}px`,
               transform: `rotate(${deg}deg)`
             }}
           />
         ))}
+
         {/* Hour Hand */}
         <div style={{
           position: 'absolute',
-          width: '3px',
+          width: '3.5px',
           height: `${size * 0.26}px`,
-          background: '#F8FAFC',
+          background: 'linear-gradient(to top, #CBD5E1, #FFFFFF)',
           borderRadius: '4px',
           top: `${size * 0.24}px`,
-          left: `calc(50% - 1.5px)`,
+          left: 'calc(50% - 1.75px)',
           transformOrigin: '50% 100%',
-          transform: `rotate(${hourDeg}deg)`
+          transform: `rotate(${hourDeg}deg)`,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
         }} />
+
         {/* Minute Hand */}
         <div style={{
           position: 'absolute',
-          width: '2px',
+          width: '2.5px',
           height: `${size * 0.36}px`,
-          background: '#38BDF8',
+          background: 'linear-gradient(to top, #0284C7, #38BDF8)',
           borderRadius: '4px',
           top: `${size * 0.14}px`,
-          left: `calc(50% - 1px)`,
+          left: 'calc(50% - 1.25px)',
           transformOrigin: '50% 100%',
-          transform: `rotate(${minDeg}deg)`
+          transform: `rotate(${minDeg}deg)`,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
         }} />
+
         {/* Second Hand */}
         <div style={{
           position: 'absolute',
           width: '1.5px',
           height: `${size * 0.42}px`,
-          background: '#D4933A',
+          background: '#F59E0B',
           borderRadius: '2px',
           top: `${size * 0.08}px`,
-          left: `calc(50% - 0.75px)`,
+          left: 'calc(50% - 0.75px)',
           transformOrigin: '50% 100%',
           transform: `rotate(${secDeg}deg)`,
-          transition: 'transform 0.2s cubic-bezier(0.4, 2.08, 0.55, 0.44)'
+          transition: 'transform 0.2s cubic-bezier(0.4, 2.08, 0.55, 0.44)',
+          boxShadow: '0 0 6px rgba(245, 158, 11, 0.8)'
         }} />
-        {/* Pivot */}
+
+        {/* Center Jewel */}
         <div style={{
           position: 'absolute',
-          width: '6px',
-          height: '6px',
+          width: '7px',
+          height: '7px',
           borderRadius: '50%',
           background: '#D4933A',
-          border: '1.5px solid #0F172A',
-          top: 'calc(50% - 3px)',
-          left: 'calc(50% - 3px)',
-          zIndex: 10
+          border: '2px solid #0F172A',
+          top: 'calc(50% - 3.5px)',
+          left: 'calc(50% - 3.5px)',
+          zIndex: 10,
+          boxShadow: '0 0 4px rgba(212, 147, 58, 0.9)'
         }} />
       </div>
 
+      {/* Digital Time & Date */}
       <div style={{ textAlign: 'left' }}>
-        <div style={{ fontSize: '17px', fontWeight: 900, color: '#38BDF8', letterSpacing: '0.5px', fontFamily: 'var(--font-mono)' }}>
-          {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+        <div style={{
+          fontSize: '20px',
+          fontWeight: 900,
+          color: '#F8FAFC',
+          letterSpacing: '1px',
+          fontFamily: 'monospace, ui-monospace',
+          lineHeight: 1,
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: '4px'
+        }}>
+          {timeString}
         </div>
-        <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
-          {time.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
+        <div style={{
+          fontSize: '11px',
+          color: '#94A3B8',
+          fontWeight: 700,
+          letterSpacing: '0.05em',
+          marginTop: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
+        }}>
+          <span style={{ color: '#D4933A' }}>{dateString}</span>
+          <span style={{ fontSize: '9px', background: 'rgba(212, 147, 58, 0.15)', color: '#F59E0B', padding: '1px 5px', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>BST</span>
         </div>
       </div>
     </div>
