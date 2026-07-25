@@ -179,8 +179,15 @@ export default function PublicAttendancePage() {
 
   async function doCheckin(identifier) {
     try {
-      // Find staff ID or employee_id key in breakToggles
-      const isBreakOn = Object.entries(breakToggles).some(([k, v]) => v && (k === identifier || String(identifier).includes(k)))
+      // Find staff by rfid_code, employee_id, or staff_id to check breakToggle
+      const matchedStaff = records.find(r =>
+        r.rfid_code === identifier ||
+        r.employee_id === identifier ||
+        r.staff_id === identifier ||
+        r.id === identifier
+      )
+      const staffKey = matchedStaff ? (matchedStaff.staff_id || matchedStaff.id || matchedStaff.employee_id) : identifier
+      const isBreakOn = !!breakToggles[staffKey] || Object.entries(breakToggles).some(([k, v]) => v && (k === identifier || String(identifier).includes(k)))
 
       const res = await fetch('/api/attendance/checkin', {
         method: 'POST',
