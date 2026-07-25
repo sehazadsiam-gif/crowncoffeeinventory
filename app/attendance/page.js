@@ -207,30 +207,33 @@ export default function AttendanceDashboardPage() {
     if (!staffIdOrRfid) return
     try {
       setCheckingIn(true)
-      const res = await fetch('/api/attendance/today', {
+      const res = await fetch('/api/attendance/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          staff_id: staffIdOrRfid,
-          rfid_code: method === 'rfid' ? staffIdOrRfid : null,
-          manual_status: manualStatus,
-          method
+          identifier: staffIdOrRfid,
+          source: method,
+          adminOverride: !!manualStatus,
+          forceStatus: manualStatus
         })
       })
       const json = await res.json()
-      if (res.ok) {
-        addToast(json.message || 'Attendance updated successfully', 'success')
+      if (res.ok && (json.success || json.alreadyCheckedOut)) {
+        const actionText = json.alreadyCheckedOut ? 'Checked Out' : 'Checked In'
+        addToast(json.message || `${actionText} successfully!`, 'success')
         setQrModalOpen(false)
         setQrCodeInput('')
         fetchTodayData(true)
-        if (json.record) {
+        if (json.staff) {
           setLastTapEvent({
-            name: json.record.name || 'Staff Member',
-            status: json.action === 'check_in' ? 'Checked In' : 'Checked Out',
-            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+            name: json.staff.name || 'Staff Member',
+            status: json.status ? json.status.toUpperCase() : actionText,
+            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
           })
           setTimeout(() => setLastTapEvent(null), 5000)
         }
+      } else if (json.blocked) {
+        addToast(`Attendance already complete for today`, 'warning')
       } else {
         addToast(json.error || 'Failed to update attendance', 'error')
       }
