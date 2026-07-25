@@ -496,8 +496,16 @@ export default function EquipmentChecklistPage() {
             </div>
 
             <form onSubmit={handleSave}>
-              {/* Row 1: Name (wide) + Qty + Price */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+              <style>{`
+                .form-grid-row-1 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 14px; }
+                .form-grid-row-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: flex-end; }
+                @media (max-width: 640px) {
+                  .form-grid-row-1, .form-grid-row-2 { grid-template-columns: 1fr !important; }
+                  .form-submit-btn { width: 100% !important; justify-content: center !important; }
+                }
+              `}</style>
+              {/* Row 1: Name + Qty + Price */}
+              <div className="form-grid-row-1">
                 <div>
                   <label style={LABEL_STYLE}>Item Name <span style={{ color: '#EF4444' }}>*</span></label>
                   <input
@@ -532,7 +540,7 @@ export default function EquipmentChecklistPage() {
               </div>
 
               {/* Row 2: Condition + Notes + Save */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: '14px', alignItems: 'flex-end' }}>
+              <div className="form-grid-row-2">
                 <div>
                   <label style={LABEL_STYLE}>Condition</label>
                   <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={INPUT_STYLE}>
@@ -555,6 +563,7 @@ export default function EquipmentChecklistPage() {
                 <button
                   type="submit"
                   disabled={saving}
+                  className="form-submit-btn"
                   style={{
                     display: 'flex', alignItems: 'center', gap: '8px',
                     padding: '10px 22px',
@@ -627,14 +636,14 @@ export default function EquipmentChecklistPage() {
           </div>
 
           {/* Right: Search */}
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', minWidth: '200px', flex: 1, maxWidth: '300px' }}>
             <Search size={14} style={{ position: 'absolute', left: '11px', top: '50%', transform: 'translateY(-50%)', color: '#CBD5E1', pointerEvents: 'none' }} />
             <input
               type="text"
               placeholder="Search items…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ ...INPUT_STYLE, width: '230px', paddingLeft: '32px', height: '36px', fontSize: '13px' }}
+              style={{ ...INPUT_STYLE, width: '100%', paddingLeft: '32px', height: '36px', fontSize: '13px' }}
             />
           </div>
         </div>
@@ -644,7 +653,8 @@ export default function EquipmentChecklistPage() {
           background: '#fff',
           border: '1px solid #E2E8F0',
           borderRadius: '14px',
-          overflow: 'hidden',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
         }}>
           {loading ? (
             <div style={{ padding: '80px', textAlign: 'center', color: '#94A3B8', fontSize: '14px' }}>
