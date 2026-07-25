@@ -36,31 +36,30 @@ function AnalogClock({ size = 120, time = new Date() }) {
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '24px',
-      background: 'linear-gradient(145deg, #0F172A 0%, #1E293B 100%)',
-      border: '2px solid rgba(212, 147, 58, 0.45)',
-      borderRadius: '24px',
-      padding: '16px 28px',
-      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.15)',
-      backdropFilter: 'blur(16px)'
+      gap: '20px',
+      background: '#FFFFFF',
+      border: '1.5px solid #E2E8F0',
+      borderRadius: '20px',
+      padding: '14px 24px',
+      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)'
     }}>
-      {/* 120px Grand Luxury Analog Dial */}
+      {/* 110px Light Mode Analog Dial */}
       <div style={{
         width: `${size}px`,
         height: `${size}px`,
         borderRadius: '50%',
-        background: 'radial-gradient(circle at 50% 50%, #1E293B 0%, #0F172A 60%, #020617 100%)',
+        background: '#F8FAFC',
         border: '3px solid #D4933A',
-        boxShadow: '0 0 24px rgba(212, 147, 58, 0.3), inset 0 4px 12px rgba(0, 0, 0, 0.85), 0 0 0 2px rgba(255,255,255,0.05)',
+        boxShadow: '0 4px 14px rgba(212, 147, 58, 0.15), inset 0 2px 6px rgba(0, 0, 0, 0.06)',
         position: 'relative',
         flexShrink: 0
       }}>
         {/* Inner Ring Accent */}
         <div style={{
           position: 'absolute',
-          inset: '8px',
+          inset: '7px',
           borderRadius: '50%',
-          border: '1px dashed rgba(212, 147, 58, 0.3)',
+          border: '1px dashed #CBD5E1',
           pointerEvents: 'none'
         }} />
 
@@ -68,8 +67,8 @@ function AnalogClock({ size = 120, time = new Date() }) {
         {numbers.map(({ num, deg }) => {
           const rad = (deg - 90) * (Math.PI / 180)
           const radius = size * 0.37
-          const x = size / 2 + radius * Math.cos(rad) - (num.length > 1 ? 8 : 4)
-          const y = size / 2 + radius * Math.sin(rad) - 7
+          const x = size / 2 + radius * Math.cos(rad) - (num.length > 1 ? 7 : 3.5)
+          const y = size / 2 + radius * Math.sin(rad) - 6.5
 
           return (
             <div
@@ -78,9 +77,9 @@ function AnalogClock({ size = 120, time = new Date() }) {
                 position: 'absolute',
                 left: `${x}px`,
                 top: `${y}px`,
-                fontSize: num % 3 === 0 || num === '12' ? '12px' : '9px',
+                fontSize: num % 3 === 0 || num === '12' ? '11px' : '9px',
                 fontWeight: 900,
-                color: deg % 90 === 0 ? '#F59E0B' : 'rgba(226, 232, 240, 0.65)',
+                color: deg % 90 === 0 ? '#B45309' : '#64748B',
                 fontFamily: 'sans-serif',
                 userSelect: 'none'
               }}
@@ -100,7 +99,7 @@ function AnalogClock({ size = 120, time = new Date() }) {
                 position: 'absolute',
                 width: i % 5 === 0 ? '2px' : '1px',
                 height: i % 5 === 0 ? '5px' : '3px',
-                background: i % 5 === 0 ? '#D4933A' : 'rgba(148, 163, 184, 0.3)',
+                background: i % 5 === 0 ? '#D4933A' : '#CBD5E1',
                 top: '4px',
                 left: 'calc(50% - 0.5px)',
                 transformOrigin: `50% ${size / 2 - 4}px`,
@@ -113,83 +112,81 @@ function AnalogClock({ size = 120, time = new Date() }) {
         {/* Hour Hand */}
         <div style={{
           position: 'absolute',
-          width: '5px',
+          width: '4px',
           height: `${size * 0.27}px`,
-          background: 'linear-gradient(to top, #94A3B8, #FFFFFF)',
+          background: '#0F172A',
           borderRadius: '4px',
           top: `${size * 0.23}px`,
-          left: 'calc(50% - 2.5px)',
+          left: 'calc(50% - 2px)',
           transformOrigin: '50% 100%',
           transform: `rotate(${hourDeg}deg)`,
-          boxShadow: '0 3px 6px rgba(0,0,0,0.6)',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
           zIndex: 4
         }} />
 
         {/* Minute Hand */}
         <div style={{
           position: 'absolute',
-          width: '3.5px',
+          width: '3px',
           height: `${size * 0.38}px`,
-          background: 'linear-gradient(to top, #0284C7, #38BDF8)',
+          background: '#2563EB',
           borderRadius: '4px',
           top: `${size * 0.12}px`,
-          left: 'calc(50% - 1.75px)',
+          left: 'calc(50% - 1.5px)',
           transformOrigin: '50% 100%',
           transform: `rotate(${minDeg}deg)`,
-          boxShadow: '0 3px 6px rgba(0,0,0,0.6)',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
           zIndex: 5
         }} />
 
         {/* Second Hand */}
         <div style={{
           position: 'absolute',
-          width: '2px',
+          width: '1.5px',
           height: `${size * 0.44}px`,
-          background: '#EF4444',
+          background: '#D4933A',
           borderRadius: '2px',
           top: `${size * 0.06}px`,
-          left: 'calc(50% - 1px)',
+          left: 'calc(50% - 0.75px)',
           transformOrigin: '50% 100%',
           transform: `rotate(${secDeg}deg)`,
           transition: 'transform 0.2s cubic-bezier(0.4, 2.08, 0.55, 0.44)',
-          boxShadow: '0 0 8px rgba(239, 68, 68, 0.9)',
           zIndex: 6
         }} />
 
         {/* Center Golden Cap */}
         <div style={{
           position: 'absolute',
-          width: '12px',
-          height: '12px',
+          width: '10px',
+          height: '10px',
           borderRadius: '50%',
-          background: 'radial-gradient(circle, #F59E0B, #D4933A)',
-          border: '2px solid #0F172A',
-          top: 'calc(50% - 6px)',
-          left: 'calc(50% - 6px)',
+          background: '#D4933A',
+          border: '2px solid #FFFFFF',
+          top: 'calc(50% - 5px)',
+          left: 'calc(50% - 5px)',
           zIndex: 10,
-          boxShadow: '0 2px 6px rgba(0,0,0,0.8)'
+          boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
         }} />
       </div>
 
       {/* Digital Readout Block */}
       <div style={{ textAlign: 'left' }}>
         <div style={{
-          fontSize: '26px',
+          fontSize: '24px',
           fontWeight: 900,
-          color: '#F8FAFC',
-          letterSpacing: '1px',
+          color: '#0F172A',
+          letterSpacing: '0.5px',
           fontFamily: 'monospace, ui-monospace',
-          lineHeight: 1,
-          textShadow: '0 2px 10px rgba(0,0,0,0.5)'
+          lineHeight: 1
         }}>
           {timeString}
         </div>
 
         <div style={{
-          fontSize: '13px',
-          color: '#D4933A',
+          fontSize: '12px',
+          color: '#475569',
           fontWeight: 800,
-          letterSpacing: '0.04em',
+          letterSpacing: '0.03em',
           marginTop: '6px'
         }}>
           {dateString}
@@ -204,12 +201,12 @@ function AnalogClock({ size = 120, time = new Date() }) {
           <span style={{
             fontSize: '10px',
             fontWeight: 800,
-            background: 'rgba(212, 147, 58, 0.15)',
-            color: '#F59E0B',
+            background: '#FEF3C7',
+            color: '#B45309',
             padding: '3px 8px',
             borderRadius: '6px',
-            border: '1px solid rgba(245, 158, 11, 0.3)',
-            letterSpacing: '0.05em'
+            border: '1px solid #FCD34D',
+            letterSpacing: '0.04em'
           }}>
             ASIA/DHAKA • BST (GMT+6)
           </span>
@@ -219,10 +216,10 @@ function AnalogClock({ size = 120, time = new Date() }) {
             alignItems: 'center',
             gap: '4px',
             fontSize: '10px',
-            color: '#22C55E',
+            color: '#16A34A',
             fontWeight: 800
           }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 6px #22C55E' }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 6px #16A34A' }} />
             LIVE
           </span>
         </div>
