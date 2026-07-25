@@ -175,24 +175,34 @@ export default function PublicAttendancePage() {
     finally { if (!silent) setLoading(false) }
   }
 
+  const [breakToggles, setBreakToggles] = useState({})
+
   async function doCheckin(identifier) {
     try {
+      // Find staff ID or employee_id key in breakToggles
+      const isBreakOn = Object.entries(breakToggles).some(([k, v]) => v && (k === identifier || String(identifier).includes(k)))
+
       const res = await fetch('/api/attendance/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, source: 'rfid' })
+        body: JSON.stringify({ identifier, source: 'rfid', enableBreak: isBreakOn })
       })
       const json = await res.json()
-      const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+      const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
       if (res.ok) {
         setIsOffline(false)
-        const isOut = json.alreadyCheckedOut
-        const isLate = json.status === 'late'
+        let flashType = 'in'
+        if (json.action === 'break_start') flashType = 'break_start'
+        else if (json.action === 'break_end') flashType = 'break_end'
+        else if (json.alreadyCheckedOut || json.action === 'check_out') flashType = 'out'
+        else if (json.status === 'late') flashType = 'late'
+
         setTapFlash({
           name: json.staff?.name || 'Staff Member',
           id: json.staff?.employee_id || '',
           time: t,
-          type: isOut ? 'out' : isLate ? 'late' : 'in'
+          type: flashType,
+          subText: json.message || json.subText
         })
       } else if (json.blocked) {
         setIsOffline(false)
@@ -206,7 +216,7 @@ export default function PublicAttendancePage() {
         setTapFlash({ name: 'Card Not Recognised', id: '', time: t, type: 'error' })
       }
       fetchTodayData(true)
-      setTimeout(() => setTapFlash(null), 2000)
+      setTimeout(() => setTapFlash(null), 2500)
     } catch (e) {
       console.error(e)
       setIsOffline(true)
@@ -224,11 +234,13 @@ export default function PublicAttendancePage() {
   const absentCount = records.filter(r => r.status === 'absent').length
 
   const flashConfig = {
-    in:    { bg: '#16A34A', icon: 'Check', heading: 'CHECKED IN',  sub: 'On Time' },
-    late:  { bg: '#D97706', icon: 'Check', heading: 'CHECKED IN',  sub: 'Late Arrival' },
-    out:   { bg: '#1D4ED8', icon: 'Check', heading: 'CHECKED OUT', sub: 'Duty Complete' },
-    done:  { bg: '#475569', icon: 'Check', heading: 'SHIFT COMPLETED', sub: 'Check-in & check-out recorded for today' },
-    error: { bg: '#DC2626', icon: 'X', heading: 'NOT FOUND',   sub: 'Card not paired to any staff' },
+    in:          { bg: '#16A34A', icon: '✓', heading: 'CHECKED IN',   sub: 'On Time' },
+    late:        { bg: '#D97706', icon: '✓', heading: 'CHECKED IN',   sub: 'Late Arrival' },
+    break_start: { bg: '#D97706', icon: '☕', heading: 'BREAK STARTED', sub: 'Enjoy your break! Tap card when returning.' },
+    break_end:   { bg: '#2563EB', icon: '✓', heading: 'BREAK ENDED',   sub: 'Welcome back to your shift!' },
+    out:         { bg: '#1D4ED8', icon: '✓', heading: 'CHECKED OUT',  sub: 'Duty Complete' },
+    done:        { bg: '#475569', icon: '✓', heading: 'SHIFT COMPLETED', sub: 'Check-in & check-out recorded for today' },
+    error:       { bg: '#DC2626', icon: '✕', heading: 'NOT FOUND',    sub: 'Card not paired to any staff' },
   }
 
   return (
@@ -384,8 +396,18 @@ export default function PublicAttendancePage() {
             Loading...
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
-            {filtered.map(r => <StaffCard key={r.staff_id} r={r} />)}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '16px' }}>
+            {filtered.map(r => {
+              const staffKey = r.staff_id || r.id || r.employee_id
+              return (
+                <StaffCard
+                  key={staffKey}
+                  r={r}
+                  isBreakOn={!!breakToggles[staffKey]}
+                  onToggleBreak={(val) => setBreakToggles(prev => ({ ...prev, [staffKey]: val }))}
+                />
+              )
+            })}
           </div>
         )}
       </main>
@@ -408,10 +430,12 @@ function Stat({ label, value, color }) {
   )
 }
 
-function StaffCard({ r }) {
+function StaffCard({ r, isBreakOn, onToggleBreak }) {
   const isIn = r.status === 'present'
   const isLate = r.status === 'late'
   const isOut = (isIn || isLate) && !!r.check_out_at
+  const isOnBreak = (isIn || isLate) && !!r.break_start_at && !r.break_end_at
+  const isBackFromBreak = (isIn || isLate) && !!r.break_end_at && !r.check_out_at
   const isAbsent = r.status === 'absent'
   const isLeave = r.status === 'on_leave'
   const isDayOff = r.status === 'off'
@@ -425,6 +449,12 @@ function StaffCard({ r }) {
   if (isOut) {
     borderColor = '#93C5FD'; statusDot = '#3B82F6'
     statusText = 'Checked Out'; statusColor = '#1D4ED8'
+  } else if (isOnBreak) {
+    borderColor = '#FCD34D'; statusDot = '#F59E0B'
+    statusText = 'On Break ☕'; statusColor = '#B45309'; bgColor = '#FFFBEB'
+  } else if (isBackFromBreak) {
+    borderColor = '#93C5FD'; statusDot = '#2563EB'
+    statusText = 'Back From Break'; statusColor = '#1D4ED8'; bgColor = '#F0F9FF'
   } else if (isIn) {
     borderColor = '#86EFAC'; statusDot = '#16A34A'
     statusText = 'Present'; statusColor = '#15803D'; bgColor = '#F0FDF4'
@@ -451,48 +481,72 @@ function StaffCard({ r }) {
       border: `2px solid ${borderColor}`,
       borderRadius: '16px',
       padding: '20px',
-      transition: 'all 0.2s ease'
+      transition: 'all 0.2s ease',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between'
     }}>
-      {/* Top: Avatar + Name + Status */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
-        {r.photo_url ? (
-          <img src={r.photo_url} alt={r.name}
-            style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', border: `3px solid ${borderColor}` }} />
-        ) : (
-          <div style={{
-            width: '52px', height: '52px', borderRadius: '50%', flexShrink: 0,
-            background: '#F1F5F9', border: `3px solid ${borderColor}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 900, fontSize: '18px', color: '#475569'
-          }}>
-            {r.name ? r.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'CC'}
+      <div>
+        {/* Top: Avatar + Name + Status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
+          {r.photo_url ? (
+            <img src={r.photo_url} alt={r.name}
+              style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', border: `3px solid ${borderColor}` }} />
+          ) : (
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '50%', flexShrink: 0,
+              background: '#F1F5F9', border: `3px solid ${borderColor}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 900, fontSize: '18px', color: '#475569'
+            }}>
+              {r.name ? r.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'CC'}
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+            <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 500, marginTop: '1px' }}>{r.designation}</div>
           </div>
-        )}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
-          <div style={{ fontSize: '12px', color: '#64748B', fontWeight: 500, marginTop: '1px' }}>{r.designation}</div>
+          {/* Status Dot */}
+          <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 0 3px ${statusDot}22` }} />
         </div>
-        {/* Status Dot */}
-        <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 0 3px ${statusDot}22` }} />
-      </div>
 
-      {/* Status Badge */}
-      <div style={{ marginBottom: '14px' }}>
-        <span style={{
-          fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
-          color: statusColor, background: `${borderColor}55`,
-          padding: '4px 10px', borderRadius: '20px'
-        }}>
-          {statusText}
-          {isLate && !isOut && r.minutes_late > 0 && ` · ${r.minutes_late}m late`}
-        </span>
-      </div>
+        {/* Status Badge + Individual Break Toggle Checkbox */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+          <span style={{
+            fontSize: '11px', fontWeight: 800, letterSpacing: '0.06em',
+            color: statusColor, background: `${borderColor}55`,
+            padding: '4px 10px', borderRadius: '20px'
+          }}>
+            {statusText}
+            {isLate && !isOut && r.minutes_late > 0 && ` · ${r.minutes_late}m late`}
+          </span>
 
-      {/* Time Row */}
-      <div style={{ display: 'flex', gap: '8px' }}>
-        <TimeChip label="IN" time={fmtTime(r.check_in_at)} color="#16A34A" />
-        <TimeChip label="OUT" time={fmtTime(r.check_out_at)} color="#2563EB" />
-        {r.hours_worked > 0 && <TimeChip label="DUTY" time={`${r.hours_worked}h`} color="#7C3AED" />}
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', userSelect: 'none', background: isBreakOn ? '#FEF3C7' : '#F8FAFC', border: isBreakOn ? '1px solid #F59E0B' : '1px solid #E2E8F0', padding: '3px 8px', borderRadius: '8px', transition: 'all 0.15s' }}>
+            <input
+              type="checkbox"
+              checked={isBreakOn}
+              onChange={e => onToggleBreak(e.target.checked)}
+              style={{ width: '14px', height: '14px', accentColor: '#D4933A', cursor: 'pointer' }}
+            />
+            <span style={{ fontSize: '11px', fontWeight: 800, color: isBreakOn ? '#B45309' : '#64748B' }}>
+              Take Break ☕
+            </span>
+          </label>
+        </div>
+
+        {/* Time Row */}
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <TimeChip label="IN" time={fmtTime(r.check_in_at)} color="#16A34A" />
+          {(r.break_start_at || isBreakOn) && (
+            <TimeChip
+              label="BREAK"
+              time={r.break_duration_minutes > 0 ? `${r.break_duration_minutes}m` : fmtTime(r.break_start_at) || '—'}
+              color="#D97706"
+            />
+          )}
+          <TimeChip label="OUT" time={fmtTime(r.check_out_at)} color="#2563EB" />
+          {r.hours_worked > 0 && <TimeChip label="DUTY" time={`${r.hours_worked}h`} color="#7C3AED" />}
+        </div>
       </div>
     </div>
   )

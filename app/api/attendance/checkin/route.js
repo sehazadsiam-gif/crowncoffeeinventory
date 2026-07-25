@@ -57,7 +57,7 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { identifier, timestamp, source = 'manual', notes, adminOverride, forceStatus } = body
+    const { identifier, timestamp, source = 'manual', notes, adminOverride, forceStatus, enableBreak } = body
 
     if (!identifier) {
       return NextResponse.json({ error: 'identifier is required' }, { status: 400 })
@@ -74,7 +74,8 @@ export async function POST(request) {
       source: deviceKey ? 'biometric' : source,
       notes,
       adminOverride: !!adminOverride,
-      forceStatus
+      forceStatus,
+      enableBreak: !!enableBreak
     })
 
     // Blocked = day already complete (both taps done). Return 200, not 400.
