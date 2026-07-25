@@ -332,7 +332,49 @@ def run_stdin_listener(api_url, device_key):
         except Exception as e:
             safe_print(f"Error: {e}")
 
-# ── Entry Point ───────────────────────────────────────────────────────────────
+# ── Native Windows Global Listener (via 'keyboard' or 'pynput') ────────────────
+
+def run_keyboard_module_listener(api_url, device_key):
+    """
+    Ultra-reliable background listener using python 'keyboard' package.
+    Hooks low-level Windows keyboard events globally across all windows.
+    """
+    import keyboard
+    safe_print("==========================================================")
+    safe_print(" Crown Coffee RFID Background Listener (Native Hook)")
+    safe_print(f" Target API: {api_url}")
+    safe_print(" Ready! Capturing RFID card scans in BACKGROUND...")
+    safe_print("==========================================================")
+
+    start_queue_flusher()
+    flush_queue()
+
+    buffer = []
+    last_key_time = [time.time()]
+
+    def on_event(e):
+        if e.event_type != 'down':
+            return
+        now = time.time()
+        if now - last_key_time[0] > 1.5:
+            buffer.clear()
+        last_key_time[0] = now
+
+        name = e.name.lower() if e.name else ''
+        if name in ('enter', 'return'):
+            if len(buffer) >= 3:
+                card_code = "".join(buffer).strip()
+                buffer.clear()
+                threading.Thread(target=send_checkin, args=(api_url, card_code, device_key), daemon=True).start()
+            else:
+                buffer.clear()
+        elif name == 'backspace' and buffer:
+            buffer.pop()
+        elif len(name) == 1 and (name.isalnum() or name in '0123456789'):
+            buffer.append(name)
+
+    keyboard.hook(on_event)
+    keyboard.wait()
 
 def main():
     parser = argparse.ArgumentParser(description="Crown Coffee RFID Background Attendance Service")
@@ -344,12 +386,29 @@ def main():
 
     if args.console:
         run_stdin_listener(args.url, args.key)
-    else:
-        try:
-            run_pynput_listener(args.url, args.key)
-        except Exception as e:
-            safe_print(f"Pynput listener failed: {e}. Falling back to console mode.")
-            run_stdin_listener(args.url, args.key)
+        return
+
+    # Try 'keyboard' library first (best for Windows background execution)
+    try:
+        run_keyboard_module_listener(args.url, args.key)
+        return
+    except Exception as e1:
+        safe_print(f"[INFO] 'keyboard' library listener not available ({e1}). Trying pynput...")
+
+    # Try 'pynput' library second
+    try:
+        run_pynput_listener(args.url, args.key)
+        return
+    except Exception as e2:
+        safe_print(f"[WARNING] Pynput listener also failed ({e2}).")
+
+    safe_print("\n" + "!" * 65)
+    safe_print(" ATTENTION: Background RFID Listening requires one of these packages:")
+    safe_print("   pip install keyboard pynput")
+    safe_print(" IMPORTANT on Windows: Right-click Command Prompt and select 'Run as Administrator'")
+    safe_print("!" * 65 + "\n")
+
+    run_stdin_listener(args.url, args.key)
 
 if __name__ == "__main__":
     main()
