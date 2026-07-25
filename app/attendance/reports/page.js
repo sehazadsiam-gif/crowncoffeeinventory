@@ -298,6 +298,7 @@ export default function AttendanceReportsPage() {
         'Name': `${log.staff_name} (${log.employee_id})`,
         'Date(Selected Range)': log.date_formatted,
         'Check In': log.check_in_formatted,
+        'Break Duration': log.break_formatted || '--',
         'Check Out': log.check_out_formatted,
         'Overtime': `${log.overtime_hours || 0} hrs`,
         'Late': log.minutes_late > 0 ? `${(log.minutes_late / 60).toFixed(2).replace(/\.00$/, '')} hrs late` : 'On Time'
@@ -608,6 +609,7 @@ export default function AttendanceReportsPage() {
                         <th style={{ padding: '12px' }}>Name</th>
                         <th style={{ padding: '12px' }}>Date (Selected Range)</th>
                         <th style={{ padding: '12px' }}>Check In</th>
+                        <th style={{ padding: '12px' }}>Break</th>
                         <th style={{ padding: '12px' }}>Check Out</th>
                         <th style={{ padding: '12px', textAlign: 'center' }}>Overtime</th>
                         <th style={{ padding: '12px', textAlign: 'center' }}>Late</th>
@@ -628,6 +630,9 @@ export default function AttendanceReportsPage() {
                           </td>
                           <td style={{ padding: '12px', fontWeight: 700, color: '#059669', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
                             {log.check_in_formatted}
+                          </td>
+                          <td style={{ padding: '12px', fontWeight: 700, color: '#D97706', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                            {log.break_formatted || '--'}
                           </td>
                           <td style={{ padding: '12px', fontWeight: 700, color: '#2563EB', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
                             {log.check_out_formatted}

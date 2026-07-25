@@ -67,6 +67,21 @@ export async function GET(request) {
       const lateMins = l.minutes_late || 0
       const lateHours = Math.round((lateMins / 60) * 100) / 100
 
+      const breakStart = l.break_start_at
+        ? new Date(l.break_start_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }).toLowerCase()
+        : null
+
+      const breakEnd = l.break_end_at
+        ? new Date(l.break_end_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }).toLowerCase()
+        : null
+
+      let breakFormatted = '--'
+      if (l.break_duration_minutes > 0) {
+        breakFormatted = `${l.break_duration_minutes} mins`
+      } else if (breakStart && !breakEnd) {
+        breakFormatted = `On Break (${breakStart})`
+      }
+
       return {
         id: l.id,
         staff_id: l.staff_id,
@@ -77,6 +92,10 @@ export async function GET(request) {
         date_formatted: formattedDate,
         check_in_at: l.check_in_at,
         check_out_at: l.check_out_at,
+        break_start_at: l.break_start_at,
+        break_end_at: l.break_end_at,
+        break_duration_minutes: l.break_duration_minutes || 0,
+        break_formatted: breakFormatted,
         check_in_formatted: checkInTime || '--',
         check_out_formatted: checkOutTime || '--',
         time_range: timeRange,

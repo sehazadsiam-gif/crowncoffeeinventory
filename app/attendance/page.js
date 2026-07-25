@@ -431,6 +431,8 @@ export default function AttendanceDashboardPage() {
               const isIn = r.status === 'present'
               const isLate = r.status === 'late'
               const isOut = (isIn || isLate) && !!r.check_out_at
+              const isOnBreak = (isIn || isLate) && !!r.break_start_at && !r.break_end_at
+              const isBackFromBreak = (isIn || isLate) && !!r.break_end_at && !r.check_out_at
               const isAbsent = r.status === 'absent'
               const isLeave = r.status === 'on_leave'
               const isDayOff = r.status === 'off'
@@ -444,6 +446,12 @@ export default function AttendanceDashboardPage() {
               if (isOut) {
                 borderColor = '#93C5FD'; statusDot = '#3B82F6'
                 statusText = 'Checked Out'; statusColor = '#1D4ED8'
+              } else if (isOnBreak) {
+                borderColor = '#FCD34D'; statusDot = '#F59E0B'
+                statusText = 'On Break ☕'; statusColor = '#B45309'; bgColor = '#FFFBEB'
+              } else if (isBackFromBreak) {
+                borderColor = '#93C5FD'; statusDot = '#2563EB'
+                statusText = 'Back From Break'; statusColor = '#1D4ED8'; bgColor = '#F0F9FF'
               } else if (isIn) {
                 borderColor = '#86EFAC'; statusDot = '#16A34A'
                 statusText = 'Present'; statusColor = '#15803D'; bgColor = '#F0FDF4'
@@ -462,7 +470,7 @@ export default function AttendanceDashboardPage() {
               }
 
               const fmtTime = (ts) => ts
-                ? new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                ? new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
                 : null
 
               return (
