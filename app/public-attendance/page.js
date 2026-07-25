@@ -223,13 +223,21 @@ export default function PublicAttendancePage() {
 
   async function doCheckin(identifier) {
     try {
-      // Find staff by rfid_code, employee_id, or staff_id to check breakToggle
-      const matchedStaff = records.find(r =>
-        r.rfid_code === identifier ||
-        r.employee_id === identifier ||
-        r.staff_id === identifier ||
-        r.id === identifier
-      )
+      const normId = String(identifier || '').trim().replace(/^0+/, '')
+      const upperId = String(identifier || '').trim().toUpperCase()
+
+      // Robust matching against rfid_code (stripped leading zeros), employee_id, or staff_id
+      const matchedStaff = records.find(r => {
+        const normRfid = String(r.rfid_code || '').trim().replace(/^0+/, '')
+        const upperEmp = String(r.employee_id || '').trim().toUpperCase()
+        return (
+          (normRfid && normRfid === normId) ||
+          (upperEmp && upperEmp === upperId) ||
+          r.staff_id === identifier ||
+          r.id === identifier
+        )
+      })
+
       const staffKey = matchedStaff ? (matchedStaff.staff_id || matchedStaff.id || matchedStaff.employee_id) : identifier
       const isBreakOn = !!breakToggles[staffKey] || Object.entries(breakToggles).some(([k, v]) => v && (k === identifier || String(identifier).includes(k)))
 

@@ -160,7 +160,7 @@ def send_checkin(api_url, card_code, device_key="", queued_at=None, suppress_que
     queued_note = f" [queued at {queued_at}]" if queued_at else ""
     safe_print(f"[{timestamp_str}] [RFID] Scanned Card Code: {card_code}{queued_note}")
 
-    payload = {"identifier": str(card_code).strip(), "source": "rfid"}
+    payload = {"identifier": str(card_code).strip(), "source": "rfid", "enableBreak": True}
     data = json.dumps(payload).encode("utf-8")
     headers = {
         "Content-Type": "application/json",
