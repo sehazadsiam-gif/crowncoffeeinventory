@@ -648,16 +648,18 @@ export default function AttendanceReportsPage() {
                           <td style={{ padding: '12px', textAlign: 'center' }}>
                             <span style={{
                               fontWeight: 800,
-                              color: log.minutes_late > 0 ? '#DC2626' : '#16A34A',
-                              background: log.minutes_late > 0 ? '#FEE2E2' : '#DCFCE7',
-                              border: log.minutes_late > 0 ? '1px solid #FCA5A5' : '1px solid #86EFAC',
+                              color: log.minutes_late > 0 ? '#DC2626' : log.check_in_at ? '#16A34A' : '#64748B',
+                              background: log.minutes_late > 0 ? '#FEE2E2' : log.check_in_at ? '#DCFCE7' : '#F1F5F9',
+                              border: log.minutes_late > 0 ? '1px solid #FCA5A5' : log.check_in_at ? '1px solid #86EFAC' : '1px solid #CBD5E1',
                               padding: '3px 10px',
                               borderRadius: '12px',
                               fontSize: '12px'
                             }}>
                               {log.minutes_late > 0
                                 ? `${(log.minutes_late / 60).toFixed(2).replace(/\.00$/, '')} hrs late`
-                                : 'On Time'}
+                                : log.check_in_at
+                                ? 'On Time'
+                                : (log.status === 'absent' ? 'Absent' : 'Not Checked In')}
                             </span>
                           </td>
                           <td style={{ padding: '12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
