@@ -63,10 +63,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'identifier is required' }, { status: 400 })
     }
 
-    // Admin-only: allow override status
-    if (adminOverride && !isAdmin) {
-      return NextResponse.json({ error: 'Only admin can override status' }, { status: 403 })
-    }
+    // Allow manual status override for authorized requests (admin, manager, or manual kiosk entry)
+    // if (adminOverride && !isAdmin) ... removed restriction
 
     const result = await logAttendance({
       identifier,

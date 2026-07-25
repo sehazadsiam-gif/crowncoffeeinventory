@@ -207,14 +207,19 @@ export default function AttendanceDashboardPage() {
     if (!staffIdOrRfid) return
     try {
       setCheckingIn(true)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('cc_token') : null
       const res = await fetch('/api/attendance/checkin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           identifier: staffIdOrRfid,
           source: method,
           adminOverride: !!manualStatus,
-          forceStatus: manualStatus
+          forceStatus: manualStatus,
+          token
         })
       })
       const json = await res.json()
