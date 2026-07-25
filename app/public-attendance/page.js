@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import Head from 'next/head'
 
 
-function AnalogClock({ size = 56, time = new Date() }) {
+function AnalogClock({ size = 120, time = new Date() }) {
   const seconds = time.getSeconds()
   const minutes = time.getMinutes()
   const hours = time.getHours() % 12
@@ -15,133 +15,216 @@ function AnalogClock({ size = 56, time = new Date() }) {
   const hourDeg = ((hours + minutes / 60) / 12) * 360
 
   const timeString = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
-  const dateString = time.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Dhaka' })
+  const dateString = time.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Dhaka' })
+
+  const numbers = [
+    { num: '12', deg: 0 },
+    { num: '1', deg: 30 },
+    { num: '2', deg: 60 },
+    { num: '3', deg: 90 },
+    { num: '4', deg: 120 },
+    { num: '5', deg: 150 },
+    { num: '6', deg: 180 },
+    { num: '7', deg: 210 },
+    { num: '8', deg: 240 },
+    { num: '9', deg: 270 },
+    { num: '10', deg: 300 },
+    { num: '11', deg: 330 },
+  ]
 
   return (
     <div style={{
       display: 'flex',
       alignItems: 'center',
-      gap: '16px',
-      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
-      border: '1px solid rgba(212, 147, 58, 0.35)',
-      borderRadius: '20px',
-      padding: '10px 20px',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
-      backdropFilter: 'blur(12px)'
+      gap: '24px',
+      background: 'linear-gradient(145deg, #0F172A 0%, #1E293B 100%)',
+      border: '2px solid rgba(212, 147, 58, 0.45)',
+      borderRadius: '24px',
+      padding: '16px 28px',
+      boxShadow: '0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.15)',
+      backdropFilter: 'blur(16px)'
     }}>
-      {/* Sleek Analog Dial */}
+      {/* 120px Grand Luxury Analog Dial */}
       <div style={{
         width: `${size}px`,
         height: `${size}px`,
         borderRadius: '50%',
-        background: 'radial-gradient(circle, #0F172A 40%, #020617 100%)',
-        border: '2px solid #D4933A',
-        boxShadow: '0 0 16px rgba(212, 147, 58, 0.25), inset 0 2px 6px rgba(0,0,0,0.8)',
+        background: 'radial-gradient(circle at 50% 50%, #1E293B 0%, #0F172A 60%, #020617 100%)',
+        border: '3px solid #D4933A',
+        boxShadow: '0 0 24px rgba(212, 147, 58, 0.3), inset 0 4px 12px rgba(0, 0, 0, 0.85), 0 0 0 2px rgba(255,255,255,0.05)',
         position: 'relative',
         flexShrink: 0
       }}>
-        {/* Hour Markers */}
-        {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((deg) => (
-          <div
-            key={deg}
-            style={{
-              position: 'absolute',
-              width: deg % 90 === 0 ? '2.5px' : '1px',
-              height: deg % 90 === 0 ? '6px' : '3.5px',
-              background: deg % 90 === 0 ? '#D4933A' : 'rgba(212, 147, 58, 0.5)',
-              top: '3px',
-              left: 'calc(50% - 0.75px)',
-              transformOrigin: `50% ${size / 2 - 3}px`,
-              transform: `rotate(${deg}deg)`
-            }}
-          />
-        ))}
+        {/* Inner Ring Accent */}
+        <div style={{
+          position: 'absolute',
+          inset: '8px',
+          borderRadius: '50%',
+          border: '1px dashed rgba(212, 147, 58, 0.3)',
+          pointerEvents: 'none'
+        }} />
+
+        {/* Hour Numbers & Ticks */}
+        {numbers.map(({ num, deg }) => {
+          const rad = (deg - 90) * (Math.PI / 180)
+          const radius = size * 0.37
+          const x = size / 2 + radius * Math.cos(rad) - (num.length > 1 ? 8 : 4)
+          const y = size / 2 + radius * Math.sin(rad) - 7
+
+          return (
+            <div
+              key={deg}
+              style={{
+                position: 'absolute',
+                left: `${x}px`,
+                top: `${y}px`,
+                fontSize: num % 3 === 0 || num === '12' ? '12px' : '9px',
+                fontWeight: 900,
+                color: deg % 90 === 0 ? '#F59E0B' : 'rgba(226, 232, 240, 0.65)',
+                fontFamily: 'sans-serif',
+                userSelect: 'none'
+              }}
+            >
+              {num}
+            </div>
+          )
+        })}
+
+        {/* 60 Minute Ticks */}
+        {Array.from({ length: 60 }).map((_, i) => {
+          const deg = i * 6
+          return (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                width: i % 5 === 0 ? '2px' : '1px',
+                height: i % 5 === 0 ? '5px' : '3px',
+                background: i % 5 === 0 ? '#D4933A' : 'rgba(148, 163, 184, 0.3)',
+                top: '4px',
+                left: 'calc(50% - 0.5px)',
+                transformOrigin: `50% ${size / 2 - 4}px`,
+                transform: `rotate(${deg}deg)`
+              }}
+            />
+          )
+        })}
 
         {/* Hour Hand */}
         <div style={{
           position: 'absolute',
-          width: '3.5px',
-          height: `${size * 0.26}px`,
-          background: 'linear-gradient(to top, #CBD5E1, #FFFFFF)',
+          width: '5px',
+          height: `${size * 0.27}px`,
+          background: 'linear-gradient(to top, #94A3B8, #FFFFFF)',
           borderRadius: '4px',
-          top: `${size * 0.24}px`,
-          left: 'calc(50% - 1.75px)',
+          top: `${size * 0.23}px`,
+          left: 'calc(50% - 2.5px)',
           transformOrigin: '50% 100%',
           transform: `rotate(${hourDeg}deg)`,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+          boxShadow: '0 3px 6px rgba(0,0,0,0.6)',
+          zIndex: 4
         }} />
 
         {/* Minute Hand */}
         <div style={{
           position: 'absolute',
-          width: '2.5px',
-          height: `${size * 0.36}px`,
+          width: '3.5px',
+          height: `${size * 0.38}px`,
           background: 'linear-gradient(to top, #0284C7, #38BDF8)',
           borderRadius: '4px',
-          top: `${size * 0.14}px`,
-          left: 'calc(50% - 1.25px)',
+          top: `${size * 0.12}px`,
+          left: 'calc(50% - 1.75px)',
           transformOrigin: '50% 100%',
           transform: `rotate(${minDeg}deg)`,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+          boxShadow: '0 3px 6px rgba(0,0,0,0.6)',
+          zIndex: 5
         }} />
 
         {/* Second Hand */}
         <div style={{
           position: 'absolute',
-          width: '1.5px',
-          height: `${size * 0.42}px`,
-          background: '#F59E0B',
+          width: '2px',
+          height: `${size * 0.44}px`,
+          background: '#EF4444',
           borderRadius: '2px',
-          top: `${size * 0.08}px`,
-          left: 'calc(50% - 0.75px)',
+          top: `${size * 0.06}px`,
+          left: 'calc(50% - 1px)',
           transformOrigin: '50% 100%',
           transform: `rotate(${secDeg}deg)`,
           transition: 'transform 0.2s cubic-bezier(0.4, 2.08, 0.55, 0.44)',
-          boxShadow: '0 0 6px rgba(245, 158, 11, 0.8)'
+          boxShadow: '0 0 8px rgba(239, 68, 68, 0.9)',
+          zIndex: 6
         }} />
 
-        {/* Center Jewel */}
+        {/* Center Golden Cap */}
         <div style={{
           position: 'absolute',
-          width: '7px',
-          height: '7px',
+          width: '12px',
+          height: '12px',
           borderRadius: '50%',
-          background: '#D4933A',
+          background: 'radial-gradient(circle, #F59E0B, #D4933A)',
           border: '2px solid #0F172A',
-          top: 'calc(50% - 3.5px)',
-          left: 'calc(50% - 3.5px)',
+          top: 'calc(50% - 6px)',
+          left: 'calc(50% - 6px)',
           zIndex: 10,
-          boxShadow: '0 0 4px rgba(212, 147, 58, 0.9)'
+          boxShadow: '0 2px 6px rgba(0,0,0,0.8)'
         }} />
       </div>
 
-      {/* Digital Time & Date */}
+      {/* Digital Readout Block */}
       <div style={{ textAlign: 'left' }}>
         <div style={{
-          fontSize: '20px',
+          fontSize: '26px',
           fontWeight: 900,
           color: '#F8FAFC',
           letterSpacing: '1px',
           fontFamily: 'monospace, ui-monospace',
           lineHeight: 1,
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: '4px'
+          textShadow: '0 2px 10px rgba(0,0,0,0.5)'
         }}>
           {timeString}
         </div>
+
         <div style={{
-          fontSize: '11px',
-          color: '#94A3B8',
-          fontWeight: 700,
-          letterSpacing: '0.05em',
-          marginTop: '4px',
+          fontSize: '13px',
+          color: '#D4933A',
+          fontWeight: 800,
+          letterSpacing: '0.04em',
+          marginTop: '6px'
+        }}>
+          {dateString}
+        </div>
+
+        <div style={{
+          marginTop: '8px',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px'
+          gap: '8px'
         }}>
-          <span style={{ color: '#D4933A' }}>{dateString}</span>
-          <span style={{ fontSize: '9px', background: 'rgba(212, 147, 58, 0.15)', color: '#F59E0B', padding: '1px 5px', borderRadius: '4px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>BST</span>
+          <span style={{
+            fontSize: '10px',
+            fontWeight: 800,
+            background: 'rgba(212, 147, 58, 0.15)',
+            color: '#F59E0B',
+            padding: '3px 8px',
+            borderRadius: '6px',
+            border: '1px solid rgba(245, 158, 11, 0.3)',
+            letterSpacing: '0.05em'
+          }}>
+            ASIA/DHAKA • BST (GMT+6)
+          </span>
+
+          <span style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            color: '#22C55E',
+            fontWeight: 800
+          }}>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E', boxShadow: '0 0 6px #22C55E' }} />
+            LIVE
+          </span>
         </div>
       </div>
     </div>
