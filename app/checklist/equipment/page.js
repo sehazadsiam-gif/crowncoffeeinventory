@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Navbar from '../../../components/Navbar'
-import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
 import {
   Plus, Edit3, Trash2, Search, Calendar, Lock,
-  FileSpreadsheet, Wrench, Package, DollarSign,
-  ChevronDown, X
+  FileSpreadsheet, Wrench, Package, DollarSign, X, Check
 } from 'lucide-react'
 import * as xlsx from 'xlsx'
 
@@ -231,8 +229,8 @@ export default function EquipmentChecklistPage() {
   const [search, setSearch]   = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // Modal
-  const [modalOpen, setModalOpen]   = useState(false)
+  // Inline form
+  const [showForm, setShowForm]     = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [form, setForm] = useState({ item_name: '', quantity: 1, price: '', status: 'working', notes: '' })
   const [saving, setSaving] = useState(false)
@@ -261,7 +259,7 @@ export default function EquipmentChecklistPage() {
   function openAdd() {
     setEditTarget(null)
     setForm({ item_name: '', quantity: 1, price: '', status: 'working', notes: '' })
-    setModalOpen(true)
+    setShowForm(true)
   }
 
   function openEdit(item) {
@@ -273,7 +271,13 @@ export default function EquipmentChecklistPage() {
       status:    item.status || 'working',
       notes:     item.notes  || '',
     })
-    setModalOpen(true)
+    setShowForm(true)
+  }
+
+  function closeForm() {
+    setShowForm(false)
+    setEditTarget(null)
+    setForm({ item_name: '', quantity: 1, price: '', status: 'working', notes: '' })
   }
 
   async function handleSave(e) {
@@ -290,7 +294,7 @@ export default function EquipmentChecklistPage() {
       const json = await res.json()
       if (res.ok && json.success) {
         addToast(isEdit ? 'Item updated' : 'Item added', 'success')
-        setModalOpen(false)
+        closeForm()
         fetchItems()
       } else {
         addToast(json.error || 'Failed to save', 'error')
@@ -398,18 +402,20 @@ export default function EquipmentChecklistPage() {
               <FileSpreadsheet size={15} /> Export Excel
             </button>
             <button
-              onClick={openAdd}
+              onClick={() => showForm && !editTarget ? closeForm() : openAdd()}
               style={{
                 display: 'flex', alignItems: 'center', gap: '7px',
                 padding: '9px 18px',
-                background: '#0F172A',
-                border: 'none',
+                background: showForm && !editTarget ? '#F1F5F9' : '#0F172A',
+                border: showForm && !editTarget ? '1px solid #E2E8F0' : 'none',
                 borderRadius: '10px',
-                fontSize: '13px', fontWeight: 800, color: '#fff',
+                fontSize: '13px', fontWeight: 800,
+                color: showForm && !editTarget ? '#64748B' : '#fff',
                 cursor: 'pointer',
+                transition: 'all 0.15s',
               }}
             >
-              <Plus size={16} /> Add Item
+              {showForm && !editTarget ? <><X size={15} /> Cancel</> : <><Plus size={16} /> Add Item</>}
             </button>
           </div>
         </div>
@@ -420,6 +426,106 @@ export default function EquipmentChecklistPage() {
           <KpiCard icon={<Package size={18} />}   label="Total Units"       value={totalQty}                                    accent="#3B82F6" />
           <KpiCard icon={<DollarSign size={18} />} label="Total Valuation"  value={`৳${totalVal.toLocaleString('en-IN')}`}      accent="#D97706" />
         </div>
+
+        {/* ── INLINE ADD / EDIT FORM ── */}
+        {showForm && (
+          <div style={{
+            background: '#fff',
+            border: '1.5px solid #0F172A',
+            borderRadius: '14px',
+            padding: '24px 28px',
+            marginBottom: '20px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>
+                {editTarget ? 'Edit Equipment Item' : 'New Equipment Item'}
+              </span>
+              <button onClick={closeForm} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', padding: '4px' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSave}>
+              {/* Row 1: Name (wide) + Qty + Price */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <div>
+                  <label style={LABEL_STYLE}>Item Name <span style={{ color: '#EF4444' }}>*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Espresso Machine, Grinder, POS Terminal"
+                    value={form.item_name}
+                    onChange={e => setForm({ ...form, item_name: e.target.value })}
+                    required
+                    autoFocus
+                    style={INPUT_STYLE}
+                  />
+                </div>
+                <div>
+                  <label style={LABEL_STYLE}>Quantity <span style={{ color: '#EF4444' }}>*</span></label>
+                  <input
+                    type="number" min="1"
+                    value={form.quantity}
+                    onChange={e => setForm({ ...form, quantity: e.target.value })}
+                    required
+                    style={INPUT_STYLE}
+                  />
+                </div>
+                <div>
+                  <label style={LABEL_STYLE}>Price (BDT) <span style={{ color: '#CBD5E1', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>optional</span></label>
+                  <input
+                    type="number" min="0" placeholder="e.g. 150000"
+                    value={form.price}
+                    onChange={e => setForm({ ...form, price: e.target.value })}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Condition + Notes + Save */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto', gap: '14px', alignItems: 'flex-end' }}>
+                <div>
+                  <label style={LABEL_STYLE}>Condition</label>
+                  <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={INPUT_STYLE}>
+                    <option value="working">Working</option>
+                    <option value="maintenance">Needs Maintenance</option>
+                    <option value="damaged">Damaged</option>
+                    <option value="checked">Verified</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={LABEL_STYLE}>Notes <span style={{ color: '#CBD5E1', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>optional</span></label>
+                  <input
+                    type="text"
+                    placeholder="Serial number, location, remarks…"
+                    value={form.notes}
+                    onChange={e => setForm({ ...form, notes: e.target.value })}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '10px 22px',
+                    background: saving ? '#94A3B8' : '#0F172A',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: saving ? 'wait' : 'pointer',
+                    whiteSpace: 'nowrap',
+                    height: '40px',
+                  }}
+                >
+                  <Check size={15} />
+                  {saving ? 'Saving…' : editTarget ? 'Update Item' : 'Add Item'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* ── FILTER BAR ── */}
         <div style={{
@@ -501,10 +607,12 @@ export default function EquipmentChecklistPage() {
               <p style={{ fontSize: '13px', color: '#94A3B8', margin: '0 0 20px' }}>
                 Add your first equipment item for {MONTHS[month - 1]} {year}.
               </p>
-              <button onClick={openAdd}
-                style={{ background: '#0F172A', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 18px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
-                + Add Item
-              </button>
+              {!showForm && (
+                <button onClick={openAdd}
+                  style={{ background: '#0F172A', color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 18px', fontSize: '13px', fontWeight: 800, cursor: 'pointer' }}>
+                  + Add Item
+                </button>
+              )}
             </div>
           ) : (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
@@ -596,80 +704,7 @@ export default function EquipmentChecklistPage() {
         </div>
       </main>
 
-      {/* ── ADD / EDIT MODAL ── */}
-      {modalOpen && (
-        <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editTarget ? 'Edit Equipment Item' : 'Add Equipment Item'}>
-          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-            <div>
-              <label style={LABEL_STYLE}>Item Name <span style={{ color: '#EF4444' }}>*</span></label>
-              <input
-                type="text"
-                placeholder="e.g. Espresso Machine, Grinder, POS Terminal"
-                value={form.item_name}
-                onChange={e => setForm({ ...form, item_name: e.target.value })}
-                required
-                autoFocus
-                style={INPUT_STYLE}
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div>
-                <label style={LABEL_STYLE}>Quantity <span style={{ color: '#EF4444' }}>*</span></label>
-                <input
-                  type="number" min="1"
-                  value={form.quantity}
-                  onChange={e => setForm({ ...form, quantity: e.target.value })}
-                  required
-                  style={INPUT_STYLE}
-                />
-              </div>
-              <div>
-                <label style={LABEL_STYLE}>Unit Price (BDT) <span style={{ color: '#CBD5E1', fontWeight: 500, textTransform: 'none' }}>optional</span></label>
-                <input
-                  type="number" min="0" placeholder="e.g. 150000"
-                  value={form.price}
-                  onChange={e => setForm({ ...form, price: e.target.value })}
-                  style={INPUT_STYLE}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label style={LABEL_STYLE}>Condition</label>
-              <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} style={INPUT_STYLE}>
-                <option value="working">Working</option>
-                <option value="maintenance">Needs Maintenance</option>
-                <option value="damaged">Damaged</option>
-                <option value="checked">Verified</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={LABEL_STYLE}>Notes <span style={{ color: '#CBD5E1', fontWeight: 500, textTransform: 'none' }}>optional</span></label>
-              <textarea
-                rows="3"
-                placeholder="Serial number, location, remarks…"
-                value={form.notes}
-                onChange={e => setForm({ ...form, notes: e.target.value })}
-                style={{ ...INPUT_STYLE, resize: 'vertical', paddingTop: '10px' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', paddingTop: '4px' }}>
-              <button type="button" onClick={() => setModalOpen(false)}
-                style={{ padding: '10px 18px', background: '#F1F5F9', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: '#64748B', cursor: 'pointer' }}>
-                Cancel
-              </button>
-              <button type="submit" disabled={saving}
-                style={{ padding: '10px 22px', background: saving ? '#94A3B8' : '#0F172A', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 800, color: '#fff', cursor: saving ? 'wait' : 'pointer' }}>
-                {saving ? 'Saving…' : editTarget ? 'Update' : 'Add Item'}
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
     </div>
   )
 }
