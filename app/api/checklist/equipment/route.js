@@ -81,15 +81,19 @@ export async function POST(request) {
 
 /**
  * PUT /api/checklist/equipment
- * Body: { id, item_name?, quantity?, price?, status?, notes? }
+ * Body: { id, item_name?, quantity?, price?, status?, notes?, action_pin? }
  */
 export async function PUT(request) {
   try {
     const body = await request.json()
-    const { id, item_name, quantity, price, status, notes } = body
+    const { id, item_name, quantity, price, status, notes, action_pin } = body
 
     if (!id) {
       return NextResponse.json({ error: 'Item ID is required' }, { status: 400 })
+    }
+
+    if (action_pin !== undefined && String(action_pin).trim() !== '1590') {
+      return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN (Requires 1590)' }, { status: 401 })
     }
 
     const updateData = {
@@ -119,15 +123,20 @@ export async function PUT(request) {
 }
 
 /**
- * DELETE /api/checklist/equipment?id=...
+ * DELETE /api/checklist/equipment?id=...&action_pin=1590
  */
 export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    const actionPin = searchParams.get('action_pin') || request.headers.get('x-action-pin')
 
     if (!id) {
       return NextResponse.json({ error: 'Item ID is required' }, { status: 400 })
+    }
+
+    if (actionPin && String(actionPin).trim() !== '1590') {
+      return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN (Requires 1590)' }, { status: 401 })
     }
 
     const { error } = await supabaseAdmin

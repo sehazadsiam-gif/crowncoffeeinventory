@@ -235,6 +235,12 @@ export default function EquipmentChecklistPage() {
   const [form, setForm] = useState({ item_name: '', quantity: 1, price: '', status: 'working', notes: '' })
   const [saving, setSaving] = useState(false)
 
+  // Action PIN Modal (1590) for Edit/Delete protection
+  const [actionPinModalOpen, setActionPinModalOpen] = useState(false)
+  const [pendingAction, setPendingAction]           = useState(null)
+  const [actionPinInput, setActionPinInput]         = useState('')
+  const [actionPinError, setActionPinError]         = useState(false)
+
   useEffect(() => {
     if (sessionStorage.getItem('cc_mgr_checklist_authed') === 'true') setIsUnlocked(true)
   }, [])
@@ -242,6 +248,34 @@ export default function EquipmentChecklistPage() {
   useEffect(() => {
     if (isUnlocked) fetchItems()
   }, [isUnlocked, month, year])
+
+  // Helper to enforce PIN 1590 before executing edit/delete actions
+  function requireActionPin(onAuthorized) {
+    const isAuthed = sessionStorage.getItem('cc_checklist_action_authed') === 'true'
+    if (isAuthed) {
+      onAuthorized('1590')
+      return
+    }
+    setPendingAction(() => onAuthorized)
+    setActionPinInput('')
+    setActionPinError(false)
+    setActionPinModalOpen(true)
+  }
+
+  function handleVerifyActionPin(e) {
+    e.preventDefault()
+    if (actionPinInput.trim() === '1590') {
+      sessionStorage.setItem('cc_checklist_action_authed', 'true')
+      setActionPinModalOpen(false)
+      if (pendingAction) {
+        pendingAction('1590')
+        setPendingAction(null)
+      }
+    } else {
+      setActionPinError(true)
+      addToast('Invalid Edit/Delete PIN (Requires 1590)', 'error')
+    }
+  }
 
   async function fetchItems() {
     setLoading(true)
@@ -263,15 +297,17 @@ export default function EquipmentChecklistPage() {
   }
 
   function openEdit(item) {
-    setEditTarget(item)
-    setForm({
-      item_name: item.item_name || '',
-      quantity:  item.quantity  || 1,
-      price:     item.price !== null && item.price !== undefined ? item.price : '',
-      status:    item.status || 'working',
-      notes:     item.notes  || '',
+    requireActionPin(() => {
+      setEditTarget(item)
+      setForm({
+        item_name: item.item_name || '',
+        quantity:  item.quantity  || 1,
+        price:     item.price !== null && item.price !== undefined ? item.price : '',
+        status:    item.status || 'working',
+        notes:     item.notes  || '',
+      })
+      setShowForm(true)
     })
-    setShowForm(true)
   }
 
   function closeForm() {
@@ -283,56 +319,70 @@ export default function EquipmentChecklistPage() {
   async function handleSave(e) {
     e.preventDefault()
     if (!form.item_name.trim()) { addToast('Item name is required', 'error'); return }
-    setSaving(true)
-    try {
-      const isEdit = !!editTarget
-      const res = await fetch('/api/checklist/equipment', {
-        method: isEdit ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, month, year, id: editTarget?.id })
-      })
-      const json = await res.json()
-      if (res.ok && json.success) {
-        addToast(isEdit ? 'Item updated' : 'Item added', 'success')
-        closeForm()
-        fetchItems()
-      } else {
-        addToast(json.error || 'Failed to save', 'error')
+
+    const isEdit = !!editTarget
+
+    const executeSave = async () => {
+      setSaving(true)
+      try {
+        const res = await fetch('/api/checklist/equipment', {
+          method: isEdit ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...form, month, year, id: editTarget?.id, action_pin: isEdit ? '1590' : undefined })
+        })
+        const json = await res.json()
+        if (res.ok && json.success) {
+          addToast(isEdit ? 'Item updated' : 'Item added', 'success')
+          closeForm()
+          fetchItems()
+        } else {
+          addToast(json.error || 'Failed to save', 'error')
+        }
+      } catch {
+        addToast('Network error', 'error')
+      } finally {
+        setSaving(false)
       }
-    } catch {
-      addToast('Network error', 'error')
-    } finally {
-      setSaving(false)
+    }
+
+    if (isEdit) {
+      requireActionPin(() => executeSave())
+    } else {
+      executeSave()
     }
   }
 
   async function handleStatusChange(item, newStatus) {
-    const prev = items
-    setItems(items.map(i => i.id === item.id ? { ...i, status: newStatus } : i))
-    try {
-      const res = await fetch('/api/checklist/equipment', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: item.id, status: newStatus })
-      })
-      if (!res.ok) { setItems(prev); addToast('Failed to update status', 'error') }
-    } catch {
-      setItems(prev)
-      addToast('Network error', 'error')
-    }
+    requireActionPin(async () => {
+      const prev = items
+      setItems(items.map(i => i.id === item.id ? { ...i, status: newStatus } : i))
+      try {
+        const res = await fetch('/api/checklist/equipment', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: item.id, status: newStatus, action_pin: '1590' })
+        })
+        if (!res.ok) { setItems(prev); addToast('Failed to update status', 'error') }
+      } catch {
+        setItems(prev)
+        addToast('Network error', 'error')
+      }
+    })
   }
 
   async function handleDelete(id) {
-    if (!confirm('Remove this equipment item?')) return
-    setItems(items.filter(i => i.id !== id))
-    try {
-      const res = await fetch(`/api/checklist/equipment?id=${id}`, { method: 'DELETE' })
-      if (!res.ok) { fetchItems(); addToast('Failed to delete', 'error') }
-      else addToast('Item removed', 'info')
-    } catch {
-      fetchItems()
-      addToast('Network error', 'error')
-    }
+    requireActionPin(async () => {
+      if (!confirm('Remove this equipment item?')) return
+      setItems(items.filter(i => i.id !== id))
+      try {
+        const res = await fetch(`/api/checklist/equipment?id=${id}&action_pin=1590`, { method: 'DELETE' })
+        if (!res.ok) { fetchItems(); addToast('Failed to delete', 'error') }
+        else addToast('Item removed', 'info')
+      } catch {
+        fetchItems()
+        addToast('Network error', 'error')
+      }
+    })
   }
 
   function handleExcel() {
@@ -704,7 +754,99 @@ export default function EquipmentChecklistPage() {
         </div>
       </main>
 
+      {/* ── ACTION PIN (1590) MODAL FOR EDIT / DELETE ── */}
+      {actionPinModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.5)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+          zIndex: 9999
+        }}>
+          <div style={{
+            background: '#fff',
+            border: '1px solid #E2E8F0',
+            borderRadius: '20px',
+            padding: '36px 32px',
+            maxWidth: '360px',
+            width: '100%',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setActionPinModalOpen(false)}
+              style={{ position: 'absolute', right: '16px', top: '16px', background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+            >
+              <X size={18} />
+            </button>
 
+            <div style={{
+              width: '46px',
+              height: '46px',
+              borderRadius: '12px',
+              background: '#FEF2F2',
+              color: '#EF4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}>
+              <Lock size={20} />
+            </div>
+
+            <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: '0 0 6px' }}>
+              Edit / Delete Security PIN
+            </h3>
+            <p style={{ fontSize: '12px', color: '#94A3B8', margin: '0 0 20px', lineHeight: 1.5 }}>
+              Enter Action PIN <strong>1590</strong> to modify or remove checklist records.
+            </p>
+
+            <form onSubmit={handleVerifyActionPin}>
+              <input
+                type="password"
+                placeholder="Enter PIN"
+                value={actionPinInput}
+                onChange={e => { setActionPinInput(e.target.value); setActionPinError(false); }}
+                autoFocus
+                style={{
+                  ...INPUT_STYLE,
+                  textAlign: 'center',
+                  fontSize: '18px',
+                  letterSpacing: '4px',
+                  padding: '12px',
+                  marginBottom: '12px',
+                  border: actionPinError ? '1.5px solid #EF4444' : '1.5px solid #E2E8F0'
+                }}
+              />
+              {actionPinError && (
+                <p style={{ fontSize: '11px', color: '#EF4444', fontWeight: 700, margin: '-6px 0 12px' }}>
+                  Incorrect PIN. Please enter 1590.
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setActionPinModalOpen(false)}
+                  style={{ flex: 1, padding: '11px', background: '#F1F5F9', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 700, color: '#64748B', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ flex: 1, padding: '11px', background: '#0F172A', border: 'none', borderRadius: '10px', fontSize: '13px', fontWeight: 800, color: '#fff', cursor: 'pointer' }}
+                >
+                  Authorize
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
