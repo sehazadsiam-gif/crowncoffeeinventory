@@ -7,7 +7,7 @@ import {
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
   Upload, FileSpreadsheet, UserCheck, Sun, Moon, Receipt, Package,
   TrendingUp, Calculator as CalcIcon, ShoppingBag, MessageSquare,
-  BellRing, ShieldAlert, AlertTriangle, Calendar, Mail
+  BellRing, ShieldAlert, AlertTriangle, Calendar, Mail, ClipboardList
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useSessionTimeout } from '../hooks/useSessionTimeout'
@@ -94,7 +94,7 @@ export default function Navbar() {
     const role = localStorage.getItem('cc_role')
     const user = localStorage.getItem('cc_username') || localStorage.getItem('cc_staff_name')
 
-    if (!token && !['/', '/admin/login', '/staff/login', '/sub-admin/login'].includes(pathname) && !pathname.startsWith('/membership')) {
+    if (!token && !['/', '/admin/login', '/staff/login', '/sub-admin/login'].includes(pathname) && !pathname.startsWith('/membership') && !pathname.startsWith('/checklist')) {
       router.replace('/')
       return
     }
@@ -125,6 +125,13 @@ export default function Navbar() {
     { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
     { href: '/sales-reconciliation', label: 'Sales Audit', icon: <ShieldAlert size={16} /> },
     { href: '/admin?tab=feedbacks', label: 'Feedbacks', icon: <MessageSquare size={16} /> },
+    {
+      label: 'Check-List',
+      icon: <ClipboardList size={16} />,
+      children: [
+        { href: '/checklist/equipment', label: '1. Equipments Check-List' },
+      ]
+    },
 
     { href: '/bazar', label: 'Bazar', icon: <TrendingUp size={16} /> },
     {
