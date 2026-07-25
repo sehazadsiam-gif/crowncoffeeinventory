@@ -182,9 +182,24 @@ def send_checkin(api_url, card_code, device_key="", queued_at=None, suppress_que
             elif res_json.get("success"):
                 staff_name = res_json.get("staff", {}).get("name", "Staff")
                 status = res_json.get("status", "present").upper()
-                action = "CHECK-OUT" if res_json.get("alreadyCheckedOut") else "CHECK-IN"
-                safe_print(f"[{timestamp_str}] [OK] {action}: {staff_name} — {status}")
-                beep("checkout" if action == "CHECK-OUT" else "success")
+                raw_action = res_json.get("action", "")
+                
+                if raw_action == "break_start":
+                    action_label = "BREAK START ☕"
+                    beep_type = "success"
+                elif raw_action == "break_end":
+                    action_label = "BREAK END 🔵"
+                    beep_type = "success"
+                elif res_json.get("alreadyCheckedOut") or raw_action == "check_out":
+                    action_label = "CHECK-OUT ⚪"
+                    beep_type = "checkout"
+                else:
+                    action_label = "CHECK-IN 🟢"
+                    beep_type = "success"
+
+                msg = res_json.get("message") or status
+                safe_print(f"[{timestamp_str}] [OK] {action_label}: {staff_name} — {msg}")
+                beep(beep_type)
             else:
                 safe_print(f"[{timestamp_str}] [RESPONSE] API Response: {res_json}")
                 beep("error")
