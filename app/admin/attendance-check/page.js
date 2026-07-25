@@ -102,8 +102,8 @@ export default function AttendanceCheckPage() {
 
   function triggerLiveBanner(entry) {
     const timeStr = entry.check_in_at
-      ? new Date(entry.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-      : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+      ? new Date(entry.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+      : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
 
     setLastTapEvent({
       name: entry.employee_id || 'Staff Member',
@@ -601,14 +601,14 @@ export default function AttendanceCheckPage() {
                           <div>
                             <span style={{ color: '#888', fontSize: '10px', display: 'block' }}>CHECK-IN</span>
                             <strong style={{ fontSize: '13px' }}>
-                              {r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                              {r.check_in_at ? new Date(r.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }) : '--:--'}
                             </strong>
                           </div>
 
                           <div>
                             <span style={{ color: '#888', fontSize: '10px', display: 'block' }}>CHECK-OUT</span>
                             <strong style={{ fontSize: '13px' }}>
-                              {r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '--:--'}
+                              {r.check_out_at ? new Date(r.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }) : '--:--'}
                             </strong>
                           </div>
 

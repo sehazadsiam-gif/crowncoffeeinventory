@@ -46,11 +46,11 @@ export async function GET(request) {
       const formattedDate = `${dayNum} ${monthName}, ${d.getFullYear()}`
 
       const checkInTime = l.check_in_at
-        ? new Date(l.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()
+        ? new Date(l.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }).toLowerCase()
         : null
 
       const checkOutTime = l.check_out_at
-        ? new Date(l.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()
+        ? new Date(l.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' }).toLowerCase()
         : null
 
       let timeRange = '--'

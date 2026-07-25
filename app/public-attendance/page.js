@@ -442,7 +442,7 @@ function StaffCard({ r }) {
   }
 
   const fmtTime = (ts) => ts
-    ? new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    ? new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
     : null
 
   return (
