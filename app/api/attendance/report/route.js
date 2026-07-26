@@ -178,13 +178,14 @@ export async function POST(request) {
     if (action === 'update_log') {
       const { check_in_at, check_out_at, status, minutes_late, notes } = payload
       
-      let hoursWorked = 0
+      let hoursWorked = null
       let overtimeMins = 0
 
       if (check_in_at && check_out_at) {
         const inDate = new Date(check_in_at)
         const outDate = new Date(check_out_at)
-        const totalMins = Math.max(0, Math.floor((outDate - inDate) / (1000 * 60)))
+        let totalMins = Math.max(0, Math.floor((outDate - inDate) / (1000 * 60)))
+        if (totalMins > 960) totalMins = 960 // Safety Cap: 16 hours max per shift
         hoursWorked = Math.round((totalMins / 60) * 100) / 100
         overtimeMins = Math.max(0, totalMins - 600)
       }
@@ -192,14 +193,13 @@ export async function POST(request) {
       const updateData = {
         status: status || 'present',
         minutes_late: Number(minutes_late || 0),
+        check_in_at: check_in_at || null,
+        check_out_at: check_out_at || null,
         hours_worked: hoursWorked,
         overtime_minutes: overtimeMins,
         notes: notes || null,
         updated_at: new Date().toISOString()
       }
-
-      if (check_in_at) updateData.check_in_at = check_in_at
-      if (check_out_at) updateData.check_out_at = check_out_at
 
       const { error } = await supabaseAdmin
         .from('attendance_log')
