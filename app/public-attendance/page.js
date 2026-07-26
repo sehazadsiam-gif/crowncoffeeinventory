@@ -116,7 +116,7 @@ export default function PublicAttendancePage() {
     window.addEventListener('online', updateOnlineStatus)
     window.addEventListener('offline', updateOnlineStatus)
 
-    const channel = supabase.channel('kiosk_v4')
+    const channel = supabase.channel('kiosk_v5')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, () => {
         fetchTodayData(true)
       })
@@ -267,13 +267,48 @@ export default function PublicAttendancePage() {
   const absentCount = records.filter(r => r.status === 'absent' && !r.check_in_at).length
 
   const flashConfig = {
-    in: { bg: 'linear-gradient(135deg, #059669 0%, #047857 100%)', icon: '🟢', heading: 'CHECKED IN', sub: 'Have a great shift!' },
-    late: { bg: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)', icon: '🟡', heading: 'CHECKED IN (LATE)', sub: 'Logged late arrival.' },
-    break_start: { bg: 'linear-gradient(135deg, #D97706 0%, #92400E 100%)', icon: '☕', heading: 'BREAK STARTED', sub: 'Enjoy your break!' },
-    break_end: { bg: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)', icon: '🔵', heading: 'BACK FROM BREAK', sub: 'Welcome back to duty!' },
-    out: { bg: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', icon: '⚪', heading: 'CHECKED OUT', sub: 'Thank you for your hard work!' },
-    blocked: { bg: 'linear-gradient(135deg, #475569 0%, #334155 100%)', icon: '✋', heading: 'COOLDOWN / COMPLETE', sub: 'Scan ignored.' },
-    error: { bg: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)', icon: '⚠️', heading: 'SYSTEM ERROR', sub: 'Please try again.' }
+    in: {
+      bg: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+      icon: <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4L12 14.01l-3-3"/>,
+      heading: 'CHECKED IN',
+      sub: 'Have a great shift!'
+    },
+    late: {
+      bg: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
+      icon: <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>,
+      heading: 'CHECKED IN (LATE)',
+      sub: 'Logged late arrival.'
+    },
+    break_start: {
+      bg: 'linear-gradient(135deg, #D97706 0%, #92400E 100%)',
+      icon: <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/>,
+      heading: 'BREAK STARTED',
+      sub: 'Enjoy your break!'
+    },
+    break_end: {
+      bg: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+      icon: <path d="M1 4v6h6M23 20v-6h-6M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>,
+      heading: 'BACK FROM BREAK',
+      sub: 'Welcome back to duty!'
+    },
+    out: {
+      bg: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+      icon: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>,
+      heading: 'CHECKED OUT',
+      sub: 'Thank you for your hard work!'
+    },
+    blocked: {
+      bg: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
+      icon: <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>,
+      heading: 'COOLDOWN / COMPLETE',
+      sub: 'Scan ignored.'
+    },
+    error: {
+      bg: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
+      icon: <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/>,
+      heading: 'SYSTEM ERROR',
+      sub: 'Please try again.'
+    }
   }
 
   return (
@@ -323,9 +358,13 @@ export default function PublicAttendancePage() {
                 border: '4px solid rgba(255,255,255,0.3)',
                 background: 'rgba(255,255,255,0.15)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '64px', color: 'white', marginBottom: '28px',
+                color: 'white', marginBottom: '28px',
                 boxShadow: '0 20px 50px rgba(0,0,0,0.2)'
-              }}>{cfg.icon}</div>
+              }}>
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {cfg.icon}
+                </svg>
+              </div>
 
               <div style={{ fontSize: '15px', fontWeight: 900, letterSpacing: '4px', color: 'rgba(255,255,255,0.85)', marginBottom: '10px', textTransform: 'uppercase' }}>
                 {cfg.heading}
@@ -623,8 +662,8 @@ export default function PublicAttendancePage() {
 function SectionHeader({ title, count, color }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-      <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: color, boxShadow: `0 0 10px ${color}66` }} />
-      <h2 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', letterSpacing: '0.04em', margin: 0, textTransform: 'uppercase' }}>
+      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color, boxShadow: `0 0 10px ${color}66` }} />
+      <h2 style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A', letterSpacing: '0.05em', margin: 0, textTransform: 'uppercase' }}>
         {title}
       </h2>
       <span style={{
@@ -700,10 +739,10 @@ function StaffCard({ r, isBreakOn, onToggleBreak, monthName }) {
     statusText = 'Checked Out'; statusColor = '#1D4ED8'; badgeBg = '#EFF6FF'; badgeBorder = '#BFDBFE'
   } else if (isOnBreak) {
     borderColor = '#FDE68A'; statusDot = '#F59E0B'
-    statusText = 'On Break ☕'; statusColor = '#92400E'; badgeBg = '#FEF3C7'; badgeBorder = '#FDE68A'; cardBg = '#FFFBFA'
+    statusText = 'On Break'; statusColor = '#92400E'; badgeBg = '#FEF3C7'; badgeBorder = '#FDE68A'; cardBg = '#FFFBFA'
   } else if (isBackFromBreak) {
     borderColor = '#BAE6FD'; statusDot = '#0284C7'
-    statusText = 'Back From Break 🔵'; statusColor = '#0369A1'; badgeBg = '#E0F2FE'; badgeBorder = '#BAE6FD'; cardBg = '#F0F9FF'
+    statusText = 'Back From Break'; statusColor = '#0369A1'; badgeBg = '#E0F2FE'; badgeBorder = '#BAE6FD'; cardBg = '#F0F9FF'
   } else if (isLate) {
     borderColor = '#FDE68A'; statusDot = '#D97706'
     statusText = 'Late'; statusColor = '#92400E'; badgeBg = '#FEF3C7'; badgeBorder = '#FDE68A'; cardBg = '#FFFBFA'
@@ -761,14 +800,16 @@ function StaffCard({ r, isBreakOn, onToggleBreak, monthName }) {
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 0 3px ${statusDot}33` }} />
         </div>
 
-        {/* Warnings & Alerts */}
+        {/* Warnings & Alerts (Clean SVG Icons, NO Emojis) */}
         {isZeroHolidayAlert && (
           <div style={{
             background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B',
-            borderRadius: '10px', padding: '6px 10px', fontSize: '11px', fontWeight: 800,
-            marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px'
+            borderRadius: '10px', padding: '8px 12px', fontSize: '11px', fontWeight: 800,
+            marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px'
           }}>
-            <span>🚨</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
             <span>You have 0 holiday remaining for {r.month_name || monthName || 'this month'}</span>
           </div>
         )}
@@ -776,10 +817,12 @@ function StaffCard({ r, isBreakOn, onToggleBreak, monthName }) {
         {isLateWarning && !isZeroHolidayAlert && (
           <div style={{
             background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
-            borderRadius: '10px', padding: '6px 10px', fontSize: '11px', fontWeight: 800,
-            marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px'
+            borderRadius: '10px', padding: '8px 12px', fontSize: '11px', fontWeight: 800,
+            marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px'
           }}>
-            <span>⚠️</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
             <span>Late Warning ({r.monthly_late_count} days late in {r.month_name || monthName || 'this month'})</span>
           </div>
         )}
@@ -823,7 +866,7 @@ function StaffCard({ r, isBreakOn, onToggleBreak, monthName }) {
               }} />
             </div>
             <span style={{ fontSize: '11px', fontWeight: 800, color: isBreakOn ? '#92400E' : '#64748B' }}>
-              Take Break ☕
+              Take Break
             </span>
           </button>
         </div>
