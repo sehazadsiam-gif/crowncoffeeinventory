@@ -27,7 +27,7 @@ function HeaderClock({ time = new Date() }) {
         borderRadius: '50%',
         background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 100%)',
         border: '2px solid #D4933A',
-        boxShadow: '0 0 12px rgba(212,147,58,0.2), inset 0 1px 3px rgba(0,0,0,0.5)',
+        boxShadow: '0 0 12px rgba(212,147,58,0.25), inset 0 1px 3px rgba(0,0,0,0.5)',
         position: 'relative', flexShrink: 0
       }}>
         {/* 12 ticks */}
@@ -101,9 +101,9 @@ function HeaderClock({ time = new Date() }) {
 export default function PublicAttendancePage() {
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [data, setData] = useState({ date: '', summary: {}, records: [] })
+  const [data, setData] = useState({ date: '', month_name: 'July', summary: {}, records: [] })
   const [tapFlash, setTapFlash] = useState(null)
-  const [departmentFilter, setDepartmentFilter] = useState('all')
+  const [departmentFilter, setDepartmentFilter] = useState('all') // 'all', 'grouped', 'front', 'kitchen'
   const [isOffline, setIsOffline] = useState(false)
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export default function PublicAttendancePage() {
     window.addEventListener('online', updateOnlineStatus)
     window.addEventListener('offline', updateOnlineStatus)
 
-    const channel = supabase.channel('kiosk_v3')
+    const channel = supabase.channel('kiosk_v4')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, () => {
         fetchTodayData(true)
       })
@@ -247,18 +247,24 @@ export default function PublicAttendancePage() {
   }
 
   const records = data.records || []
+  const monthName = data.month_name || new Date().toLocaleDateString('en-US', { month: 'long', timeZone: 'Asia/Dhaka' })
+
+  // Categorize staff members
+  const presentGroup = records.filter(r => (r.status === 'present' || !!r.check_in_at) && r.status !== 'late')
+  const lateGroup = records.filter(r => r.status === 'late')
+  const absentGroup = records.filter(r => r.status === 'absent' && !r.check_in_at)
+  const leaveGroup = records.filter(r => r.status === 'on_leave' || r.status === 'off')
 
   const filtered = records.filter(r => {
-    if (departmentFilter === 'all') return true
     if (departmentFilter === 'front') return r.department === 'front'
     if (departmentFilter === 'kitchen') return r.department === 'kitchen'
     return true
   })
 
   const totalStaff = records.length
-  const totalIn = records.filter(r => (r.status === 'present' || r.status === 'late') && !r.check_out_at).length
+  const totalIn = records.filter(r => (r.status === 'present' || r.status === 'late' || !!r.check_in_at) && !r.check_out_at).length
   const lateCount = records.filter(r => r.status === 'late').length
-  const absentCount = records.filter(r => r.status === 'absent').length
+  const absentCount = records.filter(r => r.status === 'absent' && !r.check_in_at).length
 
   const flashConfig = {
     in: { bg: 'linear-gradient(135deg, #059669 0%, #047857 100%)', icon: '🟢', heading: 'CHECKED IN', sub: 'Have a great shift!' },
@@ -273,7 +279,7 @@ export default function PublicAttendancePage() {
   return (
     <>
       <Head>
-        <title>Crown Coffee — Attendance Kiosk</title>
+        <title>Crown Coffee — Executive Attendance Kiosk</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -418,7 +424,12 @@ export default function PublicAttendancePage() {
 
         {/* Filter Bar */}
         <div style={{ background: 'white', borderBottom: '1px solid #E2E8F0', padding: '14px 40px', display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {[['all', 'All Staff'], ['front', 'Front of House'], ['kitchen', 'Kitchen']].map(([id, label]) => (
+          {[
+            ['all', 'All Staff'],
+            ['grouped', 'Grouped View'],
+            ['front', 'Front of House'],
+            ['kitchen', 'Kitchen']
+          ].map(([id, label]) => (
             <button key={id} onClick={() => setDepartmentFilter(id)} style={{
               padding: '8px 22px', borderRadius: '10px', border: 'none', cursor: 'pointer',
               fontWeight: 800, fontSize: '13px', transition: 'all 0.15s',
@@ -433,30 +444,168 @@ export default function PublicAttendancePage() {
             <span>Afternoon grace: <strong style={{ color: '#D97706' }}>1:15 PM</strong></span>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16A34A', fontWeight: 800 }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 8px rgba(22,163,74,0.6)', animation: 'pulse 2s infinite' }}></span>
-              Live
+              Live Sync
             </span>
           </div>
         </div>
 
-        {/* Staff Grid */}
+        {/* Main Content View */}
         <main style={{ padding: '32px 40px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '80px', color: '#94A3B8', fontSize: '16px', fontWeight: 700 }}>
               Loading Crown Coffee Kiosk...
             </div>
+          ) : departmentFilter === 'grouped' ? (
+            /* Explicit Grouped View */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '36px' }}>
+              
+              {/* PRESENT GROUP */}
+              {presentGroup.length > 0 && (
+                <StaffGroupSection
+                  title="Present & On Duty"
+                  count={presentGroup.length}
+                  color="#16A34A"
+                  bgColor="#F0FDF4"
+                  borderColor="#86EFAC"
+                  records={presentGroup}
+                  breakToggles={breakToggles}
+                  onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
+                  monthName={monthName}
+                />
+              )}
+
+              {/* LATE GROUP */}
+              {lateGroup.length > 0 && (
+                <StaffGroupSection
+                  title="Late Arrivals"
+                  count={lateGroup.length}
+                  color="#D97706"
+                  bgColor="#FFFBEB"
+                  borderColor="#FDE68A"
+                  records={lateGroup}
+                  breakToggles={breakToggles}
+                  onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
+                  monthName={monthName}
+                />
+              )}
+
+              {/* ABSENT GROUP */}
+              {absentGroup.length > 0 && (
+                <StaffGroupSection
+                  title="Absent / Not In"
+                  count={absentGroup.length}
+                  color="#DC2626"
+                  bgColor="#FEF2F2"
+                  borderColor="#FCA5A5"
+                  records={absentGroup}
+                  breakToggles={breakToggles}
+                  onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
+                  monthName={monthName}
+                />
+              )}
+
+              {/* LEAVE / OFF GROUP */}
+              {leaveGroup.length > 0 && (
+                <StaffGroupSection
+                  title="On Leave / Day Off"
+                  count={leaveGroup.length}
+                  color="#64748B"
+                  bgColor="#F8FAFC"
+                  borderColor="#E2E8F0"
+                  records={leaveGroup}
+                  breakToggles={breakToggles}
+                  onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
+                  monthName={monthName}
+                />
+              )}
+            </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '20px' }}>
-              {filtered.map(r => {
-                const staffKey = r.staff_id || r.id || r.employee_id
-                return (
-                  <StaffCard
-                    key={staffKey}
-                    r={r}
-                    isBreakOn={!!breakToggles[staffKey]}
-                    onToggleBreak={(val) => setBreakToggles(prev => ({ ...prev, [staffKey]: val }))}
-                  />
-                )
-              })}
+            /* All Staff / Department Grid View (Grouped Intelligently into Sections) */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              
+              {/* 1. PRESENT & ON DUTY SECTION */}
+              {filtered.filter(r => (r.status === 'present' || !!r.check_in_at) && r.status !== 'late').length > 0 && (
+                <div>
+                  <SectionHeader title="PRESENT & ON DUTY" count={filtered.filter(r => (r.status === 'present' || !!r.check_in_at) && r.status !== 'late').length} color="#16A34A" />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '20px' }}>
+                    {filtered.filter(r => (r.status === 'present' || !!r.check_in_at) && r.status !== 'late').map(r => {
+                      const staffKey = r.staff_id || r.id || r.employee_id
+                      return (
+                        <StaffCard
+                          key={staffKey}
+                          r={r}
+                          isBreakOn={!!breakToggles[staffKey]}
+                          onToggleBreak={(val) => setBreakToggles(prev => ({ ...prev, [staffKey]: val }))}
+                          monthName={monthName}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. LATE ARRIVALS SECTION */}
+              {filtered.filter(r => r.status === 'late').length > 0 && (
+                <div>
+                  <SectionHeader title="LATE ARRIVALS" count={filtered.filter(r => r.status === 'late').length} color="#D97706" />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '20px' }}>
+                    {filtered.filter(r => r.status === 'late').map(r => {
+                      const staffKey = r.staff_id || r.id || r.employee_id
+                      return (
+                        <StaffCard
+                          key={staffKey}
+                          r={r}
+                          isBreakOn={!!breakToggles[staffKey]}
+                          onToggleBreak={(val) => setBreakToggles(prev => ({ ...prev, [staffKey]: val }))}
+                          monthName={monthName}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. ABSENT SECTION */}
+              {filtered.filter(r => r.status === 'absent' && !r.check_in_at).length > 0 && (
+                <div>
+                  <SectionHeader title="ABSENT / NOT IN" count={filtered.filter(r => r.status === 'absent' && !r.check_in_at).length} color="#DC2626" />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '20px' }}>
+                    {filtered.filter(r => r.status === 'absent' && !r.check_in_at).map(r => {
+                      const staffKey = r.staff_id || r.id || r.employee_id
+                      return (
+                        <StaffCard
+                          key={staffKey}
+                          r={r}
+                          isBreakOn={!!breakToggles[staffKey]}
+                          onToggleBreak={(val) => setBreakToggles(prev => ({ ...prev, [staffKey]: val }))}
+                          monthName={monthName}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. LEAVE / OFF SECTION */}
+              {filtered.filter(r => r.status === 'on_leave' || r.status === 'off').length > 0 && (
+                <div>
+                  <SectionHeader title="ON LEAVE / DAY OFF" count={filtered.filter(r => r.status === 'on_leave' || r.status === 'off').length} color="#64748B" />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '20px' }}>
+                    {filtered.filter(r => r.status === 'on_leave' || r.status === 'off').map(r => {
+                      const staffKey = r.staff_id || r.id || r.employee_id
+                      return (
+                        <StaffCard
+                          key={staffKey}
+                          r={r}
+                          isBreakOn={!!breakToggles[staffKey]}
+                          onToggleBreak={(val) => setBreakToggles(prev => ({ ...prev, [staffKey]: val }))}
+                          monthName={monthName}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </main>
@@ -471,6 +620,47 @@ export default function PublicAttendancePage() {
   )
 }
 
+function SectionHeader({ title, count, color }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+      <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: color, boxShadow: `0 0 10px ${color}66` }} />
+      <h2 style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', letterSpacing: '0.04em', margin: 0, textTransform: 'uppercase' }}>
+        {title}
+      </h2>
+      <span style={{
+        background: `${color}15`, color: color, border: `1px solid ${color}33`,
+        fontSize: '12px', fontWeight: 800, padding: '2px 10px', borderRadius: '12px',
+        fontFamily: "'JetBrains Mono', monospace"
+      }}>
+        {count}
+      </span>
+      <div style={{ flex: 1, height: '1px', background: '#E2E8F0', marginLeft: '8px' }} />
+    </div>
+  )
+}
+
+function StaffGroupSection({ title, count, color, bgColor, borderColor, records, breakToggles, onToggleBreak, monthName }) {
+  return (
+    <div style={{ background: 'white', borderRadius: '20px', border: `1.5px solid ${borderColor}`, padding: '24px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.03)' }}>
+      <SectionHeader title={title} count={count} color={color} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '20px' }}>
+        {records.map(r => {
+          const staffKey = r.staff_id || r.id || r.employee_id
+          return (
+            <StaffCard
+              key={staffKey}
+              r={r}
+              isBreakOn={!!breakToggles[staffKey]}
+              onToggleBreak={(val) => onToggleBreak(staffKey, val)}
+              monthName={monthName}
+            />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function Stat({ label, value, color }) {
   return (
     <div style={{ textAlign: 'center' }}>
@@ -480,7 +670,7 @@ function Stat({ label, value, color }) {
   )
 }
 
-function StaffCard({ r, isBreakOn, onToggleBreak }) {
+function StaffCard({ r, isBreakOn, onToggleBreak, monthName }) {
   const hasCheckedIn = !!r.check_in_at || r.status === 'present' || r.status === 'late'
   const isOut = hasCheckedIn && !!r.check_out_at
   const isOnBreak = hasCheckedIn && !!r.break_start_at && !r.break_end_at
@@ -490,6 +680,12 @@ function StaffCard({ r, isBreakOn, onToggleBreak }) {
   const isAbsent = r.status === 'absent' && !hasCheckedIn
   const isLeave = r.status === 'on_leave'
   const isDayOff = r.status === 'off'
+
+  // Monthly Warning Triggers
+  // 1) Late more than 3 days: monthly_late_count > 3 (or >= 3)
+  const isLateWarning = (r.monthly_late_count || 0) >= 3
+  // 2) Absent more than 4 days: monthly_absent_count > 4 (or >= 4)
+  const isZeroHolidayAlert = (r.monthly_absent_count || 0) >= 4
 
   let borderColor = '#E2E8F0'
   let statusDot = '#CBD5E1'
@@ -533,16 +729,17 @@ function StaffCard({ r, isBreakOn, onToggleBreak }) {
       background: cardBg,
       border: `1.5px solid ${borderColor}`,
       borderRadius: '20px',
-      padding: '22px',
+      padding: '20px',
       transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
       display: 'flex',
       flexDirection: 'column',
       justify: 'space-between',
-      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.04), 0 8px 10px -6px rgba(0,0,0,0.01)'
+      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.04), 0 8px 10px -6px rgba(0,0,0,0.01)',
+      position: 'relative'
     }}>
       <div>
         {/* Top: Avatar + Name + Status Dot */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
           {r.photo_url ? (
             <img src={r.photo_url} alt={r.name}
               style={{ width: '54px', height: '54px', borderRadius: '50%', objectFit: 'cover', border: `3px solid ${borderColor}`, boxShadow: '0 4px 10px rgba(0,0,0,0.08)' }} />
@@ -564,8 +761,31 @@ function StaffCard({ r, isBreakOn, onToggleBreak }) {
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 0 3px ${statusDot}33` }} />
         </div>
 
+        {/* Warnings & Alerts */}
+        {isZeroHolidayAlert && (
+          <div style={{
+            background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#991B1B',
+            borderRadius: '10px', padding: '6px 10px', fontSize: '11px', fontWeight: 800,
+            marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px'
+          }}>
+            <span>🚨</span>
+            <span>You have 0 holiday remaining for {r.month_name || monthName || 'this month'}</span>
+          </div>
+        )}
+
+        {isLateWarning && !isZeroHolidayAlert && (
+          <div style={{
+            background: '#FFFBEB', border: '1px solid #FDE68A', color: '#92400E',
+            borderRadius: '10px', padding: '6px 10px', fontSize: '11px', fontWeight: 800,
+            marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px'
+          }}>
+            <span>⚠️</span>
+            <span>Late Warning ({r.monthly_late_count} days late in {r.month_name || monthName || 'this month'})</span>
+          </div>
+        )}
+
         {/* Status Badge + iOS Style Break Toggle */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
           <span style={{
             fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em',
             color: statusColor, background: badgeBg, border: `1px solid ${badgeBorder}`,

@@ -37,6 +37,26 @@ export async function GET(request) {
 
     if (logsErr) throw logsErr
 
+    // ── Fetch current month logs for monthly warnings (late > 3, absent > 4) ──
+    const startOfMonth = `${today.slice(0, 7)}-01`
+    const monthName = new Date().toLocaleDateString('en-US', { month: 'long', timeZone: 'Asia/Dhaka' })
+    const { data: monthLogs } = await supabaseAdmin
+      .from('attendance_log')
+      .select('staff_id, status')
+      .gte('date', startOfMonth)
+      .lte('date', today)
+
+    const monthlyLateMap = new Map()
+    const monthlyAbsentMap = new Map()
+
+    ;(monthLogs || []).forEach(ml => {
+      if (ml.status === 'late') {
+        monthlyLateMap.set(ml.staff_id, (monthlyLateMap.get(ml.staff_id) || 0) + 1)
+      } else if (ml.status === 'absent') {
+        monthlyAbsentMap.set(ml.staff_id, (monthlyAbsentMap.get(ml.staff_id) || 0) + 1)
+      }
+    })
+
     const logMap = new Map((logs || []).map(l => [l.staff_id, l]))
 
     // ── Business Rule: No roster, no day off. If no check-in → absent. ────────
@@ -65,7 +85,10 @@ export async function GET(request) {
         minutes_late: log?.minutes_late || 0,
         overtime_minutes: log?.overtime_minutes || 0,
         source: log?.source || null,
-        hours_worked: log?.hours_worked || null
+        hours_worked: log?.hours_worked || null,
+        monthly_late_count: monthlyLateMap.get(s.id) || (status === 'late' ? 1 : 0),
+        monthly_absent_count: monthlyAbsentMap.get(s.id) || (status === 'absent' ? 1 : 0),
+        month_name: monthName
       }
     })
 
@@ -75,11 +98,12 @@ export async function GET(request) {
       late: records.filter(r => r.status === 'late').length,
       absent: records.filter(r => r.status === 'absent').length,
       on_leave: records.filter(r => r.status === 'on_leave').length,
-      off: records.filter(r => r.status === 'off').length
+      off: records.filter(r => r.status === 'off').length,
+      month_name: monthName
     }
 
     return NextResponse.json(
-      { date: today, summary, records },
+      { date: today, month_name: monthName, summary, records },
       { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate' } }
     )
   } catch (err) {
