@@ -121,7 +121,7 @@ export default function PublicAttendancePage() {
       })
       .subscribe()
 
-    const pollTimer = setInterval(() => fetchTodayData(true), 10000)
+    const pollTimer = setInterval(() => fetchTodayData(true), 5000)
     return () => {
       clearInterval(clockTimer)
       clearInterval(pollTimer)
@@ -439,12 +439,13 @@ function Stat({ label, value, color }) {
 }
 
 function StaffCard({ r, isBreakOn, onToggleBreak }) {
-  const isIn = r.status === 'present'
-  const isLate = r.status === 'late'
-  const isOut = (isIn || isLate) && !!r.check_out_at
-  const isOnBreak = (isIn || isLate) && !!r.break_start_at && !r.break_end_at
-  const isBackFromBreak = (isIn || isLate) && !!r.break_end_at && !r.check_out_at
-  const isAbsent = r.status === 'absent'
+  const hasCheckedIn = !!r.check_in_at || r.status === 'present' || r.status === 'late'
+  const isOut = hasCheckedIn && !!r.check_out_at
+  const isOnBreak = hasCheckedIn && !!r.break_start_at && !r.break_end_at
+  const isBackFromBreak = hasCheckedIn && !!r.break_end_at && !r.check_out_at
+  const isLate = r.status === 'late' && !isOut && !isOnBreak && !isBackFromBreak
+  const isIn = hasCheckedIn && !isOut && !isOnBreak && !isBackFromBreak
+  const isAbsent = r.status === 'absent' && !hasCheckedIn
   const isLeave = r.status === 'on_leave'
   const isDayOff = r.status === 'off'
 
@@ -463,12 +464,12 @@ function StaffCard({ r, isBreakOn, onToggleBreak }) {
   } else if (isBackFromBreak) {
     borderColor = '#93C5FD'; statusDot = '#2563EB'
     statusText = 'Back From Break'; statusColor = '#1D4ED8'; bgColor = '#F0F9FF'
-  } else if (isIn) {
-    borderColor = '#86EFAC'; statusDot = '#16A34A'
-    statusText = 'Present'; statusColor = '#15803D'; bgColor = '#F0FDF4'
   } else if (isLate) {
     borderColor = '#FCD34D'; statusDot = '#D97706'
     statusText = 'Late'; statusColor = '#B45309'; bgColor = '#FFFBEB'
+  } else if (isIn) {
+    borderColor = '#86EFAC'; statusDot = '#16A34A'
+    statusText = 'Present'; statusColor = '#15803D'; bgColor = '#F0FDF4'
   } else if (isAbsent) {
     borderColor = '#FCA5A5'; statusDot = '#DC2626'
     statusText = 'Absent'; statusColor = '#991B1B'
