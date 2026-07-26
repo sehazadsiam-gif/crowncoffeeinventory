@@ -549,7 +549,7 @@ function StaffCard({ r, isBreakOn, onToggleBreak }) {
           {(r.break_start_at || isBreakOn) && (
             <TimeChip
               label="BREAK"
-              time={r.break_duration_minutes > 0 ? `${r.break_duration_minutes}m` : fmtTime(r.break_start_at) || '—'}
+              time={r.break_duration_minutes > 0 ? `${(r.break_duration_minutes / 60).toFixed(2).replace(/\.00$/, '')}h` : fmtTime(r.break_start_at) || '—'}
               color="#D97706"
             />
           )}

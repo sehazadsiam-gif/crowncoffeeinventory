@@ -76,10 +76,14 @@ export async function GET(request) {
         : null
 
       let breakFormatted = '--'
+      const breakHoursStr = l.break_duration_minutes > 0
+        ? `${(l.break_duration_minutes / 60).toFixed(2).replace(/\.00$/, '')}h`
+        : '0h'
+
       if (breakStart && breakEnd) {
-        breakFormatted = `${breakStart} - ${breakEnd} (${l.break_duration_minutes || 0}m)`
+        breakFormatted = `${breakStart} - ${breakEnd} (${breakHoursStr})`
       } else if (l.break_duration_minutes > 0) {
-        breakFormatted = `${l.break_duration_minutes} mins`
+        breakFormatted = breakHoursStr
       } else if (breakStart && !breakEnd) {
         breakFormatted = `On Break (${breakStart})`
       }
