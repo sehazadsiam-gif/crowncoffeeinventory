@@ -76,7 +76,9 @@ export async function GET(request) {
         : null
 
       let breakFormatted = '--'
-      if (l.break_duration_minutes > 0) {
+      if (breakStart && breakEnd) {
+        breakFormatted = `${breakStart} - ${breakEnd} (${l.break_duration_minutes || 0}m)`
+      } else if (l.break_duration_minutes > 0) {
         breakFormatted = `${l.break_duration_minutes} mins`
       } else if (breakStart && !breakEnd) {
         breakFormatted = `On Break (${breakStart})`
@@ -176,8 +178,15 @@ export async function POST(request) {
     const { action, log_id, month, year, ...payload } = body
 
     if (action === 'update_log') {
-      const { check_in_at, check_out_at, status, minutes_late, notes } = payload
+      const { check_in_at, check_out_at, break_start_at, break_end_at, status, minutes_late, notes } = payload
       
+      let breakDurationMin = 0
+      if (break_start_at && break_end_at) {
+        const bStart = new Date(break_start_at)
+        const bEnd = new Date(break_end_at)
+        breakDurationMin = Math.max(0, Math.floor((bEnd - bStart) / (1000 * 60)))
+      }
+
       let hoursWorked = null
       let overtimeMins = 0
 
@@ -186,8 +195,9 @@ export async function POST(request) {
         const outDate = new Date(check_out_at)
         let totalMins = Math.max(0, Math.floor((outDate - inDate) / (1000 * 60)))
         if (totalMins > 960) totalMins = 960 // Safety Cap: 16 hours max per shift
-        hoursWorked = Math.round((totalMins / 60) * 100) / 100
-        overtimeMins = Math.max(0, totalMins - 600)
+        const netMins = Math.max(0, totalMins - breakDurationMin)
+        hoursWorked = Math.round((netMins / 60) * 100) / 100
+        overtimeMins = Math.max(0, netMins - 600)
       }
 
       const updateData = {
@@ -195,6 +205,9 @@ export async function POST(request) {
         minutes_late: Number(minutes_late || 0),
         check_in_at: check_in_at || null,
         check_out_at: check_out_at || null,
+        break_start_at: break_start_at || null,
+        break_end_at: break_end_at || null,
+        break_duration_minutes: breakDurationMin,
         hours_worked: hoursWorked,
         overtime_minutes: overtimeMins,
         notes: notes || null,

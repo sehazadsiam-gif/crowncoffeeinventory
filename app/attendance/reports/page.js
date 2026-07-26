@@ -234,6 +234,8 @@ export default function AttendanceReportsPage() {
       status: log.status || 'present',
       check_in_at: toLocalDatetimeInput(log.check_in_at),
       check_out_at: toLocalDatetimeInput(log.check_out_at),
+      break_start_at: toLocalDatetimeInput(log.break_start_at),
+      break_end_at: toLocalDatetimeInput(log.break_end_at),
       minutes_late: log.minutes_late || 0,
       notes: log.notes || ''
     })
@@ -252,6 +254,8 @@ export default function AttendanceReportsPage() {
           status: editForm.status,
           check_in_at: editForm.check_in_at ? new Date(editForm.check_in_at).toISOString() : null,
           check_out_at: editForm.check_out_at ? new Date(editForm.check_out_at).toISOString() : null,
+          break_start_at: editForm.break_start_at ? new Date(editForm.break_start_at).toISOString() : null,
+          break_end_at: editForm.break_end_at ? new Date(editForm.break_end_at).toISOString() : null,
           minutes_late: editForm.minutes_late,
           notes: editForm.notes
         })
@@ -1090,6 +1094,28 @@ export default function AttendanceReportsPage() {
                     type="datetime-local"
                     value={editForm.check_out_at}
                     onChange={e => setEditForm({ ...editForm, check_out_at: e.target.value })}
+                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px', color: '#475569' }}>Break Start Time</label>
+                  <input
+                    type="datetime-local"
+                    value={editForm.break_start_at || ''}
+                    onChange={e => setEditForm({ ...editForm, break_start_at: e.target.value })}
+                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px', color: '#475569' }}>Break End Time</label>
+                  <input
+                    type="datetime-local"
+                    value={editForm.break_end_at || ''}
+                    onChange={e => setEditForm({ ...editForm, break_end_at: e.target.value })}
                     style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '13px' }}
                   />
                 </div>
