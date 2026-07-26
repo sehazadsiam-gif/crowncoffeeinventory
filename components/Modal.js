@@ -49,25 +49,28 @@ export default function Modal({ isOpen, onClose, onConfirm, title, message, chil
           )}
         </div>
 
-        <div style={{
-          padding: '16px 24px', background: 'var(--bg-subtle)',
-          display: 'flex', justifyContent: 'flex-end', gap: '12px',
-          borderTop: '1px solid var(--border-light)'
-        }}>
-          <button onClick={onClose} className="btn-secondary" style={{ padding: '10px 16px' }}>
-            Cancel
-          </button>
-          <button 
-            onClick={() => { onConfirm(); onClose() }} 
-            className="btn-primary"
-            style={{
-              background: type === 'danger' ? 'var(--danger)' : (type === 'warning' ? 'var(--warning)' : 'var(--primary)'),
-              boxShadow: 'none'
-            }}
-          >
-            {confirmLabel}
-          </button>
-        </div>
+        {(!children || onConfirm) && (
+          <div style={{
+            padding: '16px 24px', background: 'var(--bg-subtle)',
+            display: 'flex', justifyContent: 'flex-end', gap: '12px',
+            borderTop: '1px solid var(--border-light)'
+          }}>
+            <button onClick={onClose} className="btn-secondary" style={{ padding: '10px 16px' }}>
+              Cancel
+            </button>
+            {onConfirm && (
+              <button
+                onClick={onConfirm}
+                style={{
+                  padding: '10px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                  background: type === 'danger' ? '#EF4444' : '#0F172A', color: 'white', fontWeight: 700
+                }}
+              >
+                {confirmLabel}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

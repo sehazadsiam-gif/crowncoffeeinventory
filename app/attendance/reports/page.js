@@ -220,12 +220,20 @@ export default function AttendanceReportsPage() {
     }
   }
 
+  function toLocalDatetimeInput(isoStr) {
+    if (!isoStr) return ''
+    const d = new Date(isoStr)
+    if (isNaN(d.getTime())) return ''
+    const tzOffset = d.getTimezoneOffset() * 60000
+    return (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 16)
+  }
+
   function openEditModal(log) {
     setEditingLog(log)
     setEditForm({
       status: log.status || 'present',
-      check_in_at: log.check_in_at ? new Date(log.check_in_at).toISOString().slice(0, 16) : '',
-      check_out_at: log.check_out_at ? new Date(log.check_out_at).toISOString().slice(0, 16) : '',
+      check_in_at: toLocalDatetimeInput(log.check_in_at),
+      check_out_at: toLocalDatetimeInput(log.check_out_at),
       minutes_late: log.minutes_late || 0,
       notes: log.notes || ''
     })
@@ -1044,7 +1052,7 @@ export default function AttendanceReportsPage() {
             onClose={() => setEditingLog(null)}
             title={`Edit Attendance: ${editingLog.staff_name}`}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '80vh', overflowY: 'auto', paddingRight: '4px' }}>
               <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', color: '#334155' }}>
                 <div><strong>Staff:</strong> {editingLog.staff_name} ({editingLog.employee_id})</div>
                 <div><strong>Date:</strong> {editingLog.date_formatted}</div>
