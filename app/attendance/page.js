@@ -203,7 +203,7 @@ export default function AttendanceDashboardPage() {
     }
   }
 
-  async function handleCheckin(staffIdOrRfid, manualStatus = null, method = 'manual') {
+  async function handleCheckin(staffIdOrRfid, manualStatus = null, method = 'manual', enableBreak = false) {
     if (!staffIdOrRfid) return
     try {
       setCheckingIn(true)
@@ -219,26 +219,32 @@ export default function AttendanceDashboardPage() {
           source: method,
           adminOverride: !!manualStatus,
           forceStatus: manualStatus,
+          enableBreak: !!enableBreak,
           token
         })
       })
       const json = await res.json()
       if (res.ok && (json.success || json.alreadyCheckedOut)) {
-        const actionText = json.alreadyCheckedOut ? 'Checked Out' : 'Checked In'
-        addToast(json.message || `${actionText} successfully!`, 'success')
+        let actionMsg = 'Attendance updated!'
+        if (json.action === 'break_start') actionMsg = 'Break Started ☕'
+        else if (json.action === 'break_end') actionMsg = 'Break Ended — Back On Shift 🟢'
+        else if (json.action === 'checkout') actionMsg = 'Checked Out successfully! 👋'
+        else if (json.action === 'checkin') actionMsg = 'Checked In successfully! ⏰'
+
+        addToast(json.message || actionMsg, 'success')
         setQrModalOpen(false)
         setQrCodeInput('')
         fetchTodayData(true)
         if (json.staff) {
           setLastTapEvent({
             name: json.staff.name || 'Staff Member',
-            status: json.status ? json.status.toUpperCase() : actionText,
+            status: json.action ? json.action.toUpperCase() : (json.status ? json.status.toUpperCase() : 'UPDATED'),
             time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
           })
           setTimeout(() => setLastTapEvent(null), 5000)
         }
       } else if (json.blocked) {
-        addToast(`Attendance already complete for today`, 'warning')
+        addToast(json.error || `Attendance already complete for today`, 'warning')
       } else {
         addToast(json.error || 'Failed to update attendance', 'error')
       }
@@ -262,6 +268,7 @@ export default function AttendanceDashboardPage() {
 
   const presentCount = records.filter(r => r.status === 'present').length
   const lateCount = records.filter(r => r.status === 'late').length
+  const onBreakCount = records.filter(r => r.check_in_at && r.break_start_at && !r.break_end_at).length
   const absentCount = records.filter(r => r.status === 'absent').length
   const totalCount = records.length
 
@@ -295,7 +302,7 @@ export default function AttendanceDashboardPage() {
               </h1>
             </div>
             <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#94A3B8' }}>
-              Tap RFID card anytime on USB reader to check in/out. Realtime WebSocket sync enabled.
+              Tap RFID card anytime on USB reader to check in/out. Admin/Manager can manage breaks & attendance manually.
             </p>
           </div>
 
@@ -345,7 +352,7 @@ export default function AttendanceDashboardPage() {
         )}
 
         {/* Stats Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '28px' }}>
           <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
             <div style={{ background: '#F1F5F9', color: '#475569', padding: '12px', borderRadius: '12px' }}><Users size={24} /></div>
             <div>
@@ -363,7 +370,15 @@ export default function AttendanceDashboardPage() {
           </div>
 
           <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-            <div style={{ background: '#FEF3C7', color: '#92400E', padding: '12px', borderRadius: '12px' }}><Clock size={24} /></div>
+            <div style={{ background: '#FEF3C7', color: '#B45309', padding: '12px', borderRadius: '12px' }}><Clock size={24} /></div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>On Break</div>
+              <div style={{ fontSize: '26px', fontWeight: 900, color: '#B45309' }}>{onBreakCount}</div>
+            </div>
+          </div>
+
+          <div style={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ background: '#FFF7ED', color: '#92400E', padding: '12px', borderRadius: '12px' }}><Clock size={24} /></div>
             <div>
               <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Late Arrivals</div>
               <div style={{ fontSize: '26px', fontWeight: 900, color: '#92400E' }}>{lateCount}</div>
@@ -431,7 +446,7 @@ export default function AttendanceDashboardPage() {
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center', color: '#64748B', fontWeight: 600 }}>Loading Staff Directory & RFID Attendance…</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: '20px' }}>
             {filteredRecords.map(r => {
               const isIn = r.status === 'present'
               const isLate = r.status === 'late'
@@ -537,66 +552,119 @@ export default function AttendanceDashboardPage() {
                       </span>
                     </div>
 
-                    {/* Time Chips */}
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+                    {/* 5-Column Metric Grid: IN | B.START | B.END | OUT | DUTY */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px', marginBottom: '14px' }}>
                       <div style={{
-                        flex: 1, background: '#F8FAFC', borderRadius: '8px',
-                        padding: '8px 10px', textAlign: 'center',
+                        background: '#F8FAFC', borderRadius: '6px', padding: '6px 2px', textAlign: 'center',
                         border: r.check_in_at ? '1px solid #16A34A33' : '1px solid #F1F5F9'
                       }}>
-                        <div style={{ fontSize: '9px', fontWeight: 800, color: r.check_in_at ? '#16A34A' : '#CBD5E1', letterSpacing: '0.08em', marginBottom: '2px' }}>IN</div>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: r.check_in_at ? '#0F172A' : '#D1D5DB', fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: '8px', fontWeight: 800, color: r.check_in_at ? '#16A34A' : '#CBD5E1' }}>IN</div>
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: r.check_in_at ? '#0F172A' : '#CBD5E1', fontFamily: 'monospace' }}>
                           {fmtTime(r.check_in_at) || '—'}
                         </div>
                       </div>
 
                       <div style={{
-                        flex: 1, background: '#F8FAFC', borderRadius: '8px',
-                        padding: '8px 10px', textAlign: 'center',
+                        background: '#F8FAFC', borderRadius: '6px', padding: '6px 2px', textAlign: 'center',
+                        border: r.break_start_at ? '1px solid #B4530933' : '1px solid #F1F5F9'
+                      }}>
+                        <div style={{ fontSize: '8px', fontWeight: 800, color: r.break_start_at ? '#B45309' : '#CBD5E1' }}>B.START</div>
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: r.break_start_at ? '#92400E' : '#CBD5E1', fontFamily: 'monospace' }}>
+                          {fmtTime(r.break_start_at) || '—'}
+                        </div>
+                      </div>
+
+                      <div style={{
+                        background: '#F8FAFC', borderRadius: '6px', padding: '6px 2px', textAlign: 'center',
+                        border: r.break_end_at ? '1px solid #0369A133' : '1px solid #F1F5F9'
+                      }}>
+                        <div style={{ fontSize: '8px', fontWeight: 800, color: r.break_end_at ? '#0369A1' : '#CBD5E1' }}>B.END</div>
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: r.break_end_at ? '#0369A1' : '#CBD5E1', fontFamily: 'monospace' }}>
+                          {fmtTime(r.break_end_at) || '—'}
+                        </div>
+                      </div>
+
+                      <div style={{
+                        background: '#F8FAFC', borderRadius: '6px', padding: '6px 2px', textAlign: 'center',
                         border: r.check_out_at ? '1px solid #2563EB33' : '1px solid #F1F5F9'
                       }}>
-                        <div style={{ fontSize: '9px', fontWeight: 800, color: r.check_out_at ? '#2563EB' : '#CBD5E1', letterSpacing: '0.08em', marginBottom: '2px' }}>OUT</div>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: r.check_out_at ? '#0F172A' : '#D1D5DB', fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: '8px', fontWeight: 800, color: r.check_out_at ? '#2563EB' : '#CBD5E1' }}>OUT</div>
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: r.check_out_at ? '#0F172A' : '#CBD5E1', fontFamily: 'monospace' }}>
                           {fmtTime(r.check_out_at) || '—'}
                         </div>
                       </div>
 
-                      {r.hours_worked > 0 && (
-                        <div style={{
-                          flex: 1, background: '#F8FAFC', borderRadius: '8px',
-                          padding: '8px 10px', textAlign: 'center',
-                          border: '1px solid #7C3AED33'
-                        }}>
-                          <div style={{ fontSize: '9px', fontWeight: 800, color: '#7C3AED', letterSpacing: '0.08em', marginBottom: '2px' }}>DUTY</div>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', fontFamily: 'monospace' }}>
-                            {r.hours_worked}h
-                          </div>
+                      <div style={{
+                        background: '#F8FAFC', borderRadius: '6px', padding: '6px 2px', textAlign: 'center',
+                        border: '1px solid #7C3AED33'
+                      }}>
+                        <div style={{ fontSize: '8px', fontWeight: 800, color: '#7C3AED' }}>DUTY</div>
+                        <div style={{ fontSize: '10px', fontWeight: 800, color: '#0F172A', fontFamily: 'monospace' }}>
+                          {r.hours_worked > 0 ? `${r.hours_worked}h` : '—'}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Clock In / Clock Out Button */}
-                  <button
-                    onClick={() => handleCheckin(r.staff_id, null, 'manual')}
-                    disabled={checkingIn || (r.check_in_at && r.check_out_at)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      background: r.check_in_at && !r.check_out_at ? '#DC2626' : (r.check_out_at ? '#F1F5F9' : '#0F172A'),
-                      color: r.check_out_at ? '#64748B' : 'white',
-                      border: r.check_out_at ? '1px solid #CBD5E1' : 'none',
-                      borderRadius: '10px',
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      cursor: r.check_in_at && r.check_out_at ? 'default' : 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {r.check_in_at && !r.check_out_at
-                      ? 'Clock Out'
-                      : (r.check_out_at ? 'Shift Completed' : 'Clock In')}
-                  </button>
+                  {/* Action Buttons: Give Break / End Break / Clock Out / Clock In */}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                    {r.check_in_at && !r.check_out_at ? (
+                      <>
+                        {isOnBreak ? (
+                          <button
+                            onClick={() => handleCheckin(r.staff_id, null, 'manual', true)}
+                            disabled={checkingIn}
+                            style={{
+                              flex: 1, padding: '10px',
+                              background: '#0D9488', color: 'white', border: 'none',
+                              borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer'
+                            }}
+                          >
+                            End Break ☕
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleCheckin(r.staff_id, null, 'manual', true)}
+                            disabled={checkingIn}
+                            style={{
+                              flex: 1, padding: '10px',
+                              background: '#FEF3C7', color: '#92400E', border: '1.5px solid #F59E0B',
+                              borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer'
+                            }}
+                          >
+                            Give Break ☕
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => handleCheckin(r.staff_id, null, 'manual', false)}
+                          disabled={checkingIn}
+                          style={{
+                            flex: 1, padding: '10px',
+                            background: '#DC2626', color: 'white', border: 'none',
+                            borderRadius: '10px', fontSize: '12px', fontWeight: 800, cursor: 'pointer'
+                          }}
+                        >
+                          Clock Out
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => handleCheckin(r.staff_id, null, 'manual', false)}
+                        disabled={checkingIn || !!r.check_out_at}
+                        style={{
+                          width: '100%', padding: '10px',
+                          background: r.check_out_at ? '#F1F5F9' : '#0F172A',
+                          color: r.check_out_at ? '#64748B' : 'white',
+                          border: r.check_out_at ? '1px solid #CBD5E1' : 'none',
+                          borderRadius: '10px', fontSize: '13px', fontWeight: 800,
+                          cursor: r.check_out_at ? 'default' : 'pointer'
+                        }}
+                      >
+                        {r.check_out_at ? 'Shift Completed' : 'Clock In'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}
