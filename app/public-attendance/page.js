@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import Head from 'next/head'
 
-// ── 2. Large Analog Clock Header Centerpiece (110px Smooth Sweeping Dial) ──────
-function AnalogHeaderClock({ time = new Date() }) {
+// ── 2. Large Analog Clock Right-Side Header Centerpiece (100px Smooth Sweeping Dial) ──────
+function RightAnalogClock({ time = new Date() }) {
   const ms = time.getMilliseconds()
   const seconds = time.getSeconds() + ms / 1000
   const minutes = time.getMinutes() + seconds / 60
@@ -19,17 +19,17 @@ function AnalogHeaderClock({ time = new Date() }) {
     weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Dhaka'
   })
 
-  const sz = 100 // 100px dial centerpiece
+  const sz = 90 // 90px dial centerpiece on far right
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-      {/* 100px Luxury Analog Dial */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      {/* 90px Luxury Analog Dial */}
       <div style={{
         width: `${sz}px`, height: `${sz}px`,
         borderRadius: '50%',
         background: 'radial-gradient(circle at 30% 30%, #FFFFFF 0%, #F8FAFC 70%, #E2E8F0 100%)',
         border: '3px solid #D4933A',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.35), inset 0 2px 4px rgba(255,255,255,0.8), inset 0 -2px 6px rgba(0,0,0,0.1)',
+        boxShadow: '0 6px 20px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.8), inset 0 -2px 6px rgba(0,0,0,0.1)',
         position: 'relative', flexShrink: 0
       }}>
         {/* 12 Hour Ticks */}
@@ -37,7 +37,7 @@ function AnalogHeaderClock({ time = new Date() }) {
           <div key={deg} style={{
             position: 'absolute',
             width: deg % 90 === 0 ? '3px' : '1px',
-            height: deg % 90 === 0 ? '8px' : '4px',
+            height: deg % 90 === 0 ? '7px' : '3.5px',
             background: deg % 90 === 0 ? '#0F172A' : '#94A3B8',
             top: '4px',
             left: `calc(50% - ${deg % 90 === 0 ? 1.5 : 0.5}px)`,
@@ -48,18 +48,18 @@ function AnalogHeaderClock({ time = new Date() }) {
 
         {/* Hour Hand (Brass/Navy) */}
         <div style={{
-          position: 'absolute', width: '4px', height: `${sz * 0.26}px`,
+          position: 'absolute', width: '3.5px', height: `${sz * 0.26}px`,
           background: '#0F172A', borderRadius: '3px',
-          top: `${sz * 0.24}px`, left: 'calc(50% - 2px)',
+          top: `${sz * 0.24}px`, left: 'calc(50% - 1.75px)',
           transformOrigin: '50% 100%', transform: `rotate(${hourDeg}deg)`, zIndex: 3,
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
         }} />
 
         {/* Minute Hand (Navy) */}
         <div style={{
-          position: 'absolute', width: '3px', height: `${sz * 0.38}px`,
+          position: 'absolute', width: '2.5px', height: `${sz * 0.38}px`,
           background: '#1E293B', borderRadius: '2px',
-          top: `${sz * 0.12}px`, left: 'calc(50% - 1.5px)',
+          top: `${sz * 0.12}px`, left: 'calc(50% - 1.25px)',
           transformOrigin: '50% 100%', transform: `rotate(${minDeg}deg)`, zIndex: 4,
           boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
         }} />
@@ -75,19 +75,27 @@ function AnalogHeaderClock({ time = new Date() }) {
 
         {/* Center Cap */}
         <div style={{
-          position: 'absolute', width: '8px', height: '8px', borderRadius: '50%',
-          background: '#D4933A', border: '2px solid #0F172A',
-          top: 'calc(50% - 4px)', left: 'calc(50% - 4px)', zIndex: 10,
+          position: 'absolute', width: '7px', height: '7px', borderRadius: '50%',
+          background: '#D4933A', border: '1.5px solid #0F172A',
+          top: 'calc(50% - 3.5px)', left: 'calc(50% - 3.5px)', zIndex: 10,
           boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
         }} />
       </div>
 
-      {/* Date Label Beneath Clock */}
-      <div style={{
-        fontSize: '11px', fontWeight: 800, color: '#E2E8F0', letterSpacing: '0.04em',
-        fontFamily: "'Plus Jakarta Sans', sans-serif"
-      }}>
-        {dateString} · <span style={{ color: '#D4933A' }}>BST</span>
+      {/* Date Label Right of Clock */}
+      <div>
+        <div style={{
+          fontSize: '18px', fontWeight: 800, color: '#F8FAFC',
+          fontFamily: "'JetBrains Mono', monospace", lineHeight: 1
+        }}>
+          {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })}
+        </div>
+        <div style={{
+          fontSize: '11px', fontWeight: 800, color: '#94A3B8', marginTop: '4px',
+          fontFamily: "'Plus Jakarta Sans', sans-serif"
+        }}>
+          {dateString} · <span style={{ color: '#D4933A' }}>BST</span>
+        </div>
       </div>
     </div>
   )
@@ -101,8 +109,7 @@ export default function PublicAttendancePage() {
   const [departmentFilter, setDepartmentFilter] = useState('all') // 'all', 'front', 'kitchen'
   const [searchQuery, setSearchQuery] = useState('')
   const [lastUpdatedSecs, setLastUpdatedSecs] = useState(0)
-  const [breakToggles, setBreakToggles] = useState({})
-  const [tappedStaffId, setTappedStaffId] = useState(null)
+  const [scannedStaffId, setScannedStaffId] = useState(null)
 
   // Collapsible section states
   const [openSections, setOpenSections] = useState({
@@ -134,7 +141,7 @@ export default function PublicAttendancePage() {
   useEffect(() => {
     fetchTodayData()
 
-    const channel = supabase.channel('kiosk_v8')
+    const channel = supabase.channel('kiosk_v9')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, () => {
         fetchTodayData(true)
       })
@@ -147,7 +154,7 @@ export default function PublicAttendancePage() {
     }
   }, [])
 
-  // USB RFID Scanner Keyboard Listener
+  // ── 1. RFID-ONLY Hardware Keydown Reader Listener ──
   useEffect(() => {
     let buffer = ''
     let lastKeyTime = Date.now()
@@ -158,7 +165,11 @@ export default function PublicAttendancePage() {
       if (now - lastKeyTime > 150) buffer = ''
       lastKeyTime = now
       if (e.key === 'Enter') {
-        if (buffer.length >= 3) { e.preventDefault(); doCheckin(buffer.trim()); buffer = '' }
+        if (buffer.length >= 3) {
+          e.preventDefault()
+          handleRfidScan(buffer.trim())
+          buffer = ''
+        }
       } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
         buffer += e.key
       }
@@ -166,6 +177,68 @@ export default function PublicAttendancePage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // RFID Scan Handler (Passive Visual Reaction)
+  async function handleRfidScan(identifier) {
+    try {
+      const normId = String(identifier || '').trim().replace(/^0+/, '')
+      const upperId = String(identifier || '').trim().toUpperCase()
+
+      const matchedStaff = records.find(r => {
+        const normRfid = String(r.rfid_code || '').trim().replace(/^0+/, '')
+        const upperEmp = String(r.employee_id || '').trim().toUpperCase()
+        return (
+          (normRfid && normRfid === normId) ||
+          (upperEmp && upperEmp === upperId) ||
+          r.staff_id === identifier ||
+          r.id === identifier
+        )
+      })
+
+      const staffKey = matchedStaff ? (matchedStaff.staff_id || matchedStaff.id || matchedStaff.employee_id) : identifier
+
+      // ── 1. Visual Card Glow & Highlight Reaction ──
+      setScannedStaffId(staffKey)
+      setTimeout(() => setScannedStaffId(null), 3000)
+
+      const res = await fetch('/api/attendance/checkin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: staffKey, source: 'rfid' })
+      })
+      const json = await res.json()
+      const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+
+      if (res.ok) {
+        let flashType = 'in'
+        if (json.action === 'break_start') flashType = 'break_start'
+        else if (json.action === 'break_end') flashType = 'break_end'
+        else if (json.alreadyCheckedOut || json.action === 'check_out') flashType = 'out'
+        else if (json.status === 'late') flashType = 'late'
+
+        setTapFlash({
+          name: json.staff?.name || matchedStaff?.name || 'Staff Member',
+          id: json.staff?.employee_id || '',
+          time: t,
+          type: flashType,
+          subText: json.message || 'RFID Scan Registered'
+        })
+      } else if (json.blocked) {
+        setTapFlash({
+          name: matchedStaff?.name || 'Staff Member',
+          id: matchedStaff?.employee_id || '',
+          time: t,
+          type: 'blocked',
+          subText: json.error || 'Scan cooldown active.'
+        })
+      }
+
+      fetchTodayData(true)
+      setTimeout(() => setTapFlash(null), 3500)
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   async function fetchTodayData(silent = false) {
     try {
@@ -183,70 +256,6 @@ export default function PublicAttendancePage() {
     }
   }
 
-  // Tap-to-Toggle Check-In / Out Handler
-  async function doCheckin(identifier) {
-    try {
-      const normId = String(identifier || '').trim().replace(/^0+/, '')
-      const upperId = String(identifier || '').trim().toUpperCase()
-
-      const matchedStaff = records.find(r => {
-        const normRfid = String(r.rfid_code || '').trim().replace(/^0+/, '')
-        const upperEmp = String(r.employee_id || '').trim().toUpperCase()
-        return (
-          (normRfid && normRfid === normId) ||
-          (upperEmp && upperEmp === upperId) ||
-          r.staff_id === identifier ||
-          r.id === identifier
-        )
-      })
-
-      const staffKey = matchedStaff ? (matchedStaff.staff_id || matchedStaff.id || matchedStaff.employee_id) : identifier
-      const isBreakOn = !!breakToggles[staffKey]
-
-      // Set card tap bounce effect ID
-      setTappedStaffId(staffKey)
-      setTimeout(() => setTappedStaffId(null), 800)
-
-      const res = await fetch('/api/attendance/checkin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: staffKey, source: 'rfid', enableBreak: isBreakOn })
-      })
-      const json = await res.json()
-      const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
-
-      if (res.ok) {
-        setBreakToggles(prev => ({ ...prev, [staffKey]: false }))
-        let flashType = 'in'
-        if (json.action === 'break_start') flashType = 'break_start'
-        else if (json.action === 'break_end') flashType = 'break_end'
-        else if (json.alreadyCheckedOut || json.action === 'check_out') flashType = 'out'
-        else if (json.status === 'late') flashType = 'late'
-
-        setTapFlash({
-          name: json.staff?.name || matchedStaff?.name || 'Staff Member',
-          id: json.staff?.employee_id || '',
-          time: t,
-          type: flashType,
-          subText: json.message || 'Status Updated'
-        })
-      } else if (json.blocked) {
-        setTapFlash({
-          name: matchedStaff?.name || 'Staff Member',
-          id: matchedStaff?.employee_id || '',
-          time: t,
-          type: 'blocked',
-          subText: json.error || 'Cooldown active.'
-        })
-      }
-
-      fetchTodayData(true)
-      setTimeout(() => setTapFlash(null), 3000)
-    } catch (err) {
-      console.error(err)
-    }
-  }
-
   const records = data.records || []
 
   // Filter records by search query and role filter
@@ -259,7 +268,7 @@ export default function PublicAttendancePage() {
     return true
   })
 
-  // Group records into 3 strict sections
+  // ── 7. Grouped Collapsible Sections ──
   // 1. On Shift Now: Present on time, on break, back from break, or checked out
   const onShiftRecords = filtered.filter(r => (r.status === 'present' || !!r.check_in_at) && r.status !== 'late')
   // 2. Late: Checked in late
@@ -273,18 +282,18 @@ export default function PublicAttendancePage() {
   const absentCount = records.filter(r => r.status === 'absent' && !r.check_in_at).length
 
   const flashConfig = {
-    in: { bg: '#10B981', heading: 'CHECKED IN', sub: 'Shift started on time!' },
-    late: { bg: '#F59E0B', heading: 'CHECKED IN (LATE)', sub: 'Logged late arrival.' },
-    break_start: { bg: '#D97706', heading: 'BREAK STARTED', sub: 'Enjoy your break!' },
-    break_end: { bg: '#0284C7', heading: 'BACK FROM BREAK', sub: 'Welcome back to duty!' },
-    out: { bg: '#2563EB', heading: 'CHECKED OUT', sub: 'Have a great rest!' },
+    in: { bg: '#10B981', heading: 'RFID CHECK-IN', sub: 'Scan registered live!' },
+    late: { bg: '#F59E0B', heading: 'RFID CHECK-IN (LATE)', sub: 'Logged late arrival.' },
+    break_start: { bg: '#D97706', heading: 'RFID BREAK STARTED', sub: 'Break logged.' },
+    break_end: { bg: '#0284C7', heading: 'RFID BACK FROM BREAK', sub: 'Welcome back to shift!' },
+    out: { bg: '#2563EB', heading: 'RFID CHECK-OUT', sub: 'Shift ended!' },
     blocked: { bg: '#64748B', heading: 'COOLDOWN ACTIVE', sub: 'Scan ignored.' }
   }
 
   return (
     <>
       <Head>
-        <title>Crown Coffee — Public Attendance Kiosk</title>
+        <title>Crown Coffee — RFID Attendance Board</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -292,14 +301,14 @@ export default function PublicAttendancePage() {
 
       <div style={{
         minHeight: '100vh',
-        background: '#FAF9F6', // Warm cream background
+        background: '#FAF9F6', // 3. Warm cream background
         fontFamily: "'Outfit', 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif",
         fontFeatureSettings: '"cv02", "cv03", "cv04", "cv11"',
         color: '#0F172A',
         userSelect: 'none'
       }}>
 
-        {/* Tap Confirmation Toast Flash */}
+        {/* RFID Scan Notification Toast */}
         {tapFlash && (() => {
           const cfg = flashConfig[tapFlash.type] || flashConfig.in
           return (
@@ -314,17 +323,17 @@ export default function PublicAttendancePage() {
               <div style={{
                 width: '40px', height: '40px', borderRadius: '50%',
                 background: 'rgba(255,255,255,0.2)', display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 900
-              }}>✓</div>
+                alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 900
+              }}>RFID</div>
               <div>
                 <div style={{ fontSize: '15px', fontWeight: 900 }}>{tapFlash.name}</div>
-                <div style={{ fontSize: '12px', opacity: 0.9, fontWeight: 700 }}>{tapFlash.heading} · {tapFlash.subText}</div>
+                <div style={{ fontSize: '12px', opacity: 0.95, fontWeight: 700 }}>{tapFlash.heading} · {tapFlash.subText}</div>
               </div>
             </div>
           )
         })()}
 
-        {/* ── 2. Navy Header with Large Analog Clock Centerpiece ── */}
+        {/* ── 2. Navy Header with Right-Side Analog Clock Centerpiece ── */}
         <div style={{
           background: '#0F172A',
           padding: '16px 40px',
@@ -343,19 +352,49 @@ export default function PublicAttendancePage() {
             }}>CC</div>
             <div>
               <div style={{ color: 'white', fontWeight: 900, fontSize: '20px', letterSpacing: '-0.02em' }}>Crown Coffee</div>
-              <div style={{ color: '#D4933A', fontSize: '11px', fontWeight: 800, letterSpacing: '0.12em', marginTop: '1px' }}>ATTENDANCE KIOSK</div>
+              <div style={{ color: '#D4933A', fontSize: '11px', fontWeight: 800, letterSpacing: '0.12em', marginTop: '1px' }}>RFID ATTENDANCE BOARD</div>
             </div>
           </div>
 
-          {/* Centerpiece: Large Analog Clock */}
-          <AnalogHeaderClock time={currentTime} />
-
-          {/* Right: Header Stats Bar */}
+          {/* Center: Header Stats Bar (10. Recolored Stats Bar) */}
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <HeaderStatChip label="IN TODAY" value={totalIn} color="#22C55E" />
             <HeaderStatChip label="LATE" value={lateCount} color="#FBBF24" />
             <HeaderStatChip label="NOT IN" value={absentCount} color="#94A3B8" />
-            <HeaderStatChip label="TOTAL" value={totalStaff} color="#64748B" />
+            <HeaderStatChip label="TOTAL STAFF" value={totalStaff} color="#64748B" />
+          </div>
+
+          {/* Far Right: Right-Side Analog Clock Centerpiece + Manual Refresh */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <button
+              onClick={() => fetchTodayData(false)}
+              title="Refresh Attendance Data"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#94A3B8',
+                padding: '8px 14px',
+                borderRadius: '10px',
+                fontSize: '12px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.15s'
+              }}
+            >
+              <svg
+                width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }}
+              >
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+              Refresh
+            </button>
+
+            {/* 2. Large Analog Clock Right Centerpiece */}
+            <RightAnalogClock time={currentTime} />
           </div>
         </div>
 
@@ -398,7 +437,7 @@ export default function PublicAttendancePage() {
             </svg>
           </div>
 
-          {/* Live Sync Indicator & Ticking Updated Timestamp */}
+          {/* 9. Live Indicator & Ticking Timestamp */}
           <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '16px', fontWeight: 700 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16A34A', fontWeight: 800 }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 8px rgba(22,163,74,0.6)', animation: 'pulse 2s infinite' }}></span>
@@ -410,11 +449,11 @@ export default function PublicAttendancePage() {
           </div>
         </div>
 
-        {/* ── 6. Grouped Collapsible Sections ── */}
+        {/* ── 7. Grouped Collapsible Sections ── */}
         <main style={{ padding: '36px 40px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
           {loading ? (
             <div style={{ textAlign: 'center', padding: '80px', color: '#94A3B8', fontSize: '15px', fontWeight: 700 }}>
-              Loading Kiosk Staff Directory...
+              Loading RFID Attendance Feed...
             </div>
           ) : (
             <>
@@ -428,10 +467,7 @@ export default function PublicAttendancePage() {
                 isOpen={openSections.onShift}
                 onToggle={() => setOpenSections(prev => ({ ...prev, onShift: !prev.onShift }))}
                 records={onShiftRecords}
-                breakToggles={breakToggles}
-                onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
-                onCardTap={r => doCheckin(r.staff_id || r.id || r.employee_id)}
-                tappedStaffId={tappedStaffId}
+                scannedStaffId={scannedStaffId}
               />
 
               {/* SECTION 2: LATE (Amber) */}
@@ -444,13 +480,10 @@ export default function PublicAttendancePage() {
                 isOpen={openSections.late}
                 onToggle={() => setOpenSections(prev => ({ ...prev, late: !prev.late }))}
                 records={lateRecords}
-                breakToggles={breakToggles}
-                onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
-                onCardTap={r => doCheckin(r.staff_id || r.id || r.employee_id)}
-                tappedStaffId={tappedStaffId}
+                scannedStaffId={scannedStaffId}
               />
 
-              {/* SECTION 3: NOT CHECKED IN (Neutral Gray) */}
+              {/* SECTION 3: NOT CHECKED IN (Neutral Slate Gray) */}
               <CollapsibleGroupSection
                 title="NOT CHECKED IN"
                 count={notInRecords.length}
@@ -460,10 +493,7 @@ export default function PublicAttendancePage() {
                 isOpen={openSections.notIn}
                 onToggle={() => setOpenSections(prev => ({ ...prev, notIn: !prev.notIn }))}
                 records={notInRecords}
-                breakToggles={breakToggles}
-                onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
-                onCardTap={r => doCheckin(r.staff_id || r.id || r.employee_id)}
-                tappedStaffId={tappedStaffId}
+                scannedStaffId={scannedStaffId}
               />
             </>
           )}
@@ -473,7 +503,7 @@ export default function PublicAttendancePage() {
           @keyframes bounceIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
           @keyframes spin { 100% { transform: rotate(360deg); } }
           @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
-          @keyframes checkmarkFlash { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+          @keyframes rfidGlow { 0%, 100% { box-shadow: 0 0 24px rgba(16,185,129,0.6); transform: scale(1.02); } 50% { box-shadow: 0 0 8px rgba(16,185,129,0.3); transform: scale(1); } }
         `}</style>
       </div>
     </>
@@ -493,7 +523,7 @@ function HeaderStatChip({ label, value, color }) {
   )
 }
 
-function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, isOpen, onToggle, records, breakToggles, onToggleBreak, onCardTap, tappedStaffId }) {
+function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, isOpen, onToggle, records, scannedStaffId }) {
   return (
     <div style={{
       background: '#FFFFFF',
@@ -547,13 +577,10 @@ function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, is
               {records.map(r => {
                 const staffKey = r.staff_id || r.id || r.employee_id
                 return (
-                  <StaffCardRefined
+                  <RfidDisplayCard
                     key={staffKey}
                     r={r}
-                    isBreakOn={!!breakToggles[staffKey]}
-                    onToggleBreak={(val) => onToggleBreak(staffKey, val)}
-                    onCardTap={() => onCardTap(r)}
-                    isTapped={tappedStaffId === staffKey}
+                    isScanned={scannedStaffId === staffKey}
                   />
                 )
               })}
@@ -576,8 +603,8 @@ function getRoleAvatarBg(dept, role) {
   return '#475569' // Default Slate
 }
 
-// ── Refined Staff Card Component ──
-function StaffCardRefined({ r, isBreakOn, onToggleBreak, onCardTap, isTapped }) {
+// ── 1. Passive RFID-Only Display Card Component (Read-Only) ──
+function RfidDisplayCard({ r, isScanned }) {
   const hasCheckedIn = !!r.check_in_at
   const isOut = hasCheckedIn && !!r.check_out_at
   const isOnBreak = hasCheckedIn && !!r.break_start_at && !r.break_end_at
@@ -589,7 +616,7 @@ function StaffCardRefined({ r, isBreakOn, onToggleBreak, onCardTap, isTapped }) 
   let borderColor = '#E2E8F0'
   let statusDot = '#CBD5E1'
   let statusText = 'Not Checked In'
-  let statusColor = '#64748B' // Neutral Slate Gray (Not an alarm state)
+  let statusColor = '#64748B' // 4. Neutral Slate Gray (Not an alarm state)
   let badgeBg = '#F1F5F9'
   let badgeBorder = '#CBD5E1'
   let cardBg = '#FFFFFF'
@@ -619,39 +646,20 @@ function StaffCardRefined({ r, isBreakOn, onToggleBreak, onCardTap, isTapped }) 
 
   return (
     <div
-      onClick={onCardTap}
       style={{
         background: cardBg,
-        border: `1.5px solid ${borderColor}`,
+        border: `1.5px solid ${isScanned ? '#10B981' : borderColor}`,
         borderRadius: '20px',
         padding: '20px',
-        cursor: 'pointer',
-        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         display: 'flex',
         flexDirection: 'column',
         justify: 'space-between',
-        boxShadow: isTapped ? '0 0 20px rgba(16,185,129,0.3)' : '0 6px 18px -4px rgba(15,23,42,0.04)',
-        transform: isTapped ? 'scale(0.96)' : 'scale(1)',
+        boxShadow: isScanned ? '0 0 24px rgba(16,185,129,0.5)' : '0 6px 18px -4px rgba(15,23,42,0.04)',
+        animation: isScanned ? 'rfidGlow 1.5s ease-in-out infinite' : 'none',
         position: 'relative',
         userSelect: 'none'
       }}
     >
-      {/* Tap Ripple Checkmark Overlay */}
-      {isTapped && (
-        <div style={{
-          position: 'absolute', inset: 0, borderRadius: '20px',
-          background: 'rgba(16,185,129,0.15)', backdropFilter: 'blur(2px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 10, animation: 'bounceIn 0.2s ease'
-        }}>
-          <div style={{
-            background: '#16A34A', color: 'white', padding: '10px 20px',
-            borderRadius: '20px', fontWeight: 900, fontSize: '14px',
-            boxShadow: '0 4px 12px rgba(22,163,74,0.4)'
-          }}>✓ Tap Registered</div>
-        </div>
-      )}
-
       <div>
         {/* Top Header Row: Avatar + Name + Role + Status Dot */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
@@ -680,7 +688,7 @@ function StaffCardRefined({ r, isBreakOn, onToggleBreak, onCardTap, isTapped }) 
           <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 8px ${statusDot}44` }} />
         </div>
 
-        {/* 5. COLLAPSED VIEW FOR NOT-CHECKED-IN STAFF */}
+        {/* 5. COLLAPSED VIEW FOR AWAITING RFID SCAN STAFF */}
         {!hasCheckedIn ? (
           <div style={{
             marginTop: '12px',
@@ -691,17 +699,17 @@ function StaffCardRefined({ r, isBreakOn, onToggleBreak, onCardTap, isTapped }) 
             textAlign: 'center',
             color: '#64748B',
             fontWeight: 800,
-            fontSize: '13px',
-            letterSpacing: '0.02em',
+            fontSize: '12px',
+            letterSpacing: '0.04em',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
           }}>
             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#94A3B8' }} />
-            Tap Card to Check In
+            Awaiting RFID Scan
           </div>
         ) : (
           /* EXPANDED FULL VIEW FOR CHECKED-IN STAFF */
           <div>
-            {/* Status Badge + 7. Take Break Toggle (Rendered ONLY when checked in) */}
+            {/* Status Badge + 6. Display-Only Break Status Pill */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
               <span style={{
                 fontSize: '11px', fontWeight: 800, letterSpacing: '0.04em',
@@ -712,36 +720,15 @@ function StaffCardRefined({ r, isBreakOn, onToggleBreak, onCardTap, isTapped }) 
                 {isLate && !isOut && r.minutes_late > 0 && ` · ${r.minutes_late}m late`}
               </span>
 
-              {/* Render Take Break toggle ONLY when staff is currently on duty */}
-              {!isOut && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation() // Don't trigger card checkin/out
-                    onToggleBreak(!isBreakOn)
-                  }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    background: isBreakOn ? '#FEF3C7' : '#F8FAFC',
-                    border: isBreakOn ? '1.5px solid #F59E0B' : '1.5px solid #E2E8F0',
-                    padding: '4px 10px', borderRadius: '20px',
-                    cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
-                  }}
-                >
-                  <div style={{
-                    width: '24px', height: '14px', borderRadius: '10px',
-                    background: isBreakOn ? '#D4933A' : '#CBD5E1',
-                    position: 'relative', transition: 'all 0.2s ease'
-                  }}>
-                    <div style={{
-                      width: '10px', height: '10px', borderRadius: '50%', background: 'white',
-                      position: 'absolute', top: '2px', left: isBreakOn ? '12px' : '2px',
-                      transition: 'all 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                    }} />
-                  </div>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: isBreakOn ? '#92400E' : '#64748B' }}>
-                    Take Break
-                  </span>
-                </button>
+              {/* Display Break Status Pill (Display-Only) */}
+              {isOnBreak && (
+                <span style={{
+                  fontSize: '11px', fontWeight: 800, color: '#92400E',
+                  background: '#FEF3C7', border: '1px solid #FDE68A',
+                  padding: '4px 10px', borderRadius: '20px'
+                }}>
+                  On Break ☕
+                </span>
               )}
             </div>
 
