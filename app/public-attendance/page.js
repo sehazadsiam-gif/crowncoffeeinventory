@@ -103,6 +103,7 @@ export default function PublicAttendancePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [lastUpdatedSecs, setLastUpdatedSecs] = useState(0)
   const [scannedStaffId, setScannedStaffId] = useState(null)
+  const [breakToggles, setBreakToggles] = useState({})
 
   // 2. 4 Collapsible section states (On Shift, On Break, Late, Not Checked In)
   const [openSections, setOpenSections] = useState({
@@ -190,7 +191,7 @@ export default function PublicAttendancePage() {
       })
 
       const staffKey = matchedStaff ? (matchedStaff.staff_id || matchedStaff.id || matchedStaff.employee_id) : identifier
-      const isBreakTrackingOn = matchedStaff ? (matchedStaff.is_rostered !== false && matchedStaff.break_tracking !== false) : true
+      const isBreakOn = !!breakToggles[staffKey]
 
       // Visual Glow Reaction
       setScannedStaffId(staffKey)
@@ -199,12 +200,13 @@ export default function PublicAttendancePage() {
       const res = await fetch('/api/attendance/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: staffKey, source: 'rfid', enableBreak: isBreakTrackingOn })
+        body: JSON.stringify({ identifier: staffKey, source: 'rfid', enableBreak: isBreakOn })
       })
       const json = await res.json()
       const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
 
       if (res.ok) {
+        setBreakToggles(prev => ({ ...prev, [staffKey]: false }))
         let flashType = 'in'
         if (json.action === 'break_start') flashType = 'break_start'
         else if (json.action === 'break_end') flashType = 'break_end'
@@ -447,6 +449,8 @@ export default function PublicAttendancePage() {
                 onToggle={() => setOpenSections(prev => ({ ...prev, onShift: !prev.onShift }))}
                 records={onShiftRecords}
                 scannedStaffId={scannedStaffId}
+                breakToggles={breakToggles}
+                onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
               />
 
               {/* SECTION 2: ON BREAK (Soft Tan / Amber) */}
@@ -460,6 +464,8 @@ export default function PublicAttendancePage() {
                 onToggle={() => setOpenSections(prev => ({ ...prev, onBreak: !prev.onBreak }))}
                 records={onBreakRecords}
                 scannedStaffId={scannedStaffId}
+                breakToggles={breakToggles}
+                onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
               />
 
               {/* SECTION 3: LATE (Red) */}
@@ -473,6 +479,8 @@ export default function PublicAttendancePage() {
                 onToggle={() => setOpenSections(prev => ({ ...prev, late: !prev.late }))}
                 records={lateRecords}
                 scannedStaffId={scannedStaffId}
+                breakToggles={breakToggles}
+                onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
               />
 
               {/* SECTION 4: NOT CHECKED IN (Neutral Slate Gray) */}
@@ -486,6 +494,8 @@ export default function PublicAttendancePage() {
                 onToggle={() => setOpenSections(prev => ({ ...prev, notIn: !prev.notIn }))}
                 records={notInRecords}
                 scannedStaffId={scannedStaffId}
+                breakToggles={breakToggles}
+                onToggleBreak={(key, val) => setBreakToggles(prev => ({ ...prev, [key]: val }))}
               />
             </>
           )}
@@ -540,7 +550,7 @@ function HeaderStatChip({ label, value, color }) {
   )
 }
 
-function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, isOpen, onToggle, records, scannedStaffId }) {
+function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, isOpen, onToggle, records, scannedStaffId, breakToggles, onToggleBreak }) {
   return (
     <div style={{
       background: '#FFFFFF',
@@ -597,6 +607,8 @@ function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, is
                     key={staffKey}
                     r={r}
                     isScanned={scannedStaffId === staffKey}
+                    isBreakOn={!!breakToggles[staffKey]}
+                    onToggleBreak={(val) => onToggleBreak(staffKey, val)}
                   />
                 )
               })}
@@ -727,7 +739,7 @@ function RfidDisplayCard({ r, isScanned }) {
         ) : (
           /* EXPANDED FULL VIEW FOR CHECKED-IN STAFF */
           <div>
-            {/* Status Badge + 2. Break Tracking ON/OFF Read-Only Badge */}
+            {/* Status Badge + Interactive Take Break Toggle */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
               <span style={{
                 fontSize: '10px', fontWeight: 800, letterSpacing: '0.04em',
@@ -738,16 +750,37 @@ function RfidDisplayCard({ r, isScanned }) {
                 {isLate && !isOut && r.minutes_late > 0 && ` · ${r.minutes_late}m late`}
               </span>
 
-              {/* Read-Only Break Tracking Badge */}
-              <span style={{
-                fontSize: '9px', fontWeight: 800, letterSpacing: '0.04em',
-                color: isBreakTrackingOn ? '#B45309' : '#64748B',
-                background: isBreakTrackingOn ? '#FEF3C7' : '#F1F5F9',
-                border: isBreakTrackingOn ? '1px solid #FDE68A' : '1px solid #E2E8F0',
-                padding: '2px 8px', borderRadius: '12px'
-              }}>
-                Break Tracking: {isBreakTrackingOn ? 'ON' : 'OFF'}
-              </span>
+              {/* Interactive Staff Take Break Toggle Switch */}
+              {!isOut && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleBreak(!isBreakOn)
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    background: isBreakOn ? '#FEF3C7' : '#F8FAFC',
+                    border: isBreakOn ? '1.5px solid #F59E0B' : '1.5px solid #E2E8F0',
+                    padding: '3px 8px', borderRadius: '16px',
+                    cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
+                  }}
+                >
+                  <div style={{
+                    width: '22px', height: '12px', borderRadius: '10px',
+                    background: isBreakOn ? '#D4933A' : '#CBD5E1',
+                    position: 'relative', transition: 'all 0.2s ease'
+                  }}>
+                    <div style={{
+                      width: '8px', height: '8px', borderRadius: '50%', background: 'white',
+                      position: 'absolute', top: '2px', left: isBreakOn ? '12px' : '2px',
+                      transition: 'all 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }} />
+                  </div>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: isBreakOn ? '#92400E' : '#64748B' }}>
+                    {isBreakOn ? 'Take Break ON ☕' : 'Take Break'}
+                  </span>
+                </button>
+              )}
             </div>
 
             {/* 2. 5-Column Time Metric Grid (IN | BREAK START | BREAK END | OUT | DUTY) */}
