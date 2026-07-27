@@ -321,11 +321,7 @@ export default function PublicAttendancePage() {
       </Head>
 
       <div style={{
-        height: '100vh',
-        maxHeight: '100vh',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
+        minHeight: '100vh',
         background: '#FAF9F6', // 5. Light Mode Warm Cream Background
         fontFamily: "'Outfit', 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif",
         fontFeatureSettings: '"cv02", "cv03", "cv04", "cv11"',
@@ -361,34 +357,34 @@ export default function PublicAttendancePage() {
         {/* ── 4. FULLY RESPONSIVE NAVY HEADER ── */}
         <div style={{ background: '#0F172A', borderBottom: '3px solid #D4933A', boxShadow: '0 6px 24px rgba(15, 23, 42, 0.2)' }}>
           <div className="header-container" style={{
-            maxWidth: '1800px', margin: '0 auto', padding: '8px 20px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px'
+            maxWidth: '1800px', margin: '0 auto', padding: '16px 24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px'
           }}>
             {/* Left: Official Logo & Branding */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 0%', justifyContent: 'flex-start' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 0%', justifyContent: 'flex-start' }}>
               <img
                 src="/crown-coffee-logo.jpg"
                 alt="Crown Coffee Logo"
                 style={{
-                  width: 'clamp(48px, 3.8vw, 62px)',
-                  height: 'clamp(48px, 3.8vw, 62px)',
+                  width: 'clamp(72px, 5vw, 88px)',
+                  height: 'clamp(72px, 5vw, 88px)',
                   borderRadius: '50%',
                   objectFit: 'cover',
                   background: '#000000',
-                  border: '2.5px solid #F59E0B',
-                  boxShadow: '0 0 16px rgba(245, 158, 11, 0.5), 0 3px 10px rgba(0,0,0,0.4)',
+                  border: '3px solid #F59E0B',
+                  boxShadow: '0 0 24px rgba(245, 158, 11, 0.6), 0 4px 14px rgba(0,0,0,0.5)',
                   flexShrink: 0,
                   transition: 'all 0.2s ease'
                 }}
               />
               <div>
-                <div style={{ color: 'white', fontWeight: 900, fontSize: 'clamp(16px, 1.4vw, 21px)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>Crown Coffee</div>
-                <div style={{ color: '#F59E0B', fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', marginTop: '2px' }}>RFID ATTENDANCE BOARD</div>
+                <div style={{ color: 'white', fontWeight: 900, fontSize: 'clamp(18px, 1.6vw, 24px)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>Crown Coffee</div>
+                <div style={{ color: '#F59E0B', fontSize: '11px', fontWeight: 800, letterSpacing: '0.14em', marginTop: '3px' }}>RFID ATTENDANCE BOARD</div>
               </div>
             </div>
 
             {/* 10. Center: 5 Stat Chips Bar (Middle Centered) */}
-            <div className="header-stats-bar" style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', margin: '0 auto' }}>
+            <div className="header-stats-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', margin: '0 auto' }}>
               <HeaderStatChip label="IN TODAY" value={totalIn} color="#22C55E" />
               <HeaderStatChip label="ON BREAK" value={onBreakCount} color="#F59E0B" />
               <HeaderStatChip label="LATE" value={lateCount} color="#EF4444" />
@@ -404,10 +400,10 @@ export default function PublicAttendancePage() {
         </div>
 
         {/* Responsive Filter Bar & Search */}
-        <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E2E8F0', flexShrink: 0 }}>
+        <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E2E8F0' }}>
           <div className="filter-container" style={{
-            maxWidth: '1800px', margin: '0 auto', padding: '6px 20px',
-            display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap'
+            maxWidth: '1800px', margin: '0 auto', padding: '12px 24px',
+            display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap'
           }}>
             {[
               ['all', 'All Staff'],
@@ -415,16 +411,16 @@ export default function PublicAttendancePage() {
               ['kitchen', 'Kitchen']
             ].map(([id, label]) => (
               <button key={id} onClick={() => setDepartmentFilter(id)} style={{
-                padding: '5px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-                fontWeight: 800, fontSize: '11px', transition: 'all 0.15s',
+                padding: '8px 18px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                fontWeight: 800, fontSize: '12px', transition: 'all 0.15s',
                 background: departmentFilter === id ? '#0F172A' : '#F1F5F9',
                 color: departmentFilter === id ? 'white' : '#64748B',
-                boxShadow: departmentFilter === id ? '0 3px 8px rgba(15,23,42,0.1)' : 'none'
+                boxShadow: departmentFilter === id ? '0 4px 12px rgba(15,23,42,0.12)' : 'none'
               }}>{label}</button>
             ))}
 
             {/* Search Input */}
-            <div style={{ position: 'relative', minWidth: '160px', flex: '1', maxWidth: '240px' }}>
+            <div style={{ position: 'relative', minWidth: '180px', flex: '1', maxWidth: '280px' }}>
               <input
                 type="text"
                 placeholder="Search staff name or ID..."
@@ -432,37 +428,32 @@ export default function PublicAttendancePage() {
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
                   width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0',
-                  borderRadius: '8px', padding: '5px 10px 5px 30px', fontSize: '11px',
+                  borderRadius: '10px', padding: '8px 12px 8px 34px', fontSize: '12px',
                   fontWeight: 700, color: '#0F172A', outline: 'none'
                 }}
               />
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '10px', top: '7px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '12px', top: '10px' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
             </div>
 
             {/* 9. Live Indicator & Ticking Timestamp */}
-            <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 700 }}>
+            <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '14px', fontWeight: 700 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16A34A', fontWeight: 800 }}>
-                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 8px rgba(22,163,74,0.6)', animation: 'pulse 2s infinite' }}></span>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 8px rgba(22,163,74,0.6)', animation: 'pulse 2s infinite' }}></span>
                 Live Sync
               </span>
-              <span style={{ fontSize: '10px', color: '#94A3B8', fontFamily: "'JetBrains Mono', monospace" }}>
+              <span style={{ fontSize: '11px', color: '#94A3B8', fontFamily: "'JetBrains Mono', monospace" }}>
                 Updated {lastUpdatedSecs}s ago
               </span>
             </div>
           </div>
         </div>
 
-        {/* ── 2. Grouped 4 Collapsible Sections (100vh 2x2 Viewport Grid) ── */}
-        <main className="kiosk-sections-grid" style={{
-          maxWidth: '1800px', margin: '0 auto', width: '100%', padding: '10px 16px',
-          flex: '1 1 0%', overflow: 'hidden',
-          display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridTemplateRows: 'repeat(2, 1fr)',
-          gap: '10px'
-        }}>
+        {/* ── 2. Grouped 4 Collapsible Sections (Max 1800px Centered) ── */}
+        <main style={{ maxWidth: '1800px', margin: '0 auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8', fontSize: '14px', fontWeight: 700, gridColumn: 'span 2' }}>
+            <div style={{ textAlign: 'center', padding: '80px', color: '#94A3B8', fontSize: '15px', fontWeight: 700 }}>
               Loading RFID Attendance Feed...
             </div>
           ) : (
@@ -531,36 +522,10 @@ export default function PublicAttendancePage() {
         </main>
 
         <style>{`
+          /* Responsive Layout Rules across Phone (~390px), Tablet (~768px), Laptop (~1440px), TV (~1920px+) */
           .clock-dial {
-            width: clamp(52px, 4.2vw, 68px);
-            height: clamp(52px, 4.2vw, 68px);
-          }
-
-          @media (max-width: 1024px) {
-            .kiosk-sections-grid {
-              display: flex !important;
-              flex-direction: column !important;
-              overflow-y: auto !important;
-            }
-          }
-
-          @media (max-width: 768px) {
-            .header-container {
-              flex-wrap: wrap;
-              gap: 8px;
-            }
-            .header-stats-bar {
-              order: 3;
-              width: 100%;
-              justify-content: space-around;
-              margin-top: 2px;
-            }
-          }
-
-          .fluid-cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(clamp(220px, 15vw, 290px), 1fr));
-            gap: 10px;
+            width: clamp(65px, 6vw, 105px);
+            height: clamp(65px, 6vw, 105px);
           }
 
           @media (max-width: 768px) {
@@ -609,33 +574,29 @@ function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, is
   return (
     <div style={{
       background: '#FFFFFF',
-      borderRadius: '16px',
+      borderRadius: '20px',
       border: `1.5px solid ${borderColor}`,
-      boxShadow: '0 6px 20px -4px rgba(15,23,42,0.04)',
-      overflow: 'hidden',
-      height: '100%',
-      maxHeight: '100%',
-      display: 'flex',
-      flexDirection: 'column'
+      boxShadow: '0 8px 24px -4px rgba(15,23,42,0.04)',
+      overflow: 'hidden'
     }}>
       {/* Section Header */}
       <div
         onClick={onToggle}
         style={{
-          padding: '10px 16px',
+          padding: '16px 20px',
           background: bgColor,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          cursor: 'pointer', userSelect: 'none', flexShrink: 0
+          cursor: 'pointer', userSelect: 'none'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}66` }} />
-          <h2 style={{ fontSize: '13px', fontWeight: 900, color: '#0F172A', letterSpacing: '0.03em', margin: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: color, boxShadow: `0 0 10px ${color}66` }} />
+          <h2 style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A', letterSpacing: '0.04em', margin: 0 }}>
             {title}
           </h2>
           <span style={{
             background: '#FFFFFF', color: color, border: `1px solid ${borderColor}`,
-            fontSize: '10px', fontWeight: 800, padding: '1px 7px', borderRadius: '8px',
+            fontSize: '11px', fontWeight: 800, padding: '2px 8px', borderRadius: '10px',
             fontFamily: "'JetBrains Mono', monospace"
           }}>
             {count}
@@ -643,18 +604,18 @@ function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, is
         </div>
 
         <svg
-          width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
           style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
         >
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </div>
 
-      {/* Fluid Grid Content with Internal Scroll */}
+      {/* Fluid Grid Content */}
       {isOpen && (
-        <div style={{ padding: '10px', borderTop: `1px solid ${borderColor}`, flex: '1 1 0%', overflowY: 'auto' }}>
+        <div style={{ padding: '20px', borderTop: `1px solid ${borderColor}` }}>
           {records.length === 0 ? (
-            <div style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600, textAlign: 'center', padding: '12px' }}>
+            <div style={{ fontSize: '13px', color: '#94A3B8', fontWeight: 600, textAlign: 'center', padding: '16px' }}>
               No staff members in this section.
             </div>
           ) : (
@@ -738,12 +699,12 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
       style={{
         background: cardBg,
         border: `1.5px solid ${isScanned ? '#10B981' : borderColor}`,
-        borderRadius: '14px',
-        padding: '12px',
+        borderRadius: '18px',
+        padding: '18px',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
-        boxShadow: isScanned ? '0 0 20px rgba(16,185,129,0.5)' : '0 4px 14px -3px rgba(15,23,42,0.04)',
+        justify: 'space-between',
+        boxShadow: isScanned ? '0 0 24px rgba(16,185,129,0.5)' : '0 6px 18px -4px rgba(15,23,42,0.04)',
         animation: isScanned ? 'rfidGlow 1.5s ease-in-out infinite' : 'none',
         position: 'relative',
         userSelect: 'none'
@@ -751,30 +712,30 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
     >
       <div>
         {/* Top Header Row: Avatar + Name + Role + Status Dot */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
           {r.photo_url ? (
             <img
               src={r.photo_url} alt={r.name}
-              style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${borderColor}`, boxShadow: '0 3px 6px rgba(0,0,0,0.06)' }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${borderColor}`, boxShadow: '0 4px 8px rgba(0,0,0,0.06)' }}
             />
           ) : (
             /* 8. Role-consistent colored initials circle */
             <div style={{
-              width: '40px', height: '40px', borderRadius: '50%', flexShrink: 0,
+              width: '48px', height: '48px', borderRadius: '50%', flexShrink: 0,
               background: avatarBg, border: `2px solid ${borderColor}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 900, fontSize: '14px', color: 'white', boxShadow: '0 3px 6px rgba(0,0,0,0.08)'
+              fontWeight: 900, fontSize: '16px', color: 'white', boxShadow: '0 4px 8px rgba(0,0,0,0.08)'
             }}>
               {r.name ? r.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'CC'}
             </div>
           )}
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
-            <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600, marginTop: '1px' }}>{r.designation}</div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, marginTop: '2px' }}>{r.designation}</div>
           </div>
 
-          <div style={{ width: '9px', height: '9px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 6px ${statusDot}44` }} />
+          <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 8px ${statusDot}44` }} />
         </div>
 
         {/* 7. COLLAPSED VIEW FOR AWAITING RFID SCAN STAFF */}
