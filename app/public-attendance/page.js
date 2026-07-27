@@ -607,8 +607,8 @@ function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, is
                     key={staffKey}
                     r={r}
                     isScanned={scannedStaffId === staffKey}
-                    isBreakOn={!!breakToggles[staffKey]}
-                    onToggleBreak={(val) => onToggleBreak(staffKey, val)}
+                    isBreakOn={!!(breakToggles && breakToggles[staffKey])}
+                    onToggleBreak={(val) => onToggleBreak && onToggleBreak(staffKey, val)}
                   />
                 )
               })}
@@ -632,7 +632,7 @@ function getRoleAvatarBg(dept, role) {
 }
 
 // ── 1. Passive RFID Display Card ──
-function RfidDisplayCard({ r, isScanned }) {
+function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
   const hasCheckedIn = !!r.check_in_at
   const isOut = hasCheckedIn && !!r.check_out_at
   const isOnBreak = hasCheckedIn && !!r.break_start_at && !r.break_end_at
