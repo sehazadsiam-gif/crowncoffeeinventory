@@ -12,6 +12,7 @@ import {
   Settings,
   UserCheck,
   TrendingUp,
+  BookOpen,
   Home,
   Calendar,
   MessageSquare,
@@ -38,6 +39,7 @@ export default function Sidebar({ role, currentPage, staffName }) {
   const navItems = {
     admin: [
       { label: 'Dashboard', icon: BarChart3, path: '/admin/dashboard' },
+      { label: 'Recipe Book', icon: BookOpen, path: '/recipebook' },
       { label: 'Payroll', icon: DollarSign, path: '/admin/payroll' },
       { label: 'Directory', icon: Users, path: '/admin/staff' },
       { label: 'Advances', icon: Hand, path: '/admin/advances' },
