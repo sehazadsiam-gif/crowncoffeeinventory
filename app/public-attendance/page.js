@@ -330,7 +330,7 @@ export default function PublicAttendancePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px'
           }}>
             {/* Left: Branding */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 0%', justifyContent: 'flex-start' }}>
               <img
                 src="/crown-coffee-logo.jpg"
                 alt="Crown Coffee Logo"
@@ -352,8 +352,8 @@ export default function PublicAttendancePage() {
               </div>
             </div>
 
-            {/* Center: Stat Chips Bar */}
-            <div className="header-stats-bar" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            {/* Center: Stat Chips Bar (Middle Centered) */}
+            <div className="header-stats-bar" style={{ display: 'flex', gap: '14px', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', margin: '0 auto' }}>
               <HeaderStatChip label="IN TODAY" value={totalIn} color="#22C55E" />
               <HeaderStatChip label="LATE" value={lateCount} color="#FBBF24" />
               <HeaderStatChip label="NOT IN" value={absentCount} color="#94A3B8" />
@@ -361,7 +361,9 @@ export default function PublicAttendancePage() {
             </div>
 
             {/* 2. EXTREME FAR-RIGHT: Analog Clock Pinned Flush Right */}
-            <ExtremeRightAnalogClock time={currentTime} />
+            <div style={{ flex: '1 1 0%', display: 'flex', justifyContent: 'flex-end' }}>
+              <ExtremeRightAnalogClock time={currentTime} />
+            </div>
           </div>
         </div>
 
