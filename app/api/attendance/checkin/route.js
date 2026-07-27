@@ -73,7 +73,7 @@ export async function POST(request) {
       notes,
       adminOverride: !!adminOverride,
       forceStatus,
-      enableBreak: enableBreak !== undefined ? !!enableBreak : true
+      enableBreak: enableBreak !== undefined ? !!enableBreak : false
     })
 
     // Blocked = day already complete (both taps done). Return 200, not 400.
