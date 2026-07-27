@@ -62,7 +62,8 @@ export async function GET(request) {
 
       const hoursWorked = l.hours_worked || 0
       const standardShiftHours = 10
-      const overtimeHours = l.overtime_hours || (hoursWorked > standardShiftHours ? Math.round((hoursWorked - standardShiftHours) * 100) / 100 : 0)
+      const otThresholdHours = 11
+      const overtimeHours = l.overtime_hours || (hoursWorked > otThresholdHours ? Math.round((hoursWorked - otThresholdHours) * 100) / 100 : 0)
       const overtimeMins = Math.round(overtimeHours * 60)
       const lateMins = l.minutes_late || 0
       const lateHours = Math.round((lateMins / 60) * 100) / 100
