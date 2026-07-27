@@ -201,6 +201,7 @@ export default function PublicAttendancePage() {
       const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
       if (res.ok) {
         setIsOffline(false)
+        setBreakToggles(prev => ({ ...prev, [staffKey]: false }))
         let flashType = 'in'
         if (json.action === 'break_start') flashType = 'break_start'
         else if (json.action === 'break_end') flashType = 'break_end'
