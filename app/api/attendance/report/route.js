@@ -129,7 +129,7 @@ export async function GET(request) {
       const totalLateHours = Math.round((totalLateMinutes / 60) * 100) / 100
       const totalOvertimeHours = Math.round(sLogs.reduce((sum, l) => {
         const hw = l.hours_worked || 0
-        const ot = l.overtime_hours || (hw > 10 ? hw - 10 : 0)
+        const ot = l.overtime_hours || (hw > 11 ? hw - 11 : 0)
         return sum + ot
       }, 0) * 100) / 100
 
@@ -202,7 +202,7 @@ export async function POST(request) {
         if (totalMins > 960) totalMins = 960 // Safety Cap: 16 hours max per shift
         const netMins = Math.max(0, totalMins - breakDurationMin)
         hoursWorked = Math.round((netMins / 60) * 100) / 100
-        overtimeMins = Math.max(0, netMins - 600)
+        overtimeMins = Math.max(0, netMins - 660)
       }
 
       const updateData = {
