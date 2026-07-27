@@ -386,7 +386,7 @@ export default function RecipeBookPage() {
                 maxLength={6}
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
-                placeholder="Enter PIN (e.g. 456456)"
+                placeholder="Enter 6-Digit PIN"
                 style={{
                   width: '100%',
                   padding: '14px 16px 14px 48px',
