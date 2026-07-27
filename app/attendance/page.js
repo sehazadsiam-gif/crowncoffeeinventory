@@ -21,7 +21,7 @@ function AnalogClock({ size = 52, time = new Date() }) {
   const hourDeg = ((hours + minutes / 60) / 12) * 360
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '10px 18px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '10px 18px' }}>
       <div style={{
         width: `${size}px`,
         height: `${size}px`,
@@ -98,11 +98,11 @@ function AnalogClock({ size = 52, time = new Date() }) {
         }} />
       </div>
 
-      <div style={{ textAlign: 'left' }}>
-        <div style={{ fontSize: '17px', fontWeight: 900, color: '#38BDF8', letterSpacing: '0.5px', fontFamily: 'var(--font-mono)' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '15px', fontWeight: 900, color: '#38BDF8', letterSpacing: '0.5px', fontFamily: 'var(--font-mono)', lineHeight: 1.1 }}>
           {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
         </div>
-        <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
+        <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>
           {time.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
         </div>
       </div>

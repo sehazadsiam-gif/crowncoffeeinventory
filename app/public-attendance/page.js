@@ -82,11 +82,27 @@ function ExtremeRightAnalogClock({ time = new Date() }) {
         }} />
       </div>
 
+      {/* Digital Time Readout Directly Below Analog Dial */}
+      <div style={{
+        fontSize: 'clamp(12px, 1.1vw, 16px)',
+        fontWeight: 900,
+        color: '#38BDF8',
+        fontFamily: "'JetBrains Mono', monospace",
+        letterSpacing: '0.04em',
+        lineHeight: 1.1,
+        marginTop: '3px',
+        textAlign: 'center',
+        whiteSpace: 'nowrap',
+        textShadow: '0 0 10px rgba(56,189,248,0.35)'
+      }}>
+        {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })}
+      </div>
+
       {/* Date Label Beneath Clock */}
       <div style={{
-        fontSize: 'clamp(9px, 0.8vw, 11px)', fontWeight: 800, color: '#E2E8F0',
+        fontSize: 'clamp(8px, 0.7vw, 10px)', fontWeight: 800, color: '#94A3B8',
         letterSpacing: '0.04em', fontFamily: "'Plus Jakarta Sans', sans-serif",
-        textAlign: 'center', whiteSpace: 'nowrap'
+        textAlign: 'center', whiteSpace: 'nowrap', marginTop: '1px'
       }}>
         {dateString} · <span style={{ color: '#D4933A' }}>BST</span>
       </div>
