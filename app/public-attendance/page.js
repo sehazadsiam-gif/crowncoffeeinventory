@@ -84,16 +84,20 @@ function ExtremeRightAnalogClock({ time = new Date() }) {
 
       {/* Digital Time Readout Directly Below Analog Dial */}
       <div style={{
-        fontSize: 'clamp(12px, 1.1vw, 16px)',
+        fontSize: 'clamp(14px, 1.3vw, 20px)',
         fontWeight: 900,
         color: '#38BDF8',
+        background: 'rgba(15, 23, 42, 0.85)',
+        border: '1px solid rgba(56, 189, 248, 0.35)',
+        borderRadius: '8px',
+        padding: '3px 10px',
         fontFamily: "'JetBrains Mono', monospace",
-        letterSpacing: '0.04em',
+        letterSpacing: '0.06em',
         lineHeight: 1.1,
-        marginTop: '3px',
+        marginTop: '6px',
         textAlign: 'center',
         whiteSpace: 'nowrap',
-        textShadow: '0 0 10px rgba(56,189,248,0.35)'
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3), 0 0 12px rgba(56,189,248,0.2)'
       }}>
         {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })}
       </div>
