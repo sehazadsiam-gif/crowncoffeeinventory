@@ -330,22 +330,25 @@ export default function PublicAttendancePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px'
           }}>
             {/* Left: Branding */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
               <img
                 src="/crown-coffee-logo.jpg"
                 alt="Crown Coffee Logo"
                 style={{
-                  width: '54px', height: '54px',
+                  width: 'clamp(72px, 5vw, 88px)',
+                  height: 'clamp(72px, 5vw, 88px)',
                   borderRadius: '50%',
                   objectFit: 'cover',
-                  border: '2px solid #D4933A',
-                  boxShadow: '0 4px 14px rgba(212,147,58,0.45)',
-                  flexShrink: 0
+                  background: '#000000',
+                  border: '3px solid #F59E0B',
+                  boxShadow: '0 0 24px rgba(245, 158, 11, 0.6), 0 4px 14px rgba(0,0,0,0.5)',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease'
                 }}
               />
               <div>
-                <div style={{ color: 'white', fontWeight: 900, fontSize: 'clamp(16px, 1.4vw, 22px)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>Crown Coffee</div>
-                <div style={{ color: '#D4933A', fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', marginTop: '2px' }}>RFID ATTENDANCE BOARD</div>
+                <div style={{ color: 'white', fontWeight: 900, fontSize: 'clamp(18px, 1.6vw, 24px)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>Crown Coffee</div>
+                <div style={{ color: '#F59E0B', fontSize: '11px', fontWeight: 800, letterSpacing: '0.14em', marginTop: '3px' }}>RFID ATTENDANCE BOARD</div>
               </div>
             </div>
 
