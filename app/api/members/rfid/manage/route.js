@@ -34,7 +34,21 @@ export async function POST(req) {
       if (existing) {
         return NextResponse.json({
           success: false,
-          error: `This RFID card is already assigned to ${existing.full_name}. Please deactivate it first.`
+          error: `This RFID card is already assigned to member ${existing.full_name}. Please deactivate it first.`
+        }, { status: 400 })
+      }
+
+      // Check if rfid_code is assigned to a Staff member
+      const { data: existingStaff } = await supabase
+        .from('staff')
+        .select('name')
+        .eq('rfid_code', cleanRfid)
+        .maybeSingle()
+
+      if (existingStaff) {
+        return NextResponse.json({
+          success: false,
+          error: `This RFID card is assigned to Staff Member (${existingStaff.name}). Staff cards cannot be assigned to customer members.`
         }, { status: 400 })
       }
 
