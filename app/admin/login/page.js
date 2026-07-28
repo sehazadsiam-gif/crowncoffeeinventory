@@ -1,49 +1,44 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Shield, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { ChevronLeft, Lock, AlertCircle } from 'lucide-react'
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ username: '', password: '' })
+  const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
+    document.title = 'Admin Sign In | Crown Coffee'
     if (typeof window !== 'undefined' && window.location.search.includes('session=expired')) {
-      setError('Your session expired due to 10 minutes of inactivity. Please log in again.')
+      setError('Your session expired due to inactivity. Please log in again.')
     }
     const token = localStorage.getItem('cc_token')
     const role = localStorage.getItem('cc_role')
-    if (token && (role === 'admin' || role === 'sub_admin')) router.replace('/dashboard')
+    const isAdmin = localStorage.getItem('isAdmin')
+    if (isAdmin === 'true' || (token && (role === 'admin' || role === 'sub_admin'))) {
+      router.replace('/')
+    }
   }, [router])
 
-  async function handleLogin() {
-    if (!form.username || !form.password) {
-      setError('Please enter username and password')
+  async function handleLogin(e) {
+    if (e) e.preventDefault()
+    if (!pin.trim()) {
+      setError('Please enter Admin PIN')
       return
     }
     setLoading(true)
     setError('')
-    try {
-      const res = await fetch('/api/auth/admin-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Login failed')
-        return
-      }
-      localStorage.setItem('cc_token', data.token)
+
+    if (pin.trim() === '1590') {
+      localStorage.setItem('isAdmin', 'true')
+      localStorage.setItem('cc_token', 'admin_pin_session')
       localStorage.setItem('cc_role', 'admin')
-      localStorage.setItem('cc_username', data.username)
-      router.replace('/dashboard')
-    } catch (err) {
-      setError('Something went wrong. Please try again.')
-    } finally {
+      localStorage.setItem('cc_username', 'admin')
+      router.replace('/')
+    } else {
+      setError('Invalid Admin PIN. Please try again.')
       setLoading(false)
     }
   }
@@ -128,10 +123,10 @@ export default function AdminLoginPage() {
 
         <div style={{ maxWidth: '400px', width: '100%', margin: '0 auto' }}>
           <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#1C1410', margin: '0 0 8px 0' }}>
-            Admin Sign In
+            Admin Security Sign In
           </h2>
           <p style={{ fontSize: '13px', color: '#9C8A76', margin: '0 0 32px 0' }}>
-            Enter your credentials to access the management system
+            Enter your 4-digit Security PIN to access the Admin Panel
           </p>
 
           {error && (
@@ -151,7 +146,7 @@ export default function AdminLoginPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div>
               <label style={{ 
                 display: 'block', 
@@ -161,48 +156,24 @@ export default function AdminLoginPage() {
                 marginBottom: '8px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em'
-              }}>Username</label>
-              <input
-                className="custom-input"
-                type="text"
-                placeholder="Enter username"
-                value={form.username}
-                onChange={e => setForm({ ...form, username: e.target.value })}
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              />
-            </div>
-
-            <div>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '11px', 
-                fontWeight: 600, 
-                color: '#9C8A76', 
-                marginBottom: '8px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em'
-              }}>Password</label>
+              }}>Admin PIN</label>
               <div style={{ position: 'relative' }}>
+                <Lock size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9C8A76' }} />
                 <input
                   className="custom-input"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter password"
-                  value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  style={{ paddingRight: '44px' }}
+                  type="password"
+                  placeholder="Enter PIN (1590)"
+                  value={pin}
+                  onChange={e => setPin(e.target.value)}
+                  style={{ paddingLeft: '44px', fontSize: '18px', letterSpacing: '4px', textAlign: 'center' }}
+                  required
+                  autoFocus
                 />
-                <button
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9C8A76' }}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
               </div>
             </div>
 
             <button
-              onClick={handleLogin}
+              type="submit"
               disabled={loading}
               style={{
                 width: '100%',
@@ -220,13 +191,9 @@ export default function AdminLoginPage() {
               }}
               className="signin-btn"
             >
-              {loading ? 'Signing in...' : 'SIGN IN'}
+              {loading ? 'Verifying PIN...' : 'ACCESS ADMIN PANEL'}
             </button>
-            <p style={{ marginTop: '16px', fontSize: '11px', color: '#9C8A76', textAlign: 'center' }}>
-              For membership verification, use the<br/>
-              Membership Portal at the home page.
-            </p>
-          </div>
+          </form>
         </div>
       </div>
 
