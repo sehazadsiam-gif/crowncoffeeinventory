@@ -13,6 +13,10 @@ export default function AdminManageMemberPage() {
     full_name: '',
     phone: '',
     email: '',
+    address: '',
+    special_occasion: 'Birthday',
+    special_month: '1',
+    special_day: '1',
     rfid_code: '',
     card_number: ''
   })
@@ -67,6 +71,12 @@ export default function AdminManageMemberPage() {
     setMessage('')
     try {
       // 1. Submit application to create member
+      const specialDatesPayload = newMemberForm.special_occasion ? [{
+        occasion_name: newMemberForm.special_occasion,
+        month: parseInt(newMemberForm.special_month || '1'),
+        day: parseInt(newMemberForm.special_day || '1')
+      }] : []
+
       const appRes = await fetch('/api/members/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -74,6 +84,8 @@ export default function AdminManageMemberPage() {
           full_name: newMemberForm.full_name,
           email: newMemberForm.email,
           phone: newMemberForm.phone,
+          address: newMemberForm.address,
+          special_dates: specialDatesPayload,
           card_number: newMemberForm.card_number || `CC-MEM-${Math.floor(1000 + Math.random() * 9000)}`
         })
       })
@@ -395,6 +407,58 @@ export default function AdminManageMemberPage() {
                     required
                     style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px' }}
                   />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', display: 'block', marginBottom: '6px' }}>Member Address</label>
+                <input
+                  type="text"
+                  value={newMemberForm.address}
+                  onChange={(e) => setNewMemberForm({ ...newMemberForm, address: e.target.value })}
+                  placeholder="Enter house address..."
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', display: 'block', marginBottom: '6px' }}>Special Date Occasion</label>
+                  <select
+                    value={newMemberForm.special_occasion}
+                    onChange={(e) => setNewMemberForm({ ...newMemberForm, special_occasion: e.target.value })}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px', outline: 'none' }}
+                  >
+                    <option value="Birthday">Birthday</option>
+                    <option value="Anniversary">Anniversary</option>
+                    <option value="Other">Special Day</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', display: 'block', marginBottom: '6px' }}>Month</label>
+                  <select
+                    value={newMemberForm.special_month}
+                    onChange={(e) => setNewMemberForm({ ...newMemberForm, special_month: e.target.value })}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px', outline: 'none' }}
+                  >
+                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                      <option key={m} value={i + 1}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', display: 'block', marginBottom: '6px' }}>Day</label>
+                  <select
+                    value={newMemberForm.special_day}
+                    onChange={(e) => setNewMemberForm({ ...newMemberForm, special_day: e.target.value })}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px', outline: 'none' }}
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
