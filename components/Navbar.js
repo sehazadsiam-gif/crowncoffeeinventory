@@ -161,6 +161,7 @@ export default function Navbar() {
       icon: <Users size={16} />,
       children: [
         { href: '/admin/staff', label: 'Staff Directory & ID Cards', flag: 'staff_directory' },
+        { href: '/roster', label: 'Weekly Duty Roster' },
         { href: '/attendance', label: 'Live Attendance & RFID Kiosk', flag: 'attendance_live' },
         { href: '/public-attendance', label: 'Public Attendance Kiosk', flag: 'attendance_public' },
         { href: '/attendance/requests', label: 'Duty & Leave Requests', flag: 'leave_requests' },
