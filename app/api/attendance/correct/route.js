@@ -51,7 +51,10 @@ export async function PATCH(request) {
         const checkOutDate = new Date(`${date}T${checkOutAt}:00+06:00`)
         const diffMins = (checkOutDate - checkInDate) / 60000
         if (diffMins > 0) {
-          updates.hours_worked = Math.round((diffMins / 60) * 100) / 100
+          const hw = Math.round((diffMins / 60) * 100) / 100
+          updates.hours_worked = hw
+          const otMins = hw > 10.0 ? Math.round((hw - 10.0) * 60) : 0
+          updates.overtime_minutes = otMins
         }
       }
     }

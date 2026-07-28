@@ -60,9 +60,17 @@ export async function GET(request) {
         timeRange = `${checkInTime} (Checked In)`
       }
 
-      const hoursWorked = l.hours_worked || 0
+      let hoursWorked = l.hours_worked || 0
+      if ((!hoursWorked || hoursWorked === 0) && l.check_in_at && l.check_out_at) {
+        const checkIn = new Date(l.check_in_at).getTime()
+        const checkOut = new Date(l.check_out_at).getTime()
+        const breakMins = l.break_duration_minutes || 0
+        const diffMins = Math.max(0, Math.floor((checkOut - checkIn) / (1000 * 60)) - breakMins)
+        hoursWorked = Math.round((diffMins / 60) * 100) / 100
+      }
+
       const standardShiftHours = 10
-      const otThresholdHours = 11
+      const otThresholdHours = 10.0
       const overtimeHours = l.overtime_hours || (hoursWorked > otThresholdHours ? Math.round((hoursWorked - otThresholdHours) * 100) / 100 : 0)
       const overtimeMins = Math.round(overtimeHours * 60)
       const lateMins = l.minutes_late || 0
@@ -124,12 +132,27 @@ export async function GET(request) {
       const absent = sLogs.filter(l => l.status === 'absent').length
       const onLeave = sLogs.filter(l => l.status === 'on_leave').length
       const off = sLogs.filter(l => l.status === 'off').length
-      const totalHours = Math.round(sLogs.reduce((sum, l) => sum + (l.hours_worked || 0), 0) * 10) / 10
+      const totalHours = Math.round(sLogs.reduce((sum, l) => {
+        let hw = l.hours_worked || 0
+        if ((!hw || hw === 0) && l.check_in_at && l.check_out_at) {
+          const ci = new Date(l.check_in_at).getTime()
+          const co = new Date(l.check_out_at).getTime()
+          const bm = l.break_duration_minutes || 0
+          hw = Math.max(0, Math.floor((co - ci) / (1000 * 60)) - bm) / 60
+        }
+        return sum + hw
+      }, 0) * 10) / 10
       const totalLateMinutes = sLogs.reduce((sum, l) => sum + (l.minutes_late || 0), 0)
       const totalLateHours = Math.round((totalLateMinutes / 60) * 100) / 100
       const totalOvertimeHours = Math.round(sLogs.reduce((sum, l) => {
-        const hw = l.hours_worked || 0
-        const ot = l.overtime_hours || (hw > 11 ? hw - 11 : 0)
+        let hw = l.hours_worked || 0
+        if ((!hw || hw === 0) && l.check_in_at && l.check_out_at) {
+          const ci = new Date(l.check_in_at).getTime()
+          const co = new Date(l.check_out_at).getTime()
+          const bm = l.break_duration_minutes || 0
+          hw = Math.max(0, Math.floor((co - ci) / (1000 * 60)) - bm) / 60
+        }
+        const ot = l.overtime_hours || (hw > 10.0 ? hw - 10.0 : 0)
         return sum + ot
       }, 0) * 100) / 100
 
