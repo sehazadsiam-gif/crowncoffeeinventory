@@ -29,15 +29,8 @@ export default function RosterPage() {
   const weekRangeText = getWeekRangeText(weekStart)
 
   useEffect(() => {
-    const token = localStorage.getItem('cc_token')
-    const role = localStorage.getItem('cc_role')
-    if (!token || (role !== 'admin' && role !== 'sub_admin')) {
-      router.replace('/')
-      return
-    }
-
     fetchRosterData(weekStart)
-  }, [weekStart, router])
+  }, [weekStart])
 
   async function fetchRosterData(ws) {
     try {
