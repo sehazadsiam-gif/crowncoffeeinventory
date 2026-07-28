@@ -10,9 +10,13 @@ export default function MemberProgressViewPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [dailyVisits, setDailyVisits] = useState([])
+
   useEffect(() => {
     fetchTodayTaps()
-  }, [])
+    fetchVisitsByDate(selectedDate)
+  }, [selectedDate])
 
   const fetchTodayTaps = async () => {
     try {
@@ -23,6 +27,18 @@ export default function MemberProgressViewPage() {
       }
     } catch (err) {
       console.error('Error fetching taps:', err)
+    }
+  }
+
+  const fetchVisitsByDate = async (dateStr) => {
+    try {
+      const res = await fetch(`/api/members/visits/list?date=${dateStr}`)
+      const data = await res.json()
+      if (data.success) {
+        setDailyVisits(data.visits || [])
+      }
+    } catch (err) {
+      console.error('Error fetching daily visits:', err)
     }
   }
 
@@ -45,6 +61,7 @@ export default function MemberProgressViewPage() {
         setMessage(`Visit #${data.member.total_visits} recorded for ${data.member.full_name}! Customer notified via email.`)
         setRfidInput('')
         fetchTodayTaps()
+        fetchVisitsByDate(selectedDate)
       } else {
         setMessage(`${data.error || 'RFID Tag not found'}`)
       }
@@ -368,6 +385,85 @@ export default function MemberProgressViewPage() {
           )}
         </div>
 
+      </div>
+
+      {/* Daily Member Visits Log */}
+      <div style={{ maxWidth: '1100px', margin: '32px auto 0 auto', backgroundColor: '#1E110A', padding: '28px', borderRadius: '16px', border: '1px solid #382215' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#F3EAD8' }}>
+              Daily Member Visits Log ({dailyVisits.length} Visits)
+            </h2>
+            <p style={{ fontSize: '12px', color: '#A89284', margin: '4px 0 0 0' }}>
+              Select a date to view members who visited on that specific day.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 800, color: '#D4AF37' }}>Select Date:</label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                backgroundColor: '#120A06',
+                border: '1px solid #4A2810',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: 700,
+                outline: 'none'
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', color: '#F3EAD8' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #382215', textAlign: 'left', color: '#D4AF37' }}>
+                <th style={{ padding: '12px' }}>Visit Time</th>
+                <th style={{ padding: '12px' }}>Member Name</th>
+                <th style={{ padding: '12px' }}>Card Number</th>
+                <th style={{ padding: '12px' }}>Phone</th>
+                <th style={{ padding: '12px' }}>Punches</th>
+                <th style={{ padding: '12px' }}>Total Visits</th>
+                <th style={{ padding: '12px' }}>Recorded Via</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dailyVisits.map(v => (
+                <tr key={v.id} style={{ borderBottom: '1px solid #2B180C' }}>
+                  <td style={{ padding: '12px', fontFamily: 'monospace', color: '#E0C870', fontWeight: 700 }}>
+                    {new Date(v.visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </td>
+                  <td style={{ padding: '12px', fontWeight: 800, color: '#FFFFFF' }}>
+                    {v.members?.full_name || 'Member'}
+                  </td>
+                  <td style={{ padding: '12px', fontFamily: 'monospace', color: '#D4AF37' }}>
+                    {v.members?.card_number || '-'}
+                  </td>
+                  <td style={{ padding: '12px', color: '#A89284' }}>{v.members?.phone || '-'}</td>
+                  <td style={{ padding: '12px', fontWeight: 800, color: '#4ADE80' }}>
+                    {v.members?.visit_punch_count || 0}/5
+                  </td>
+                  <td style={{ padding: '12px', fontWeight: 800 }}>#{v.members?.total_visits || 0}</td>
+                  <td style={{ padding: '12px', fontSize: '11px', textTransform: 'uppercase', color: '#A89284' }}>
+                    {v.recorded_by || 'RFID Tap'}
+                  </td>
+                </tr>
+              ))}
+              {dailyVisits.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ padding: '24px', textAlign: 'center', color: '#A89284' }}>
+                    No member visits recorded for {selectedDate}.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

@@ -38,6 +38,9 @@ export default function AdminManageMemberPage() {
   const [activeTab, setActiveTab] = useState('directory') // 'directory', 'create', 'studio', 'logs'
   const [cardTheme, setCardTheme] = useState('dark') // 'dark', 'gold', 'silver'
 
+  const [visitLogDate, setVisitLogDate] = useState(new Date().toISOString().split('T')[0])
+  const [dailyVisitsList, setDailyVisitsList] = useState([])
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const isAdmin = localStorage.getItem('isAdmin')
@@ -48,7 +51,20 @@ export default function AdminManageMemberPage() {
     }
     fetchMembers()
     fetchLogs()
-  }, [])
+    fetchDailyVisitsList(visitLogDate)
+  }, [visitLogDate])
+
+  const fetchDailyVisitsList = async (dateStr) => {
+    try {
+      const res = await fetch(`/api/members/visits/list?date=${dateStr}`)
+      const data = await res.json()
+      if (data.success) {
+        setDailyVisitsList(data.visits || [])
+      }
+    } catch (err) {
+      console.error('Error fetching admin daily visits:', err)
+    }
+  }
 
   const handleVerifyPin = (e) => {
     e.preventDefault()
@@ -534,6 +550,21 @@ export default function AdminManageMemberPage() {
             All Enlisted Members ({members.length})
           </button>
           <button
+            onClick={() => setActiveTab('daily_visits')}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '10px',
+              border: 'none',
+              backgroundColor: activeTab === 'daily_visits' ? '#1E110A' : '#E7E5E4',
+              color: activeTab === 'daily_visits' ? '#FFFFFF' : '#44403C',
+              fontSize: '14px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            Daily Member Visits ({dailyVisitsList.length})
+          </button>
+          <button
             onClick={() => setActiveTab('create')}
             style={{
               padding: '12px 24px',
@@ -664,6 +695,86 @@ export default function AdminManageMemberPage() {
                     <tr>
                       <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#78716C' }}>
                         No members found matching "{searchQuery}"
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 0.5: DAILY MEMBER VISITS LOG BY DATE */}
+        {activeTab === 'daily_visits' && (
+          <div style={{ backgroundColor: '#FFFFFF', padding: '28px', borderRadius: '16px', border: '1px solid #E7E5E4' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>
+                  Daily Member Visits Audit Log ({dailyVisitsList.length} Visits)
+                </h3>
+                <p style={{ fontSize: '12px', color: '#78716C', margin: '4px 0 0 0' }}>
+                  Filter and track every single member visit punch recorded on any specific calendar date.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 800, color: '#1C1917' }}>Select Date:</label>
+                <input
+                  type="date"
+                  value={visitLogDate}
+                  onChange={(e) => setVisitLogDate(e.target.value)}
+                  style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px', outline: 'none', fontWeight: 700 }}
+                />
+                <button
+                  onClick={() => setVisitLogDate(new Date().toISOString().split('T')[0])}
+                  style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #D6D3D1', backgroundColor: '#F5F5F4', color: '#1C1917', fontSize: '12px', fontWeight: 800, cursor: 'pointer' }}
+                >
+                  Today
+                </button>
+              </div>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F5F5F4', textAlign: 'left', color: '#78716C' }}>
+                    <th style={{ padding: '12px' }}>Visit Timestamp</th>
+                    <th style={{ padding: '12px' }}>Member Name</th>
+                    <th style={{ padding: '12px' }}>Card Number</th>
+                    <th style={{ padding: '12px' }}>Phone</th>
+                    <th style={{ padding: '12px' }}>Email</th>
+                    <th style={{ padding: '12px' }}>Punches</th>
+                    <th style={{ padding: '12px' }}>Total Lifetime Visits</th>
+                    <th style={{ padding: '12px' }}>Recorded By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dailyVisitsList.map(v => (
+                    <tr key={v.id} style={{ borderBottom: '1px solid #E7E5E4' }}>
+                      <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#1E110A' }}>
+                        {new Date(v.visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: 800, color: '#1C1917' }}>
+                        {v.members?.full_name || 'Member'}
+                      </td>
+                      <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#6B3A2A' }}>
+                        {v.members?.card_number || '-'}
+                      </td>
+                      <td style={{ padding: '12px', color: '#57534E' }}>{v.members?.phone || '-'}</td>
+                      <td style={{ padding: '12px', color: '#57534E' }}>{v.members?.email || '-'}</td>
+                      <td style={{ padding: '12px', fontWeight: 800, color: '#15803D' }}>
+                        {v.members?.visit_punch_count || 0}/5
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: 800 }}>#{v.members?.total_visits || 0}</td>
+                      <td style={{ padding: '12px', fontSize: '11px', textTransform: 'uppercase', color: '#78716C' }}>
+                        {v.recorded_by || 'RFID Tap'}
+                      </td>
+                    </tr>
+                  ))}
+                  {dailyVisitsList.length === 0 && (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#78716C' }}>
+                        No member visits recorded for date: <strong>{visitLogDate}</strong>
                       </td>
                     </tr>
                   )}
