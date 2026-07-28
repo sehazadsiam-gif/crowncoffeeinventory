@@ -739,7 +739,7 @@ export default function AdminManageMemberPage() {
                         borderRadius: '10px',
                         color: activeTheme.subColor
                       }}>
-                        {selectedMember.tier || 'VIP MEMBER'}
+                        {selectedMember.tier && selectedMember.tier !== 'silver' && selectedMember.tier !== 'gold' ? selectedMember.tier : 'TOP 1%'}
                       </div>
                     </div>
 
