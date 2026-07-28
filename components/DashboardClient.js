@@ -143,7 +143,10 @@ export default function DashboardClient() {
     }
   }
 
-  const totalAlerts = alerts.pendingLeaves.length + alerts.unreadMessages.length + stats.lowStockCount
+  const totalLeavesAlert = isEnabled('leave_requests') ? alerts.pendingLeaves.length : 0
+  const totalMessagesAlert = isEnabled('staff_directory') ? alerts.unreadMessages.length : 0
+  const totalStockAlert = isEnabled('inventory_manager') ? stats.lowStockCount : 0
+  const totalAlerts = totalLeavesAlert + totalMessagesAlert + totalStockAlert
   const profit = stats.totalSales - stats.totalBazar
   const attendancePct = hrStats.activeStaff > 0 ? Math.round((hrStats.presentToday / hrStats.activeStaff) * 100) : 0
 
@@ -264,88 +267,98 @@ export default function DashboardClient() {
             loading={loading}
             trend="up"
           />
-          <KpiCard
-            title="Daily Expenses"
-            value={stats.totalBazar}
-            icon={<Wallet size={20} />}
-            color="#EF4444"
-            subtitle={dateLabel.split(',')[0]}
-            loading={loading}
-            trend="down"
-          />
-          <KpiCard
-            title="Net Profit"
-            value={profit}
-            icon={<Activity size={20} />}
-            color={profit >= 0 ? '#3B82F6' : '#F59E0B'}
-            subtitle="Sales minus expenses"
-            loading={loading}
-          />
-          <KpiCard
-            title="Stock Value"
-            value={stats.stockValue}
-            icon={<Package size={20} />}
-            color="#8B5CF6"
-            subtitle="Current estimated value"
-            loading={loading}
-          />
-          <KpiCard
-            title="Payroll Est."
-            value={hrStats.payrollEstimate}
-            icon={<Users size={20} />}
-            color="#F59E0B"
-            subtitle="Monthly base salaries"
-            loading={loading}
-          />
+          {isEnabled('bazar') && (
+            <KpiCard
+              title="Daily Expenses"
+              value={stats.totalBazar}
+              icon={<Wallet size={20} />}
+              color="#EF4444"
+              subtitle={dateLabel.split(',')[0]}
+              loading={loading}
+              trend="down"
+            />
+          )}
+          {isEnabled('bazar') && isEnabled('sales_audit') && (
+            <KpiCard
+              title="Net Profit"
+              value={profit}
+              icon={<Activity size={20} />}
+              color={profit >= 0 ? '#3B82F6' : '#F59E0B'}
+              subtitle="Sales minus expenses"
+              loading={loading}
+            />
+          )}
+          {isEnabled('inventory_manager') && (
+            <KpiCard
+              title="Stock Value"
+              value={stats.stockValue}
+              icon={<Package size={20} />}
+              color="#8B5CF6"
+              subtitle="Current estimated value"
+              loading={loading}
+            />
+          )}
+          {isEnabled('payroll') && (
+            <KpiCard
+              title="Payroll Est."
+              value={hrStats.payrollEstimate}
+              icon={<Users size={20} />}
+              color="#F59E0B"
+              subtitle="Monthly base salaries"
+              loading={loading}
+            />
+          )}
         </div>
 
         {/* ── FEATURED AI SALES & CASH AUDIT BANNER IN COMMAND CENTER ── */}
-        <div style={{
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-          borderRadius: '16px',
-          padding: '20px 24px',
-          marginBottom: '28px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          display: 'flex',
-          alignItems: 'center',
-          justify: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px',
-          boxShadow: '0 8px 24px rgba(15,23,42,0.2)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ background: 'rgba(59,130,246,0.2)', padding: '12px', borderRadius: '12px', display: 'flex' }}>
-              <ShieldAlert size={26} color="#60A5FA" />
+        {isEnabled('sales_audit') && (
+          <div style={{
+            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+            borderRadius: '16px',
+            padding: '20px 24px',
+            marginBottom: '28px',
+            border: '1px solid rgba(255,255,255,0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '16px',
+            boxShadow: '0 8px 24px rgba(15,23,42,0.2)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ background: 'rgba(59,130,246,0.2)', padding: '12px', borderRadius: '12px', display: 'flex' }}>
+                <ShieldAlert size={26} color="#60A5FA" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'white', fontFamily: 'var(--font-sans)' }}>
+                  AI Daily Sales & Cash Audit Engine
+                </h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-sans)' }}>
+                  Upload POS report, staff closing sheet, delivery app earnings & bazaar receipts for zero-tolerance cash shortage detection.
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: 'white', fontFamily: 'var(--font-sans)' }}>
-                AI Daily Sales & Cash Audit Engine
-              </h3>
-              <p style={{ margin: '3px 0 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-sans)' }}>
-                Upload POS report, staff closing sheet, delivery app earnings & bazaar receipts for zero-tolerance cash shortage detection.
-              </p>
-            </div>
+            <Link
+              href="/sales-reconciliation"
+              style={{
+                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                color: 'white',
+                padding: '10px 20px',
+                borderRadius: '10px',
+                textDecoration: 'none',
+                fontWeight: 800,
+                fontSize: '13px',
+                boxShadow: '0 4px 14px rgba(37,99,235,0.4)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: 'var(--font-sans)'
+              }}
+            >
+              Open Audit Engine →
+            </Link>
           </div>
-          <Link
-            href="/sales-reconciliation"
-            style={{
-              background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
-              color: 'white',
-              padding: '10px 20px',
-              borderRadius: '10px',
-              textDecoration: 'none',
-              fontWeight: 800,
-              fontSize: '13px',
-              boxShadow: '0 4px 14px rgba(37,99,235,0.4)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontFamily: 'var(--font-sans)'
-            }}
-          >
-            Open Audit Engine →
-          </Link>
-        </div>
+        )}
 
         {/* ── MAIN GRID ── */}
         <div className="dash-grid">
@@ -660,9 +673,9 @@ export default function DashboardClient() {
               </div>
 
               <div>
-                {alerts.pendingLeaves.map(lv => (
+                {isEnabled('leave_requests') && alerts.pendingLeaves.map(lv => (
                   <div key={lv.id} className="alert-row">
-                    <div style={{ background: '#F59E0B18', color: '#F59E0B', padding: '8px', borderRadius: '9px', flexShrink: 0, borderLeft: '3px solid #F59E0B' }}>
+                    <div style={{ background: '#F59E0B18', color: '#F59E0B', padding: '8px', borderRadius: '99px', flexShrink: 0, borderLeft: '3px solid #F59E0B' }}>
                       <Clock size={16} />
                     </div>
                     <div>
@@ -677,7 +690,7 @@ export default function DashboardClient() {
                   </div>
                 ))}
 
-                {alerts.unreadMessages.map(msg => (
+                {isEnabled('staff_directory') && alerts.unreadMessages.map(msg => (
                   <div key={msg.id} className="alert-row">
                     <div style={{ background: '#3B82F618', color: '#3B82F6', padding: '8px', borderRadius: '9px', flexShrink: 0, borderLeft: '3px solid #3B82F6' }}>
                       <MessageSquare size={16} />
@@ -695,7 +708,7 @@ export default function DashboardClient() {
                   </div>
                 ))}
 
-                {alerts.lowStockItems.length > 0 && (
+                {isEnabled('inventory_manager') && alerts.lowStockItems.length > 0 && (
                   <div className="alert-row">
                     <div style={{ background: '#EF444418', color: '#EF4444', padding: '8px', borderRadius: '9px', flexShrink: 0, borderLeft: '3px solid #EF4444' }}>
                       <AlertTriangle size={16} />
