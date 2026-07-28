@@ -78,19 +78,30 @@ Respond ONLY with a valid JSON object matching this exact schema:
     let aiResponseText = ''
 
     if (process.env.GEMINI_API_KEY) {
-      try {
-        const model = genAI.getGenerativeModel({
-          model: 'gemini-3.5-flash',
-          generationConfig: { responseMimeType: 'application/json' }
-        })
-        const result = await model.generateContent(prompt)
-        aiResponseText = result.response.text()
-      } catch (geminiErr) {
-        console.warn('[Roster AI] Gemini failed, trying Anthropic fallback:', geminiErr.message)
+      const candidateModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp']
+      let geminiSuccess = false
+
+      for (const modelName of candidateModels) {
+        try {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: { responseMimeType: 'application/json' }
+          })
+          const result = await model.generateContent(prompt)
+          aiResponseText = result.response.text()
+          geminiSuccess = true
+          break
+        } catch (geminiErr) {
+          console.warn(`[Roster AI] Gemini model ${modelName} failed/503:`, geminiErr.message)
+        }
+      }
+
+      if (!geminiSuccess) {
+        console.warn('[Roster AI] All Gemini models failed, trying Anthropic Claude fallback...')
         if (process.env.ANTHROPIC_API_KEY) {
           aiResponseText = await callAnthropicFallback(prompt)
         } else {
-          throw geminiErr
+          throw new Error('Gemini API is currently busy (503). Please try again in a few seconds.')
         }
       }
     } else if (process.env.ANTHROPIC_API_KEY) {
