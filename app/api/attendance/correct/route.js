@@ -53,7 +53,7 @@ export async function PATCH(request) {
         if (diffMins > 0) {
           const hw = Math.round((diffMins / 60) * 100) / 100
           updates.hours_worked = hw
-          const otMins = hw > 10.0 ? Math.round((hw - 10.0) * 60) : 0
+          const otMins = hw > 11.0 ? Math.round((hw - 11.0) * 60) : 0
           updates.overtime_minutes = otMins
         }
       }
