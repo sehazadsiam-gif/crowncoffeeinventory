@@ -207,12 +207,32 @@ export default function AdminManageMemberPage() {
       color: '#1C1917',
       fontFamily: "'Inter', 'Segoe UI', sans-serif"
     }}>
-      {/* Print Styles */}
+      {/* Print Styles for PVC Plastic Card Printer */}
       <style>{`
         @media print {
-          body { background: white !important; padding: 0 !important; }
-          .no-print { display: none !important; }
-          .print-area { margin: 0 !important; box-shadow: none !important; }
+          @page {
+            size: auto;
+            margin: 0;
+          }
+          body * {
+            visibility: hidden;
+          }
+          .print-area, .print-area * {
+            visibility: visible !important;
+          }
+          .print-area {
+            position: relative !important;
+            margin: 15px auto !important;
+            box-shadow: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .no-print {
+            display: none !important;
+          }
         }
       `}</style>
 
