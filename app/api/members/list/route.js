@@ -9,14 +9,6 @@ import { unstable_noStore as noStore } from 'next/cache'
 export async function GET(request) {
   noStore()
   try {
-    const authHeader = request.headers.get('Authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    const session = await validateSession(token)
-
-    if (!session || (session.role !== 'admin' && session.role !== 'sub_admin')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { data: members, error } = await supabase
       .from('members')
       .select('*')

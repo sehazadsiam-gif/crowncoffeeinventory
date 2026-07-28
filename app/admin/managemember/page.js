@@ -9,6 +9,12 @@ export default function AdminManageMemberPage() {
   const [cardLogs, setCardLogs] = useState([])
   const [selectedMember, setSelectedMember] = useState(null)
   
+  // Security PIN state (PIN: 1590)
+  const [pinVerified, setPinVerified] = useState(false)
+  const [pinInput, setPinInput] = useState('')
+  const [pinError, setPinError] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  
   // Custom High-Res Download & Size State
   const [downloadScale, setDownloadScale] = useState(3) // 1x, 2x, 3x (300 DPI), 4x (4K)
   const [downloading, setDownloading] = useState(false)
@@ -29,8 +35,34 @@ export default function AdminManageMemberPage() {
   const [rfidPairInput, setRfidPairInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [activeTab, setActiveTab] = useState('create') // 'create', 'studio', 'logs'
+  const [activeTab, setActiveTab] = useState('directory') // 'directory', 'create', 'studio', 'logs'
   const [cardTheme, setCardTheme] = useState('dark') // 'dark', 'gold', 'silver'
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isAdmin = localStorage.getItem('isAdmin')
+      const token = localStorage.getItem('cc_token')
+      if (isAdmin === 'true' || token === 'admin_pin_session') {
+        setPinVerified(true)
+      }
+    }
+    fetchMembers()
+    fetchLogs()
+  }, [])
+
+  const handleVerifyPin = (e) => {
+    e.preventDefault()
+    if (pinInput.trim() === '1590') {
+      localStorage.setItem('isAdmin', 'true')
+      localStorage.setItem('cc_token', 'admin_pin_session')
+      localStorage.setItem('cc_role', 'admin')
+      setPinVerified(true)
+      setPinError('')
+      fetchMembers()
+    } else {
+      setPinError('Invalid Admin PIN. Please try again.')
+    }
+  }
 
   const addSpecialDateRow = () => {
     setNewMemberForm(prev => ({
@@ -260,6 +292,95 @@ export default function AdminManageMemberPage() {
 
   const activeTheme = getThemeStyles()
 
+  if (!pinVerified) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#1E110A',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        fontFamily: "'Inter', system-ui, sans-serif"
+      }}>
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          padding: '40px',
+          borderRadius: '20px',
+          width: '100%',
+          maxWidth: '400px',
+          textAlign: 'center',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.3)'
+        }}>
+          <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#D4AF37', margin: 0 }}>CC</h1>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#1C1917', margin: '8px 0 4px 0' }}>
+            Admin Security Guard
+          </h2>
+          <p style={{ fontSize: '13px', color: '#78716C', margin: '0 0 24px 0' }}>
+            Enter Admin PIN to access Member Management Studio
+          </p>
+
+          {pinError && (
+            <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: '#FEF2F2', border: '1px solid #FEE2E2', color: '#991B1B', fontSize: '13px', marginBottom: '16px', fontWeight: 700 }}>
+              {pinError}
+            </div>
+          )}
+
+          <form onSubmit={handleVerifyPin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <input
+                type="password"
+                placeholder="Enter PIN (1590)"
+                value={pinInput}
+                onChange={e => setPinInput(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  border: '1px solid #D6D3D1',
+                  fontSize: '18px',
+                  letterSpacing: '6px',
+                  textAlign: 'center',
+                  outline: 'none'
+                }}
+                required
+                autoFocus
+              />
+            </div>
+            <button
+              type="submit"
+              style={{
+                width: '100%',
+                padding: '14px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: '#1E110A',
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              ACCESS MEMBER STUDIO →
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
+
+  const filteredMembers = members.filter(m => {
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase().trim()
+    return (
+      m.full_name?.toLowerCase().includes(q) ||
+      m.email?.toLowerCase().includes(q) ||
+      m.phone?.includes(q) ||
+      m.card_number?.toLowerCase().includes(q) ||
+      m.rfid_code?.toLowerCase().includes(q)
+    )
+  })
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -376,7 +497,7 @@ export default function AdminManageMemberPage() {
         {/* Global Quick Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', marginBottom: '28px' }}>
           <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E7E5E4', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', textTransform: 'uppercase' }}>Total Members</div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', textTransform: 'uppercase' }}>Total Enlisted Members</div>
             <div style={{ fontSize: '28px', fontWeight: 900, color: '#1C1917', marginTop: '4px' }}>{members.length}</div>
           </div>
           <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E7E5E4', textAlign: 'center' }}>
@@ -396,7 +517,22 @@ export default function AdminManageMemberPage() {
         </div>
 
         {/* Mode Selector Tabs */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveTab('directory')}
+            style={{
+              padding: '12px 24px',
+              borderRadius: '10px',
+              border: 'none',
+              backgroundColor: activeTab === 'directory' ? '#1E110A' : '#E7E5E4',
+              color: activeTab === 'directory' ? '#FFFFFF' : '#44403C',
+              fontSize: '14px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            All Enlisted Members ({members.length})
+          </button>
           <button
             onClick={() => setActiveTab('create')}
             style={{
@@ -443,6 +579,99 @@ export default function AdminManageMemberPage() {
             Card Status Audit Logs ({cardLogs.length})
           </button>
         </div>
+
+        {/* TAB 0: ALL ENLISTED MEMBERS DIRECTORY */}
+        {activeTab === 'directory' && (
+          <div style={{ backgroundColor: '#FFFFFF', padding: '28px', borderRadius: '16px', border: '1px solid #E7E5E4' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>
+                  Enlisted Members Directory ({filteredMembers.length})
+                </h3>
+                <p style={{ fontSize: '12px', color: '#78716C', margin: '4px 0 0 0' }}>
+                  Click "Generate Card & Print" next to any member to edit design or print CR80 plastic card.
+                </p>
+              </div>
+
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search member by Name, Phone, Email, Card #..."
+                style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px', width: '320px', outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#F5F5F4', textAlign: 'left', color: '#78716C' }}>
+                    <th style={{ padding: '12px' }}>Member Name</th>
+                    <th style={{ padding: '12px' }}>Card Number</th>
+                    <th style={{ padding: '12px' }}>Mobile Phone</th>
+                    <th style={{ padding: '12px' }}>Email</th>
+                    <th style={{ padding: '12px' }}>RFID Code</th>
+                    <th style={{ padding: '12px' }}>Visits</th>
+                    <th style={{ padding: '12px' }}>Card Validity (24M)</th>
+                    <th style={{ padding: '12px', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.map(m => (
+                    <tr key={m.id} style={{ borderBottom: '1px solid #E7E5E4' }}>
+                      <td style={{ padding: '12px', fontWeight: 800, color: '#1C1917' }}>
+                        {m.full_name}
+                      </td>
+                      <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#6B3A2A' }}>
+                        {m.card_number || 'CC-MEM-8042'}
+                      </td>
+                      <td style={{ padding: '12px', color: '#57534E' }}>{m.phone || '-'}</td>
+                      <td style={{ padding: '12px', color: '#57534E' }}>{m.email || '-'}</td>
+                      <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: '12px' }}>
+                        <span style={{ padding: '2px 8px', borderRadius: '6px', backgroundColor: m.rfid_code ? '#E0F2FE' : '#F5F5F4', color: m.rfid_code ? '#0369A1' : '#78716C', fontWeight: 700 }}>
+                          {m.rfid_code || 'Unpaired'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: 800 }}>#{m.total_visits || 0}</td>
+                      <td style={{ padding: '12px', fontSize: '12px', fontWeight: 700, color: '#D4AF37' }}>
+                        EXP: {m.card_expires_at 
+                          ? new Date(m.card_expires_at).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })
+                          : new Date(new Date().setMonth(new Date().getMonth() + 24)).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'right' }}>
+                        <button
+                          onClick={() => {
+                            setSelectedMember(m)
+                            setActiveTab('studio')
+                          }}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            backgroundColor: '#1E110A',
+                            color: '#FFFFFF',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Generate Card & Print →
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredMembers.length === 0 && (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#78716C' }}>
+                        No members found matching "{searchQuery}"
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* TAB 1: CREATE MEMBER & GENERATE CARD */}
         {activeTab === 'create' && (
