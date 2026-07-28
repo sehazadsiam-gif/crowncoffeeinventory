@@ -14,12 +14,6 @@ export default function AdminLoginPage() {
     if (typeof window !== 'undefined' && window.location.search.includes('session=expired')) {
       setError('Your session expired due to inactivity. Please log in again.')
     }
-    const token = localStorage.getItem('cc_token')
-    const role = localStorage.getItem('cc_role')
-    const isAdmin = localStorage.getItem('isAdmin')
-    if (isAdmin === 'true' || (token && (role === 'admin' || role === 'sub_admin'))) {
-      router.replace('/')
-    }
   }, [router])
 
   async function handleLogin(e) {
@@ -36,7 +30,7 @@ export default function AdminLoginPage() {
       localStorage.setItem('cc_token', 'admin_pin_session')
       localStorage.setItem('cc_role', 'admin')
       localStorage.setItem('cc_username', 'admin')
-      router.replace('/')
+      router.replace('/dashboard')
     } else {
       setError('Invalid Admin PIN. Please try again.')
       setLoading(false)

@@ -27,8 +27,6 @@ export default function GatewayPage() {
 
   useEffect(() => {
     setMounted(true)
-    const isAdmin = localStorage.getItem('isAdmin')
-    if (isAdmin === 'true') router.push('/')
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
@@ -60,7 +58,7 @@ export default function GatewayPage() {
       localStorage.setItem('cc_token', 'admin_pin_session')
       localStorage.setItem('cc_role', 'admin')
       addToast('Welcome back, Admin!', 'success')
-      router.push('/')
+      router.push('/dashboard')
     } else {
       addToast('Invalid Admin PIN', 'error')
     }
