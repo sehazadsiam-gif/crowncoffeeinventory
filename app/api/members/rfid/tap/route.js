@@ -40,12 +40,34 @@ export async function POST(req) {
       }, { status: 403 })
     }
 
-    // 3. Check card expiration (36-month validity)
+    // 3. Check card expiration (24-month validity)
     if (member.card_expires_at && new Date(member.card_expires_at) < new Date()) {
       return NextResponse.json({
         success: false,
         error: `Card expired on ${new Date(member.card_expires_at).toLocaleDateString('en-GB')}. Please renew at counter.`
       }, { status: 403 })
+    }
+
+    // 3.5 Enforce 1 Punch Per Day Rule
+    const { override_today_limit = false } = body
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+    const startOfTodayISO = startOfToday.toISOString()
+
+    const { data: todayVisits } = await supabase
+      .from('member_visits')
+      .select('id, visited_at')
+      .eq('member_id', member.id)
+      .gte('visited_at', startOfTodayISO)
+      .limit(1)
+
+    if (todayVisits && todayVisits.length > 0 && !override_today_limit) {
+      const lastVisitTime = new Date(todayVisits[0].visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      return NextResponse.json({
+        success: false,
+        already_punched_today: true,
+        error: `Visit already recorded for ${member.full_name} today at ${lastVisitTime}! Maximum 1 punch per day allowed.`
+      }, { status: 429 })
     }
 
     // 4. Calculate new visit counts

@@ -26,8 +26,8 @@ export default function MemberProgressViewPage() {
     }
   }
 
-  const handleManualRfidTap = async (e) => {
-    e.preventDefault()
+  const handleManualRfidTap = async (e, override = false) => {
+    if (e) e.preventDefault()
     if (!rfidInput.trim()) return
 
     setLoading(true)
@@ -36,7 +36,7 @@ export default function MemberProgressViewPage() {
       const res = await fetch('/api/members/rfid/tap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rfid_code: rfidInput.trim() })
+        body: JSON.stringify({ rfid_code: rfidInput.trim(), override_today_limit: override })
       })
 
       const data = await res.json()
@@ -46,7 +46,7 @@ export default function MemberProgressViewPage() {
         setRfidInput('')
         fetchTodayTaps()
       } else {
-        setMessage(`Error: ${data.error || 'RFID Tag not found'}`)
+        setMessage(`${data.error || 'RFID Tag not found'}`)
       }
     } catch (err) {
       setMessage('Failed to process RFID tap')
