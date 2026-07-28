@@ -587,9 +587,18 @@ export default function AdminClient({ initialStats }) {
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                  <a href="/admin/memberview" style={{ display: 'flex', flexDirection: 'column', padding: '16px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FDE68A', textDecoration: 'none', color: '#1E293B' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '14px', color: '#92400E' }}>
+                      Member RFID & Credit-Card ID Studio
+                    </div>
+                    <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#78350F' }}>
+                      Pair member RFID cards, generate CR80 plastic cards, track card history & 36-month expiry.
+                    </p>
+                  </a>
+
                   <a href="/admin/staff" style={{ display: 'flex', flexDirection: 'column', padding: '16px', background: '#F4F7FB', borderRadius: '12px', border: '1px solid #D0E1F9', textDecoration: 'none', color: '#1E293B' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '14px', color: '#1565C0' }}>
-                      👥 Staff Directory & ID Cards
+                      Staff Directory & ID Cards
                     </div>
                     <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748B' }}>
                       Add/edit staff, set Front/Kitchen roles, pair RFID cards, print official ID cards.
@@ -598,16 +607,16 @@ export default function AdminClient({ initialStats }) {
 
                   <a href="/admin/attendance-check" style={{ display: 'flex', flexDirection: 'column', padding: '16px', background: '#EDFDF5', borderRadius: '12px', border: '1px solid #A7F3D0', textDecoration: 'none', color: '#1E293B' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '14px', color: '#047857' }}>
-                      ⏱️ Live Attendance Check
+                      Live Attendance Check
                     </div>
                     <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748B' }}>
-                      Real-time WebSocket monitoring (&lt;1s), minute-by-minute overtime beyond 10 hours.
+                      Real-time WebSocket monitoring, minute-by-minute overtime beyond 10 hours.
                     </p>
                   </a>
 
                   <a href="/public-attendance" target="_blank" style={{ display: 'flex', flexDirection: 'column', padding: '16px', background: '#FAF5FF', borderRadius: '12px', border: '1px solid #E9D5FF', textDecoration: 'none', color: '#1E293B' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '14px', color: '#6B21A8' }}>
-                      📺 Public Display Kiosk (PWA)
+                      Public Display Kiosk (PWA)
                     </div>
                     <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748B' }}>
                       Read-only shop display, standalone PWA app mode, auto-start PC configuration guide.

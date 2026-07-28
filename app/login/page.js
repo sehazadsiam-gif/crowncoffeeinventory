@@ -14,6 +14,7 @@ export default function GatewayPage() {
   const [staffSubMode, setStaffSubMode] = useState('login')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [adminPin, setAdminPin] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [staffList, setStaffList] = useState([])
@@ -44,12 +45,14 @@ export default function GatewayPage() {
   const handleAdminLogin = (e) => {
     e.preventDefault()
     setLoading(true)
-    if (username === 'admin' && password === 'admin12345') {
+    if (adminPin.trim() === '1590' || (username === 'admin' && password === 'admin12345')) {
       localStorage.setItem('isAdmin', 'true')
+      localStorage.setItem('cc_token', 'admin_pin_session')
+      localStorage.setItem('cc_role', 'admin')
       addToast('Welcome back, Admin!', 'success')
       router.push('/')
     } else {
-      addToast('Invalid credentials', 'error')
+      addToast('Invalid Admin PIN', 'error')
     }
     setLoading(false)
   }
@@ -207,24 +210,23 @@ export default function GatewayPage() {
               <div style={{ padding: '28px' }}>
                 <form onSubmit={handleAdminLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <label className="label">Username</label>
-                    <div style={{ position: 'relative' }}>
-                      <User size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', pointerEvents: 'none' }} />
-                      <input className="input" style={{ paddingLeft: '42px' }} placeholder="Enter username" value={username} onChange={e => setUsername(e.target.value)} required autoComplete="username" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="label">Password</label>
+                    <label className="label">Admin Security PIN</label>
                     <div style={{ position: 'relative' }}>
                       <Lock size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', pointerEvents: 'none' }} />
-                      <input className="input" type={showPassword ? 'text' : 'password'} style={{ paddingLeft: '42px', paddingRight: '44px' }} placeholder="Enter password" value={password} onChange={e => setPassword(e.target.value)} required autoComplete="current-password" />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-                        {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                      </button>
+                      <input 
+                        className="input" 
+                        type="password" 
+                        style={{ paddingLeft: '42px', fontSize: '18px', letterSpacing: '4px', textAlign: 'center' }} 
+                        placeholder="Enter PIN (1590)" 
+                        value={adminPin} 
+                        onChange={e => setAdminPin(e.target.value)} 
+                        required 
+                        autoFocus
+                      />
                     </div>
                   </div>
                   <button type="submit" className="btn-primary" style={{ width: '100%', height: '48px', marginTop: '4px' }} disabled={loading}>
-                    {loading ? 'Authenticating...' : 'Sign In →'}
+                    {loading ? 'Verifying PIN...' : 'Access Admin Dashboard →'}
                   </button>
                 </form>
               </div>
