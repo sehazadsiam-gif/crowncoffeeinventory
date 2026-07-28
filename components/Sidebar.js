@@ -13,6 +13,7 @@ import {
   UserCheck,
   TrendingUp,
   BookOpen,
+  Sliders,
   Home,
   Calendar,
   MessageSquare,
@@ -22,10 +23,12 @@ import {
   Menu,
   X
 } from 'lucide-react'
+import { useFeatureFlags } from '../hooks/useFeatureFlags'
 
 export default function Sidebar({ role, currentPage, staffName }) {
   const router = useRouter()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const { isEnabled } = useFeatureFlags()
 
   const handleLogout = () => {
     localStorage.removeItem('cc_token')
@@ -39,31 +42,33 @@ export default function Sidebar({ role, currentPage, staffName }) {
   const navItems = {
     admin: [
       { label: 'Dashboard', icon: BarChart3, path: '/admin/dashboard' },
-      { label: 'Recipe Book', icon: BookOpen, path: '/recipebook' },
-      { label: 'Payroll', icon: DollarSign, path: '/admin/payroll' },
-      { label: 'Directory', icon: Users, path: '/admin/staff' },
-      { label: 'Advances', icon: Hand, path: '/admin/advances' },
-      { label: 'Attendance Import', icon: Upload, path: '/attendance-import' },
-      { label: 'Service Charge', icon: Settings, path: '/admin/service-charge' },
-      { label: 'Members', icon: UserCheck, path: '/admin/members' },
-      { label: 'Pending Approvals', icon: UserCheck, path: '/admin/members/pending' },
-      { label: 'Balance Sheet', icon: TrendingUp, path: '/balance-sheet' },
+      { label: 'Feature Manager', icon: Sliders, path: '/admin/features' },
+      { label: 'Recipe Book', icon: BookOpen, path: '/recipebook', flag: 'recipebook' },
+      { label: 'Payroll', icon: DollarSign, path: '/admin/payroll', flag: 'payroll' },
+      { label: 'Directory', icon: Users, path: '/admin/staff', flag: 'staff_directory' },
+      { label: 'Advances', icon: Hand, path: '/admin/advances', flag: 'advances' },
+      { label: 'Attendance Import', icon: Upload, path: '/attendance-import', flag: 'attendance_reports' },
+      { label: 'Service Charge', icon: Settings, path: '/admin/service-charge', flag: 'service_charge' },
+      { label: 'Members', icon: UserCheck, path: '/admin/members', flag: 'members' },
+      { label: 'Pending Approvals', icon: UserCheck, path: '/admin/members/pending', flag: 'members' },
+      { label: 'Balance Sheet', icon: TrendingUp, path: '/balance-sheet', flag: 'balance_sheet' },
     ],
     staff: [
       { label: 'Dashboard', icon: Home, path: '/staff-portal' },
-      { label: 'Payroll', icon: DollarSign, path: '/staff/payroll' },
-      { label: 'Attendance', icon: Calendar, path: '/staff/attendance' },
+      { label: 'Payroll', icon: DollarSign, path: '/staff/payroll', flag: 'payroll' },
+      { label: 'Attendance', icon: Calendar, path: '/staff/attendance', flag: 'attendance_live' },
       { label: 'Remarks', icon: MessageSquare, path: '/staff/remarks' },
       { label: 'Profile', icon: User, path: '/staff/profile' },
     ],
     manager: [
-      { label: 'Member Lookup', icon: Search, path: '/manager' },
+      { label: 'Member Lookup', icon: Search, path: '/manager', flag: 'members' },
       { label: 'Analytics', icon: BarChart3, path: '/manager/analytics' },
       { label: 'Profile', icon: User, path: '/manager/profile' },
     ]
   }
 
-  const items = navItems[role] || []
+  const rawItems = navItems[role] || []
+  const items = rawItems.filter(item => !item.flag || isEnabled(item.flag))
 
   const toggleMobile = () => setIsMobileOpen(!isMobileOpen)
 

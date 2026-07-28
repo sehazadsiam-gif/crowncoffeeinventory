@@ -12,6 +12,8 @@ import {
 import { supabase } from '../lib/supabase'
 import { useSessionTimeout } from '../hooks/useSessionTimeout'
 
+import { useFeatureFlags } from '../hooks/useFeatureFlags'
+
 export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -23,6 +25,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [isBellOpen, setIsBellOpen] = useState(false)
   const [bellAlerts, setBellAlerts] = useState({ lowStockCount: 0, pendingLeavesCount: 0, pendingQueriesCount: 0 })
+  const { isEnabled } = useFeatureFlags()
 
   // 10-minute inactivity auto-logout for admin and sub_admin
   useSessionTimeout(userRole === 'admin' || userRole === 'sub_admin')
@@ -123,58 +126,72 @@ export default function Navbar() {
 
   const adminItems = [
     { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
-    { href: '/sales-reconciliation', label: 'Sales Audit', icon: <ShieldAlert size={16} /> },
-    { href: '/admin?tab=feedbacks', label: 'Feedbacks', icon: <MessageSquare size={16} /> },
+    { href: '/recipebook', label: 'Recipe Book', icon: <BookOpen size={16} />, flag: 'recipebook' },
+    { href: '/sales-reconciliation', label: 'Sales Audit', icon: <ShieldAlert size={16} />, flag: 'sales_audit' },
+    { href: '/admin?tab=feedbacks', label: 'Feedbacks', icon: <MessageSquare size={16} />, flag: 'feedbacks' },
     {
       label: 'Check-List',
       icon: <ClipboardList size={16} />,
       children: [
-        { href: '/checklist/equipment', label: '1. Equipments Check-List' },
+        { href: '/checklist/equipment', label: '1. Equipments Check-List', flag: 'checklist' },
       ]
     },
 
-    { href: '/bazar', label: 'Bazar', icon: <TrendingUp size={16} /> },
+    { href: '/bazar', label: 'Bazar', icon: <TrendingUp size={16} />, flag: 'bazar' },
     {
       label: 'Stock',
       icon: <Package size={16} />,
       children: [
-        { href: '/stock', label: 'Stock Manager' },
-        { href: '/stock-import', label: 'Stock Import' },
-        { href: '/stock-audit', label: 'Stock Audit & Costing' },
+        { href: '/stock', label: 'Stock Manager', flag: 'inventory_manager' },
+        { href: '/stock-import', label: 'Stock Import', flag: 'stock_import' },
+        { href: '/stock-audit', label: 'Stock Audit & Costing', flag: 'stock_audit' },
       ]
     },
     {
       label: 'Menu',
       icon: <BookOpen size={16} />,
       children: [
-        { href: '/menu', label: 'Menu List' },
-        { href: '/menu-import', label: 'Menu Import' },
-        { href: '/admin/menu-engineering', label: 'Menu Costing & Engineering' },
+        { href: '/menu', label: 'Menu List', flag: 'menu_list' },
+        { href: '/menu-import', label: 'Menu Import', flag: 'menu_import' },
+        { href: '/admin/menu-engineering', label: 'Menu Costing & Engineering', flag: 'menu_engineering' },
       ]
     },
     {
       label: 'Staff',
       icon: <Users size={16} />,
       children: [
-        { href: '/admin/staff', label: 'Staff Directory & ID Cards' },
-        { href: '/attendance', label: 'Live Attendance & RFID Kiosk' },
-        { href: '/public-attendance', label: 'Public Attendance Kiosk' },
-        { href: '/attendance/requests', label: 'Duty & Leave Requests' },
-        { href: '/attendance/reports', label: 'Attendance Reports' },
-        { href: '/admin/tasks', label: 'Assign Tasks' },
-        { href: '/admin/overtime', label: 'Overtime Management' },
-        { href: '/staff/payroll', label: 'Payroll Ledger' },
-        { href: '/staff/advances', label: 'Staff Advances' },
-        { href: '/staff/service-charge', label: 'Service Charge' },
-        { href: '/staff/history', label: 'Payment History' },
+        { href: '/admin/staff', label: 'Staff Directory & ID Cards', flag: 'staff_directory' },
+        { href: '/attendance', label: 'Live Attendance & RFID Kiosk', flag: 'attendance_live' },
+        { href: '/public-attendance', label: 'Public Attendance Kiosk', flag: 'attendance_public' },
+        { href: '/attendance/requests', label: 'Duty & Leave Requests', flag: 'leave_requests' },
+        { href: '/attendance/reports', label: 'Attendance Reports', flag: 'attendance_reports' },
+        { href: '/admin/tasks', label: 'Assign Tasks', flag: 'tasks' },
+        { href: '/admin/overtime', label: 'Overtime Management', flag: 'overtime' },
+        { href: '/staff/payroll', label: 'Payroll Ledger', flag: 'payroll' },
+        { href: '/staff/advances', label: 'Staff Advances', flag: 'advances' },
+        { href: '/staff/service-charge', label: 'Service Charge', flag: 'service_charge' },
+        { href: '/staff/history', label: 'Payment History', flag: 'payroll' },
       ]
     },
-    { href: '/admin/members', label: 'Members', icon: <Users size={16} /> },
-    { href: '/waste', label: 'Waste', icon: <Trash2 size={16} /> },
-    { href: '/balance-sheet', label: 'Balance', icon: <CalcIcon size={16} /> },
+    { href: '/admin/members', label: 'Members', icon: <Users size={16} />, flag: 'members' },
+    { href: '/waste', label: 'Waste', icon: <Trash2 size={16} />, flag: 'waste' },
+    { href: '/balance-sheet', label: 'Balance', icon: <CalcIcon size={16} />, flag: 'balance_sheet' },
   ]
 
-  const navItems = (userRole === 'admin' || userRole === 'sub_admin') ? adminItems : []
+  const rawNavItems = (userRole === 'admin' || userRole === 'sub_admin') ? adminItems : []
+  
+  // Filter nav items and sub-children based on active feature flags
+  const navItems = rawNavItems
+    .map(item => {
+      if (item.flag && !isEnabled(item.flag)) return null
+      if (item.children) {
+        const filteredChildren = item.children.filter(child => !child.flag || isEnabled(child.flag))
+        if (filteredChildren.length === 0) return null
+        return { ...item, children: filteredChildren }
+      }
+      return item
+    })
+    .filter(Boolean)
 
   if (!userRole && !['/', '/admin/login', '/staff/login', '/sub-admin/login'].includes(pathname) && !pathname.startsWith('/membership')) return null
 

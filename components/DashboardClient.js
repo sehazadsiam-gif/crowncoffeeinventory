@@ -35,6 +35,8 @@ function useLiveClock() {
 /* ─────────────────────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────────────────────── */
+import { useFeatureFlags } from '../hooks/useFeatureFlags'
+
 export default function DashboardClient() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [stats, setStats] = useState({ totalSales: 0, totalBazar: 0, stockValue: 0, lowStockCount: 0 })
@@ -45,6 +47,7 @@ export default function DashboardClient() {
   const [refreshing, setRefreshing] = useState(false)
   const [historyData, setHistoryData] = useState([])
   const [hoveredChartIdx, setHoveredChartIdx] = useState(null)
+  const { isEnabled } = useFeatureFlags()
 
   const greeting = useGreeting()
   const clock = useLiveClock()
@@ -144,19 +147,22 @@ export default function DashboardClient() {
   const profit = stats.totalSales - stats.totalBazar
   const attendancePct = hrStats.activeStaff > 0 ? Math.round((hrStats.presentToday / hrStats.activeStaff) * 100) : 0
 
-  const quickModules = [
-    { href: '/sales-reconciliation', icon: <ShieldAlert size={22} />, title: 'Daily Sales Audit', color: '#E11D48', desc: 'AI sales & cash audit' },
-    { href: '/admin?tab=feedbacks', icon: <MessageSquare size={22} />, title: 'Guest Feedbacks', color: '#B0633E', desc: 'Reviews & ratings' },
-    { href: '/menu',               icon: <BookOpen size={22} />,      title: 'Menu',            color: '#3B82F6', desc: 'Manage items' },
-    { href: '/admin/menu-engineering', icon: <BarChart2 size={22} />, title: 'Menu Engineering', color: '#7C3A1E', desc: 'Costing & Profitability' },
-    { href: '/bazar',              icon: <ClipboardList size={22} />, title: 'Bazar',           color: '#EF4444', desc: 'Log expenses' },
-    { href: '/stock',              icon: <Box size={22} />,            title: 'Inventory',       color: '#F59E0B', desc: 'Track stock',      badge: stats.lowStockCount > 0 ? stats.lowStockCount : null },
-    { href: '/stock-audit',        icon: <Calculator size={22} />,    title: 'Stock Audit',     color: '#10B981', desc: 'Monthly bazar ratio' },
-    { href: '/staff/attendance',   icon: <UserCheck size={22} />,     title: 'Attendance',      color: '#8B5CF6', desc: 'Mark attendance' },
-    { href: '/staff/payroll',      icon: <FileText size={22} />,      title: 'Payroll',         color: '#2563EB', desc: 'Process salaries' },
-    { href: '/staff/leave-requests', icon: <CalendarDays size={22} />, title: 'Leave',          color: '#D97706', desc: 'Review leaves',    badge: alerts.pendingLeaves.length > 0 ? alerts.pendingLeaves.length : null },
+  const allQuickModules = [
+    { href: '/recipebook',          icon: <BookOpen size={22} />,      title: 'Recipe Book',     color: '#6B3A2A', desc: 'Online recipes & PDF', flag: 'recipebook' },
+    { href: '/sales-reconciliation', icon: <ShieldAlert size={22} />, title: 'Daily Sales Audit', color: '#E11D48', desc: 'AI sales & cash audit', flag: 'sales_audit' },
+    { href: '/admin?tab=feedbacks', icon: <MessageSquare size={22} />, title: 'Guest Feedbacks', color: '#B0633E', desc: 'Reviews & ratings',     flag: 'feedbacks' },
+    { href: '/menu',               icon: <BookOpen size={22} />,      title: 'Menu',            color: '#3B82F6', desc: 'Manage items',       flag: 'menu_list' },
+    { href: '/admin/menu-engineering', icon: <BarChart2 size={22} />, title: 'Menu Engineering', color: '#7C3A1E', desc: 'Costing & Profitability', flag: 'menu_engineering' },
+    { href: '/bazar',              icon: <ClipboardList size={22} />, title: 'Bazar',           color: '#EF4444', desc: 'Log expenses',       flag: 'bazar' },
+    { href: '/stock',              icon: <Box size={22} />,            title: 'Inventory',       color: '#F59E0B', desc: 'Track stock',      flag: 'inventory_manager', badge: stats.lowStockCount > 0 ? stats.lowStockCount : null },
+    { href: '/stock-audit',        icon: <Calculator size={22} />,    title: 'Stock Audit',     color: '#10B981', desc: 'Monthly bazar ratio', flag: 'stock_audit' },
+    { href: '/staff/attendance',   icon: <UserCheck size={22} />,     title: 'Attendance',      color: '#8B5CF6', desc: 'Mark attendance',    flag: 'attendance_live' },
+    { href: '/staff/payroll',      icon: <FileText size={22} />,      title: 'Payroll',         color: '#2563EB', desc: 'Process salaries',   flag: 'payroll' },
+    { href: '/staff/leave-requests', icon: <CalendarDays size={22} />, title: 'Leave',          color: '#D97706', desc: 'Review leaves',    flag: 'leave_requests', badge: alerts.pendingLeaves.length > 0 ? alerts.pendingLeaves.length : null },
     { href: '/admin/queries',      icon: <MessageSquare size={22} />, title: 'Staff Inbox',     color: '#0EA5E9', desc: 'Manage queries',   badge: alerts.unreadMessages.length > 0 ? alerts.unreadMessages.length : null },
   ]
+
+  const quickModules = allQuickModules.filter(mod => !mod.flag || isEnabled(mod.flag))
 
   const dateLabel = new Date(date).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
