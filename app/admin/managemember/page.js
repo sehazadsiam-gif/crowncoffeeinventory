@@ -19,9 +19,9 @@ export default function AdminManageMemberPage() {
     phone: '',
     email: '',
     address: '',
-    special_occasion: 'Birthday',
-    special_month: '1',
-    special_day: '1',
+    special_dates: [
+      { occasion_name: 'Birthday', month: 1, day: 1 }
+    ],
     rfid_code: '',
     card_number: ''
   })
@@ -31,6 +31,28 @@ export default function AdminManageMemberPage() {
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState('create') // 'create', 'studio', 'logs'
   const [cardTheme, setCardTheme] = useState('dark') // 'dark', 'gold', 'silver'
+
+  const addSpecialDateRow = () => {
+    setNewMemberForm(prev => ({
+      ...prev,
+      special_dates: [...prev.special_dates, { occasion_name: 'Anniversary', month: 1, day: 1 }]
+    }))
+  }
+
+  const removeSpecialDateRow = (index) => {
+    setNewMemberForm(prev => ({
+      ...prev,
+      special_dates: prev.special_dates.filter((_, i) => i !== index)
+    }))
+  }
+
+  const updateSpecialDateRow = (index, field, value) => {
+    setNewMemberForm(prev => {
+      const updated = [...prev.special_dates]
+      updated[index] = { ...updated[index], [field]: value }
+      return { ...prev, special_dates: updated }
+    })
+  }
 
   useEffect(() => {
     fetchMembers()
@@ -76,11 +98,13 @@ export default function AdminManageMemberPage() {
     setMessage('')
     try {
       // 1. Submit application to create member
-      const specialDatesPayload = newMemberForm.special_occasion ? [{
-        occasion_name: newMemberForm.special_occasion,
-        month: parseInt(newMemberForm.special_month || '1'),
-        day: parseInt(newMemberForm.special_day || '1')
-      }] : []
+      const specialDatesPayload = newMemberForm.special_dates
+        .filter(d => d.occasion_name)
+        .map(d => ({
+          occasion_name: d.occasion_name,
+          month: parseInt(d.month || '1'),
+          day: parseInt(d.day || '1')
+        }))
 
       const appRes = await fetch('/api/members/apply', {
         method: 'POST',
@@ -477,44 +501,81 @@ export default function AdminManageMemberPage() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', display: 'block', marginBottom: '6px' }}>Special Date Occasion</label>
-                  <select
-                    value={newMemberForm.special_occasion}
-                    onChange={(e) => setNewMemberForm({ ...newMemberForm, special_occasion: e.target.value })}
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px', outline: 'none' }}
+              {/* Multiple Special Occasion Dates Input */}
+              <div style={{ backgroundColor: '#FAFAF9', padding: '16px', borderRadius: '12px', border: '1px solid #E7E5E4' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 800, color: '#1C1917' }}>
+                    Special Occasion Dates (Birthday, Anniversary, etc.)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addSpecialDateRow}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #D6D3D1',
+                      backgroundColor: '#FFFFFF',
+                      color: '#1E110A',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
                   >
-                    <option value="Birthday">Birthday</option>
-                    <option value="Anniversary">Anniversary</option>
-                    <option value="Other">Special Day</option>
-                  </select>
+                    + Add Another Occasion
+                  </button>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', display: 'block', marginBottom: '6px' }}>Month</label>
-                  <select
-                    value={newMemberForm.special_month}
-                    onChange={(e) => setNewMemberForm({ ...newMemberForm, special_month: e.target.value })}
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px', outline: 'none' }}
-                  >
-                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
-                      <option key={m} value={i + 1}>{m}</option>
-                    ))}
-                  </select>
-                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {newMemberForm.special_dates.map((sd, idx) => (
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr auto', gap: '10px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        value={sd.occasion_name}
+                        onChange={(e) => updateSpecialDateRow(idx, 'occasion_name', e.target.value)}
+                        placeholder="e.g. Birthday, Anniversary..."
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '13px' }}
+                      />
 
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', display: 'block', marginBottom: '6px' }}>Day</label>
-                  <select
-                    value={newMemberForm.special_day}
-                    onChange={(e) => setNewMemberForm({ ...newMemberForm, special_day: e.target.value })}
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '14px', outline: 'none' }}
-                  >
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
+                      <select
+                        value={sd.month}
+                        onChange={(e) => updateSpecialDateRow(idx, 'month', e.target.value)}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '13px', outline: 'none' }}
+                      >
+                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                          <option key={m} value={i + 1}>{m}</option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={sd.day}
+                        onChange={(e) => updateSpecialDateRow(idx, 'day', e.target.value)}
+                        style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '13px', outline: 'none' }}
+                      >
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+
+                      {newMemberForm.special_dates.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeSpecialDateRow(idx)}
+                          style={{
+                            padding: '8px 10px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            backgroundColor: '#FEE2E2',
+                            color: '#991B1B',
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 
