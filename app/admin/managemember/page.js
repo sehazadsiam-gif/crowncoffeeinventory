@@ -652,11 +652,43 @@ export default function AdminManageMemberPage() {
                 >
                   {members.map(m => (
                     <option key={m.id} value={m.id}>
-                      {m.full_name} ({m.card_number || 'CC-MEM'})
+                      {m.full_name} ({m.card_number || 'CC-MEM'}) — RFID: {m.rfid_code || 'Unpaired'}
                     </option>
                   ))}
                 </select>
               </div>
+
+              {/* Manual RFID Card Tag Pairing for Selected Member */}
+              <form onSubmit={handlePairExistingCard} style={{ marginBottom: '20px', backgroundColor: '#FAFAF9', padding: '12px', borderRadius: '8px', border: '1px solid #E7E5E4' }}>
+                <label style={{ fontSize: '11px', fontWeight: 800, color: '#1C1917', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+                  Manual RFID Tag Number Input
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    value={rfidPairInput}
+                    onChange={(e) => setRfidPairInput(e.target.value)}
+                    placeholder="Type/scan RFID number..."
+                    style={{ flex: 1, padding: '8px 10px', borderRadius: '6px', border: '1px solid #D6D3D1', fontSize: '13px' }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: '#1E110A',
+                      color: '#FFFFFF',
+                      fontSize: '12px',
+                      fontWeight: 800,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Pair Tag
+                  </button>
+                </div>
+              </form>
 
               {/* Theme Customizer */}
               <div style={{ marginBottom: '24px' }}>
