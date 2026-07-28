@@ -1,10 +1,10 @@
--- MIGRATION: Member RFID & Credit-Card ID System Schema
+-- MIGRATION: Member RFID & Credit-Card ID System Schema (24-Month Validity)
 
 -- 1. Extend members table with RFID card and visit punch columns
 ALTER TABLE members ADD COLUMN IF NOT EXISTS rfid_code TEXT UNIQUE;
 ALTER TABLE members ADD COLUMN IF NOT EXISTS card_status TEXT DEFAULT 'active';
 ALTER TABLE members ADD COLUMN IF NOT EXISTS card_issued_at TIMESTAMPTZ DEFAULT NOW();
-ALTER TABLE members ADD COLUMN IF NOT EXISTS card_expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '36 months');
+ALTER TABLE members ADD COLUMN IF NOT EXISTS card_expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '24 months');
 ALTER TABLE members ADD COLUMN IF NOT EXISTS visit_punch_count INTEGER DEFAULT 0;
 ALTER TABLE members ADD COLUMN IF NOT EXISTS free_coffee_rewards_available INTEGER DEFAULT 0;
 

@@ -50,9 +50,9 @@ export async function POST(req) {
         generatedCardNumber = `CC-MEM-${Math.floor(1000 + Math.random() * 9000)}`
       }
 
-      // Calculate 36 months expiration
+      // Calculate 24 months expiration from application/issuance date
       const now = new Date()
-      const expiresAt = new Date(now.setMonth(now.getMonth() + 36)).toISOString()
+      const expiresAt = new Date(now.setMonth(now.getMonth() + 24)).toISOString()
       const issuedAt = new Date().toISOString()
 
       const { data: member, error: updateErr } = await supabase

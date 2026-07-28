@@ -587,12 +587,12 @@ export default function AdminClient({ initialStats }) {
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-                  <a href="/admin/memberview" style={{ display: 'flex', flexDirection: 'column', padding: '16px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FDE68A', textDecoration: 'none', color: '#1E293B' }}>
+                  <a href="/admin/managemember" style={{ display: 'flex', flexDirection: 'column', padding: '16px', background: '#FFFBEB', borderRadius: '12px', border: '1px solid #FDE68A', textDecoration: 'none', color: '#1E293B' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '14px', color: '#92400E' }}>
-                      Member RFID & Credit-Card ID Studio
+                      Manage Members & Credit Card Studio
                     </div>
                     <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#78350F' }}>
-                      Pair member RFID cards, generate CR80 plastic cards, track card history & 36-month expiry.
+                      Input member details, generate CR80 credit-card IDs with 24-month validity (EXP: MM/YY) & print.
                     </p>
                   </a>
 
