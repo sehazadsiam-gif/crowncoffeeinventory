@@ -80,13 +80,13 @@ export default function AdminManageMemberPage() {
 
       const appData = await appRes.json()
 
-      if (!appData.success || !appData.member) {
+      if (!appData.success || (!appData.member && !appData.member_id)) {
         setMessage(`Error creating member: ${appData.error || 'Failed'}`)
         setLoading(false)
         return
       }
 
-      const createdMember = appData.member
+      const createdMemberId = appData.member?.id || appData.member_id
       const rfidToPair = newMemberForm.rfid_code.trim() || `RFID-${Math.floor(100000 + Math.random() * 900000)}`
 
       // 2. Pair RFID card and set 24 months expiration
@@ -95,7 +95,7 @@ export default function AdminManageMemberPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'pair',
-          member_id: createdMember.id,
+          member_id: createdMemberId,
           rfid_code: rfidToPair,
           reason: 'Created & Generated via Admin Manage Member Hub'
         })

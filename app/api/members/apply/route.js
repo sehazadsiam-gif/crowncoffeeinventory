@@ -53,7 +53,8 @@ export async function POST(request) {
       .select()
 
     if (insertError || !members || members.length === 0) {
-      return NextResponse.json({ error: 'Failed to create application' }, { status: 500 })
+      console.error('Insert Error in apply route:', insertError)
+      return NextResponse.json({ error: insertError?.message || 'Failed to create application' }, { status: 500 })
     }
 
     const member = members[0]
@@ -101,6 +102,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       success: true,
+      member: member,
       member_id: member.id,
       name: member.full_name
     }, { status: 200 })
