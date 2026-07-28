@@ -711,13 +711,16 @@ export default function StaffDirectory() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
             <div>
-              <label className="label" style={{ color: 'var(--text-secondary)' }}>Shift Start (08:00 - 23:00)</label>
-              <input
+              <label className="label" style={{ color: 'var(--text-secondary)' }}>Shift Start</label>
+              <select
                 className="input"
-                type="time"
-                value={form.shift_start}
+                value={form.shift_start || '08:00'}
                 onChange={e => setForm({ ...form, shift_start: e.target.value })}
-              />
+              >
+                <option value="08:00">8:00 AM</option>
+                <option value="11:00">11:00 AM</option>
+                <option value="13:00">1:00 PM (13:00)</option>
+              </select>
             </div>
             <div>
               <label className="label" style={{ color: 'var(--text-secondary)' }}>Weekly Off</label>
@@ -1009,12 +1012,15 @@ export default function StaffDirectory() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
               <div>
                 <label className="label">Shift Start</label>
-                <input
+                <select
                   className="input"
-                  type="time"
                   value={editingStaff.shift_start || '08:00'}
                   onChange={e => setEditingStaff({ ...editingStaff, shift_start: e.target.value })}
-                />
+                >
+                  <option value="08:00">8:00 AM</option>
+                  <option value="11:00">11:00 AM</option>
+                  <option value="13:00">1:00 PM (13:00)</option>
+                </select>
               </div>
               <div>
                 <label className="label">Weekly Off</label>

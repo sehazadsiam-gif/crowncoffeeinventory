@@ -406,12 +406,15 @@ export default function WeeklyRosterPage() {
                             ) : cell.is_off ? (
                               <span style={{ padding: '2px 8px', borderRadius: '4px', background: '#7b1fa2', color: 'white', fontWeight: 700, fontSize: '11px' }}>DAY OFF</span>
                             ) : (
-                              <input
-                                type="time"
+                              <select
                                 value={cell.shift_start || '08:00'}
                                 onChange={e => handleCellChange(s.id, d, 'shift_start', e.target.value)}
-                                style={{ padding: '4px 6px', border: '1px solid #E0D6C8', borderRadius: '6px', fontSize: '12px', textAlign: 'center' }}
-                              />
+                                style={{ padding: '4px 6px', border: '1px solid #E0D6C8', borderRadius: '6px', fontSize: '12px', textAlign: 'center', background: 'white', fontWeight: 600 }}
+                              >
+                                <option value="08:00">8:00 AM</option>
+                                <option value="11:00">11:00 AM</option>
+                                <option value="13:00">1:00 PM</option>
+                              </select>
                             )}
 
                             <label style={{ fontSize: '10px', color: '#888', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', marginTop: '2px' }}>

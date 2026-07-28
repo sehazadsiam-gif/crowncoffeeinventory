@@ -24,15 +24,25 @@ export async function PATCH(request) {
       const isoCheckIn = new Date(`${date}T${checkInAt}:00+06:00`).toISOString()
       updates.check_in_at = isoCheckIn
 
-      // Recalculate lateness
+      // Recalculate lateness (8:00 AM, 11:00 AM, or 1:00 PM shift)
       const [h, m] = checkInAt.split(':').map(Number)
       const totalMins = h * 60 + m
-      const isAfternoon = totalMins >= 11 * 60
-      const graceDeadline = isAfternoon ? 13 * 60 + 15 : 8 * 60 + 15
+      let shiftStartStr = '08:00'
+      let shiftMins = 8 * 60
+
+      if (totalMins >= 12 * 60 + 30) {
+        shiftStartStr = '13:00'
+        shiftMins = 13 * 60
+      } else if (totalMins >= 10 * 60 + 30) {
+        shiftStartStr = '11:00'
+        shiftMins = 11 * 60
+      }
+
+      const graceDeadline = shiftMins + 15
       const late = totalMins > graceDeadline
       updates.status = late ? 'late' : 'present'
-      updates.minutes_late = late ? totalMins - graceDeadline : 0
-      updates.shift_start = isAfternoon ? '13:00' : '08:00'
+      updates.minutes_late = late ? totalMins - shiftMins : 0
+      updates.shift_start = shiftStartStr
     }
 
     if (checkOutAt) {

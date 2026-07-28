@@ -646,12 +646,15 @@ export default function StaffPortalPage() {
                 {newDutyChange.request_type === 'shift_swap' && (
                   <div>
                     <label className="label">{t.newTime}</label>
-                    <input
-                      type="time"
+                    <select
                       className="input"
-                      value={newDutyChange.new_shift_start}
+                      value={newDutyChange.new_shift_start || '08:00'}
                       onChange={e => setNewDutyChange({ ...newDutyChange, new_shift_start: e.target.value })}
-                    />
+                    >
+                      <option value="08:00">8:00 AM</option>
+                      <option value="11:00">11:00 AM</option>
+                      <option value="13:00">1:00 PM (13:00)</option>
+                    </select>
                   </div>
                 )}
 
