@@ -140,22 +140,22 @@ export default function MemberProgressViewPage() {
           border: '1px solid #382215'
         }}>
           <h2 style={{ fontSize: '18px', fontWeight: 800, marginTop: 0, color: '#F3EAD8' }}>
-            Tap / Scan Member Card
+            Tap Card or Manual Entry
           </h2>
           <p style={{ fontSize: '12px', color: '#A89284', marginBottom: '20px' }}>
-            Member taps physical card on RFID reader to record visit & update progress.
+            Member taps RFID card at reader. If card fails, type RFID code, Card # (CC-MEM-XXXX), or Phone #.
           </p>
 
           <form onSubmit={handleManualRfidTap} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ fontSize: '11px', fontWeight: 800, color: '#D4AF37', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                RFID Reader Hardware Tag Input
+                RFID Code / Card # / Phone # Input
               </label>
               <input
                 type="text"
                 value={rfidInput}
                 onChange={(e) => setRfidInput(e.target.value)}
-                placeholder="Scan or enter RFID tag code..."
+                placeholder="Scan RFID or type Card # / Phone #..."
                 autoFocus
                 style={{
                   width: '100%',
@@ -164,7 +164,7 @@ export default function MemberProgressViewPage() {
                   backgroundColor: '#120A06',
                   border: '1px solid #4A2810',
                   color: '#FFFFFF',
-                  fontSize: '16px',
+                  fontSize: '15px',
                   fontWeight: 700,
                   outline: 'none'
                 }}

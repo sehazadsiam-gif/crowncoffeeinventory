@@ -16,18 +16,20 @@ export async function POST(req) {
 
     const cleanCode = rfid_code.trim()
 
-    // 1. Fetch member by RFID code
-    const { data: member, error: fetchErr } = await supabase
+    // 1. Fetch member by RFID code, card_number, or phone
+    const { data: members, error: fetchErr } = await supabase
       .from('members')
       .select('*')
-      .eq('rfid_code', cleanCode)
-      .single()
+      .or(`rfid_code.eq.${cleanCode},card_number.eq.${cleanCode},phone.eq.${cleanCode}`)
+      .limit(1)
+
+    const member = members && members.length > 0 ? members[0] : null
 
     if (fetchErr || !member) {
       return NextResponse.json({
         success: false,
-        error: 'Unassigned RFID Card. Pair this card with a member in Admin Studio.'
-      }, { status: 444 })
+        error: 'Member not found. Check RFID code, Card #, or Phone Number.'
+      }, { status: 404 })
     }
 
     // 2. Check card status
