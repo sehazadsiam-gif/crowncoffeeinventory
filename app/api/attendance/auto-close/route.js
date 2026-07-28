@@ -11,16 +11,24 @@ export async function POST(request) {
 
 async function handleAutoClose(request) {
   try {
-    // ── Use Bangladesh Standard Time (Asia/Dhaka, UTC+6) for "today" ──
-    const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' })
+    // ── 5:00 AM Business Day Reset Rule for Auto-Close ──
+    const now = new Date()
+    const localHour = parseInt(now.toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka', hour12: false }).split(':')[0], 10) % 24
+    
+    // If running before 5:00 AM, the active business day is still yesterday, so cutoff is strictly before yesterday
+    let businessTodayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' })
+    if (localHour < 5) {
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+      businessTodayStr = yesterday.toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' })
+    }
 
-    // Only close records from PREVIOUS days — never touch today's open check-ins
+    // Only close records strictly before current business day
     const { data: openLogs, error } = await supabaseAdmin
       .from('attendance_log')
       .select('id, staff_id, check_in_at, date')
       .is('check_out_at', null)
       .not('check_in_at', 'is', null)
-      .lt('date', todayStr)   // strictly before today in BST
+      .lt('date', businessTodayStr)
 
     if (error) throw error
 
