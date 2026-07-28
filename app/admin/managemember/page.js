@@ -794,13 +794,10 @@ export default function AdminManageMemberPage() {
                   }}>
                     <div style={{ width: '100%', height: '36px', backgroundColor: '#111', marginTop: '16px' }} />
 
-                    <div style={{ padding: '0 24px 16px 24px', fontSize: '9px', lineHeight: '1.4', color: activeTheme.subColor }}>
+                    <div style={{ padding: '0 24px 20px 24px', fontSize: '9.5px', lineHeight: '1.6', color: activeTheme.subColor }}>
                       <div>- Property of Crown Coffee.</div>
                       <div>- Tap card at counter to enjoy 10% lifetime discount & earn 5-visit rewards.</div>
                       <div>- Non-transferable. Valid for 24 months from issue date.</div>
-                      <div style={{ marginTop: '6px', fontWeight: 800, color: activeTheme.textColor }}>
-                        RFID Code: {selectedMember.rfid_code || 'Encoded'}
-                      </div>
                     </div>
                   </div>
 
