@@ -162,7 +162,7 @@ export default function AdminLoginPage() {
                 <input
                   className="custom-input"
                   type="password"
-                  placeholder="Enter PIN (1590)"
+                  placeholder="Enter Admin PIN"
                   value={pin}
                   onChange={e => setPin(e.target.value)}
                   style={{ paddingLeft: '44px', fontSize: '18px', letterSpacing: '4px', textAlign: 'center' }}

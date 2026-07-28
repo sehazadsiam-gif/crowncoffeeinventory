@@ -217,7 +217,7 @@ export default function GatewayPage() {
                         className="input" 
                         type="password" 
                         style={{ paddingLeft: '42px', fontSize: '18px', letterSpacing: '4px', textAlign: 'center' }} 
-                        placeholder="Enter PIN (1590)" 
+                        placeholder="Enter Admin PIN" 
                         value={adminPin} 
                         onChange={e => setAdminPin(e.target.value)} 
                         required 
