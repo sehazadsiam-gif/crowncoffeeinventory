@@ -190,13 +190,14 @@ export async function GET(req) {
     const { data: logs, error } = await query
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+      console.warn('RFID card logs query notice:', error.message)
+      return NextResponse.json({ success: true, logs: [] })
     }
 
     return NextResponse.json({ success: true, logs: logs || [] })
 
   } catch (error) {
     console.error('RFID GET Logs error:', error)
-    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ success: true, logs: [] })
   }
 }
