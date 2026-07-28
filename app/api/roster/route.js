@@ -48,10 +48,28 @@ export async function POST(request) {
       return NextResponse.json({ error: 'items array is required' }, { status: 400 })
     }
 
+    // Sanitize items: shift_start column is data type TIME in Postgres.
+    // If shift_start is 'OFF' or invalid, set is_off = true and use '08:00' valid TIME.
+    const sanitizedItems = items.map(item => {
+      const isOff = Boolean(item.is_off || item.shift_start === 'OFF')
+      let validTime = item.shift_start
+      if (!validTime || validTime === 'OFF' || !/^\d{2}:\d{2}/.test(validTime)) {
+        validTime = '08:00'
+      }
+      return {
+        staff_id: item.staff_id,
+        week_start: item.week_start,
+        day_date: item.day_date,
+        shift_start: validTime,
+        shift_hours: item.shift_hours || 10,
+        is_off: isOff
+      }
+    })
+
     // Upsert roster items into duty_roster (isolated from attendance/payroll)
     const { data, error } = await supabaseAdmin
       .from('duty_roster')
-      .upsert(items, { onConflict: 'staff_id,day_date' })
+      .upsert(sanitizedItems, { onConflict: 'staff_id,day_date' })
       .select()
 
     if (error) throw error

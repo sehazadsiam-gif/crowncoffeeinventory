@@ -94,13 +94,14 @@ export default function RosterPage() {
     setGridData(prev => {
       const staffGrid = prev[staffId] || {}
       const isOff = value === 'OFF'
+      const shiftTime = isOff ? '08:00' : value
 
       return {
         ...prev,
         [staffId]: {
           ...staffGrid,
           [dateStr]: {
-            shift_start: value,
+            shift_start: shiftTime,
             is_off: isOff
           }
         }
@@ -116,13 +117,15 @@ export default function RosterPage() {
 
       Object.entries(gridData).forEach(([staffId, dates]) => {
         Object.entries(dates).forEach(([dayDate, val]) => {
+          const isOff = Boolean(val.is_off || val.shift_start === 'OFF')
+          const timeVal = isOff || val.shift_start === 'OFF' ? '08:00' : (val.shift_start || '08:00')
           items.push({
             staff_id: staffId,
             week_start: weekStart,
             day_date: dayDate,
-            shift_start: val.shift_start || '08:00',
+            shift_start: timeVal,
             shift_hours: 10,
-            is_off: Boolean(val.is_off)
+            is_off: isOff
           })
         })
       })
