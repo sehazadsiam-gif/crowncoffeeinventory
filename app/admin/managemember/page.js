@@ -2,12 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import html2canvas from 'html2canvas'
 
 export default function AdminManageMemberPage() {
   const [members, setMembers] = useState([])
   const [cardLogs, setCardLogs] = useState([])
   const [selectedMember, setSelectedMember] = useState(null)
   
+  // Custom High-Res Download & Size State
+  const [downloadScale, setDownloadScale] = useState(3) // 1x, 2x, 3x (300 DPI), 4x (4K)
+  const [downloading, setDownloading] = useState(false)
+
   // Instant Member Input Form State
   const [newMemberForm, setNewMemberForm] = useState({
     full_name: '',
@@ -171,6 +176,37 @@ export default function AdminManageMemberPage() {
 
   const handlePrintCard = () => {
     window.print()
+  }
+
+  const handleDownloadCard = async (elementId, sideName) => {
+    const element = document.getElementById(elementId)
+    if (!element || !selectedMember) {
+      setMessage('Please select a member first.')
+      return
+    }
+
+    setDownloading(true)
+    setMessage('')
+    try {
+      const canvas = await html2canvas(element, {
+        scale: Number(downloadScale),
+        useCORS: true,
+        backgroundColor: null,
+        logging: false
+      })
+
+      const link = document.createElement('a')
+      const sanitizedName = selectedMember.full_name.replace(/[^a-zA-Z0-9]/g, '_')
+      link.download = `CrownCoffee_${sanitizedName}_${sideName}_${downloadScale}x.png`
+      link.href = canvas.toDataURL('image/png', 1.0)
+      link.click()
+      setMessage(`Downloaded ${sideName} card image (${downloadScale}x resolution)!`)
+    } catch (err) {
+      console.error('Error rendering card image:', err)
+      setMessage('Failed to render card image for download.')
+    } finally {
+      setDownloading(false)
+    }
   }
 
   const getThemeStyles = () => {
@@ -587,22 +623,78 @@ export default function AdminManageMemberPage() {
                 </div>
               </div>
 
-              <button
-                onClick={handlePrintCard}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  backgroundColor: '#1E110A',
-                  color: '#FFFFFF',
-                  fontSize: '14px',
-                  fontWeight: 800,
-                  cursor: 'pointer'
-                }}
-              >
-                Print Plastic Card (CR80)
-              </button>
+              {/* Download & Resolution Controls */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', display: 'block', marginBottom: '8px' }}>
+                  Image Download Resolution
+                </label>
+                <select
+                  value={downloadScale}
+                  onChange={(e) => setDownloadScale(Number(e.target.value))}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #D6D3D1', fontSize: '13px', outline: 'none' }}
+                >
+                  <option value={1}>1x Standard (337 × 212 px)</option>
+                  <option value={2}>2x High Definition (674 × 424 px)</option>
+                  <option value={3}>3x 300 DPI Ultra HD (1011 × 636 px) — Best for PVC Printers</option>
+                  <option value={4}>4x 4K Ultra High-Res (1348 × 848 px)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  onClick={() => handleDownloadCard('card-front-preview', 'Front')}
+                  disabled={downloading}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #1E110A',
+                    backgroundColor: '#F5F5F4',
+                    color: '#1E110A',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: downloading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {downloading ? 'Rendering Image...' : 'Download Front Card (PNG)'}
+                </button>
+
+                <button
+                  onClick={() => handleDownloadCard('card-back-preview', 'Back')}
+                  disabled={downloading}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: '1px solid #1E110A',
+                    backgroundColor: '#F5F5F4',
+                    color: '#1E110A',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: downloading ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {downloading ? 'Rendering Image...' : 'Download Back Card (PNG)'}
+                </button>
+
+                <button
+                  onClick={handlePrintCard}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: '#1E110A',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    marginTop: '4px'
+                  }}
+                >
+                  Direct Print (CR80)
+                </button>
+              </div>
             </div>
 
             {/* CR80 Plastic Card Visual Preview */}
@@ -615,7 +707,7 @@ export default function AdminManageMemberPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', alignItems: 'center' }}>
                   
                   {/* FRONT SIDE OF CARD */}
-                  <div className="print-area" style={{
+                  <div id="card-front-preview" className="print-area" style={{
                     width: '337px',
                     height: '212px',
                     borderRadius: '14px',
@@ -686,7 +778,7 @@ export default function AdminManageMemberPage() {
                   </div>
 
                   {/* BACK SIDE OF CARD */}
-                  <div className="print-area" style={{
+                  <div id="card-back-preview" className="print-area" style={{
                     width: '337px',
                     height: '212px',
                     borderRadius: '14px',
