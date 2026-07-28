@@ -7,7 +7,7 @@ import { useToast } from '../../components/Toast'
 import {
   Calendar, ChevronLeft, ChevronRight, Save, Download,
   Users, UtensilsCrossed, Coffee, CheckCircle, RefreshCw,
-  Clock, ShieldAlert, Sparkles, AlertCircle
+  Clock, ShieldAlert, Sparkles, AlertCircle, X, Brain, Edit3, Check
 } from 'lucide-react'
 import html2canvas from 'html2canvas'
 
@@ -25,10 +25,30 @@ export default function RosterPage() {
   const [staffList, setStaffList] = useState([])
   const [gridData, setGridData] = useState({}) // { [staffId]: { [dateStr]: { shift_start, is_off } } }
 
+  // ── AI Roster Assistant State ──
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [activeAiTab, setActiveAiTab] = useState('generate') // 'train' | 'generate'
+  const [customRules, setCustomRules] = useState('')
+  const [generatingAi, setGeneratingAi] = useState(false)
+  const [aiReasoning, setAiReasoning] = useState('')
+  const [aiDraftData, setAiDraftData] = useState(null)
+
   const days = get7Days(weekStart)
   const weekRangeText = getWeekRangeText(weekStart)
 
   useEffect(() => {
+    // Load trained AI rules from localStorage if available
+    const savedRules = localStorage.getItem('cc_roster_ai_rules')
+    if (savedRules) {
+      setCustomRules(savedRules)
+    } else {
+      setCustomRules(
+        '1. Ensure each staff member gets 1 day off per week (preferably Friday or Saturday).\n' +
+        '2. Kitchen requires at least 1 Cook on 8:00 AM shift and 1 Cook on 1:00 PM shift every day.\n' +
+        '3. Front staff baristas prefer 8:00 AM or 11:00 AM shifts.'
+      )
+    }
+
     fetchRosterData(weekStart)
   }, [weekStart])
 
@@ -157,7 +177,6 @@ export default function RosterPage() {
       setExporting(true)
       addToast('Generating JPG Roster image...', 'info')
 
-      // Ensure hidden export container is visible for html2canvas
       const element = exportRef.current
 
       const canvas = await html2canvas(element, {
@@ -182,6 +201,68 @@ export default function RosterPage() {
     } finally {
       setExporting(false)
     }
+  }
+
+  // ── AI Assistant Actions ──
+  function handleSaveRules() {
+    localStorage.setItem('cc_roster_ai_rules', customRules)
+    addToast('AI Training Rules saved permanently!', 'success')
+  }
+
+  async function handleGenerateAiRoster() {
+    try {
+      setGeneratingAi(true)
+      setAiReasoning('')
+      setAiDraftData(null)
+
+      const res = await fetch('/api/roster/ai-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          week_start: weekStart,
+          custom_rules: customRules
+        })
+      })
+
+      const json = await res.json()
+
+      if (res.ok) {
+        setAiReasoning(json.reasoning)
+        setAiDraftData(json.draft)
+        addToast('AI Roster Draft generated successfully!', 'success')
+      } else {
+        addToast(json.error || 'AI generation failed', 'error')
+      }
+    } catch (err) {
+      addToast('Error generating AI roster', 'error')
+    } finally {
+      setGeneratingAi(false)
+    }
+  }
+
+  function handleApplyAiDraft() {
+    if (!aiDraftData) return
+
+    setGridData(prev => {
+      const newGrid = { ...prev }
+
+      Object.entries(aiDraftData).forEach(([staffId, dates]) => {
+        if (!newGrid[staffId]) newGrid[staffId] = {}
+
+        Object.entries(dates).forEach(([dateStr, val]) => {
+          const isOff = val === 'OFF'
+          newGrid[staffId][dateStr] = {
+            shift_start: isOff ? '08:00' : val,
+            is_off: isOff
+          }
+        })
+      })
+
+      return newGrid
+    })
+
+    setShowAiModal(false)
+    addToast('AI Draft applied to roster grid! Review and save.', 'success')
   }
 
   // Helper: Categorize staff into Front vs Kitchen
@@ -212,7 +293,7 @@ export default function RosterPage() {
                   Weekly Duty Roster
                 </h1>
                 <p style={{ fontSize: '13.5px', color: '#64748B', margin: '2px 0 0' }}>
-                  Saturday to Friday roster planning &amp; JPG export (Isolated from attendance/payroll)
+                  Saturday to Friday roster planning &amp; AI drafting (Isolated from attendance/payroll)
                 </p>
               </div>
             </div>
@@ -220,6 +301,21 @@ export default function RosterPage() {
 
           {/* Action Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {/* AI Assistant Trigger Button */}
+            <button
+              onClick={() => setShowAiModal(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: 'linear-gradient(135deg, #7C3AED, #9333EA)',
+                color: 'white', border: 'none', padding: '11px 20px',
+                borderRadius: '12px', fontSize: '14px', fontWeight: 800,
+                cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,0.30)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Sparkles size={18} /> ✨ AI Roster Assistant
+            </button>
+
             <button
               onClick={handleSaveRoster}
               disabled={saving || loading}
@@ -233,7 +329,7 @@ export default function RosterPage() {
                 transition: 'all 0.2s'
               }}
             >
-              <Save size={18} /> {saving ? 'Saving Roster...' : 'Save Roster'}
+              <Save size={18} /> {saving ? 'Saving...' : 'Save Roster'}
             </button>
 
             <button
@@ -248,7 +344,7 @@ export default function RosterPage() {
                 transition: 'all 0.2s'
               }}
             >
-              <Download size={18} /> {exporting ? 'Generating JPG...' : 'Download JPG Roster'}
+              <Download size={18} /> {exporting ? 'Generating JPG...' : 'Download JPG'}
             </button>
           </div>
         </div>
@@ -323,6 +419,160 @@ export default function RosterPage() {
         )}
 
       </main>
+
+      {/* ── AI ROSTER ASSISTANT MODAL ── */}
+      {showAiModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)',
+          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '24px', maxWidth: '680px', width: '100%',
+            overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)',
+            border: '1px solid #E2E8F0'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1E1B4B, #312E81)', color: 'white',
+              padding: '24px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Brain size={22} color="#C4B5FD" />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '20px', fontWeight: 900, margin: 0 }}>Crown Coffee Roster AI</h2>
+                  <p style={{ fontSize: '13px', color: '#A5B4FC', margin: 0 }}>Train rules &amp; auto-generate weekly schedules</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAiModal(false)}
+                style={{ background: 'rgba(255,255,255,0.10)', border: 'none', color: 'white', width: '34px', height: '34px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid #E2E8F0', background: '#F8FAFC' }}>
+              <button
+                onClick={() => setActiveAiTab('generate')}
+                style={{
+                  flex: 1, padding: '14px', border: 'none', background: activeAiTab === 'generate' ? 'white' : 'transparent',
+                  borderBottom: activeAiTab === 'generate' ? '3px solid #7C3AED' : 'none',
+                  fontWeight: 800, fontSize: '14px', color: activeAiTab === 'generate' ? '#7C3AED' : '#64748B',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                }}
+              >
+                <Sparkles size={16} /> Auto-Generate Roster
+              </button>
+              <button
+                onClick={() => setActiveAiTab('train')}
+                style={{
+                  flex: 1, padding: '14px', border: 'none', background: activeAiTab === 'train' ? 'white' : 'transparent',
+                  borderBottom: activeAiTab === 'train' ? '3px solid #7C3AED' : 'none',
+                  fontWeight: 800, fontSize: '14px', color: activeAiTab === 'train' ? '#7C3AED' : '#64748B',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                }}
+              >
+                <Edit3 size={16} /> Train AI Rules
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: '24px 28px', maxHeight: '70vh', overflowY: 'auto' }}>
+
+              {/* TAB 1: TRAIN AI RULES */}
+              {activeAiTab === 'train' && (
+                <div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 8px', color: '#0F172A' }}>
+                    Café Scheduling Preferences &amp; Rules
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 16px' }}>
+                    Type your custom rules below. The AI will strictly follow these rules every time it plans your weekly roster.
+                  </p>
+                  <textarea
+                    rows={6}
+                    value={customRules}
+                    onChange={e => setCustomRules(e.target.value)}
+                    placeholder="Enter your custom scheduling rules here..."
+                    style={{
+                      width: '100%', padding: '14px', borderRadius: '12px',
+                      border: '1.5px solid #CBD5E1', fontSize: '13.5px', fontFamily: 'inherit',
+                      lineHeight: '1.6', outline: 'none', resize: 'vertical',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                    <button
+                      onClick={handleSaveRules}
+                      style={{
+                        background: '#0F172A', color: 'white', border: 'none',
+                        padding: '10px 20px', borderRadius: '10px', fontSize: '13.5px',
+                        fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
+                      }}
+                    >
+                      <Check size={16} /> Save Training Rules
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: GENERATE ROSTER */}
+              {activeAiTab === 'generate' && (
+                <div>
+                  <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#6D28D9', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ACTIVE TRAINED RULES</div>
+                    <div style={{ fontSize: '13px', color: '#4C1D95', marginTop: '4px', whiteSpace: 'pre-line', lineHeight: '1.5' }}>
+                      {customRules}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleGenerateAiRoster}
+                    disabled={generatingAi}
+                    style={{
+                      width: '100%', background: 'linear-gradient(135deg, #7C3AED, #9333EA)',
+                      color: 'white', border: 'none', padding: '14px', borderRadius: '14px',
+                      fontSize: '15px', fontWeight: 900, cursor: generatingAi ? 'wait' : 'pointer',
+                      boxShadow: '0 4px 14px rgba(124,58,237,0.30)', display: 'flex',
+                      alignItems: 'center', justifyContent: 'center', gap: '10px'
+                    }}
+                  >
+                    <Sparkles size={20} /> {generatingAi ? 'Gemini AI is drafting weekly schedule...' : 'Generate Weekly Roster with AI'}
+                  </button>
+
+                  {/* AI Output Preview */}
+                  {aiReasoning && (
+                    <div style={{ marginTop: '24px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', fontWeight: 800, fontSize: '14px', marginBottom: '8px' }}>
+                        <CheckCircle size={18} /> AI Draft Generated Successfully!
+                      </div>
+                      <p style={{ fontSize: '13px', color: '#334155', margin: '0 0 16px', lineHeight: '1.6' }}>
+                        {aiReasoning}
+                      </p>
+                      <button
+                        onClick={handleApplyAiDraft}
+                        style={{
+                          width: '100%', background: '#059669', color: 'white',
+                          border: 'none', padding: '12px', borderRadius: '12px',
+                          fontSize: '14px', fontWeight: 800, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                        }}
+                      >
+                        Apply AI Draft to Roster Grid
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── HIDDEN / HIGH-RESOLUTION JPG EXPORT CONTAINER ── */}
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
