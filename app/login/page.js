@@ -29,6 +29,16 @@ export default function GatewayPage() {
     setMounted(true)
     const isAdmin = localStorage.getItem('isAdmin')
     if (isAdmin === 'true') router.push('/')
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const modeParam = params.get('mode') || params.get('role') || params.get('type')
+      if (modeParam === 'admin') {
+        setActiveMode('admin')
+      } else if (modeParam === 'staff') {
+        setActiveMode('staff')
+      }
+    }
   }, [router])
 
   useEffect(() => {
