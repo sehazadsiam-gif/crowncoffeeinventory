@@ -97,7 +97,7 @@ export default function Navbar() {
     const role = localStorage.getItem('cc_role')
     const user = localStorage.getItem('cc_username') || localStorage.getItem('cc_staff_name')
 
-    if (!token && !['/', '/admin/login', '/staff/login', '/sub-admin/login'].includes(pathname) && !pathname.startsWith('/membership') && !pathname.startsWith('/checklist')) {
+    if (!token && !['/', '/admin/login', '/staff/login', '/sub-admin/login', '/roster'].includes(pathname) && !pathname.startsWith('/membership') && !pathname.startsWith('/checklist')) {
       router.replace('/')
       return
     }
@@ -194,7 +194,7 @@ export default function Navbar() {
     })
     .filter(Boolean)
 
-  if (!userRole && !['/', '/admin/login', '/staff/login', '/sub-admin/login'].includes(pathname) && !pathname.startsWith('/membership')) return null
+  if (!userRole && !['/', '/admin/login', '/staff/login', '/sub-admin/login', '/roster'].includes(pathname) && !pathname.startsWith('/membership')) return null
 
   return (
     <>

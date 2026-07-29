@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '../../components/Navbar'
 import { useToast } from '../../components/Toast'
@@ -19,6 +19,11 @@ export default function RosterPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
+
+  // Auto-save: 'idle' | 'pending' | 'saving' | 'saved' | 'error'
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle')
+  const autoSaveTimer = useRef(null)
+  const isFirstLoad = useRef(true)
 
   // Current week start (Saturday date string YYYY-MM-DD)
   const [weekStart, setWeekStart] = useState(() => getSaturdayOf(new Date()))
@@ -129,45 +134,82 @@ export default function RosterPage() {
     })
   }
 
-  // Save Roster
+  // ── Core save logic (shared by manual save & auto-save) ──
+  const saveRosterItems = useCallback(async (currentGridData, currentWeekStart, { silent = false } = {}) => {
+    const items = []
+
+    Object.entries(currentGridData).forEach(([staffId, dates]) => {
+      Object.entries(dates).forEach(([dayDate, val]) => {
+        const isOff = Boolean(val.is_off || val.shift_start === 'OFF')
+        const timeVal = isOff || val.shift_start === 'OFF' ? '08:00' : (val.shift_start || '08:00')
+        items.push({
+          staff_id: staffId,
+          week_start: currentWeekStart,
+          day_date: dayDate,
+          shift_start: timeVal,
+          shift_hours: 10,
+          is_off: isOff
+        })
+      })
+    })
+
+    if (items.length === 0) return
+
+    const res = await fetch('/api/roster', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items })
+    })
+
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Failed to save roster')
+
+    if (!silent) addToast('Weekly roster saved!', 'success')
+  }, [addToast])
+
+  // ── Manual Save ──
   async function handleSaveRoster() {
     try {
       setSaving(true)
-      const items = []
-
-      Object.entries(gridData).forEach(([staffId, dates]) => {
-        Object.entries(dates).forEach(([dayDate, val]) => {
-          const isOff = Boolean(val.is_off || val.shift_start === 'OFF')
-          const timeVal = isOff || val.shift_start === 'OFF' ? '08:00' : (val.shift_start || '08:00')
-          items.push({
-            staff_id: staffId,
-            week_start: weekStart,
-            day_date: dayDate,
-            shift_start: timeVal,
-            shift_hours: 10,
-            is_off: isOff
-          })
-        })
-      })
-
-      const res = await fetch('/api/roster', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items })
-      })
-
-      const json = await res.json()
-      if (res.ok) {
-        addToast('Weekly roster saved successfully!', 'success')
-      } else {
-        addToast(json.error || 'Failed to save roster', 'error')
-      }
+      setAutoSaveStatus('saving')
+      // Cancel any pending auto-save since we're saving now
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+      await saveRosterItems(gridData, weekStart, { silent: false })
+      setAutoSaveStatus('saved')
     } catch (err) {
-      addToast('Error saving roster', 'error')
+      addToast(err.message || 'Error saving roster', 'error')
+      setAutoSaveStatus('error')
     } finally {
       setSaving(false)
     }
   }
+
+  // ── Auto-Save: debounce 1.5 s after every gridData change ──
+  useEffect(() => {
+    // Skip the very first render (data just loaded from server)
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false
+      return
+    }
+    // Also skip if still loading
+    if (loading) return
+
+    setAutoSaveStatus('pending')
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+
+    autoSaveTimer.current = setTimeout(async () => {
+      try {
+        setAutoSaveStatus('saving')
+        await saveRosterItems(gridData, weekStart, { silent: true })
+        setAutoSaveStatus('saved')
+      } catch (err) {
+        setAutoSaveStatus('error')
+        addToast('Auto-save failed: ' + (err.message || 'Unknown error'), 'error')
+      }
+    }, 1500)
+
+    return () => { if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current) }
+  }, [gridData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Download Roster as High-Quality JPG
   async function handleDownloadJPG() {
@@ -292,9 +334,36 @@ export default function RosterPage() {
                 <h1 style={{ fontSize: '26px', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: '#0F172A' }}>
                   Weekly Duty Roster
                 </h1>
-                <p style={{ fontSize: '13.5px', color: '#64748B', margin: '2px 0 0' }}>
-                  Saturday to Friday roster planning &amp; AI drafting (Isolated from attendance/payroll)
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
+                  <p style={{ fontSize: '13.5px', color: '#64748B', margin: 0 }}>
+                    Saturday to Friday roster planning &amp; AI drafting
+                  </p>
+                  {/* Auto-save status badge */}
+                  {autoSaveStatus === 'pending' && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11.5px', fontWeight: 700, color: '#B45309', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '20px', padding: '2px 10px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#B45309', display: 'inline-block' }} />
+                      Unsaved changes
+                    </span>
+                  )}
+                  {autoSaveStatus === 'saving' && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11.5px', fontWeight: 700, color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '20px', padding: '2px 10px' }}>
+                      <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />
+                      Auto-saving...
+                    </span>
+                  )}
+                  {autoSaveStatus === 'saved' && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11.5px', fontWeight: 700, color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '20px', padding: '2px 10px' }}>
+                      <CheckCircle size={11} />
+                      Auto-saved
+                    </span>
+                  )}
+                  {autoSaveStatus === 'error' && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11.5px', fontWeight: 700, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '20px', padding: '2px 10px' }}>
+                      <AlertCircle size={11} />
+                      Save failed
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -321,15 +390,18 @@ export default function RosterPage() {
               disabled={saving || loading}
               style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
-                background: 'linear-gradient(135deg, #059669, #10B981)',
+                background: saving ? 'linear-gradient(135deg, #047857, #059669)' : 'linear-gradient(135deg, #059669, #10B981)',
                 color: 'white', border: 'none', padding: '11px 20px',
                 borderRadius: '12px', fontSize: '14px', fontWeight: 800,
                 cursor: saving ? 'wait' : 'pointer',
                 boxShadow: '0 4px 14px rgba(16,185,129,0.30)',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s', opacity: saving ? 0.85 : 1
               }}
             >
-              <Save size={18} /> {saving ? 'Saving...' : 'Save Roster'}
+              {saving
+                ? <><RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</>
+                : <><Save size={18} /> Save Now</>
+              }
             </button>
 
             <button
