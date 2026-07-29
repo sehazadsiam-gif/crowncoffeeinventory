@@ -21,8 +21,8 @@
  */
 
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '../../../lib/supabase'
-import { logAttendance } from '../../../lib/attendance-service'
+import { supabaseAdmin } from '../../../../lib/supabase'
+import { logAttendance } from '../../../../lib/attendance-service'
 
 export const dynamic = 'force-dynamic'
 
@@ -191,7 +191,7 @@ async function handleMemberPunch(member, rfidCode, location) {
 
   // Fire notification emails async (non-blocking)
   try {
-    const { sendRfidTapVisitEmail, sendFreeCoffeeEarnedEmail } = await import('../../../lib/email')
+    const { sendRfidTapVisitEmail, sendFreeCoffeeEarnedEmail } = await import('../../../../lib/email')
     const updatedMember = { ...member, total_visits: newTotalVisits }
     sendRfidTapVisitEmail(updatedMember, newTotalVisits, newPunchCount, rewardUnlocked).catch(() => {})
     if (rewardUnlocked) {
