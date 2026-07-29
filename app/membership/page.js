@@ -119,6 +119,14 @@ export default function MembershipPage() {
       const data = await res.json()
       if (res.ok) {
         router.push(`/membership/success?name=${encodeURIComponent(form.full_name)}&email=${encodeURIComponent(form.email)}`)
+      } else if (res.status === 409) {
+        // Duplicate email or phone
+        const dupField = data.duplicate_field === 'email' ? 'email address' : 'phone number'
+        setError(
+          `This ${dupField} is already registered as a Crown Coffee member. ` +
+          `You may already have an active membership. ` +
+          `Please visit Crown Coffee or contact us if you need assistance.`
+        )
       } else {
         setError(data.error || 'Registration failed. Please try again.')
       }

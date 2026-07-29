@@ -223,6 +223,18 @@ export default function AdminManageMemberPage() {
 
       const appData = await appRes.json()
 
+      // ── Duplicate email / phone guard ──────────────────────────────────────
+      if (appRes.status === 409) {
+        const dupField = appData.duplicate_field === 'email' ? 'Email' : 'Phone Number'
+        setMessage(
+          `⛔ Duplicate ${dupField}: "${newMemberForm[appData.duplicate_field]}" is already registered ` +
+          `under member "${appData.existing_name}" (${appData.existing_status}). ` +
+          `Each member must have a unique email and phone. Go to the Directory tab to locate them.`
+        )
+        setLoading(false)
+        return
+      }
+
       if (!appData.success || (!appData.member && !appData.member_id)) {
         setMessage(`Error creating member: ${appData.error || 'Failed'}`)
         setLoading(false)
@@ -232,7 +244,7 @@ export default function AdminManageMemberPage() {
       const createdMemberId = appData.member?.id || appData.member_id
       const rfidToPair = newMemberForm.rfid_code.trim() || `RFID-${Math.floor(100000 + Math.random() * 900000)}`
 
-      // 2. Pair RFID card and set 24 months expiration
+      // 2. Pair RFID card and set 12 months expiration
       const pairRes = await fetch('/api/members/rfid/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -248,7 +260,7 @@ export default function AdminManageMemberPage() {
 
       if (pairData.success && pairData.member) {
         setSelectedMember(pairData.member)
-        setMessage(`Member ${pairData.member.full_name} created & credit card generated! 24-month validity active.`)
+        setMessage(`Member ${pairData.member.full_name} created & credit card generated! 12-month validity active.`)
         setNewMemberForm({ full_name: '', phone: '', email: '', rfid_code: '', card_number: '' })
         setActiveTab('studio')
         fetchMembers()
@@ -286,7 +298,7 @@ export default function AdminManageMemberPage() {
 
       const data = await res.json()
       if (data.success) {
-        setMessage(`RFID Card successfully paired to ${selectedMember.full_name}! 24-month validity active.`)
+        setMessage(`RFID Card successfully paired to ${selectedMember.full_name}! 12-month validity active.`)
         setRfidPairInput('')
         fetchMembers()
         fetchLogs()
@@ -582,7 +594,7 @@ export default function AdminManageMemberPage() {
           </div>
           <div style={{ backgroundColor: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E7E5E4', textAlign: 'center' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#78716C', textTransform: 'uppercase' }}>Card Validity</div>
-            <div style={{ fontSize: '28px', fontWeight: 900, color: '#D4AF37', marginTop: '4px' }}>24 Months</div>
+            <div style={{ fontSize: '28px', fontWeight: 900, color: '#D4AF37', marginTop: '4px' }}>12 Months</div>
           </div>
         </div>
 
@@ -697,7 +709,7 @@ export default function AdminManageMemberPage() {
                     <th style={{ padding: '12px' }}>Email</th>
                     <th style={{ padding: '12px' }}>RFID Code</th>
                     <th style={{ padding: '12px' }}>Visits</th>
-                    <th style={{ padding: '12px' }}>Card Validity (24M)</th>
+                    <th style={{ padding: '12px' }}>Card Validity (12M)</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
@@ -721,7 +733,7 @@ export default function AdminManageMemberPage() {
                       <td style={{ padding: '12px', fontSize: '12px', fontWeight: 700, color: '#D4AF37' }}>
                         EXP: {m.card_expires_at 
                           ? new Date(m.card_expires_at).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })
-                          : new Date(new Date().setMonth(new Date().getMonth() + 24)).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })}
+                          : new Date(new Date().setMonth(new Date().getMonth() + 12)).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })}
                       </td>
                       <td style={{ padding: '12px', textAlign: 'right' }}>
                         <button
@@ -1120,7 +1132,7 @@ export default function AdminManageMemberPage() {
               </div>
 
               <div style={{ backgroundColor: '#FFFBEB', padding: '12px 16px', borderRadius: '8px', border: '1px solid #FDE68A', fontSize: '13px', color: '#92400E' }}>
-                Card validity will be calculated as <strong>24 Months</strong> from today. Format: <strong>EXP: {new Date(new Date().setMonth(new Date().getMonth() + 24)).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })}</strong>
+                Card validity will be calculated as <strong>12 Months</strong> from today. Format: <strong>EXP: {new Date(new Date().setMonth(new Date().getMonth() + 12)).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })}</strong>
               </div>
 
               <button
@@ -1376,7 +1388,7 @@ export default function AdminManageMemberPage() {
                           EXP:{' '}
                           {selectedMember.card_expires_at 
                             ? new Date(selectedMember.card_expires_at).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })
-                            : new Date(new Date().setMonth(new Date().getMonth() + 24)).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })}
+                            : new Date(new Date().setMonth(new Date().getMonth() + 12)).toLocaleDateString('en-GB', { month: '2-digit', year: '2-digit' })}
                         </div>
                       </div>
                     </div>
@@ -1402,7 +1414,7 @@ export default function AdminManageMemberPage() {
                     <div style={{ padding: '0 24px 20px 24px', fontSize: '9.5px', lineHeight: '1.6', color: activeTheme.subColor }}>
                       <div>- Property of Crown Coffee.</div>
                       <div>- Tap card at counter to enjoy 10% lifetime discount & earn 5-visit rewards.</div>
-                      <div>- Non-transferable. Valid for 24 months from issue date.</div>
+                      <div>- Non-transferable. Valid for 12 months from issue date.</div>
                     </div>
                   </div>
 

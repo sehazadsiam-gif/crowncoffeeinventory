@@ -23,8 +23,28 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Phone must be at least 9 digits' }, { status: 400 })
     }
 
-    // Email and phone number uniqueness checks are bypassed per request to let members register
-    // with the same email or phone number as many times as they want.
+    // ── Uniqueness check: block duplicate email OR phone ──────────────────────
+    const emailNorm = email.trim().toLowerCase()
+    const phoneNorm = phone.trim()
+
+    const { data: existing } = await supabase
+      .from('members')
+      .select('id, email, phone, full_name, status')
+      .or(`email.eq.${emailNorm},phone.eq.${phoneNorm}`)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) {
+      const isEmailMatch = existing.email?.toLowerCase() === emailNorm
+      const field = isEmailMatch ? 'email' : 'phone'
+      const value = isEmailMatch ? emailNorm : phoneNorm
+      return NextResponse.json({
+        error: `A membership already exists with this ${field} (${value}). Each member must have a unique email and phone number.`,
+        duplicate_field: field,
+        existing_name: existing.full_name,
+        existing_status: existing.status
+      }, { status: 409 })
+    }
 
 
     const now = new Date()

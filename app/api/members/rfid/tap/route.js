@@ -40,7 +40,7 @@ export async function POST(req) {
       }, { status: 403 })
     }
 
-    // 3. Check card expiration (24-month validity)
+    // 3. Check card expiration (12-month validity)
     if (member.card_expires_at && new Date(member.card_expires_at) < new Date()) {
       return NextResponse.json({
         success: false,
