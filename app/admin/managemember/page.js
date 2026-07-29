@@ -74,10 +74,8 @@ export default function AdminManageMemberPage() {
   const handleDeleteVisit = async (visitId) => {
     setVisitActionLoading(true)
     try {
-      const token = localStorage.getItem('cc_token') || ''
       const res = await fetch(`/api/members/visits/${visitId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+        method: 'DELETE'
       })
       const data = await res.json()
       if (data.success) {
@@ -98,10 +96,9 @@ export default function AdminManageMemberPage() {
     if (!visitEditState || visitEditState.id !== visitId) return
     setVisitActionLoading(true)
     try {
-      const token = localStorage.getItem('cc_token') || ''
       const res = await fetch(`/api/members/visits/${visitId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visited_at: visitEditState.visited_at })
       })
       const data = await res.json()

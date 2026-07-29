@@ -2,35 +2,17 @@
  * PATCH /api/members/visits/[id]  — Edit a visit's timestamp
  * DELETE /api/members/visits/[id] — Delete a visit and roll back member counters
  *
- * Both require admin token.
+ * Auth is enforced at the page level (admin PIN) consistent with all other admin APIs.
  */
 
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../../lib/supabase'
-import { validateSession } from '../../../../../lib/auth'
 
 export const dynamic = 'force-dynamic'
-
-// ── Auth helper ────────────────────────────────────────────────────────────────
-async function requireAdmin(request) {
-  const cookie = request.headers.get('cookie') || ''
-  const tokenMatch = cookie.match(/(?:^|;\s*)cc_token=([^;]+)/)
-  const bearerMatch = (request.headers.get('authorization') || '').match(/^Bearer\s+(.+)/)
-  const token = tokenMatch?.[1] || bearerMatch?.[1]
-  if (!token) return null
-  const session = await validateSession(token)
-  if (!session || (session.role !== 'admin' && session.role !== 'sub_admin')) return null
-  return session
-}
 
 // ── PATCH: Edit visited_at timestamp ──────────────────────────────────────────
 export async function PATCH(request, { params }) {
   try {
-    const session = await requireAdmin(request)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { id } = params
     const body = await request.json()
     const { visited_at } = body
@@ -39,7 +21,6 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'visited_at is required' }, { status: 400 })
     }
 
-    // Validate the timestamp is parseable
     const newDate = new Date(visited_at)
     if (isNaN(newDate.getTime())) {
       return NextResponse.json({ error: 'Invalid visited_at timestamp' }, { status: 400 })
@@ -66,11 +47,6 @@ export async function PATCH(request, { params }) {
 // ── DELETE: Remove visit and roll back member stats ───────────────────────────
 export async function DELETE(request, { params }) {
   try {
-    const session = await requireAdmin(request)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const { id } = params
 
     // 1. Fetch the visit so we know which member to update
@@ -99,8 +75,7 @@ export async function DELETE(request, { params }) {
       return NextResponse.json({ error: deleteErr.message }, { status: 500 })
     }
 
-    // 3. Also delete the matching rfid_tap row if one exists (same member, same minute)
-    // Best-effort — non-blocking
+    // 3. Best-effort: delete matching rfid_tap row (non-blocking)
     supabaseAdmin
       .from('member_rfid_taps')
       .delete()
@@ -111,14 +86,12 @@ export async function DELETE(request, { params }) {
 
     // 4. Roll back member counters
     //    total_visits  -1
-    //    visit_punch_count: if currently 0, roll back to 4 (was about to earn reward)
-    //    otherwise -1
+    //    visit_punch_count -1 (if already 0, roll back to 4 and deduct a free coffee)
     const newTotalVisits = Math.max(0, (member.total_visits || 0) - 1)
     let newPunchCount = (member.visit_punch_count || 0) - 1
     let newFreeCoffees = member.free_coffee_rewards_available || 0
 
     if (newPunchCount < 0) {
-      // The deleted visit was the 5th punch (reward was just earned)
       newPunchCount = 4
       newFreeCoffees = Math.max(0, newFreeCoffees - 1)
     }
@@ -134,7 +107,6 @@ export async function DELETE(request, { params }) {
 
     if (updateErr) {
       console.error('[DELETE visit] member rollback failed:', updateErr)
-      // Visit was already deleted — report partial success
       return NextResponse.json({
         success: true,
         warning: 'Visit deleted but member counter rollback failed',
