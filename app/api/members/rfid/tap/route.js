@@ -26,21 +26,6 @@ export async function POST(req) {
     const member = members && members.length > 0 ? members[0] : null
 
     if (fetchErr || !member) {
-      // Check if RFID card belongs to a Staff member
-      const { data: staffMember } = await supabase
-        .from('staff')
-        .select('name')
-        .eq('rfid_code', cleanCode)
-        .maybeSingle()
-
-      if (staffMember) {
-        return NextResponse.json({
-          success: false,
-          is_staff_card: true,
-          error: `Card belongs to Staff Member (${staffMember.name}). Please tap at Staff Attendance Kiosk.`
-        }, { status: 400 })
-      }
-
       return NextResponse.json({
         success: false,
         error: 'Member not found. Check RFID code, Card #, or Phone Number.'
