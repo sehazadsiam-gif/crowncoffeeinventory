@@ -40,6 +40,11 @@ export default function AdminManageMemberPage() {
 
   const [visitLogDate, setVisitLogDate] = useState(new Date().toISOString().split('T')[0])
   const [dailyVisitsList, setDailyVisitsList] = useState([])
+  // Edit/Delete visit state
+  const [visitEditState, setVisitEditState] = useState(null) // { id, visited_at } while editing
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null) // visit id awaiting confirm
+  const [visitActionLoading, setVisitActionLoading] = useState(false)
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -65,6 +70,55 @@ export default function AdminManageMemberPage() {
       console.error('Error fetching admin daily visits:', err)
     }
   }
+
+  const handleDeleteVisit = async (visitId) => {
+    setVisitActionLoading(true)
+    try {
+      const token = localStorage.getItem('cc_token') || ''
+      const res = await fetch(`/api/members/visits/${visitId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (data.success) {
+        setDeleteConfirmId(null)
+        fetchDailyVisitsList(visitLogDate)
+        setMessage('Visit deleted and member counters rolled back.')
+      } else {
+        setMessage(`Delete failed: ${data.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      setMessage('Delete request failed.')
+    } finally {
+      setVisitActionLoading(false)
+    }
+  }
+
+  const handleEditVisit = async (visitId) => {
+    if (!visitEditState || visitEditState.id !== visitId) return
+    setVisitActionLoading(true)
+    try {
+      const token = localStorage.getItem('cc_token') || ''
+      const res = await fetch(`/api/members/visits/${visitId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ visited_at: visitEditState.visited_at })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setVisitEditState(null)
+        fetchDailyVisitsList(visitLogDate)
+        setMessage('Visit timestamp updated.')
+      } else {
+        setMessage(`Edit failed: ${data.error || 'Unknown error'}`)
+      }
+    } catch (err) {
+      setMessage('Edit request failed.')
+    } finally {
+      setVisitActionLoading(false)
+    }
+  }
+
 
   const handleVerifyPin = (e) => {
     e.preventDefault()
@@ -734,46 +788,163 @@ export default function AdminManageMemberPage() {
               </div>
             </div>
 
+            {message && (
+              <div style={{ padding: '10px 16px', borderRadius: '8px', marginBottom: '16px',
+                backgroundColor: message.toLowerCase().includes('fail') || message.toLowerCase().includes('error') ? '#FEE2E2' : '#D1FAE5',
+                color: message.toLowerCase().includes('fail') || message.toLowerCase().includes('error') ? '#991B1B' : '#065F46',
+                fontWeight: 700, fontSize: '13px' }}>
+                {message}
+              </div>
+            )}
+
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#F5F5F4', textAlign: 'left', color: '#78716C' }}>
-                    <th style={{ padding: '12px' }}>Visit Timestamp</th>
+                    <th style={{ padding: '12px' }}>Visit Time</th>
                     <th style={{ padding: '12px' }}>Member Name</th>
                     <th style={{ padding: '12px' }}>Card Number</th>
                     <th style={{ padding: '12px' }}>Phone</th>
                     <th style={{ padding: '12px' }}>Email</th>
                     <th style={{ padding: '12px' }}>Punches</th>
-                    <th style={{ padding: '12px' }}>Total Lifetime Visits</th>
+                    <th style={{ padding: '12px' }}>Total Visits</th>
                     <th style={{ padding: '12px' }}>Recorded By</th>
+                    <th style={{ padding: '12px', textAlign: 'center' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dailyVisitsList.map(v => (
-                    <tr key={v.id} style={{ borderBottom: '1px solid #E7E5E4' }}>
-                      <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#1E110A' }}>
-                        {new Date(v.visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                      </td>
-                      <td style={{ padding: '12px', fontWeight: 800, color: '#1C1917' }}>
-                        {v.members?.full_name || 'Member'}
-                      </td>
-                      <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#6B3A2A' }}>
-                        {v.members?.card_number || '-'}
-                      </td>
-                      <td style={{ padding: '12px', color: '#57534E' }}>{v.members?.phone || '-'}</td>
-                      <td style={{ padding: '12px', color: '#57534E' }}>{v.members?.email || '-'}</td>
-                      <td style={{ padding: '12px', fontWeight: 800, color: '#15803D' }}>
-                        {v.members?.visit_punch_count || 0}/5
-                      </td>
-                      <td style={{ padding: '12px', fontWeight: 800 }}>#{v.members?.total_visits || 0}</td>
-                      <td style={{ padding: '12px', fontSize: '11px', textTransform: 'uppercase', color: '#78716C' }}>
-                        {v.recorded_by || 'RFID Tap'}
-                      </td>
-                    </tr>
-                  ))}
+                  {dailyVisitsList.map(v => {
+                    const isEditing = visitEditState?.id === v.id
+                    const isDeleting = deleteConfirmId === v.id
+                    return (
+                      <>
+                        <tr key={v.id} style={{ borderBottom: isEditing || isDeleting ? 'none' : '1px solid #E7E5E4',
+                          backgroundColor: isEditing ? '#EFF6FF' : isDeleting ? '#FFF7ED' : 'white' }}>
+                          <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#1E110A' }}>
+                            {new Date(v.visited_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </td>
+                          <td style={{ padding: '12px', fontWeight: 800, color: '#1C1917' }}>
+                            {v.members?.full_name || 'Member'}
+                          </td>
+                          <td style={{ padding: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#6B3A2A' }}>
+                            {v.members?.card_number || '-'}
+                          </td>
+                          <td style={{ padding: '12px', color: '#57534E' }}>{v.members?.phone || '-'}</td>
+                          <td style={{ padding: '12px', color: '#57534E' }}>{v.members?.email || '-'}</td>
+                          <td style={{ padding: '12px', fontWeight: 800, color: '#15803D' }}>
+                            {v.members?.visit_punch_count || 0}/5
+                          </td>
+                          <td style={{ padding: '12px', fontWeight: 800 }}>#{v.members?.total_visits || 0}</td>
+                          <td style={{ padding: '12px', fontSize: '11px', textTransform: 'uppercase', color: '#78716C' }}>
+                            {v.recorded_by || 'RFID Tap'}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                              {/* Edit button */}
+                              {!isDeleting && (
+                                <button
+                                  onClick={() => {
+                                    if (isEditing) {
+                                      setVisitEditState(null)
+                                    } else {
+                                      setDeleteConfirmId(null)
+                                      setVisitEditState({ id: v.id, visited_at: v.visited_at.slice(0, 16) })
+                                    }
+                                  }}
+                                  style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+                                    backgroundColor: isEditing ? '#DBEAFE' : '#F0F9FF', color: isEditing ? '#1D4ED8' : '#0369A1' }}
+                                  title="Edit visit time"
+                                >
+                                  {isEditing ? '✕ Cancel' : '✏️ Edit'}
+                                </button>
+                              )}
+                              {/* Delete button */}
+                              {!isEditing && (
+                                <button
+                                  onClick={() => {
+                                    if (isDeleting) {
+                                      setDeleteConfirmId(null)
+                                    } else {
+                                      setVisitEditState(null)
+                                      setDeleteConfirmId(v.id)
+                                    }
+                                  }}
+                                  style={{ padding: '5px 10px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+                                    backgroundColor: isDeleting ? '#FEE2E2' : '#FFF5F5', color: isDeleting ? '#991B1B' : '#DC2626' }}
+                                  title="Delete visit"
+                                >
+                                  {isDeleting ? '✕ Cancel' : '🗑️ Delete'}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Inline Edit Row */}
+                        {isEditing && (
+                          <tr key={`edit-${v.id}`} style={{ backgroundColor: '#EFF6FF', borderBottom: '1px solid #BFDBFE' }}>
+                            <td colSpan={9} style={{ padding: '14px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#1D4ED8' }}>✏️ Edit Visit Time for {v.members?.full_name}:</span>
+                                <input
+                                  type="datetime-local"
+                                  value={visitEditState.visited_at}
+                                  onChange={e => setVisitEditState(prev => ({ ...prev, visited_at: e.target.value }))}
+                                  style={{ padding: '7px 12px', borderRadius: '7px', border: '1px solid #93C5FD', fontSize: '13px', fontWeight: 700, outline: 'none' }}
+                                />
+                                <button
+                                  onClick={() => handleEditVisit(v.id)}
+                                  disabled={visitActionLoading}
+                                  style={{ padding: '7px 18px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 800,
+                                    backgroundColor: '#1D4ED8', color: 'white', opacity: visitActionLoading ? 0.6 : 1 }}
+                                >
+                                  {visitActionLoading ? 'Saving…' : '✓ Save'}
+                                </button>
+                                <button
+                                  onClick={() => setVisitEditState(null)}
+                                  style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #93C5FD', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+                                    backgroundColor: 'white', color: '#1D4ED8' }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+
+                        {/* Inline Delete Confirm Row */}
+                        {isDeleting && (
+                          <tr key={`del-${v.id}`} style={{ backgroundColor: '#FFF7ED', borderBottom: '1px solid #FED7AA' }}>
+                            <td colSpan={9} style={{ padding: '14px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 700, color: '#C2410C' }}>
+                                  🗑️ Delete this visit for <strong>{v.members?.full_name}</strong>? Member counters will be rolled back.
+                                </span>
+                                <button
+                                  onClick={() => handleDeleteVisit(v.id)}
+                                  disabled={visitActionLoading}
+                                  style={{ padding: '7px 18px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 800,
+                                    backgroundColor: '#DC2626', color: 'white', opacity: visitActionLoading ? 0.6 : 1 }}
+                                >
+                                  {visitActionLoading ? 'Deleting…' : '✓ Yes, Delete'}
+                                </button>
+                                <button
+                                  onClick={() => setDeleteConfirmId(null)}
+                                  style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid #FCA5A5', cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+                                    backgroundColor: 'white', color: '#DC2626' }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    )
+                  })}
                   {dailyVisitsList.length === 0 && (
                     <tr>
-                      <td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#78716C' }}>
+                      <td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#78716C' }}>
                         No member visits recorded for date: <strong>{visitLogDate}</strong>
                       </td>
                     </tr>
@@ -783,6 +954,7 @@ export default function AdminManageMemberPage() {
             </div>
           </div>
         )}
+
 
         {/* TAB 1: CREATE MEMBER & GENERATE CARD */}
         {activeTab === 'create' && (
