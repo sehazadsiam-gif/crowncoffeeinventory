@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crown-coffee-v1'
+const CACHE_NAME = 'crown-coffee-v2'
 
 // Core assets to cache for offline support
 const STATIC_ASSETS = [
@@ -43,16 +43,8 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Skip API calls — always fetch fresh from network
+  // Skip API calls — let browser fetch directly without SW interception
   if (request.url.includes('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return new Response(
-          JSON.stringify({ error: 'You are offline. Please check your connection.' }),
-          { status: 503, headers: { 'Content-Type': 'application/json' } }
-        )
-      })
-    )
     return
   }
 
