@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import Head from 'next/head'
 
 // ── 3. Extreme Far-Right Analog Clock (Responsive Clamp Dial) ──────
 function ExtremeRightAnalogClock({ time = new Date() }) {
@@ -313,13 +312,6 @@ export default function PublicAttendancePage() {
 
   return (
     <>
-      <Head>
-        <title>Crown Coffee — RFID Attendance Board</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&family=Outfit:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
-      </Head>
-
       <div style={{
         minHeight: '100vh',
         background: '#FAF9F6', // 5. Light Mode Warm Cream Background
