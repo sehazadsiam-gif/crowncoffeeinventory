@@ -5,15 +5,16 @@ import { supabase } from '../../../../../lib/supabase'
 import { validateSession } from '../../../../../lib/auth'
 import nodemailer from 'nodemailer'
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD
-  }
-})
-
 export async function POST(request) {
+  // Create transporter inside handler so env vars are guaranteed available at runtime
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS || process.env.GMAIL_APP_PASSWORD
+    }
+  })
+
   try {
     const authHeader = request.headers.get('Authorization')
     const token = authHeader?.replace('Bearer ', '')
