@@ -256,17 +256,25 @@ export default function PublicAttendancePage() {
     }
   }
 
+  const [fetchError, setFetchError] = useState(null)
+
   async function fetchTodayData(silent = false) {
     try {
       if (!silent) setLoading(true)
       const res = await fetch(`/api/attendance/today?t=${Date.now()}`, { cache: 'no-store' })
       const json = await res.json()
-      if (res.ok) {
+      if (res.ok && json.records) {
         setData(json)
+        setFetchError(null)
         setLastUpdatedSecs(0)
+      } else {
+        const errMsg = json.error || `HTTP ${res.status}: Failed to fetch attendance data`
+        console.error('Attendance API Error:', errMsg)
+        setFetchError(errMsg)
       }
     } catch (e) {
-      console.error(e)
+      console.error('Attendance Fetch Exception:', e)
+      setFetchError(e.message || 'Network connection error')
     } finally {
       if (!silent) setLoading(false)
     }
@@ -444,6 +452,28 @@ export default function PublicAttendancePage() {
 
         {/* ── 2. Grouped 4 Collapsible Sections (Max 1800px Centered) ── */}
         <main style={{ maxWidth: '1800px', margin: '0 auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {fetchError && (
+            <div style={{
+              background: '#FEF2F2', border: '1.5px solid #FCA5A5', color: '#991B1B',
+              borderRadius: '16px', padding: '16px 24px', display: 'flex', alignItems: 'center',
+              justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px'
+            }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '14px' }}>⚠️ Sync Connection Warning</div>
+                <div style={{ fontSize: '12px', marginTop: '2px', opacity: 0.9 }}>{fetchError}</div>
+              </div>
+              <button
+                onClick={() => fetchTodayData(false)}
+                style={{
+                  background: '#991B1B', color: 'white', border: 'none', borderRadius: '10px',
+                  padding: '8px 16px', fontWeight: 800, fontSize: '12px', cursor: 'pointer'
+                }}
+              >
+                🔄 Retry Sync Now
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div style={{ textAlign: 'center', padding: '80px', color: '#94A3B8', fontSize: '15px', fontWeight: 700 }}>
               Loading RFID Attendance Feed...

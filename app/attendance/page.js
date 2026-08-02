@@ -196,16 +196,24 @@ export default function AttendanceDashboardPage() {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
   }, [])
 
+  const [fetchError, setFetchError] = useState(null)
+
   async function fetchTodayData(silent = false) {
     try {
       if (!silent) setLoading(true)
       const res = await fetch(`/api/attendance/today?t=${Date.now()}`, { cache: 'no-store' })
       const json = await res.json()
-      if (res.ok) {
+      if (res.ok && json.records) {
         setData(json)
+        setFetchError(null)
+      } else {
+        const errMsg = json.error || `HTTP ${res.status}: Failed to fetch attendance data`
+        console.error('Attendance API Error:', errMsg)
+        setFetchError(errMsg)
       }
     } catch (err) {
       console.error('Failed to fetch today attendance:', err)
+      setFetchError(err.message || 'Network connection error')
     } finally {
       if (!silent) setLoading(false)
     }
