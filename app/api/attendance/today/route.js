@@ -72,7 +72,7 @@ export async function GET(request) {
         employee_id: s.employee_id || 'N/A',
         designation: s.designation,
         department: s.department || 'front',
-        photo_url: s.photo_url || null,
+        photo_url: (s.photo_url && s.photo_url.length < 2000) ? s.photo_url : null,
         rfid_code: s.rfid_code || null,
         shift_start: s.shift_start || '08:00',
         is_rostered: s.is_rostered !== false,
