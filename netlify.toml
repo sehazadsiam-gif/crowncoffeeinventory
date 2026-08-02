@@ -3,7 +3,7 @@
   publish = ".next"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
 
 # Increase serverless function timeout to 26s (max on free tier)
 # Prevents heavy routes (daily-summary, monthly-report-card, report) from timing out
