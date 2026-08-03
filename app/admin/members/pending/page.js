@@ -25,8 +25,8 @@ export default function PendingMembersPage() {
 
   useEffect(() => {
     load()
-    // Auto-refresh every 2 seconds
-    const interval = setInterval(load, 2000)
+    // Auto-refresh every 60 seconds
+    const interval = setInterval(load, 60000)
     return () => clearInterval(interval)
   }, [])
 

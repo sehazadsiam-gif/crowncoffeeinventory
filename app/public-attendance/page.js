@@ -161,7 +161,7 @@ export default function PublicAttendancePage() {
       })
       .subscribe()
 
-    const pollTimer = setInterval(() => fetchTodayData(true), 5000)
+    const pollTimer = setInterval(() => fetchTodayData(true), 60000)
     return () => {
       clearInterval(pollTimer)
       supabase.removeChannel(channel)

@@ -53,8 +53,8 @@ export default function AttendanceCheckPage() {
       })
       .subscribe()
 
-    // Fallback polling every 10 seconds
-    const poll = setInterval(() => fetchTodayData(true), 10000)
+    // Fallback polling every 60 seconds
+    const poll = setInterval(() => fetchTodayData(true), 60000)
 
     return () => {
       clearInterval(timer)
