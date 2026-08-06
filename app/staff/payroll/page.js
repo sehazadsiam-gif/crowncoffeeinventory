@@ -55,17 +55,37 @@ export default function PayrollPage() {
       const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0]
       const endDate = new Date(y, m, 0).toISOString().split('T')[0]
 
-      const [staffRes, payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes] = await Promise.all([
-        supabase.from('staff').select('*').eq('is_active', true).order('serial', { ascending: true }).order('name', { ascending: true }),
-        supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y),
-        supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y),
-        supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate),
-        supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate),
-        supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate),
-        supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y),
-        supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate),
-        supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes').gte('date', startDate).lte('date', endDate)
+      // Fetch staff robustly via API route first, fallback to client Supabase
+      let activeStaffList = []
+      try {
+        const staffApiResponse = await fetch('/api/staff')
+        if (staffApiResponse.ok) {
+          const staffApiJson = await staffApiResponse.json()
+          if (staffApiJson.data && staffApiJson.data.length > 0) {
+            activeStaffList = staffApiJson.data.filter(s => s.is_active)
+          }
+        }
+      } catch (err) {
+        console.warn('API /api/staff fetch fallback to client:', err)
+      }
+
+      if (activeStaffList.length === 0) {
+        const clientStaffRes = await supabase.from('staff').select('*').eq('is_active', true).order('serial', { ascending: true }).order('name', { ascending: true })
+        activeStaffList = clientStaffRes.data || []
+      }
+
+      const [payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes] = await Promise.all([
+        supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y).catch(() => ({ data: [] })),
+        supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y).catch(() => ({ data: [] })),
+        supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] })),
+        supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] })),
+        supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] })),
+        supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y).catch(() => ({ data: [] })),
+        supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] })),
+        supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] }))
       ])
+
+      const staffRes = { data: activeStaffList }
 
       const summaryMap = {}
       ;(summaryRes.data || []).forEach(s => {
