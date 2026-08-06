@@ -144,7 +144,7 @@ export default function PayrollPage() {
       ;(payRes.data || []).forEach(p => {
         payMap[p.staff_id] = {
           ...p,
-          advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0),
+          advance_taken: Number(p.advance_taken || 0),
           manual_unpaid_days: p.manual_unpaid_days ?? null,
           waived_unpaid_days: p.waived_unpaid_days || 0,
           overtime_manual: p.miscellaneous_plus === 1
