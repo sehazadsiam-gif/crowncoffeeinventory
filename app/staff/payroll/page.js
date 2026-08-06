@@ -166,7 +166,7 @@ export default function PayrollPage() {
 
         const autoOtHours = summary ? Number(summary.overtime_hours || 0) : (otMap[s.id]?.hours || Math.round((logOtMap[s.id] || 0) * 100) / 100)
         const hourlyRate = (Number(s.base_salary) / 30) / 10
-        const autoOtPay = otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate * 1.25)
+        const autoOtPay = otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate)
 
         if (!payMap[s.id]) {
           payMap[s.id] = {
