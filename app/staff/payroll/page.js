@@ -411,14 +411,14 @@ export default function PayrollPage() {
     const s = staff.find(st => st.id === staffId)
     const row = payroll[staffId]
     const finalSalary = calculateFinalSalary(s, row, waivedStaff[staffId])
-    const alreadyPaid = (payments[staffId] || []).reduce((sum, p) => sum + Number(p.amount), 0)
+    const alreadyPaid = (payments[staffId] || []).reduce((sum, p) => sum + Number(p.amount_paid || p.amount || 0), 0)
     const remaining = finalSalary - alreadyPaid
 
     if (amount > remaining) return addToast('Exceeds remaining ৳' + remaining.toLocaleString(), 'error')
 
     try {
       const { error } = await supabase.from('salary_payments').insert([{
-        staff_id: staffId, month, year, amount,
+        staff_id: staffId, month, year, amount_paid: amount,
         payment_date: paymentForm.date, notes: paymentForm.notes
       }])
       if (error) throw error
@@ -497,7 +497,7 @@ export default function PayrollPage() {
   const grandTotal = sortedStaff.reduce((acc, s) => acc + calculateFinalSalary(s, payroll[s.id] || {}, waivedStaff[s.id]), 0)
   const totalPaidAll = sortedStaff.reduce((acc, s) => {
     const staffPayments = payments[s.id] || []
-    return acc + staffPayments.reduce((pAcc, p) => pAcc + Number(p.amount), 0)
+    return acc + staffPayments.reduce((pAcc, p) => pAcc + Number(p.amount_paid || p.amount || 0), 0)
   }, 0)
   const totalRemainingAll = grandTotal - totalPaidAll
 
@@ -621,7 +621,7 @@ export default function PayrollPage() {
                   const row = payroll[s.id]; if (!row) return null
                   const finalSalary = calculateFinalSalary(s, row, waivedStaff[s.id])
                   const staffPayments = (payments[s.id] || [])
-                  const paid = staffPayments.reduce((acc, p) => acc + Number(p.amount), 0)
+                  const paid = staffPayments.reduce((acc, p) => acc + Number(p.amount_paid || p.amount || 0), 0)
                   const rem = finalSalary - paid
 
                   const base = Number(s.base_salary) || 0
@@ -829,7 +829,7 @@ export default function PayrollPage() {
                               {staffPayments.map(p => (
                                 <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', padding: '8px', background: '#252F45', borderRadius: '6px', border: '1px solid #2D3A52' }}>
                                   <div>
-                                    <div style={{ fontWeight: 700, color: '#E2E8F0' }}>৳{Number(p.amount).toLocaleString()}</div>
+                                    <div style={{ fontWeight: 700, color: '#E2E8F0' }}>৳{Number(p.amount_paid || p.amount || 0).toLocaleString()}</div>
                                     <div style={{ color: '#64748B', fontSize: '10px' }}>{new Date(p.payment_date).toLocaleDateString()}</div>
                                     {p.notes && <div style={{ color: '#94A3B8', fontSize: '9px', marginTop: '2px' }}>{p.notes}</div>}
                                   </div>
