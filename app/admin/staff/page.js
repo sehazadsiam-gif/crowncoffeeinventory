@@ -87,15 +87,21 @@ export default function StaffDirectory() {
   async function fetchStaff() {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from('staff').select('*').order('serial', { ascending: true }).order('name', { ascending: true })
-      if (error) {
-        console.error('Supabase staff query error:', error)
-        throw error
+      const res = await fetch('/api/staff')
+      if (res.ok) {
+        const body = await res.json()
+        if (body.data) {
+          setStaff(body.data)
+          return
+        }
       }
+      // Fallback to direct Supabase query
+      const { data, error } = await supabase.from('staff').select('*').order('serial', { ascending: true }).order('name', { ascending: true })
+      if (error) throw error
       setStaff(data || [])
     } catch (err) {
       console.error('Error loading staff:', err)
-      addToast('Error loading staff: ' + (err.message || JSON.stringify(err)), 'error')
+      addToast('Error loading staff: ' + (err.message || 'Server error'), 'error')
     } finally {
       setLoading(false)
     }
