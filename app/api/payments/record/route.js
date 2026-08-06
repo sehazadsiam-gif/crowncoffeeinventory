@@ -18,7 +18,7 @@ export async function POST(request) {
         staff_id,
         month,
         year,
-        amount,
+        amount_paid: amount,
         payment_date,
         payment_method,
         notes

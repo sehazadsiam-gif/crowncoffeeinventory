@@ -77,7 +77,7 @@ export default function StaffPortalDashboard() {
   )
 
   const currentMonthName = new Date().toLocaleString('default', { month: 'long' })
-  const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0)
+  const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount_paid || p.amount || 0), 0)
   const netPay = payroll?.final_salary || 0
   const remaining = Math.max(0, netPay - totalPaid)
   const isFullyPaid = netPay > 0 && remaining === 0
@@ -191,7 +191,7 @@ export default function StaffPortalDashboard() {
               {payments.map(p => (
                 <div key={p.id} style={{ padding: '12px', background: 'white', border: '1px solid var(--border-light)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <p style={{ fontSize: '14px', fontWeight: 600 }}>৳{Number(p.amount).toLocaleString()}</p>
+                    <p style={{ fontSize: '14px', fontWeight: 600 }}>৳{Number(p.amount_paid || p.amount || 0).toLocaleString()}</p>
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(p.payment_date).toLocaleDateString()}</p>
                   </div>
                   <span className="badge badge-green" style={{ fontSize: '10px' }}>Paid</span>

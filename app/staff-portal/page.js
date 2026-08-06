@@ -235,7 +235,7 @@ export default function StaffPortalPage() {
   const monthPayments = payments.filter(p => Number(p.month) === selectedMonth && Number(p.year) === selectedYear)
   const monthAttendance = attendance.filter(a => { const d = new Date(a.date); return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear })
   const monthAdvances = advances.filter(a => a.month === selectedMonth && a.year === selectedYear)
-  const totalPaidThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0)
+  const totalPaidThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount_paid || p.amount || 0), 0)
   const monthAdvanceTotal = monthAdvances.reduce((s, a) => s + Number(a.amount), 0)
   const presentDays = monthSummary ? monthSummary.present_days : monthAttendance.filter(a => a.status === 'present').length
   const absentDays = monthSummary ? monthSummary.absent_days : monthAttendance.filter(a => a.status === 'absent').length
@@ -785,7 +785,7 @@ export default function StaffPortalPage() {
                       {new Date(p.payment_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                       {p.notes ? ' · ' + p.notes : ''}
                     </span>
-                    <span style={{ color: 'var(--success)', fontWeight: 700 }}>৳{Number(p.amount).toLocaleString()}</span>
+                    <span style={{ color: 'var(--success)', fontWeight: 700 }}>৳{Number(p.amount_paid || p.amount || 0).toLocaleString()}</span>
                   </div>
                 ))}
               </div>
