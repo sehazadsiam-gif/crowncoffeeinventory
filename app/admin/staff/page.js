@@ -88,10 +88,14 @@ export default function StaffDirectory() {
     try {
       setLoading(true)
       const { data, error } = await supabase.from('staff').select('*').order('serial', { ascending: true }).order('name', { ascending: true })
-      if (error) throw error
+      if (error) {
+        console.error('Supabase staff query error:', error)
+        throw error
+      }
       setStaff(data || [])
     } catch (err) {
-      addToast('Error loading staff', 'error')
+      console.error('Error loading staff:', err)
+      addToast('Error loading staff: ' + (err.message || JSON.stringify(err)), 'error')
     } finally {
       setLoading(false)
     }
