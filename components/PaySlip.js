@@ -33,8 +33,7 @@ export default function PaySlip({ data, onClose }) {
     { label: overtimeLabel, amount: Number(payroll.overtime_pay) },
     { label: 'Service Charge', amount: Number(payroll.service_charge) },
     { label: 'Bonus', amount: Number(payroll.bonus) },
-    { label: 'Lunch / Dinner', amount: Number(payroll.lunch_dinner) },
-    { label: 'Morning Food', amount: Number(payroll.morning_food) }
+    { label: 'Food Bill', amount: Number(payroll.lunch_dinner || 0) + Number(payroll.morning_food || 0) }
   ]
 
   if (Number(payroll.miscellaneous) > 0) {

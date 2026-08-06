@@ -144,6 +144,7 @@ export default function PayrollPage() {
       ;(payRes.data || []).forEach(p => {
         payMap[p.staff_id] = {
           ...p,
+          lunch_dinner: Number(p.lunch_dinner || 0) + Number(p.morning_food || 0),
           advance_taken: Math.max(Number(p.advance_taken), advancesMap[p.staff_id] || 0),
           manual_unpaid_days: p.manual_unpaid_days ?? null,
           waived_unpaid_days: p.waived_unpaid_days || 0,
@@ -166,7 +167,7 @@ export default function PayrollPage() {
 
         const autoOtHours = summary ? Number(summary.overtime_hours || 0) : (otMap[s.id]?.hours || Math.round((logOtMap[s.id] || 0) * 100) / 100)
         const hourlyRate = (Number(s.base_salary) / 30) / 10
-        const autoOtPay = otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate * 1.25)
+        const autoOtPay = otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate)
 
         if (!payMap[s.id]) {
           payMap[s.id] = {
@@ -265,10 +266,10 @@ export default function PayrollPage() {
   function calculateFinalSalary(s, p, isLateWaived) {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
-    const perHourRate = s.hourly_rate || Math.floor(Math.floor(base / 30) / 10)
+    const perHourRate = base / 300
     const ot = p.overtime_pay !== undefined && p.overtime_pay !== null && p.overtime_pay !== ''
       ? Number(p.overtime_pay)
-      : (Number(p.overtime_hours) || 0) * perHourRate
+      : Math.round((Number(p.overtime_hours) || 0) * perHourRate)
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
     const lunch = Number(p.lunch_dinner) || 0
@@ -303,8 +304,8 @@ export default function PayrollPage() {
         const autoVal = row.overtime_auto_hours || 0
         row.overtime_manual = Number(value) !== autoVal
         const s = staff.find(st => st.id === staffId)
-        const perHourRate = s?.hourly_rate || Math.floor(Math.round((Number(s?.base_salary) || 0) / 30) / 10)
-        row.overtime_pay = (Number(value) || 0) * perHourRate
+        const perHourRate = (Number(s?.base_salary) || 0) / 300
+        row.overtime_pay = Math.round((Number(value) || 0) * perHourRate)
       }
       if (field === 'lunch_dinner') {
         const autoVal = row.lunch_dinner_auto || 0
@@ -342,7 +343,7 @@ export default function PayrollPage() {
         service_charge: Number(row.service_charge) || 0,
         bonus: Number(row.bonus) || 0,
         lunch_dinner: Number(row.lunch_dinner) || 0,
-        morning_food: Number(row.morning_food) || 0,
+        morning_food: 0,
         advance_taken: Number(row.advance_taken) || 0,
         others_taken: Number(row.others_taken) || 0,
         miscellaneous: Number(row.miscellaneous) || 0,
@@ -383,8 +384,7 @@ export default function PayrollPage() {
                   overtime: row.overtime_pay,
                   service_charge: row.service_charge,
                   bonus: row.bonus,
-                  lunch_dinner: row.lunch_dinner,
-                  morning_food: row.morning_food,
+                  food_bill: Number(row.lunch_dinner || 0),
                   advance: row.advance_taken,
                   others: row.others_taken,
                   final: finalSalary
@@ -513,8 +513,7 @@ export default function PayrollPage() {
     'Overtime Hours',
     'Service Charge',
     'Bonus',
-    'Lunch + Dinner',
-    'Morning Food',
+    'Food Bill',
     'Advance',
     'Others',
     'Unpaid Leave',
@@ -730,7 +729,6 @@ export default function PayrollPage() {
                           </button>
                         )}
                       </td>
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.morning_food} onChange={e => handleInput(s.id, 'morning_food', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
 
