@@ -74,15 +74,18 @@ export default function PayrollPage() {
         activeStaffList = clientStaffRes.data || []
       }
 
+      // safe() wraps Supabase thenables in a real Promise so .catch() works
+      const safe = (q) => Promise.resolve(q).catch(() => ({ data: [] }))
+
       const [payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes] = await Promise.all([
-        supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y).catch(() => ({ data: [] })),
-        supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y).catch(() => ({ data: [] })),
-        supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] })),
-        supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] })),
-        supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] })),
-        supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y).catch(() => ({ data: [] })),
-        supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] })),
-        supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes').gte('date', startDate).lte('date', endDate).catch(() => ({ data: [] }))
+        safe(supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y)),
+        safe(supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y)),
+        safe(supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate)),
+        safe(supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate)),
+        safe(supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate)),
+        safe(supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y)),
+        safe(supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate)),
+        safe(supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes').gte('date', startDate).lte('date', endDate))
       ])
 
       const staffRes = { data: activeStaffList }
