@@ -23,8 +23,8 @@ export default function PayrollPage() {
     date: new Date().toISOString().split('T')[0],
     notes: ''
   })
-  const [month, setMonth] = useState(new Date().getMonth() + 1)
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [month, setMonth] = useState(7)
+  const [year, setYear] = useState(2026)
   const [loading, setLoading] = useState(true)
   const [printData, setPrintData] = useState(null)
   const [nameSort, setNameSort] = useState('asc') // 'asc' | 'desc'
