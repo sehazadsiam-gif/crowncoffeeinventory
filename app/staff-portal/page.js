@@ -246,7 +246,7 @@ export default function StaffPortalPage() {
   const isLateWaived = monthPayroll?.late_waived || false
   const lateDeduction = isLateWaived ? 0 : lateDeductionDays * perDay
   const base = Number(staff?.base_salary || 0)
-  const perHourRate = base / 300
+  const perHourRate = Math.floor(Math.floor(base / 30) / 10)
   const ot = (Number(monthPayroll?.overtime_hours) || 0) * perHourRate
   const sc = Number(monthPayroll?.service_charge || 0)
   const bonus = Number(monthPayroll?.bonus || 0)
@@ -260,7 +260,7 @@ export default function StaffPortalPage() {
   const calculatedUnpaidDays = Math.max(0, autoUnpaidDays - waivedDays)
   const unpaidDeductionDays = monthPayroll?.manual_unpaid_days !== null && monthPayroll?.manual_unpaid_days !== undefined ? Number(monthPayroll.manual_unpaid_days) : calculatedUnpaidDays
   const unpaidDeductionAmount = unpaidDeductionDays * perDay
-  const finalSalary = monthPayroll ? Math.round(base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaidDeductionAmount - lateDeduction) : 0
+  const finalSalary = monthPayroll ? Math.round(base + lunch + morn + bonus + sc + misc) : 0
   const remaining = finalSalary - totalPaidThisMonth
   const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
 
@@ -740,7 +740,8 @@ export default function StaffPortalPage() {
                       { label: lang === 'bn' ? 'ওভারটাইম' : 'Overtime', value: ot, positive: true },
                       { label: lang === 'bn' ? 'সার্ভিস চার্জ' : 'Service Charge', value: sc, positive: true },
                       { label: lang === 'bn' ? 'বোনাস' : 'Bonus', value: bonus, positive: true },
-                      { label: lang === 'bn' ? 'খাবার বিল' : 'Food Bill', value: lunch + morn, positive: true },
+                      { label: lang === 'bn' ? 'লাঞ্চ+ডিনার' : 'Lunch + Dinner', value: lunch, positive: true },
+                      { label: lang === 'bn' ? 'সকালের খাবার' : 'Morning Food', value: morn, positive: true },
                       { label: lang === 'bn' ? 'বিবিধ (+)' : 'Miscellaneous', value: misc },
                       { label: lang === 'bn' ? 'অগ্রিম কাটা' : 'Advance Taken', value: adv, negative: true },
                       { label: lang === 'bn' ? 'অন্যান্য কাটা' : 'Others Taken', value: others, negative: true },
