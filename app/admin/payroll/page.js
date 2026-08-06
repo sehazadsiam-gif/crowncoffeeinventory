@@ -7,8 +7,8 @@ import { DollarSign, Download, Plus, Eye } from 'lucide-react'
 
 export default function PayrollPage() {
   const router = useRouter()
-  const [month, setMonth] = useState(new Date().getMonth() + 1)
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [month, setMonth] = useState(7)
+  const [year, setYear] = useState(2026)
   const [staffList, setStaffList] = useState([])
   const [payrollData, setPayrollData] = useState({})
   const [loading, setLoading] = useState(false)
@@ -82,7 +82,7 @@ export default function PayrollPage() {
               const payroll = payrollData[staff.id] || {}
               return (
                 <tr key={staff.id} style={{ borderBottom: '1px solid #E0E0E0' }}>
-                  <td style={{ padding: '12px', fontSize: '14px' }}>{staff.full_name}</td>
+                  <td style={{ padding: '12px', fontSize: '14px' }}>{staff.name || staff.full_name}</td>
                   <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: 700 }}>৳ {(staff.base_salary || 0).toLocaleString('en-BD')}</td>
                   <td style={{ padding: '12px', textAlign: 'right', fontSize: '14px', fontWeight: 700, color: '#6B3A2A' }}>৳ {(payroll.final_salary || 0).toLocaleString('en-BD')}</td>
                   <td style={{ padding: '12px', textAlign: 'center' }}>
