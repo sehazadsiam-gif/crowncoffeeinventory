@@ -8,11 +8,11 @@ import dynamic from 'next/dynamic'
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
 
 const LOADING_STEPS = [
-  { icon: '☕', label: 'Brewing payroll data...' },
-  { icon: '📋', label: 'Fetching staff records...' },
-  { icon: '⏱️', label: 'Calculating overtime & deductions...' },
-  { icon: '💰', label: 'Computing net salaries...' },
-  { icon: '✅', label: 'Preparing payroll ledger...' },
+  { label: 'Connecting to database...' },
+  { label: 'Fetching staff records...' },
+  { label: 'Calculating overtime & deductions...' },
+  { label: 'Computing net salaries...' },
+  { label: 'Preparing payroll ledger...' },
 ]
 
 export default function ViewPayrollPage() {
@@ -307,131 +307,158 @@ export default function ViewPayrollPage() {
   ]
 
   if (loading) {
-    const step = LOADING_STEPS[loadingStep]
+    const progress = Math.round(((loadingStep + 1) / LOADING_STEPS.length) * 100)
     return (
-      <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'Inter, sans-serif', padding: '32px', boxSizing: 'border-box' }}>
+      <div style={{ background: '#000000', minHeight: '100vh', fontFamily: '"Inter", system-ui, sans-serif', boxSizing: 'border-box', color: '#E8D5A3', display: 'flex', flexDirection: 'column' }}>
         <style>{`
-          @keyframes pulseRing {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99,102,241,0.5); }
-            70% { transform: scale(1); box-shadow: 0 0 0 18px rgba(99,102,241,0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+          @keyframes shimmerGold {
+            0% { background-position: -800px 0; }
+            100% { background-position: 800px 0; }
           }
-          @keyframes shimmer {
-            0% { background-position: -600px 0; }
-            100% { background-position: 600px 0; }
+          @keyframes goldPulse {
+            0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.5), 0 0 20px rgba(212,175,55,0.2); }
+            50% { box-shadow: 0 0 0 22px rgba(212,175,55,0), 0 0 40px rgba(212,175,55,0.35); }
+            100% { box-shadow: 0 0 0 0 rgba(212,175,55,0), 0 0 20px rgba(212,175,55,0.2); }
           }
-          @keyframes fadeSlideUp {
-            0% { opacity: 0; transform: translateY(8px); }
-            100% { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes spin {
+          @keyframes rotateRing {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
           }
-          @keyframes dotBounce {
-            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-            40% { transform: scale(1); opacity: 1; }
+          @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-          .shimmer-block {
-            background: linear-gradient(90deg, var(--bg-subtle, #f1f5f9) 25%, var(--bg-surface, #e2e8f0) 50%, var(--bg-subtle, #f1f5f9) 75%);
-            background-size: 600px 100%;
-            animation: shimmer 1.4s infinite linear;
-            border-radius: 8px;
+          @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+          }
+          @keyframes logoBreath {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(212,175,55,0.3)); }
+            50% { transform: scale(1.03); filter: drop-shadow(0 0 28px rgba(212,175,55,0.55)); }
+          }
+          .shimmer-gold {
+            background: linear-gradient(90deg, #111006 25%, #2a2208 50%, #111006 75%);
+            background-size: 800px 100%;
+            animation: shimmerGold 1.8s infinite linear;
+            border-radius: 6px;
           }
         `}</style>
 
-        {/* Hero loader */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '260px', gap: '20px' }}>
-          {/* Glow ring + icon */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{
-              width: '80px', height: '80px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-              animation: 'pulseRing 1.6s ease-in-out infinite',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '36px', boxShadow: '0 0 0 0 rgba(99,102,241,0.5)'
-            }}>
-              {step.icon}
-            </div>
-            {/* Spinning orbit ring */}
-            <div style={{
-              position: 'absolute', width: '100px', height: '100px',
-              borderRadius: '50%',
-              border: '2.5px solid transparent',
-              borderTopColor: '#6366F1',
-              borderRightColor: '#8B5CF6',
-              animation: 'spin 1.1s linear infinite'
-            }} />
+        {/* Centered logo hero */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: '0' }}>
+
+          {/* Logo with glow ring */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '36px' }}>
+            {/* Outer spinning dashed ring */}
+            <svg style={{ position: 'absolute', width: '210px', height: '210px', animation: 'rotateRing 6s linear infinite', opacity: 0.5 }} viewBox="0 0 210 210">
+              <circle cx="105" cy="105" r="100" fill="none" stroke="#D4AF37" strokeWidth="1" strokeDasharray="6 10" strokeLinecap="round" />
+            </svg>
+            {/* Inner glow ring */}
+            <svg style={{ position: 'absolute', width: '185px', height: '185px', animation: 'rotateRing 10s linear infinite reverse', opacity: 0.3 }} viewBox="0 0 185 185">
+              <circle cx="92.5" cy="92.5" r="88" fill="none" stroke="#D4AF37" strokeWidth="0.8" strokeDasharray="2 14" strokeLinecap="round" />
+            </svg>
+            {/* Logo image */}
+            <img
+              src="/crown-coffee-logo.jpg"
+              alt="Crown Coffee"
+              style={{
+                width: '160px',
+                height: '160px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                animation: 'logoBreath 3s ease-in-out infinite, goldPulse 3s ease-in-out infinite',
+                position: 'relative',
+                zIndex: 1
+              }}
+            />
           </div>
 
-          {/* Cycling text */}
-          <div key={loadingStep} style={{ textAlign: 'center', animation: 'fadeSlideUp 0.4s ease' }}>
-            <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary, #1E293B)', margin: 0 }}>{step.label}</p>
-            <p style={{ fontSize: '13px', color: '#64748B', marginTop: '6px' }}>Crown Coffee Payroll — Loading...</p>
+          {/* Brand text */}
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <p style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '0.12em', color: '#D4AF37', textTransform: 'uppercase' }}>Crown Coffee</p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '10px', letterSpacing: '0.3em', color: '#6B5A2A', textTransform: 'uppercase', fontWeight: 500 }}>Multi Cuisine Café · Payroll System</p>
           </div>
 
-          {/* Bouncing dots */}
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {[0,1,2].map(i => (
-              <div key={i} style={{
-                width: '10px', height: '10px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
-                animation: `dotBounce 1.2s ease-in-out ${i * 0.2}s infinite`
-              }} />
-            ))}
-          </div>
-
-          {/* Progress steps strip */}
-          <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+          {/* Status log panel */}
+          <div style={{ background: '#080800', border: '1px solid #2A2000', borderRadius: '10px', padding: '16px 20px', fontFamily: '"JetBrains Mono", "Fira Code", "Courier New", monospace', fontSize: '11.5px', lineHeight: '2', width: '100%', maxWidth: '440px', marginBottom: '20px' }}>
             {LOADING_STEPS.map((s, i) => (
               <div key={i} style={{
-                width: i === loadingStep ? '28px' : '8px',
-                height: '8px', borderRadius: '4px',
-                background: i <= loadingStep
-                  ? 'linear-gradient(90deg, #6366F1, #8B5CF6)'
-                  : 'var(--bg-subtle, #E2E8F0)',
-                transition: 'all 0.4s ease'
-              }} />
-            ))}
-          </div>
-        </div>
-
-        {/* Skeleton KPI cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-          {[0,1,2].map(i => (
-            <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px' }}>
-              <div className="shimmer-block" style={{ width: '55%', height: '12px', marginBottom: '10px' }} />
-              <div className="shimmer-block" style={{ width: '40%', height: '28px' }} />
-            </div>
-          ))}
-        </div>
-
-        {/* Skeleton table */}
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', overflow: 'hidden' }}>
-          {/* Header */}
-          <div style={{ display: 'flex', gap: '12px', padding: '14px 16px', borderBottom: '2px solid var(--border-medium)', background: 'var(--bg-subtle)' }}>
-            {[120,80,90,80,70,90,80,70,70,90,90,80,70,80].map((w,i) => (
-              <div key={i} className="shimmer-block" style={{ width: `${w}px`, height: '12px', flexShrink: 0 }} />
-            ))}
-          </div>
-          {/* Rows */}
-          {[0,1,2,3,4,5].map(r => (
-            <div key={r} style={{ display: 'flex', gap: '12px', padding: '14px 16px', borderBottom: '1px solid var(--border-light)', alignItems: 'center' }}>
-              <div style={{ flexShrink: 0 }}>
-                <div className="shimmer-block" style={{ width: '100px', height: '13px', marginBottom: '6px' }} />
-                <div className="shimmer-block" style={{ width: '70px', height: '10px' }} />
+                display: 'flex', alignItems: 'center', gap: '10px',
+                opacity: i < loadingStep ? 0.4 : i === loadingStep ? 1 : 0.15,
+                transition: 'opacity 0.5s ease',
+                animation: i === loadingStep ? 'fadeUp 0.35s ease' : 'none'
+              }}>
+                <span style={{ color: i < loadingStep ? '#B8860B' : i === loadingStep ? '#D4AF37' : '#2A2000', fontWeight: 700, flexShrink: 0, width: '12px', textAlign: 'center' }}>
+                  {i < loadingStep ? '✓' : i === loadingStep ? '›' : '·'}
+                </span>
+                <span style={{ color: i < loadingStep ? '#B8860B' : i === loadingStep ? '#E8D5A3' : '#2A2000' }}>
+                  {s.label}
+                </span>
+                {i === loadingStep && (
+                  <span style={{ color: '#D4AF37', animation: 'blink 0.8s step-end infinite', marginLeft: '2px' }}>▋</span>
+                )}
               </div>
-              {[80,80,80,70,80,70,70,70,90,80,70,70,80].map((w,i) => (
-                <div key={i} className="shimmer-block" style={{ width: `${w}px`, height: '13px', flexShrink: 0 }} />
+            ))}
+          </div>
+
+          {/* Gold progress bar */}
+          <div style={{ width: '100%', maxWidth: '440px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '10px', color: '#4A3A0A', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Loading</span>
+              <span style={{ fontSize: '10px', color: '#D4AF37', fontWeight: 700, fontFamily: 'monospace' }}>{progress}%</span>
+            </div>
+            <div style={{ height: '3px', background: '#1A1400', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${progress}%`,
+                background: 'linear-gradient(90deg, #7B5D0A, #D4AF37, #F5E17A)',
+                borderRadius: '2px',
+                transition: 'width 0.9s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: '0 0 10px rgba(212,175,55,0.7)'
+              }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom skeleton preview */}
+        <div style={{ padding: '0 32px 32px 32px', opacity: 0.35 }}>
+          {/* KPI cards skeleton */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
+            {[['Grand Total', '65%'], ['Total Paid', '42%'], ['Remaining', '50%']].map(([lbl, w], i) => (
+              <div key={i} style={{ background: '#0A0800', border: '1px solid #1E1600', borderRadius: '10px', padding: '14px' }}>
+                <div style={{ fontSize: '9px', color: '#3A2A00', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '8px' }}>{lbl}</div>
+                <div className="shimmer-gold" style={{ width: w, height: '20px' }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Table skeleton */}
+          <div style={{ background: '#080800', border: '1px solid #1A1400', borderRadius: '10px', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', gap: '14px', padding: '11px 18px', borderBottom: '1px solid #1A1400', background: '#060600' }}>
+              {[130, 85, 95, 80, 70, 95, 80, 70, 70, 90, 88, 80, 70, 80].map((w, i) => (
+                <div key={i} className="shimmer-gold" style={{ width: `${w}px`, height: '9px', flexShrink: 0 }} />
               ))}
             </div>
-          ))}
+            {[0,1,2,3,4].map(r => (
+              <div key={r} style={{ display: 'flex', gap: '14px', padding: '12px 18px', borderBottom: r < 4 ? '1px solid #0F0C00' : 'none', alignItems: 'center', opacity: 1 - r * 0.15 }}>
+                <div style={{ flexShrink: 0, minWidth: '130px' }}>
+                  <div className="shimmer-gold" style={{ width: '105px', height: '11px', marginBottom: '6px' }} />
+                  <div className="shimmer-gold" style={{ width: '70px', height: '8px', opacity: 0.5 }} />
+                </div>
+                {[85, 95, 80, 70, 95, 80, 70, 70, 90, 88, 80, 70, 80].map((w, i) => (
+                  <div key={i} className="shimmer-gold" style={{ width: `${w}px`, height: '11px', flexShrink: 0 }} />
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
   }
 
   return (
+
     <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, color 0.3s ease' }}>
       <Navbar />
       <main style={{ width: '100%', maxWidth: '100%', margin: '0 auto', padding: '24px 32px', boxSizing: 'border-box' }}>
