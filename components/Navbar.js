@@ -97,7 +97,7 @@ export default function Navbar() {
     const role = localStorage.getItem('cc_role')
     const user = localStorage.getItem('cc_username') || localStorage.getItem('cc_staff_name')
 
-    if (!token && !['/', '/admin/login', '/staff/login', '/sub-admin/login', '/roster'].includes(pathname) && !pathname.startsWith('/membership') && !pathname.startsWith('/checklist')) {
+    if (!token && !['/', '/admin/login', '/staff/login', '/sub-admin/login', '/roster', '/viewpayroll'].includes(pathname) && !pathname.startsWith('/membership') && !pathname.startsWith('/checklist') && !pathname.startsWith('/viewpayroll')) {
       router.replace('/')
       return
     }
