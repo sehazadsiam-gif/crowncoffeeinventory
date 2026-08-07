@@ -25,7 +25,7 @@ export async function POST(request) {
       )
     }
 
-    if (!account.is_active) {
+    if (account.staff && !account.staff.is_active) {
       return Response.json(
         { error: 'Your account has been deactivated. Contact admin.' },
         { status: 403 }
