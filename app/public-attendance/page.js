@@ -123,6 +123,42 @@ export default function PublicAttendancePage() {
   const [lastUpdatedSecs, setLastUpdatedSecs] = useState(0)
   const [scannedStaffId, setScannedStaffId] = useState(null)
   const [breakToggles, setBreakToggles] = useState({})
+  const [isOffline, setIsOffline] = useState(false)
+  const [offlineQueueCount, setOfflineQueueCount] = useState(0)
+
+  // ── Offline Queue helpers (IndexedDB key: cc_offline_tap_queue) ──
+  const OFFLINE_QUEUE_KEY = 'cc_offline_tap_queue'
+  function loadOfflineQueue() {
+    try { return JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY) || '[]') } catch { return [] }
+  }
+  function saveOfflineQueue(q) {
+    localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(q))
+    setOfflineQueueCount(q.length)
+  }
+  function addToOfflineQueue(identifier, enableBreak) {
+    const q = loadOfflineQueue()
+    q.push({ identifier, enableBreak, timestamp: new Date().toISOString() })
+    saveOfflineQueue(q)
+  }
+  async function drainOfflineQueue() {
+    const q = loadOfflineQueue()
+    if (!q.length) return
+    const remaining = []
+    for (const tap of q) {
+      try {
+        const res = await fetch('/api/attendance/checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: tap.identifier, source: 'rfid', enableBreak: tap.enableBreak, timestamp: tap.timestamp })
+        })
+        if (!res.ok) remaining.push(tap) // keep failed ones
+      } catch {
+        remaining.push(tap) // still offline
+      }
+    }
+    saveOfflineQueue(remaining)
+    if (remaining.length < q.length) fetchTodayData(true) // refresh after sync
+  }
 
   // 2. 4 Collapsible section states (On Shift, On Break, Late, Not Checked In)
   const [openSections, setOpenSections] = useState({
@@ -154,6 +190,17 @@ export default function PublicAttendancePage() {
   // Realtime Data Fetching & Subscriptions
   useEffect(() => {
     fetchTodayData()
+    setIsOffline(!navigator.onLine)
+    setOfflineQueueCount(loadOfflineQueue().length)
+
+    // Drain any queued offline taps when we come back online
+    function handleOnline() {
+      setIsOffline(false)
+      drainOfflineQueue()
+    }
+    function handleOffline() { setIsOffline(true) }
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
 
     const channel = supabase.channel('kiosk_v11')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, () => {
@@ -165,6 +212,8 @@ export default function PublicAttendancePage() {
     return () => {
       clearInterval(pollTimer)
       supabase.removeChannel(channel)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
     }
   }, [])
 
@@ -216,12 +265,45 @@ export default function PublicAttendancePage() {
       setScannedStaffId(staffKey)
       setTimeout(() => setScannedStaffId(null), 3000)
 
-      const res = await fetch('/api/attendance/checkin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: staffKey, source: 'rfid', enableBreak: isBreakOn })
-      })
-      const json = await res.json()
+      // ── Offline Guard: save tap locally if server is unreachable ──
+      if (!navigator.onLine) {
+        addToOfflineQueue(staffKey, isBreakOn)
+        const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+        setTapFlash({
+          name: matchedStaff?.name || 'Staff Member',
+          id: matchedStaff?.employee_id || '',
+          time: t,
+          type: 'offline',
+          subText: '📡 No internet — tap saved offline, will sync automatically'
+        })
+        setTimeout(() => setTapFlash(null), 4000)
+        return
+      }
+
+      let res, json
+      try {
+        res = await fetch('/api/attendance/checkin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: staffKey, source: 'rfid', enableBreak: isBreakOn })
+        })
+        json = await res.json()
+      } catch (netErr) {
+        // Network failure mid-request — queue offline
+        addToOfflineQueue(staffKey, isBreakOn)
+        const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+        setTapFlash({
+          name: matchedStaff?.name || 'Staff Member',
+          id: matchedStaff?.employee_id || '',
+          time: t,
+          type: 'offline',
+          subText: '📡 Server unreachable — tap queued, will sync on reconnect'
+        })
+        setIsOffline(true)
+        setTimeout(() => setTapFlash(null), 4000)
+        return
+      }
+
       const t = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
 
       if (res.ok) {
@@ -384,13 +466,33 @@ export default function PublicAttendancePage() {
             </div>
 
             {/* 10. Center: 5 Stat Chips Bar (Middle Centered) */}
-            <div className="header-stats-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', margin: '0 auto' }}>
-              <HeaderStatChip label="IN TODAY" value={totalIn} color="#22C55E" />
-              <HeaderStatChip label="ON BREAK" value={onBreakCount} color="#F59E0B" />
-              <HeaderStatChip label="LATE" value={lateCount} color="#EF4444" />
-              <HeaderStatChip label="NOT IN" value={absentCount} color="#94A3B8" />
-              <HeaderStatChip label="TOTAL STAFF" value={totalStaff} color="#64748B" />
+            <div className="header-stats-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', margin: '0 auto', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <HeaderStatChip label="IN TODAY" value={totalIn} color="#22C55E" />
+                <HeaderStatChip label="ON BREAK" value={onBreakCount} color="#F59E0B" />
+                <HeaderStatChip label="LATE" value={lateCount} color="#EF4444" />
+                <HeaderStatChip label="NOT IN" value={absentCount} color="#94A3B8" />
+                <HeaderStatChip label="TOTAL STAFF" value={totalStaff} color="#64748B" />
+              </div>
+              {/* Offline Status Pill */}
+              {(isOffline || offlineQueueCount > 0) && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  background: isOffline ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
+                  border: `1px solid ${isOffline ? '#EF4444' : '#22C55E'}`,
+                  borderRadius: '20px', padding: '3px 12px',
+                  animation: isOffline ? 'pulse 2s infinite' : 'none'
+                }}>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: isOffline ? '#EF4444' : '#22C55E', display: 'inline-block' }} />
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: isOffline ? '#EF4444' : '#22C55E', letterSpacing: '0.06em' }}>
+                    {isOffline
+                      ? `OFFLINE${offlineQueueCount > 0 ? ` · ${offlineQueueCount} TAP${offlineQueueCount > 1 ? 'S' : ''} QUEUED` : ''}`
+                      : `BACK ONLINE · SYNCING ${offlineQueueCount} TAP${offlineQueueCount > 1 ? 'S' : ''}...`}
+                  </span>
+                </div>
+              )}
             </div>
+
 
             {/* 3. EXTREME FAR-RIGHT: Analog Clock Pinned Flush Right */}
             <div style={{ flex: '1 1 0%', display: 'flex', justifyContent: 'flex-end' }}>

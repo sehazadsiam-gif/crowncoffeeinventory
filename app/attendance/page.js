@@ -151,9 +151,34 @@ export default function AttendanceDashboardPage() {
 
     fetchTodayData()
 
-    // Supabase Realtime WebSocket subscription for live updates
+    // ── Phase 4: Live Realtime Toasts — fires for every INSERT/UPDATE on attendance_log ──
     const channel = supabase.channel('attendance_kiosk_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_log' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attendance_log' }, (payload) => {
+        const row = payload.new
+        const timeBST = row.check_in_at
+          ? new Date(row.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+          : new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+        const empId = row.employee_id || ''
+        const status = row.status || 'present'
+        const emoji = status === 'late' ? '🐢' : status === 'on_leave' ? '🌴' : status === 'absent' ? '❌' : '☕'
+        const label = status === 'late' ? 'Late Check-In' : status === 'on_leave' ? 'On Leave' : status === 'absent' ? 'Auto-Flagged Absent' : 'Checked In'
+        addToast(`${emoji} [${timeBST}] ${empId} — ${label}`, status === 'late' ? 'warning' : status === 'absent' ? 'error' : 'success')
+        fetchTodayData(true)
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'attendance_log' }, (payload) => {
+        const row = payload.new
+        const old = payload.old
+        // Only fire toast on meaningful state changes
+        if (row.check_out_at && !old.check_out_at) {
+          const timeBST = new Date(row.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+          addToast(`👋 [${timeBST}] ${row.employee_id || 'Staff'} — Checked Out (${row.hours_worked || 0}h)`, 'info')
+        } else if (row.break_start_at && !old.break_start_at) {
+          const timeBST = new Date(row.break_start_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+          addToast(`☕ [${timeBST}] ${row.employee_id || 'Staff'} — Break Started`, 'info')
+        } else if (row.break_end_at && !old.break_end_at) {
+          const timeBST = new Date(row.break_end_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+          addToast(`🟢 [${timeBST}] ${row.employee_id || 'Staff'} — Back From Break`, 'success')
+        }
         fetchTodayData(true)
       })
       .subscribe()

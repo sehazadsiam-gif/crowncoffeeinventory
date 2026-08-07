@@ -46,8 +46,11 @@ export async function GET(request) {
       'Status',
       'Check-In Time (BST)',
       'Check-Out Time (BST)',
+      'Break Start (BST)',
+      'Break End (BST)',
+      'Break Duration (mins)',
       'Minutes Late',
-      'Hours Worked',
+      'Hours Worked (Net)',
       'Overtime Mins',
       'Notes'
     ]
@@ -70,6 +73,9 @@ export async function GET(request) {
         (l.status || '').toUpperCase(),
         formatTime(l.check_in_at),
         formatTime(l.check_out_at),
+        formatTime(l.break_start_at),
+        formatTime(l.break_end_at),
+        l.break_duration_minutes || 0,
         l.minutes_late || 0,
         l.hours_worked || 0,
         l.overtime_minutes || 0,

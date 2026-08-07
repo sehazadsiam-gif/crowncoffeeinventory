@@ -712,7 +712,53 @@ export default function StaffPortalPage() {
         {/* ── OVERVIEW TAB ── */}
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="animate-in">
+
+            {/* ── Phase 3C: Overtime Transparency Card ── */}
+            {(() => {
+              // Compute from attendance_log data (already fetched as `attendance` state)
+              const thisMonthLogs = attendance.filter(a => {
+                const d = new Date(a.date)
+                return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear
+              })
+              const totalHoursRaw = thisMonthLogs.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0)
+              const totalHours = Math.round(totalHoursRaw * 100) / 100
+              const totalOTMinutes = thisMonthLogs.reduce((sum, a) => sum + Number(a.overtime_minutes || 0), 0)
+              const totalOTHours = Math.round((totalOTMinutes / 60) * 100) / 100
+              const accrued = Math.round(totalOTHours * perHourRate)
+              const workingDays = thisMonthLogs.filter(a => a.status === 'present' || a.status === 'late').length
+
+              return (
+                <div className="card" style={{ padding: '18px 22px', background: 'linear-gradient(135deg, var(--bg-card), var(--bg-subtle))', border: '1.5px solid var(--border-light)' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <TrendingUp size={15} style={{ color: 'var(--accent-blue)' }} />
+                    {lang === 'bn' ? 'এই মাসের ঘণ্টা ও ওভারটাইম' : `${monthNames[selectedMonth - 1]} ${selectedYear} — Hours & Overtime`}
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px' }}>
+                    {[
+                      { label: lang === 'bn' ? 'কাজের দিন' : 'Days Present', value: workingDays, unit: 'days', color: 'var(--text-primary)' },
+                      { label: lang === 'bn' ? 'মোট ঘণ্টা' : 'Total Hours Worked', value: totalHours, unit: 'hrs', color: 'var(--accent-blue)' },
+                      { label: lang === 'bn' ? 'ওভারটাইম ঘণ্টা' : 'Overtime Hours', value: totalOTHours, unit: 'hrs', color: '#D4933A' },
+                      { label: lang === 'bn' ? 'অর্জিত ওটি পে' : 'Accrued OT Pay', value: `৳${accrued.toLocaleString()}`, unit: '', color: 'var(--success)' },
+                    ].map((item, i) => (
+                      <div key={i} style={{ background: 'var(--bg-card)', borderRadius: '12px', padding: '12px 14px', border: '1px solid var(--border-light)' }}>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>{item.label}</p>
+                        <p style={{ fontSize: '18px', fontWeight: 900, margin: 0, color: item.color, fontFamily: 'var(--font-mono)' }}>
+                          {item.value}{item.unit ? <span style={{ fontSize: '11px', fontWeight: 600, marginLeft: '3px', color: 'var(--text-muted)' }}>{item.unit}</span> : ''}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  {!isCurrentMonth && (
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '10px 0 0', fontStyle: 'italic' }}>
+                      ⚠️ {lang === 'bn' ? 'চূড়ান্ত পেরোল এন্ট্রি থেকে OT পার্থক্য হতে পারে' : 'Final OT pay may differ from payroll entry after processing'}
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
+
             {monthPayroll ? (
+
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '18px 22px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                   <div>
