@@ -7,6 +7,14 @@ import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
 
+const LOADING_STEPS = [
+  { icon: '☕', label: 'Brewing payroll data...' },
+  { icon: '📋', label: 'Fetching staff records...' },
+  { icon: '⏱️', label: 'Calculating overtime & deductions...' },
+  { icon: '💰', label: 'Computing net salaries...' },
+  { icon: '✅', label: 'Preparing payroll ledger...' },
+]
+
 export default function ViewPayrollPage() {
   const [staff, setStaff] = useState([])
   const [payroll, setPayroll] = useState({})
@@ -15,6 +23,7 @@ export default function ViewPayrollPage() {
   const [month, setMonth] = useState(7)
   const [year, setYear] = useState(2026)
   const [loading, setLoading] = useState(true)
+  const [loadingStep, setLoadingStep] = useState(0)
   const [printData, setPrintData] = useState(null)
   const [nameSort, setNameSort] = useState('asc') // 'asc' | 'desc'
   const [waivedStaff, setWaivedStaff] = useState({})
@@ -22,6 +31,14 @@ export default function ViewPayrollPage() {
   useEffect(() => {
     fetchAll(month, year)
   }, [month, year])
+
+  useEffect(() => {
+    if (!loading) return
+    const interval = setInterval(() => {
+      setLoadingStep(prev => (prev + 1) % LOADING_STEPS.length)
+    }, 900)
+    return () => clearInterval(interval)
+  }, [loading])
 
   async function fetchAll(m, y) {
     setLoading(true)
@@ -290,9 +307,126 @@ export default function ViewPayrollPage() {
   ]
 
   if (loading) {
+    const step = LOADING_STEPS[loadingStep]
     return (
-      <div style={{ background: 'var(--bg-base)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '16px', fontWeight: 600 }}>Loading Payroll Overview...</p>
+      <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'Inter, sans-serif', padding: '32px', boxSizing: 'border-box' }}>
+        <style>{`
+          @keyframes pulseRing {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99,102,241,0.5); }
+            70% { transform: scale(1); box-shadow: 0 0 0 18px rgba(99,102,241,0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+          }
+          @keyframes shimmer {
+            0% { background-position: -600px 0; }
+            100% { background-position: 600px 0; }
+          }
+          @keyframes fadeSlideUp {
+            0% { opacity: 0; transform: translateY(8px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes dotBounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+          }
+          .shimmer-block {
+            background: linear-gradient(90deg, var(--bg-subtle, #f1f5f9) 25%, var(--bg-surface, #e2e8f0) 50%, var(--bg-subtle, #f1f5f9) 75%);
+            background-size: 600px 100%;
+            animation: shimmer 1.4s infinite linear;
+            border-radius: 8px;
+          }
+        `}</style>
+
+        {/* Hero loader */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '260px', gap: '20px' }}>
+          {/* Glow ring + icon */}
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{
+              width: '80px', height: '80px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+              animation: 'pulseRing 1.6s ease-in-out infinite',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '36px', boxShadow: '0 0 0 0 rgba(99,102,241,0.5)'
+            }}>
+              {step.icon}
+            </div>
+            {/* Spinning orbit ring */}
+            <div style={{
+              position: 'absolute', width: '100px', height: '100px',
+              borderRadius: '50%',
+              border: '2.5px solid transparent',
+              borderTopColor: '#6366F1',
+              borderRightColor: '#8B5CF6',
+              animation: 'spin 1.1s linear infinite'
+            }} />
+          </div>
+
+          {/* Cycling text */}
+          <div key={loadingStep} style={{ textAlign: 'center', animation: 'fadeSlideUp 0.4s ease' }}>
+            <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary, #1E293B)', margin: 0 }}>{step.label}</p>
+            <p style={{ fontSize: '13px', color: '#64748B', marginTop: '6px' }}>Crown Coffee Payroll — Loading...</p>
+          </div>
+
+          {/* Bouncing dots */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {[0,1,2].map(i => (
+              <div key={i} style={{
+                width: '10px', height: '10px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                animation: `dotBounce 1.2s ease-in-out ${i * 0.2}s infinite`
+              }} />
+            ))}
+          </div>
+
+          {/* Progress steps strip */}
+          <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+            {LOADING_STEPS.map((s, i) => (
+              <div key={i} style={{
+                width: i === loadingStep ? '28px' : '8px',
+                height: '8px', borderRadius: '4px',
+                background: i <= loadingStep
+                  ? 'linear-gradient(90deg, #6366F1, #8B5CF6)'
+                  : 'var(--bg-subtle, #E2E8F0)',
+                transition: 'all 0.4s ease'
+              }} />
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton KPI cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          {[0,1,2].map(i => (
+            <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px' }}>
+              <div className="shimmer-block" style={{ width: '55%', height: '12px', marginBottom: '10px' }} />
+              <div className="shimmer-block" style={{ width: '40%', height: '28px' }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton table */}
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', overflow: 'hidden' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', gap: '12px', padding: '14px 16px', borderBottom: '2px solid var(--border-medium)', background: 'var(--bg-subtle)' }}>
+            {[120,80,90,80,70,90,80,70,70,90,90,80,70,80].map((w,i) => (
+              <div key={i} className="shimmer-block" style={{ width: `${w}px`, height: '12px', flexShrink: 0 }} />
+            ))}
+          </div>
+          {/* Rows */}
+          {[0,1,2,3,4,5].map(r => (
+            <div key={r} style={{ display: 'flex', gap: '12px', padding: '14px 16px', borderBottom: '1px solid var(--border-light)', alignItems: 'center' }}>
+              <div style={{ flexShrink: 0 }}>
+                <div className="shimmer-block" style={{ width: '100px', height: '13px', marginBottom: '6px' }} />
+                <div className="shimmer-block" style={{ width: '70px', height: '10px' }} />
+              </div>
+              {[80,80,80,70,80,70,70,70,90,80,70,70,80].map((w,i) => (
+                <div key={i} className="shimmer-block" style={{ width: `${w}px`, height: '13px', flexShrink: 0 }} />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
