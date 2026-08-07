@@ -7,7 +7,7 @@ import Navbar from '../../../components/Navbar'
 import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
 import Link from 'next/link'
-import { Users, Plus, UserX, UserCheck, Trash2, QrCode, Wifi, Radio, User, Camera } from 'lucide-react'
+import { Users, Plus, UserX, UserCheck, Trash2, QrCode, Wifi, Radio, User, Camera, Calendar, CalendarOff } from 'lucide-react'
 
 export default function StaffDirectory() {
   const router = useRouter()
@@ -87,7 +87,7 @@ export default function StaffDirectory() {
   async function fetchStaff() {
     try {
       setLoading(true)
-      const res = await fetch('/api/staff')
+      const res = await fetch(`/api/staff?t=${Date.now()}`)
       if (res.ok) {
         const body = await res.json()
         if (body.data) {
@@ -210,6 +210,19 @@ export default function StaffDirectory() {
       fetchStaff()
     } catch (err) {
       addToast('Error updating status', 'error')
+    }
+  }
+
+  async function toggleRostered(id, currentRostered) {
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .update({ is_rostered: !currentRostered })
+        .eq('id', id)
+      if (error) throw error
+      fetchStaff()
+    } catch (err) {
+      addToast('Error updating roster status', 'error')
     }
   }
 
@@ -589,6 +602,24 @@ export default function StaffDirectory() {
                       }}
                     >
                       Edit
+                    </button>
+                    <button
+                      onClick={() => toggleRostered(s.id, s.is_rostered !== false)}
+                      title={s.is_rostered !== false ? 'Exclude from Roster/Payroll' : 'Include in Roster/Payroll'}
+                      style={{
+                        width: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'transparent',
+                        border: '1px solid var(--border-medium)',
+                        borderRadius: '6px',
+                        color: s.is_rostered !== false ? 'var(--accent-blue)' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {s.is_rostered !== false ? <Calendar size={16} /> : <CalendarOff size={16} />}
                     </button>
                     <button
                       onClick={() => toggleStatus(s.id, s.is_active)}

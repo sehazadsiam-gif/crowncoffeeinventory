@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const { data, error } = await supabaseAdmin
+    const { searchParams } = new URL(request.url)
+    const rosteredOnly = searchParams.get('rostered_only') === 'true'
+
+    let query = supabaseAdmin
       .from('staff')
       .select('*')
       .eq('is_active', true)
       .order('serial', { ascending: true })
       .order('name', { ascending: true })
+
+    if (rosteredOnly) {
+      query = query.eq('is_rostered', true)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       console.error('API /api/staff/list error:', error)

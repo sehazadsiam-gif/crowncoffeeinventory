@@ -20,7 +20,7 @@ export default function PayrollPage() {
 
   const fetchStaff = async () => {
     try {
-      const res = await fetch('/api/staff/list')
+      const res = await fetch('/api/staff/list?rostered_only=true')
       const data = await res.json()
       setStaffList(data.staff || [])
     } catch (error) {

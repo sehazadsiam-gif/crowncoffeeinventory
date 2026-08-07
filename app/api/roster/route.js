@@ -15,6 +15,7 @@ export async function GET(request) {
       .from('staff')
       .select('id, name, employee_id, designation, department, serial, is_active')
       .eq('is_active', true)
+      .eq('is_rostered', true)
       .order('serial', { ascending: true })
 
     if (staffErr) throw staffErr
