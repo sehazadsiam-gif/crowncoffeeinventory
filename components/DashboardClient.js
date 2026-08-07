@@ -187,8 +187,8 @@ export default function DashboardClient() {
         .kpi-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background: linear-gradient(90deg, var(--kpi-color) 0%, var(--kpi-color)44 100%); }
         .kpi-ghost { position:absolute; right:-8px; bottom:-6px; opacity:0.05; pointer-events:none; }
 
-        .mod-card { padding:16px 12px; border-radius:14px; border:1.5px solid var(--border-light); background:var(--bg-subtle); display:flex; flex-direction:column; align-items:center; gap:10px; transition:all 0.22s ease; position:relative; cursor:pointer; min-height:108px; justify-content:center; text-decoration:none; }
-        .mod-card:hover { transform:translateY(-4px); }
+        .mod-card { padding:16px 12px; border-radius:14px; border:1.5px solid var(--border-light); background:var(--bg-subtle); display:flex; flex-direction:column; align-items:center; gap:10px; transition:all 0.22s cubic-bezier(0.4, 0, 0.2, 1); position:relative; cursor:pointer; min-height:108px; justify-content:center; text-decoration:none; }
+        .mod-card:hover { transform:translateY(-4px); border-color: var(--hover-color) !important; box-shadow: var(--hover-shadow) !important; background: var(--hover-bg) !important; }
 
         .panel { background:var(--bg-surface); border:1px solid var(--border-light); border-radius:18px; box-shadow:var(--shadow-sm); overflow:hidden; }
         .panel-header { padding:18px 22px; border-bottom:1px solid var(--border-light); display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -802,9 +802,22 @@ export default function DashboardClient() {
 
                 <Link
                   href="/staff/attendance"
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '11px', borderRadius: '10px', border: '1.5px solid var(--border-light)', background: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontWeight: 700, fontSize: '13px', textDecoration: 'none', transition: 'all 0.2s' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent-blue)'; e.currentTarget.style.color = 'var(--accent-blue)'; e.currentTarget.style.background = 'var(--accent-blue-dim)' }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-light)'; e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--bg-subtle)' }}
+                  className="nav-link-item btn-glow"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '11px',
+                    borderRadius: '10px',
+                    border: '1.5px solid var(--border-light)',
+                    background: 'var(--bg-subtle)',
+                    color: 'var(--text-secondary)',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    textDecoration: 'none',
+                    width: '100%'
+                  }}
                 >
                   <UserCheck size={14} /> View Live Attendance <ArrowUpRight size={13} />
                 </Link>
@@ -871,15 +884,10 @@ function ModuleCard({ href, icon, title, color, desc, badge }) {
     <Link href={href} style={{ textDecoration: 'none' }}>
       <div
         className="mod-card"
-        onMouseEnter={e => {
-          e.currentTarget.style.borderColor = color
-          e.currentTarget.style.boxShadow = `0 8px 24px ${color}25`
-          e.currentTarget.style.background = color + '0D'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.borderColor = 'var(--border-light)'
-          e.currentTarget.style.boxShadow = 'none'
-          e.currentTarget.style.background = 'var(--bg-subtle)'
+        style={{
+          '--hover-color': color,
+          '--hover-shadow': `0 8px 24px ${color}25`,
+          '--hover-bg': color + '0D'
         }}
       >
         {badge && (

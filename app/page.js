@@ -21,7 +21,7 @@ export default function LandingPage() {
   }, [router])
 
   if (checking) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF7F2' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
       <div className="loader"></div>
     </div>
   )
@@ -30,14 +30,14 @@ export default function LandingPage() {
     <div style={{
       display: 'flex',
       minHeight: '100vh',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      background: 'white'
-    }} className="split-container">
+      fontFamily: 'var(--font-sans)',
+      background: 'var(--bg-base)'
+    }} className="split-container page-fade-in">
       
       {/* LEFT PANEL */}
       <div style={{
         width: '45%',
-        background: '#6B3A2A',
+        background: '#5A2810',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -51,10 +51,11 @@ export default function LandingPage() {
         <div style={{ textAlign: 'center', zIndex: 2 }}>
           <h1 style={{ 
             fontSize: '80px', 
-            fontWeight: 800, 
-            color: '#C9943A', 
+            fontWeight: 900, 
+            color: 'var(--accent-gold)', 
             margin: 0,
-            lineHeight: 1
+            lineHeight: 1,
+            fontFamily: 'var(--font-display)'
           }}>CC</h1>
           <p style={{ 
             fontSize: '28px', 
@@ -62,12 +63,13 @@ export default function LandingPage() {
             margin: '12px 0 0 0',
             letterSpacing: '0.3em',
             fontWeight: 300,
-            textTransform: 'uppercase'
+            textTransform: 'uppercase',
+            fontFamily: 'var(--font-display)'
           }}>Crown Coffee</p>
           <div style={{ 
             width: '60px', 
             height: '1px', 
-            background: '#C9943A', 
+            background: 'var(--accent-gold)', 
             margin: '24px auto' 
           }} />
           <p style={{ 
@@ -75,7 +77,8 @@ export default function LandingPage() {
             color: 'rgba(255,255,255,0.6)', 
             letterSpacing: '0.15em',
             textTransform: 'uppercase',
-            margin: 0
+            margin: 0,
+            fontFamily: 'var(--font-sans)'
           }}>Inventory & Stock Management</p>
         </div>
         
@@ -85,25 +88,27 @@ export default function LandingPage() {
           left: '24px', 
           fontSize: '11px', 
           color: 'rgba(255,255,255,0.3)',
-          margin: 0
+          margin: 0,
+          fontFamily: 'var(--font-mono)'
         }}>{new Date().getFullYear()}</p>
       </div>
 
       {/* RIGHT PANEL */}
       <div style={{
         width: '55%',
-        background: 'white',
+        background: 'var(--bg-surface)',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         padding: '48px 56px',
-        overflowY: 'auto'
+        overflowY: 'auto',
+        transition: 'background-color 0.3s ease'
       }} className="right-panel">
         <div style={{ maxWidth: '400px', width: '100%', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '32px', fontWeight: 700, color: '#1C1410', margin: '0 0 8px 0' }}>
+          <h2 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)', margin: '0 0 8px 0', fontFamily: 'var(--font-display)' }}>
             Welcome back
           </h2>
-          <p style={{ fontSize: '14px', color: '#9C8A76', margin: '0 0 40px 0' }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: '0 0 40px 0', fontFamily: 'var(--font-sans)' }}>
             Choose your access level to continue
           </p>
 
@@ -118,12 +123,12 @@ export default function LandingPage() {
                   alignItems: 'center',
                   gap: '16px',
                   padding: '20px 24px',
-                  background: 'white',
-                  border: '2px solid #6B3A2A',
+                  background: 'var(--bg-card)',
+                  border: '2px solid var(--accent-brown)',
                   borderRadius: '12px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.25s ease',
                   width: '100%',
                   outline: 'none'
                 }}
@@ -132,7 +137,7 @@ export default function LandingPage() {
                 <div style={{
                   width: '40px',
                   height: '40px',
-                  background: '#6B3A2A',
+                  background: 'var(--accent-brown)',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
@@ -142,12 +147,12 @@ export default function LandingPage() {
                   <Shield size={18} color="white" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: 0 }}>Admin Portal</p>
-                  <p style={{ fontSize: '12px', color: '#9C8A76', margin: '2px 0 0 0' }}>Full system access</p>
+                  <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Admin Portal</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Full system access</p>
                 </div>
-                <ChevronRight size={20} color="#9C8A76" />
+                <ChevronRight size={20} color="var(--text-faint)" />
               </button>
-              <p style={{ fontSize: '11px', color: '#9C8A76', marginTop: '6px' }}>Full system access</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Full system access</p>
             </div>
 
             {/* STAFF CARD */}
@@ -159,12 +164,12 @@ export default function LandingPage() {
                   alignItems: 'center',
                   gap: '16px',
                   padding: '20px 24px',
-                  background: 'white',
-                  border: '1px solid #E8E0D4',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-light)',
                   borderRadius: '12px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.25s ease',
                   width: '100%',
                   outline: 'none'
                 }}
@@ -173,22 +178,22 @@ export default function LandingPage() {
                 <div style={{
                   width: '40px',
                   height: '40px',
-                  background: '#F5F0E8',
+                  background: 'var(--accent-brown-dim)',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  <User size={18} color="#6B3A2A" />
+                  <User size={18} color="var(--accent-brown)" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: 0 }}>Staff Portal</p>
-                  <p style={{ fontSize: '12px', color: '#9C8A76', margin: '2px 0 0 0' }}>View your records</p>
+                  <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Staff Portal</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>View your records</p>
                 </div>
-                <ChevronRight size={20} color="#9C8A76" />
+                <ChevronRight size={20} color="var(--text-faint)" />
               </button>
-              <p style={{ fontSize: '11px', color: '#9C8A76', marginTop: '6px' }}>View your records</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>View your records</p>
             </div>
 
             {/* MEMBERSHIP PORTAL CARD */}
@@ -200,12 +205,12 @@ export default function LandingPage() {
                   alignItems: 'center',
                   gap: '16px',
                   padding: '20px 24px',
-                  background: 'white',
-                  border: '1px solid #E8E0D4',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-light)',
                   borderRadius: '12px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'all 0.2s ease',
+                  transition: 'all 0.25s ease',
                   width: '100%',
                   outline: 'none'
                 }}
@@ -214,27 +219,27 @@ export default function LandingPage() {
                 <div style={{
                   width: '40px',
                   height: '40px',
-                  background: '#fef7e0',
+                  background: 'var(--accent-gold-dim)',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  <Users size={18} color="#C9943A" />
+                  <Users size={18} color="var(--accent-gold)" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '15px', fontWeight: 700, color: '#1C1410', margin: 0 }}>Membership Portal</p>
-                  <p style={{ fontSize: '12px', color: '#9C8A76', margin: '2px 0 0 0' }}>Manager access to verify and record member visits</p>
+                  <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Membership Portal</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Manager access to verify visits</p>
                 </div>
-                <ChevronRight size={20} color="#9C8A76" />
+                <ChevronRight size={20} color="var(--text-faint)" />
               </button>
-              <p style={{ fontSize: '11px', color: '#9C8A76', marginTop: '6px' }}>Verify member cards</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Verify member cards</p>
             </div>
 
           </div>
 
-          <p style={{ marginTop: '48px', fontSize: '11px', color: '#C8B8A8', textAlign: 'center' }}>
+          <p style={{ marginTop: '48px', fontSize: '11px', color: 'var(--text-faint)', textAlign: 'center', fontFamily: 'var(--font-display)' }}>
             Crown Coffee
           </p>
         </div>
@@ -244,25 +249,27 @@ export default function LandingPage() {
         @media (max-width: 768px) {
           .split-container { flex-direction: column !important; }
           .left-panel { width: 100% !important; height: 160px !important; padding: 32px !important; }
-          .left-panel h1 { fontSize: 48px !important; }
-          .left-panel p:nth-child(2) { fontSize: 18px !important; }
+          .left-panel h1 { font-size: 48px !important; }
+          .left-panel p:nth-child(2) { font-size: 18px !important; }
           .left-panel div { margin: 12px auto !important; }
           .right-panel { width: 100% !important; padding: 32px 24px !important; flex: 1; }
         }
         .admin-card:hover {
-          background: #FDF8F4 !important;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(107,58,42,0.1);
+          background: var(--bg-hover) !important;
+          transform: translateY(-3px);
+          box-shadow: 0 8px 20px var(--accent-brown-dim);
         }
         .staff-card:hover {
-          border-color: #6B3A2A !important;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          border-color: var(--accent-brown) !important;
+          background: var(--bg-hover) !important;
+          transform: translateY(-3px);
+          box-shadow: 0 8px 20px var(--accent-brown-dim);
         }
         .membership-card:hover {
-          border-color: #C9943A !important;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(201,148,58,0.1);
+          border-color: var(--accent-gold) !important;
+          background: var(--bg-hover) !important;
+          transform: translateY(-3px);
+          box-shadow: 0 8px 20px var(--accent-gold-dim);
         }
       `}</style>
     </div>

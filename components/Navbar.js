@@ -246,33 +246,16 @@ export default function Navbar() {
                   onMouseLeave={() => setActiveDropdown(null)}
                 >
                   {item.href ? (
-                    <Link href={item.href} style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      padding: '6px 12px', borderRadius: '8px',
-                      textDecoration: 'none',
-                      color: isCurrentPage ? 'var(--accent-blue)' : 'var(--text-muted)',
-                      fontWeight: isCurrentPage ? 700 : 600,
-                      fontSize: '13px',
-                      transition: 'all 0.15s ease',
-                      background: isCurrentPage ? 'var(--accent-blue-dim)' : 'transparent',
-                      fontFamily: 'var(--font-sans)'
-                    }}
-                    onMouseEnter={e => { if (!isCurrentPage) { e.currentTarget.style.background = 'var(--bg-subtle)'; e.currentTarget.style.color = 'var(--text-primary)' }}}
-                    onMouseLeave={e => { if (!isCurrentPage) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)' }}}
+                    <Link
+                      href={item.href}
+                      className={`nav-link-item ${isCurrentPage ? 'active' : ''}`}
                     >
                       {item.icon} {item.label}
                     </Link>
                   ) : (
                     <button
                       onClick={() => setActiveDropdown(isActive ? null : idx)}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: '6px',
-                        padding: '6px 12px', borderRadius: '8px', border: 'none',
-                        background: isActive ? 'var(--bg-subtle)' : 'transparent',
-                        color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
-                        fontWeight: 600, fontSize: '13px', cursor: 'pointer',
-                        transition: 'all 0.15s ease', fontFamily: 'var(--font-sans)'
-                      }}
+                      className={`nav-link-item ${isActive ? 'active' : ''}`}
                     >
                       {item.icon} {item.label}
                       <ChevronDown size={12} style={{ transform: isActive ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
@@ -293,16 +276,8 @@ export default function Navbar() {
                           key={cIdx}
                           href={child.href}
                           onClick={() => setActiveDropdown(null)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '9px 12px', borderRadius: '8px', textDecoration: 'none',
-                            color: pathname === child.href ? 'var(--accent-blue)' : 'var(--text-secondary)',
-                            fontSize: '13px', fontWeight: pathname === child.href ? 700 : 500,
-                            background: pathname === child.href ? 'var(--accent-blue-dim)' : 'transparent',
-                            transition: 'all 0.15s ease', fontFamily: 'var(--font-sans)'
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-subtle)'; e.currentTarget.style.color = 'var(--text-primary)' }}
-                          onMouseLeave={e => { e.currentTarget.style.background = pathname === child.href ? 'var(--accent-blue-dim)' : 'transparent'; e.currentTarget.style.color = pathname === child.href ? 'var(--accent-blue)' : 'var(--text-secondary)' }}
+                          className={`nav-link-item ${pathname === child.href ? 'active' : ''}`}
+                          style={{ padding: '9px 12px' }}
                         >
                           {child.label}
                         </Link>
