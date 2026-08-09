@@ -3,6 +3,38 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 
+function isWithinFetchHours() {
+  const now = new Date()
+  const options = { timeZone: 'Asia/Dhaka', hour: 'numeric', minute: 'numeric', hour12: false }
+  const formatter = new Intl.DateTimeFormat('en-US', options)
+  const parts = formatter.formatToParts(now)
+  
+  let hour = 0
+  let minute = 0
+  parts.forEach(part => {
+    if (part.type === 'hour') {
+      let h = parseInt(part.value, 10)
+      if (h === 24) h = 0
+      hour = h
+    }
+    if (part.type === 'minute') minute = parseInt(part.value, 10)
+  })
+
+  const timeVal = hour * 60 + minute
+
+  const ranges = [
+    [7 * 60 + 30, 9 * 60],      // 7:30am - 9am
+    [10 * 60 + 30, 12 * 60],    // 10:30am - 12pm
+    [12 * 60 + 30, 14 * 60],    // 12:30pm - 2pm
+    [17 * 60 + 30, 19 * 60],    // 5:30pm - 7pm
+    [20 * 60 + 30, 22 * 60],    // 8:30pm - 10pm
+    [23 * 60, 24 * 60],         // 11pm - 12am
+    [0, 1 * 60]                 // 12am - 1am
+  ]
+
+  return ranges.some(([start, end]) => timeVal >= start && timeVal <= end)
+}
+
 // ── 3. Extreme Far-Right Analog Clock (Responsive Clamp Dial) ──────
 function ExtremeRightAnalogClock({ time = new Date() }) {
   const ms = time.getMilliseconds()
@@ -157,8 +189,9 @@ export default function PublicAttendancePage() {
       }
     }
     saveOfflineQueue(remaining)
-    if (remaining.length < q.length) fetchTodayData(true) // refresh after sync
+    if (remaining.length < q.length) fetchTodayData(true, true) // refresh after sync (forced)
   }
+
 
   // 2. 4 Collapsible section states (On Shift, On Break, Late, Not Checked In)
   const [openSections, setOpenSections] = useState({
@@ -331,7 +364,7 @@ export default function PublicAttendancePage() {
         })
       }
 
-      fetchTodayData(true)
+      fetchTodayData(true, true) // refresh after scan (forced)
       setTimeout(() => setTapFlash(null), 3500)
     } catch (err) {
       console.error(err)
@@ -340,7 +373,10 @@ export default function PublicAttendancePage() {
 
   const [fetchError, setFetchError] = useState(null)
 
-  async function fetchTodayData(silent = false) {
+  async function fetchTodayData(silent = false, force = false) {
+    if (silent && !force && !isWithinFetchHours()) {
+      return
+    }
     try {
       if (!silent) setLoading(true)
       const res = await fetch(`/api/attendance/today?t=${Date.now()}`, { cache: 'no-store' })
