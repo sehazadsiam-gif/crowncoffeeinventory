@@ -67,8 +67,15 @@ export async function POST(request) {
     const visit = visits[0]
 
     const newVisits = (member.total_visits || 0) + 1
-    const newPunchCount = (member.punch_count || 0) + 1
-    const freeCoffeeEarned = newPunchCount % 5 === 0
+    let newPunchCount = (member.visit_punch_count || member.punch_count || 0) + 1
+    let newFreeCoffees = member.free_coffee_rewards_available || 0
+    let freeCoffeeEarned = false
+
+    if (newPunchCount >= 5) {
+      newPunchCount = 0
+      newFreeCoffees += 1
+      freeCoffeeEarned = true
+    }
 
     let newTier = member.tier
     let tierUpgraded = false
@@ -82,6 +89,8 @@ export async function POST(request) {
       .update({
         total_visits: newVisits,
         punch_count: newPunchCount,
+        visit_punch_count: newPunchCount,
+        free_coffee_rewards_available: newFreeCoffees,
         tier: newTier
       })
       .eq('id', member_id)

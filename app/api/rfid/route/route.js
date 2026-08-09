@@ -162,6 +162,7 @@ async function handleMemberPunch(member, rfidCode, location) {
     .update({
       total_visits: newTotalVisits,
       visit_punch_count: newPunchCount,
+      punch_count: newPunchCount,
       free_coffee_rewards_available: newFreeCoffees
     })
     .eq('id', member.id)

@@ -267,7 +267,7 @@ export default function ManagerDashboard() {
 
 function MemberCard({ member, onRecord, loading, justRecorded }) {
   const [expanded, setExpanded] = useState(false)
-  const isFreeCoffee = member.punch_count % 5 === 0 && member.punch_count > 0
+  const isFreeCoffee = (member.free_coffee_rewards_available || 0) > 0 || (member.punch_count % 5 === 0 && member.punch_count > 0)
   const discount = member.tier === 'gold' ? '10%' : '5%'
 
   useEffect(() => {
@@ -355,6 +355,10 @@ function MemberCard({ member, onRecord, loading, justRecorded }) {
                   <div>
                     <p style={{ fontSize: 20, fontWeight: 800, color: '#1C1410', margin: 0 }}>{member.total_visits}</p>
                     <p style={{ fontSize: 11, color: '#9C8A76', margin: 0 }}>Total Visits</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 20, fontWeight: 800, color: '#2E7D32', margin: 0 }}>{member.free_coffee_rewards_available || 0}</p>
+                    <p style={{ fontSize: 11, color: '#9C8A76', margin: 0 }}>Free Coffees</p>
                   </div>
                   <div>
                     <p style={{ fontSize: 20, fontWeight: 800, color: '#1C1410', margin: 0 }}>{member.tier === 'gold' ? '10%' : '5%'}</p>

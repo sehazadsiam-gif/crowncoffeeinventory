@@ -23,7 +23,7 @@ export async function GET(request) {
 
     const { data, error } = await supabase
       .from('members')
-      .select('id, full_name, card_number, tier, total_visits, punch_count, email, phone')
+      .select('id, full_name, card_number, tier, total_visits, punch_count, visit_punch_count, free_coffee_rewards_available, email, phone')
       .eq('status', 'active')
       .or(`full_name.ilike.%${q}%,card_number.ilike.%${q}%,phone.ilike.%${q}%`)
       .limit(20)
