@@ -25,13 +25,13 @@ export default function MenuEngineeringClient() {
   const [loading,     setLoading]     = useState(true)
 
   // Section B totals (lifted state for Section C)
-  const [sectionBTotals, setSectionBTotals] = useState({ totalCM: 0, totalRevenue: 0 })
+  const [salesData, setSalesData] = useState({})
 
   // Export data per section
   const [exportDataB, setExportDataB] = useState([])
   const [exportDataC, setExportDataC] = useState([])
 
-  // Load all data
+  // Load pricing data
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
@@ -49,7 +49,50 @@ export default function MenuEngineeringClient() {
     }
   }, [])
 
-  useEffect(() => { loadData() }, [loadData])
+  // Load sales data dynamically
+  const loadSalesData = useCallback(async (y, m) => {
+    try {
+      const res = await fetch(`/api/admin/sales?year=${y}&month=${m}`)
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        const m = {}
+        data.forEach(entry => {
+          const itemId = entry.menu_item_id
+          const channelId = entry.channel_id || 'dineIn'
+          if (!m[itemId]) m[itemId] = {}
+          m[itemId][channelId] = entry.quantity_sold
+        })
+        setSalesData(m)
+      } else {
+        setSalesData({})
+      }
+    } catch (e) {
+      console.error('Load sales data error:', e)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  useEffect(() => {
+    loadSalesData(year, month)
+  }, [year, month, loadSalesData])
+
+  // Derive Section B / C totals dynamically
+  const totalRevenue = items.reduce((sum, item) => {
+    const qtySold = Object.values(salesData[item.id] || { dineIn: 0 }).reduce((s, v) => s + (parseInt(v) || 0), 0)
+    const dineInSp = parseFloat(item.dine_in_price) || 0
+    return sum + (qtySold * dineInSp)
+  }, 0)
+
+  const totalCM = items.reduce((sum, item) => {
+    const qtySold = Object.values(salesData[item.id] || { dineIn: 0 }).reduce((s, v) => s + (parseInt(v) || 0), 0)
+    const dineInSp = parseFloat(item.dine_in_price) || 0
+    const cogs = item.current_cogs || 0
+    const dineCM = dineInSp - cogs
+    return sum + (qtySold * dineCM)
+  }, 0)
 
   function handleExport(section) {
     if (section === 'B') console.log('Export B triggered — data passed via ExportButton')
@@ -186,6 +229,8 @@ export default function MenuEngineeringClient() {
               pricingData={pricingData}
               year={year}
               month={month}
+              salesData={salesData}
+              setSalesData={setSalesData}
               onExport={section => {}}
             />
           )}
@@ -193,8 +238,8 @@ export default function MenuEngineeringClient() {
             <SectionC
               year={year}
               month={month}
-              totalCM={sectionBTotals.totalCM}
-              totalRevenue={sectionBTotals.totalRevenue}
+              totalCM={totalCM}
+              totalRevenue={totalRevenue}
               onExport={section => {}}
             />
           )}

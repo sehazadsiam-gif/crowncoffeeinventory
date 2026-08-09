@@ -6,9 +6,7 @@ import { Upload, Save, Download } from 'lucide-react'
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-export default function SectionB({ items, pricingData, year, month, onExport }) {
-  // salesData: { [itemId]: { dineIn: qty, [channelId]: qty } }
-  const [salesData, setSalesData] = useState({})
+export default function SectionB({ items, pricingData, year, month, salesData = {}, setSalesData, onExport }) {
   const [saved, setSaved]         = useState(false)
   const [saving, setSaving]       = useState(false)
   const [csvError, setCsvError]   = useState('')
@@ -143,7 +141,10 @@ export default function SectionB({ items, pricingData, year, month, onExport }) 
                     <input
                       type="number" min="0"
                       value={salesData[item.id]?.dineIn ?? ''}
-                      onChange={e => setSalesData(p => ({ ...p, [item.id]: { ...p[item.id], dineIn: e.target.value } }))}
+                      onChange={e => setSalesData(p => {
+                        const curr = p[item.id] || {}
+                        return { ...p, [item.id]: { ...curr, dineIn: e.target.value } }
+                      })}
                       style={{ ...inS, width: 90 }}
                       placeholder="0"
                     />

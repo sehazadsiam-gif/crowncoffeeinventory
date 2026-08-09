@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   contributionMargin, foodCostPercent, netMarginAfterCommission,
   netFoodCostPctAfterCommission, foodCostColor, formatBDT, formatPct,
@@ -27,7 +27,16 @@ function FCBadge({ pct }) {
 
 export default function SectionA({ items, channels, onSave }) {
   // localPrices: { [itemId]: { dineIn: '', channelPrices: { [channelId]: { price:'', commission:'', discount:'' } } } }
-  const [localPrices, setLocalPrices] = useState(() => {
+  const [localPrices, setLocalPrices] = useState({})
+
+  // Keep localPrices in sync when items/channels load
+  const [channelList, setChannelList] = useState(channels)
+
+  useEffect(() => {
+    setChannelList(channels)
+  }, [channels])
+
+  useEffect(() => {
     const m = {}
     items.forEach(item => {
       m[item.id] = {
@@ -41,18 +50,23 @@ export default function SectionA({ items, channels, onSave }) {
         ),
       }
     })
-    return m
-  })
+    setLocalPrices(m)
+  }, [items, channels])
 
   const [saving, setSaving]                 = useState({})
   const [showChannelMgr, setShowChannelMgr] = useState(false)
   const [newChanName, setNewChanName]       = useState('')
-  const [channelList, setChannelList]       = useState(channels)
   const [losingThreshold, setLosingThreshold] = useState(0) // min net margin
   const [calcModalItem, setCalcModalItem]   = useState(null) // item object for calculator
 
   function setDineIn(itemId, val) {
-    setLocalPrices(p => ({ ...p, [itemId]: { ...p[itemId], dineIn: val } }))
+    setLocalPrices(p => {
+      const current = p[itemId] || { dineIn: '', channelPrices: {} }
+      return {
+        ...p,
+        [itemId]: { ...current, dineIn: val }
+      }
+    })
   }
 
   function setTargetProfitForDineIn(itemId, cogs, profitVal) {
@@ -61,16 +75,21 @@ export default function SectionA({ items, channels, onSave }) {
   }
 
   function setChannelPrice(itemId, chanId, field, val) {
-    setLocalPrices(p => ({
-      ...p,
-      [itemId]: {
-        ...p[itemId],
-        channelPrices: {
-          ...p[itemId].channelPrices,
-          [chanId]: { ...p[itemId].channelPrices[chanId], [field]: val },
-        },
-      },
-    }))
+    setLocalPrices(p => {
+      const current = p[itemId] || { dineIn: '', channelPrices: {} }
+      const currentChannelPrices = current.channelPrices || {}
+      const currentChan = currentChannelPrices[chanId] || { price: '', commission: '', discount: '' }
+      return {
+        ...p,
+        [itemId]: {
+          ...current,
+          channelPrices: {
+            ...currentChannelPrices,
+            [chanId]: { ...currentChan, [field]: val }
+          }
+        }
+      }
+    })
   }
 
   async function saveItem(item) {
