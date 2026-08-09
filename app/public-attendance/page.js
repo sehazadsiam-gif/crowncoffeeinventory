@@ -35,109 +35,37 @@ function isWithinFetchHours() {
   return ranges.some(([start, end]) => timeVal >= start && timeVal <= end)
 }
 
-// ── 3. Extreme Far-Right Analog Clock (Responsive Clamp Dial) ──────
-function ExtremeRightAnalogClock({ time = new Date() }) {
-  const ms = time.getMilliseconds()
-  const seconds = time.getSeconds() + ms / 1000
-  const minutes = time.getMinutes() + seconds / 60
-  const hours = (time.getHours() % 12) + minutes / 60
-
-  const secDeg = seconds * 6
-  const minDeg = minutes * 6
-  const hourDeg = hours * 30
-
+// ── 3. Extreme Far-Right Minimalist Digital Clock ──────
+function HeaderDigitalClock({ time = new Date() }) {
+  const timeString = time.toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka'
+  })
   const dateString = time.toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric', timeZone: 'Asia/Dhaka'
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone: 'Asia/Dhaka'
   })
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-      marginLeft: 'auto', flexShrink: 0
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px',
+      marginLeft: 'auto', flexShrink: 0, textAlign: 'right'
     }}>
-      {/* Responsive Analog Dial */}
-      <div className="clock-dial" style={{
-        borderRadius: '50%',
-        background: 'radial-gradient(circle at 30% 30%, #FFFFFF 0%, #F8FAFC 70%, #E2E8F0 100%)',
-        border: '3px solid #D4933A',
-        boxShadow: '0 6px 20px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.8), inset 0 -2px 6px rgba(0,0,0,0.1)',
-        position: 'relative', flexShrink: 0
-      }}>
-        {/* 12 Hour Ticks */}
-        {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(deg => (
-          <div key={deg} style={{
-            position: 'absolute',
-            width: deg % 90 === 0 ? '3px' : '1px',
-            height: deg % 90 === 0 ? '10%' : '5%',
-            background: deg % 90 === 0 ? '#0F172A' : '#94A3B8',
-            top: '4%',
-            left: `calc(50% - ${deg % 90 === 0 ? 1.5 : 0.5}px)`,
-            transformOrigin: '50% 460%',
-            transform: `rotate(${deg}deg)`
-          }} />
-        ))}
-
-        {/* Hour Hand */}
-        <div style={{
-          position: 'absolute', width: '3.5px', height: '28%',
-          background: '#0F172A', borderRadius: '3px',
-          top: '22%', left: 'calc(50% - 1.75px)',
-          transformOrigin: '50% 100%', transform: `rotate(${hourDeg}deg)`, zIndex: 3,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }} />
-
-        {/* Minute Hand */}
-        <div style={{
-          position: 'absolute', width: '2.5px', height: '38%',
-          background: '#1E293B', borderRadius: '2px',
-          top: '12%', left: 'calc(50% - 1.25px)',
-          transformOrigin: '50% 100%', transform: `rotate(${minDeg}deg)`, zIndex: 4,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }} />
-
-        {/* Second Hand (Gold Sweeping) */}
-        <div style={{
-          position: 'absolute', width: '1.5px', height: '44%',
-          background: '#D4933A', borderRadius: '1px',
-          top: '6%', left: 'calc(50% - 0.75px)',
-          transformOrigin: '50% 100%', transform: `rotate(${secDeg}deg)`,
-          zIndex: 5
-        }} />
-
-        {/* Center Cap */}
-        <div style={{
-          position: 'absolute', width: '8px', height: '8px', borderRadius: '50%',
-          background: '#D4933A', border: '1.5px solid #0F172A',
-          top: 'calc(50% - 4px)', left: 'calc(50% - 4px)', zIndex: 10,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
-        }} />
-      </div>
-
-      {/* Digital Time Readout Directly Below Analog Dial */}
       <div style={{
-        fontSize: 'clamp(14px, 1.3vw, 20px)',
-        fontWeight: 900,
-        color: '#38BDF8',
-        background: 'rgba(15, 23, 42, 0.85)',
-        border: '1px solid rgba(56, 189, 248, 0.35)',
-        borderRadius: '8px',
-        padding: '3px 10px',
+        fontSize: 'clamp(28px, 2.5vw, 42px)',
+        fontWeight: 800,
+        color: '#1C1917',
         fontFamily: "'JetBrains Mono', monospace",
-        letterSpacing: '0.06em',
-        lineHeight: 1.1,
-        marginTop: '6px',
-        textAlign: 'center',
-        whiteSpace: 'nowrap',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3), 0 0 12px rgba(56,189,248,0.2)'
+        letterSpacing: '0.02em',
+        lineHeight: 1
       }}>
-        {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })}
+        {timeString}
       </div>
-
-      {/* Date Label Beneath Clock */}
       <div style={{
-        fontSize: 'clamp(8px, 0.7vw, 10px)', fontWeight: 800, color: '#94A3B8',
-        letterSpacing: '0.04em', fontFamily: "'Plus Jakarta Sans', sans-serif",
-        textAlign: 'center', whiteSpace: 'nowrap', marginTop: '1px'
+        fontSize: 'clamp(11px, 0.9vw, 14px)',
+        fontWeight: 700,
+        color: '#8B6E30',
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+        marginTop: '2px'
       }}>
         {dateString} · <span style={{ color: '#D4933A' }}>BST</span>
       </div>
@@ -440,10 +368,10 @@ export default function PublicAttendancePage() {
     <>
       <div style={{
         minHeight: '100vh',
-        background: '#FAF9F6', // 5. Light Mode Warm Cream Background
+        background: '#F8F6F0', // Premium light-mode warm cream background
         fontFamily: "'Outfit', 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif",
         fontFeatureSettings: '"cv02", "cv03", "cv04", "cv11"',
-        color: '#0F172A',
+        color: '#1C1917',
         userSelect: 'none'
       }}>
 
@@ -472,8 +400,8 @@ export default function PublicAttendancePage() {
           )
         })()}
 
-        {/* ── 4. FULLY RESPONSIVE NAVY HEADER ── */}
-        <div style={{ background: '#0F172A', borderBottom: '3px solid #D4933A', boxShadow: '0 6px 24px rgba(15, 23, 42, 0.2)' }}>
+        {/* ── 4. FULLY RESPONSIVE LIGHT HEADER ── */}
+        <div style={{ background: '#F8F6F0', borderBottom: '1px solid #E2D1A9' }}>
           <div className="header-container" style={{
             maxWidth: '1800px', margin: '0 auto', padding: '16px 24px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px'
@@ -484,43 +412,43 @@ export default function PublicAttendancePage() {
                 src="/crown-coffee-logo.jpg"
                 alt="Crown Coffee Logo"
                 style={{
-                  width: 'clamp(72px, 5vw, 88px)',
-                  height: 'clamp(72px, 5vw, 88px)',
+                  width: 'clamp(56px, 4vw, 72px)',
+                  height: 'clamp(56px, 4vw, 72px)',
                   borderRadius: '50%',
                   objectFit: 'cover',
                   background: '#000000',
-                  border: '3px solid #F59E0B',
-                  boxShadow: '0 0 24px rgba(245, 158, 11, 0.6), 0 4px 14px rgba(0,0,0,0.5)',
+                  border: '2px solid #D4933A',
+                  boxShadow: '0 4px 12px rgba(212,175,55,0.2)',
                   flexShrink: 0,
                   transition: 'all 0.2s ease'
                 }}
               />
               <div>
-                <div style={{ color: 'white', fontWeight: 900, fontSize: 'clamp(18px, 1.6vw, 24px)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>Crown Coffee</div>
-                <div style={{ color: '#F59E0B', fontSize: '11px', fontWeight: 800, letterSpacing: '0.14em', marginTop: '3px' }}>RFID ATTENDANCE BOARD</div>
+                <div style={{ color: '#1C1917', fontWeight: 900, fontSize: 'clamp(18px, 1.6vw, 24px)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>Crown Coffee</div>
+                <div style={{ color: '#B8860B', fontSize: '11px', fontWeight: 800, letterSpacing: '0.14em', marginTop: '3px' }}>RFID ATTENDANCE BOARD</div>
               </div>
             </div>
 
             {/* 10. Center: 5 Stat Chips Bar (Middle Centered) */}
             <div className="header-stats-bar" style={{ display: 'flex', gap: '10px', alignItems: 'center', justifyContent: 'center', flex: '0 0 auto', margin: '0 auto', flexDirection: 'column' }}>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                <HeaderStatChip label="IN TODAY" value={totalIn} color="#22C55E" />
-                <HeaderStatChip label="ON BREAK" value={onBreakCount} color="#F59E0B" />
-                <HeaderStatChip label="LATE" value={lateCount} color="#EF4444" />
-                <HeaderStatChip label="NOT IN" value={absentCount} color="#94A3B8" />
-                <HeaderStatChip label="TOTAL STAFF" value={totalStaff} color="#64748B" />
+                <HeaderStatChip label="IN TODAY" value={totalIn} color="#16A34A" />
+                <HeaderStatChip label="ON BREAK" value={onBreakCount} color="#D97706" />
+                <HeaderStatChip label="LATE" value={lateCount} color="#DC2626" />
+                <HeaderStatChip label="NOT IN" value={absentCount} color="#8B6E30" />
+                <HeaderStatChip label="TOTAL STAFF" value={totalStaff} color="#475569" />
               </div>
               {/* Offline Status Pill */}
               {(isOffline || offlineQueueCount > 0) && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '6px',
-                  background: isOffline ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)',
-                  border: `1px solid ${isOffline ? '#EF4444' : '#22C55E'}`,
+                  background: isOffline ? 'rgba(220,38,38,0.08)' : 'rgba(22,163,74,0.08)',
+                  border: `1px solid ${isOffline ? '#DC2626' : '#16A34A'}`,
                   borderRadius: '20px', padding: '3px 12px',
                   animation: isOffline ? 'pulse 2s infinite' : 'none'
                 }}>
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: isOffline ? '#EF4444' : '#22C55E', display: 'inline-block' }} />
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: isOffline ? '#EF4444' : '#22C55E', letterSpacing: '0.06em' }}>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: isOffline ? '#DC2626' : '#16A34A', display: 'inline-block' }} />
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: isOffline ? '#DC2626' : '#16A34A', letterSpacing: '0.06em' }}>
                     {isOffline
                       ? `OFFLINE${offlineQueueCount > 0 ? ` · ${offlineQueueCount} TAP${offlineQueueCount > 1 ? 'S' : ''} QUEUED` : ''}`
                       : `BACK ONLINE · SYNCING ${offlineQueueCount} TAP${offlineQueueCount > 1 ? 'S' : ''}...`}
@@ -529,16 +457,15 @@ export default function PublicAttendancePage() {
               )}
             </div>
 
-
-            {/* 3. EXTREME FAR-RIGHT: Analog Clock Pinned Flush Right */}
+            {/* 3. EXTREME FAR-RIGHT: Digital Clock Pinned Flush Right */}
             <div style={{ flex: '1 1 0%', display: 'flex', justifyContent: 'flex-end' }}>
-              <ExtremeRightAnalogClock time={currentTime} />
+              <HeaderDigitalClock time={currentTime} />
             </div>
           </div>
         </div>
 
         {/* Responsive Filter Bar & Search */}
-        <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E2E8F0' }}>
+        <div style={{ background: '#F8F6F0', borderBottom: '1px solid #E2D1A9' }}>
           <div className="filter-container" style={{
             maxWidth: '1800px', margin: '0 auto', padding: '12px 24px',
             display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap'
@@ -549,11 +476,11 @@ export default function PublicAttendancePage() {
               ['kitchen', 'Kitchen']
             ].map(([id, label]) => (
               <button key={id} onClick={() => setDepartmentFilter(id)} style={{
-                padding: '8px 18px', borderRadius: '12px', border: 'none', cursor: 'pointer',
+                padding: '8px 18px', borderRadius: '12px', border: '1px solid #E2D1A9', cursor: 'pointer',
                 fontWeight: 800, fontSize: '12px', transition: 'all 0.15s',
-                background: departmentFilter === id ? '#0F172A' : '#F1F5F9',
-                color: departmentFilter === id ? 'white' : '#64748B',
-                boxShadow: departmentFilter === id ? '0 4px 12px rgba(15,23,42,0.12)' : 'none'
+                background: departmentFilter === id ? '#B8860B' : '#FFFFFF',
+                color: departmentFilter === id ? '#FFFFFF' : '#8B6E30',
+                boxShadow: departmentFilter === id ? '0 4px 12px rgba(184,134,11,0.2)' : 'none'
               }}>{label}</button>
             ))}
 
@@ -565,23 +492,24 @@ export default function PublicAttendancePage() {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
-                  width: '100%', background: '#F8FAFC', border: '1px solid #E2E8F0',
+                  width: '100%', background: '#FFFFFF', border: '1px solid #E2D1A9',
                   borderRadius: '10px', padding: '8px 12px 8px 34px', fontSize: '12px',
-                  fontWeight: 700, color: '#0F172A', outline: 'none'
+                  fontWeight: 700, color: '#1C1917', outline: 'none',
+                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.02)'
                 }}
               />
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '12px', top: '10px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8B6E30" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: '12px', top: '10px' }}>
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
             </div>
 
             {/* 9. Live Indicator & Ticking Timestamp */}
-            <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '14px', fontWeight: 700 }}>
+            <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#8B6E30', display: 'flex', alignItems: 'center', gap: '14px', fontWeight: 700 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16A34A', fontWeight: 800 }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 8px rgba(22,163,74,0.6)', animation: 'pulse 2s infinite' }}></span>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#16A34A', boxShadow: '0 0 8px rgba(22,163,74,0.4)', animation: 'pulse 2s infinite' }}></span>
                 Live Sync
               </span>
-              <span style={{ fontSize: '11px', color: '#94A3B8', fontFamily: "'JetBrains Mono', monospace" }}>
+              <span style={{ fontSize: '11px', color: '#8B6E30', opacity: 0.8, fontFamily: "'JetBrains Mono', monospace" }}>
                 Updated {lastUpdatedSecs}s ago
               </span>
             </div>
@@ -720,12 +648,13 @@ export default function PublicAttendancePage() {
 function HeaderStatChip({ label, value, color }) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.06)',
-      border: '1px solid rgba(255,255,255,0.12)',
-      borderRadius: '12px', padding: '6px 12px', textAlign: 'center', minWidth: '65px'
+      background: '#FFFFFF',
+      border: '1px solid #E2D1A9',
+      borderRadius: '12px', padding: '8px 14px', textAlign: 'center', minWidth: '70px',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
     }}>
-      <div style={{ fontSize: 'clamp(15px, 1.1vw, 20px)', fontWeight: 900, color, lineHeight: 1, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
-      <div style={{ fontSize: '8px', fontWeight: 800, color: '#94A3B8', letterSpacing: '0.08em', marginTop: '2px' }}>{label}</div>
+      <div style={{ fontSize: 'clamp(16px, 1.2vw, 22px)', fontWeight: 900, color, lineHeight: 1, fontFamily: "'JetBrains Mono', monospace" }}>{value}</div>
+      <div style={{ fontSize: '8.5px', fontWeight: 800, color: '#8B6E30', letterSpacing: '0.06em', marginTop: '4px', textTransform: 'uppercase' }}>{label}</div>
     </div>
   )
 }
@@ -734,9 +663,9 @@ function CollapsibleGroupSection({ title, count, color, bgColor, borderColor, is
   return (
     <div style={{
       background: '#FFFFFF',
-      borderRadius: '20px',
-      border: `1.5px solid ${borderColor}`,
-      boxShadow: '0 8px 24px -4px rgba(15,23,42,0.04)',
+      borderRadius: '16px',
+      border: '1px solid #E2D1A9',
+      boxShadow: '0 4px 12px rgba(139,110,48,0.04)',
       overflow: 'hidden'
     }}>
       {/* Section Header */}
@@ -813,6 +742,7 @@ function getRoleAvatarBg(dept, role) {
 
 // ── 1. Passive RFID Display Card ──
 function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
+  const [expanded, setExpanded] = useState(false)
   const hasCheckedIn = !!r.check_in_at
   const isOut = hasCheckedIn && !!r.check_out_at
   const isOnBreak = hasCheckedIn && !!r.break_start_at && !r.break_end_at
@@ -823,29 +753,29 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
   const isBreakTrackingOn = r.is_rostered !== false && r.break_tracking !== false
 
   // Status System Colors
-  let borderColor = '#E2E8F0'
+  let borderColor = '#E2D1A9'
   let statusDot = '#CBD5E1'
   let statusText = 'Not Checked In'
-  let statusColor = '#64748B' // 6. Neutral Slate Gray (Not an alarm state)
-  let badgeBg = '#F1F5F9'
-  let badgeBorder = '#CBD5E1'
+  let statusColor = '#8B6E30'
+  let badgeBg = '#FDFBF7'
+  let badgeBorder = '#E2D1A9'
   let cardBg = '#FFFFFF'
 
   if (isOut) {
-    borderColor = '#93C5FD'; statusDot = '#3B82F6'
-    statusText = 'Checked Out'; statusColor = '#1D4ED8'; badgeBg = '#EFF6FF'; badgeBorder = '#BFDBFE'
+    borderColor = '#BFDBFE'; statusDot = '#3B82F6'
+    statusText = 'Checked Out'; statusColor = '#1D4ED8'; badgeBg = '#EFF6FF'; badgeBorder = '#BFDBFE'; cardBg = '#FFFFFF'
   } else if (isOnBreak) {
-    borderColor = '#FDE68A'; statusDot = '#B45309'
-    statusText = 'On Break'; statusColor = '#92400E'; badgeBg = '#FEF3C7'; badgeBorder = '#FDE68A'; cardBg = '#FFFBFA'
+    borderColor = '#FCD34D'; statusDot = '#B45309'
+    statusText = 'On Break'; statusColor = '#92400E'; badgeBg = '#FEF3C7'; badgeBorder = '#FDE68A'; cardBg = '#FFFDF9'
   } else if (isBackFromBreak) {
     borderColor = '#BAE6FD'; statusDot = '#0284C7'
-    statusText = 'Back From Break'; statusColor = '#0369A1'; badgeBg = '#E0F2FE'; badgeBorder = '#BAE6FD'; cardBg = '#F0F9FF'
+    statusText = 'Back From Break'; statusColor = '#0369A1'; badgeBg = '#E0F2FE'; badgeBorder = '#BAE6FD'; cardBg = '#F7FCFF'
   } else if (isLate) {
     borderColor = '#FCA5A5'; statusDot = '#DC2626'
-    statusText = 'Late'; statusColor = '#DC2626'; badgeBg = '#FEF2F2'; badgeBorder = '#FCA5A5'; cardBg = '#FFF5F5'
+    statusText = 'Late'; statusColor = '#DC2626'; badgeBg = '#FEF2F2'; badgeBorder = '#FCA5A5'; cardBg = '#FFFDFD'
   } else if (isIn) {
     borderColor = '#86EFAC'; statusDot = '#16A34A'
-    statusText = 'Checked In'; statusColor = '#15803D'; badgeBg = '#DCFCE7'; badgeBorder = '#86EFAC'; cardBg = '#F0FDF4'
+    statusText = 'Checked In'; statusColor = '#15803D'; badgeBg = '#DCFCE7'; badgeBorder = '#86EFAC'; cardBg = '#FAFFFA'
   }
 
   const fmtTime = (ts) => ts
@@ -863,8 +793,8 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
         padding: '18px',
         display: 'flex',
         flexDirection: 'column',
-        justify: 'space-between',
-        boxShadow: isScanned ? '0 0 24px rgba(16,185,129,0.5)' : '0 6px 18px -4px rgba(15,23,42,0.04)',
+        justifyContent: 'space-between',
+        boxShadow: isScanned ? '0 0 24px rgba(16,185,129,0.3)' : '0 6px 18px -4px rgba(139,110,48,0.02)',
         animation: isScanned ? 'rfidGlow 1.5s ease-in-out infinite' : 'none',
         position: 'relative',
         userSelect: 'none'
@@ -876,23 +806,22 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
           {r.photo_url ? (
             <img
               src={r.photo_url} alt={r.name}
-              style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${borderColor}`, boxShadow: '0 4px 8px rgba(0,0,0,0.06)' }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${borderColor}`, boxShadow: '0 4px 8px rgba(0,0,0,0.04)' }}
             />
           ) : (
-            /* 8. Role-consistent colored initials circle */
             <div style={{
               width: '48px', height: '48px', borderRadius: '50%', flexShrink: 0,
               background: avatarBg, border: `2px solid ${borderColor}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 900, fontSize: '16px', color: 'white', boxShadow: '0 4px 8px rgba(0,0,0,0.08)'
+              fontWeight: 900, fontSize: '16px', color: 'white', boxShadow: '0 4px 8px rgba(0,0,0,0.04)'
             }}>
               {r.name ? r.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'CC'}
             </div>
           )}
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
-            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: 600, marginTop: '2px' }}>{r.designation}</div>
+            <div style={{ fontSize: '15px', fontWeight: 800, color: '#1C1917', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
+            <div style={{ fontSize: '11px', color: '#8B6E30', fontWeight: 600, marginTop: '2px' }}>{r.designation}</div>
           </div>
 
           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 8px ${statusDot}44` }} />
@@ -902,18 +831,18 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
         {!hasCheckedIn ? (
           <div style={{
             marginTop: '10px',
-            background: '#F8FAFC',
-            border: '1.5px dashed #CBD5E1',
+            background: '#FDFBF7',
+            border: '1.5px dashed #E2D1A9',
             borderRadius: '10px',
             padding: '10px',
             textAlign: 'center',
-            color: '#64748B',
+            color: '#8B6E30',
             fontWeight: 800,
             fontSize: '11px',
             letterSpacing: '0.04em',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
           }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#94A3B8' }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#CBD5E1' }} />
             Awaiting RFID Scan
           </div>
         ) : (
@@ -939,8 +868,8 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
                   }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
-                    background: isBreakOn ? '#FEF3C7' : '#F8FAFC',
-                    border: isBreakOn ? '1.5px solid #F59E0B' : '1.5px solid #E2E8F0',
+                    background: isBreakOn ? '#FEF3C7' : '#FDFBF7',
+                    border: isBreakOn ? '1.5px solid #F59E0B' : '1.5px solid #E2D1A9',
                     padding: '3px 8px', borderRadius: '16px',
                     cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
                   }}
@@ -956,21 +885,48 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
                       transition: 'all 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                     }} />
                   </div>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: isBreakOn ? '#92400E' : '#64748B' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 800, color: isBreakOn ? '#92400E' : '#8B6E30' }}>
                     {isBreakOn ? 'Take Break ON ☕' : 'Take Break'}
                   </span>
                 </button>
               )}
             </div>
 
-            {/* 2. 5-Column Time Metric Grid (IN | BREAK START | BREAK END | OUT | DUTY) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
-              <TimeChip label="IN" time={fmtTime(r.check_in_at)} color="#16A34A" />
-              <TimeChip label="B.START" time={fmtTime(r.break_start_at)} color="#D97706" />
-              <TimeChip label="B.END" time={fmtTime(r.break_end_at)} color="#0284C7" />
-              <TimeChip label="OUT" time={fmtTime(r.check_out_at)} color="#2563EB" />
-              <TimeChip label="DUTY" time={r.hours_worked > 0 ? `${r.hours_worked}h` : '—'} color="#7C3AED" />
-            </div>
+            {/* Collapsible View Toggle Summary */}
+            {!expanded ? (
+              <div 
+                onClick={() => setExpanded(true)}
+                style={{ 
+                  marginTop: '10px', padding: '8px 12px', background: '#FDFBF7', border: '1px solid #F3ECE0', borderRadius: '8px', 
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: '12px', color: '#8B6E30', fontWeight: 700 
+                }}
+              >
+                <span>
+                  {isOnBreak ? `On Break since ${fmtTime(r.break_start_at)}` : 
+                   isOut ? `Checked Out: ${fmtTime(r.check_out_at)}` :
+                   isIn ? `Clocked In: ${fmtTime(r.check_in_at)}` : 
+                   isLate ? `Clocked In (Late): ${fmtTime(r.check_in_at)}` : ''}
+                </span>
+                <span style={{ fontSize: '10px', opacity: 0.7 }}>View Details ▾</span>
+              </div>
+            ) : (
+              /* Expanded Detailed Timeline */
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px', marginBottom: '10px' }}>
+                  <TimeChip label="IN" time={fmtTime(r.check_in_at)} color="#16A34A" />
+                  <TimeChip label="B.START" time={fmtTime(r.break_start_at)} color="#D97706" />
+                  <TimeChip label="B.END" time={fmtTime(r.break_end_at)} color="#0284C7" />
+                  <TimeChip label="OUT" time={fmtTime(r.check_out_at)} color="#2563EB" />
+                  <TimeChip label="DUTY" time={r.hours_worked > 0 ? `${r.hours_worked}h` : '—'} color="#7C3AED" />
+                </div>
+                <div 
+                  onClick={() => setExpanded(false)}
+                  style={{ textAlign: 'center', fontSize: '10px', color: '#8B6E30', cursor: 'pointer', fontWeight: 700, marginTop: '8px' }}
+                >
+                  Collapse ▴
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -990,7 +946,7 @@ function TimeChip({ label, time, color }) {
     }}>
       <div style={{ fontSize: '7.5px', fontWeight: 800, color: isSet ? color : '#94A3B8', letterSpacing: '0.06em', marginBottom: '2px' }}>{label}</div>
       <div style={{
-        fontSize: '10.5px', fontWeight: 800, color: isSet ? '#0F172A' : '#CBD5E1',
+        fontSize: '10.5px', fontWeight: 800, color: isSet ? '#1C1917' : '#CBD5E1',
         fontFamily: "'JetBrains Mono', monospace",
         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
       }}>
