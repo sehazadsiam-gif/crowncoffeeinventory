@@ -27,6 +27,7 @@ export default function ViewPayrollPage() {
   const [printData, setPrintData] = useState(null)
   const [nameSort, setNameSort] = useState('asc') // 'asc' | 'desc'
   const [waivedStaff, setWaivedStaff] = useState({})
+  const [viewMode, setViewMode] = useState('desktop') // 'desktop' | 'mobile'
 
   useEffect(() => {
     fetchAll(month, year)
@@ -463,16 +464,29 @@ export default function ViewPayrollPage() {
       <Navbar />
       <main style={{ width: '100%', maxWidth: '100%', margin: '0 auto', padding: '24px 32px', boxSizing: 'border-box' }}>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Payroll Center (View Only)</h1>
             <p style={{ color: '#64748B', fontSize: '14px', margin: '4px 0 0 0' }}>{months[month - 1]} {year}</p>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             <select style={{ width: '130px', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)', color: 'var(--text-primary)' }} value={month} onChange={e => setMonth(Number(e.target.value))}>
               {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
             <input type="number" style={{ width: '85px', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)', color: 'var(--text-primary)', textAlign: 'center' }} value={year} onChange={e => setYear(Number(e.target.value))} />
+            <button
+              onClick={() => setViewMode(v => v === 'desktop' ? 'mobile' : 'desktop')}
+              style={{
+                padding: '8px 14px', borderRadius: '8px', border: '1px solid var(--border-medium)',
+                background: viewMode === 'mobile' ? '#6366F1' : 'var(--bg-surface)',
+                color: viewMode === 'mobile' ? '#fff' : 'var(--text-primary)',
+                fontWeight: 600, fontSize: '12px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {viewMode === 'desktop' ? '📱 Mobile View' : '🖥 Desktop View'}
+            </button>
           </div>
         </div>
 
@@ -491,7 +505,119 @@ export default function ViewPayrollPage() {
           </div>
         </div>
 
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
+        {viewMode === 'mobile' ? (
+          /* ── MOBILE CARD VIEW ── */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {sortedStaff.map(s => {
+              const row = payroll[s.id]; if (!row) return null
+              const finalSalary = calculateFinalSalary(s, row, waivedStaff[s.id])
+              const staffPayments = (payments[s.id] || [])
+              const paid = staffPayments.reduce((acc, p) => acc + Number(p.amount_paid || p.amount || 0), 0)
+              const rem = finalSalary - paid
+              const base = Number(s.base_salary) || 0
+              const perDay = Math.round(base / 30)
+              const autoUnpaid = Math.max(0, (Number(row.absent_days) || 0) - 4)
+
+              const Row = ({ label, value, color, border }) => (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderTop: border ? '1px solid var(--border-light)' : 'none' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: color || 'var(--text-primary)' }}>{value}</span>
+                </div>
+              )
+
+              return (
+                <div key={s.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+
+                  {/* Card Header */}
+                  <div style={{ background: 'var(--bg-subtle)', padding: '14px 16px', borderBottom: '1px solid var(--border-light)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 800, fontSize: '15px', color: 'var(--text-primary)' }}>{s.name}</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>{s.designation}</p>
+                      </div>
+                      <div style={{ textAlign: 'right', fontSize: '11px', fontWeight: 600 }}>
+                        {Number(row.present_days) > 0 && <p style={{ margin: 0, color: '#34D399' }}>Present {row.present_days}d</p>}
+                        {Number(row.late_days) > 0 && <p style={{ margin: 0, color: '#FBBF24' }}>Late {row.late_days}d</p>}
+                        {Number(row.absent_days) > 0 && <p style={{ margin: 0, color: '#F87171' }}>Absent {row.absent_days}d</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Body */}
+                  <div style={{ padding: '4px 16px 0 16px' }}>
+
+                    {/* Earnings */}
+                    <Row label="Base Salary" value={`৳${base.toLocaleString()}`} />
+                    {Number(row.overtime_pay) > 0 && <Row label={`Overtime (${row.overtime_hours || 0} hrs)`} value={`+৳${Number(row.overtime_pay).toLocaleString()}`} color="#34D399" />}
+                    {Number(row.service_charge) > 0 && <Row label="Service Charge" value={`৳${Number(row.service_charge).toLocaleString()}`} />}
+                    {Number(row.bonus) > 0 && <Row label="Bonus" value={`৳${Number(row.bonus).toLocaleString()}`} color="#34D399" />}
+                    {Number(row.lunch_dinner) > 0 && <Row label="Lunch + Dinner" value={`৳${Number(row.lunch_dinner).toLocaleString()}`} />}
+                    {Number(row.morning_food) > 0 && <Row label="Morning Food" value={`৳${Number(row.morning_food).toLocaleString()}`} />}
+
+                    {/* Deductions */}
+                    {Number(row.advance_taken) > 0 && <Row label="Advance" value={`-৳${Number(row.advance_taken).toLocaleString()}`} color="#F87171" border />}
+                    {Number(row.others_taken) > 0 && <Row label="Others" value={`-৳${Number(row.others_taken).toLocaleString()}`} color="#F87171" />}
+                    {autoUnpaid > 0 && <Row label={`Unpaid Leave (${autoUnpaid}d)`} value={`-৳${(autoUnpaid * perDay).toLocaleString()}`} color="#F87171" />}
+                    {Number(row.late_days) > 0 && !waivedStaff[s.id] && <Row label={`Late Deduction (${row.late_days})`} value={`-৳${Number(row.late_deduction).toLocaleString()}`} color="#F87171" />}
+                    {waivedStaff[s.id] && <Row label="Late Deduction" value="Waived ✓" color="#34D399" />}
+                    {Number(row.miscellaneous) > 0 && <Row label="Miscellaneous" value={`-৳${Number(row.miscellaneous).toLocaleString()}`} color="#F87171" />}
+
+                    {/* Net Pay */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', marginTop: '4px', borderTop: '2px solid var(--border-medium)' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>NET PAY</span>
+                      <span style={{ fontSize: '18px', fontWeight: 900, color: '#34D399' }}>৳{finalSalary.toLocaleString()}</span>
+                    </div>
+                    <Row label="Paid" value={`৳${paid.toLocaleString()}`} color="#34D399" />
+                    {rem > 0 && <Row label="Due" value={`৳${rem.toLocaleString()}`} color="#F87171" />}
+                    {rem <= 0 && paid >= finalSalary && <Row label="Status" value="Fully Paid ✓" color="#34D399" />}
+                  </div>
+
+                  {/* Card Footer — buttons */}
+                  <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-light)', display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => setPrintData({ staff: s, payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary, is_waived: waivedStaff[s.id] }, month: months[month - 1], year })}
+                      style={{ flex: 1, padding: '9px', borderRadius: '8px', background: '#1C2233', color: '#94A3B8', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                    >
+                      <Printer size={13} /> Payslip
+                    </button>
+                    {staffPayments.length > 0 && (
+                      <button
+                        onClick={() => setShowHistory(showHistory === s.id ? null : s.id)}
+                        style={{ flex: 1, padding: '9px', borderRadius: '8px', background: showHistory === s.id ? '#6366F1' : '#1C2233', color: showHistory === s.id ? '#fff' : '#94A3B8', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                      >
+                        <History size={13} /> History
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Inline payment history (mobile — no popup) */}
+                  {showHistory === s.id && staffPayments.length > 0 && (
+                    <div style={{ margin: '0 16px 14px 16px', background: '#1C2233', borderRadius: '10px', border: '1px solid #2D3A52', padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h4 style={{ margin: 0, fontSize: '12px', fontWeight: 800, color: '#E2E8F0' }}>Payment History</h4>
+                        <button onClick={() => setShowHistory(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={13} /></button>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {staffPayments.map(p => (
+                          <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '8px', background: '#252F45', borderRadius: '6px', border: '1px solid #2D3A52' }}>
+                            <div>
+                              <div style={{ fontWeight: 700, color: '#E2E8F0' }}>৳{Number(p.amount_paid || p.amount || 0).toLocaleString()}</div>
+                              {p.notes && <div style={{ color: '#94A3B8', fontSize: '10px', marginTop: '2px' }}>{p.notes}</div>}
+                            </div>
+                            <div style={{ color: '#64748B', fontSize: '11px' }}>{new Date(p.payment_date).toLocaleDateString()}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          /* ── DESKTOP TABLE VIEW (unchanged) ── */
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto', position: 'relative' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'center', minWidth: '100%' }}>
               <thead>
@@ -628,7 +754,8 @@ export default function ViewPayrollPage() {
               </tbody>
             </table>
           </div>
-        </div>
+          </div>
+        )}
       </main>
       {printData && <PaySlip data={printData} onClose={() => setPrintData(null)} />}
     </div>
