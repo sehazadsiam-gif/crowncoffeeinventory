@@ -506,58 +506,7 @@ export default function StaffPortalPage() {
           </div>
         )}
 
-        {/* Summary Stat Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '20px' }}>
-          {[
-            { label: lang === 'bn' ? 'মোট বেতন' : 'Final Salary', value: '৳' + finalSalary.toLocaleString(), color: '#7C3A1E', bg: 'linear-gradient(135deg, #7C3A1E15, #D4933A10)' },
-            { label: lang === 'bn' ? 'পেয়েছেন' : 'Received', value: '৳' + totalPaidThisMonth.toLocaleString(), color: 'var(--success)', bg: 'var(--success-bg)' },
-            { label: lang === 'bn' ? 'বাকি' : 'Remaining', value: '৳' + remaining.toLocaleString(), color: remaining > 0 ? 'var(--danger)' : 'var(--success)', bg: remaining > 0 ? 'var(--danger-bg)' : 'var(--success-bg)' },
-            { label: lang === 'bn' ? 'অগ্রিম' : 'Advance', value: '৳' + monthAdvanceTotal.toLocaleString(), color: 'var(--danger)', bg: 'var(--danger-bg)' },
-            { label: lang === 'bn' ? 'উপস্থিত' : 'Present', value: presentDays + ' days', color: 'var(--success)', bg: 'var(--success-bg)' },
-            { label: lang === 'bn' ? 'অনুপস্থিত' : 'Absent', value: absentDays, color: 'var(--danger)', bg: 'var(--danger-bg)' },
-            { label: lang === 'bn' ? 'দেরি' : 'Late', value: lateDays + ' days', color: 'var(--warning)', bg: 'var(--warning-bg)' },
-            { label: lang === 'bn' ? 'ছাড় দেওয়া দিন' : 'Free Days', value: Math.min(4, absentDays), color: 'var(--success)', bg: 'var(--success-bg)' },
-          ].map((card, i) => (
-            <div key={i} style={{
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-light)',
-              borderRadius: '12px', padding: '14px',
-              boxShadow: 'var(--shadow-xs)',
-              transition: 'box-shadow 0.2s, transform 0.2s'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow-xs)'; e.currentTarget.style.transform = 'translateY(0)' }}
-            >
-              <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, marginBottom: '6px' }}>{card.label}</p>
-              <p style={{ fontSize: '17px', fontWeight: 800, color: card.color, margin: 0, letterSpacing: '-0.01em' }}>{card.value}</p>
-            </div>
-          ))}
-        </div>
 
-        {/* Salary progress bar */}
-        {finalSalary > 0 && (
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '14px', padding: '18px 20px', marginBottom: '20px', boxShadow: 'var(--shadow-xs)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '13px' }}>
-              <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{lang === 'bn' ? 'বেতন প্রদানের অগ্রগতি' : 'Salary Payment Progress'}</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 800 }}>{Math.min(100, Math.round((totalPaidThisMonth / finalSalary) * 100))}%</span>
-            </div>
-            <div style={{ height: '10px', background: 'var(--bg-subtle)', borderRadius: '10px', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                width: Math.min(100, finalSalary > 0 ? (totalPaidThisMonth / finalSalary) * 100 : 0) + '%',
-                background: remaining <= 0
-                  ? 'linear-gradient(90deg, #10B981, #34D399)'
-                  : 'linear-gradient(90deg, #7C3A1E, #D4933A)',
-                borderRadius: '10px',
-                transition: 'width 0.7s cubic-bezier(0.4, 0, 0.2, 1)'
-              }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
-              <span>Received: ৳{totalPaidThisMonth.toLocaleString()}</span>
-              <span>Total: ৳{finalSalary.toLocaleString()}</span>
-            </div>
-          </div>
-        )}
 
         {/* Tab Bar */}
         <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }} className="no-scrollbar">
