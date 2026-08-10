@@ -233,20 +233,42 @@ export default function StaffPortalPage() {
 
   const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December']
   const monthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  function isSameMonthYear(dateStr, targetMonth, targetYear) {
+    if (!dateStr) return false
+    const str = String(dateStr).split('T')[0]
+    const parts = str.split('-')
+    if (parts.length < 2) return false
+    const y = parseInt(parts[0], 10)
+    const m = parseInt(parts[1], 10)
+    return m === targetMonth && y === targetYear
+  }
+
+  // Unified attendance array merging `attendance` and `attendanceLogs` by date
+  const attendanceByDate = {}
+  ;(attendanceLogs || []).forEach(l => {
+    if (l.date) {
+      const dKey = String(l.date).split('T')[0]
+      attendanceByDate[dKey] = { ...l, id: l.id || dKey, status: l.status || 'present' }
+    }
+  })
+  ;(attendance || []).forEach(a => {
+    if (a.date) {
+      const dKey = String(a.date).split('T')[0]
+      attendanceByDate[dKey] = { ...(attendanceByDate[dKey] || {}), ...a }
+    }
+  })
+  const unifiedAttendance = Object.values(attendanceByDate).sort((a, b) => (b.date > a.date ? 1 : -1))
+
   const monthPayroll = payroll.find(p => p.month === selectedMonth && p.year === selectedYear)
   const monthSummary = (summary || []).find(s => s.month === selectedMonth && s.year === selectedYear)
   const monthPayments = payments.filter(p => Number(p.month) === selectedMonth && Number(p.year) === selectedYear)
-  const monthAttendance = attendance.filter(a => { const d = new Date(a.date); return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear })
+  const monthAttendance = unifiedAttendance.filter(a => isSameMonthYear(a.date, selectedMonth, selectedYear))
   const monthAdvances = advances.filter(a => a.month === selectedMonth && a.year === selectedYear)
   const totalPaidThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount_paid || p.amount || 0), 0)
   const monthAdvanceTotal = monthAdvances.reduce((s, a) => s + Number(a.amount), 0)
 
   // Live Overtime calculation from daily attendance logs
-  const monthLogs = (attendanceLogs && attendanceLogs.length > 0) ? attendanceLogs : attendance
-  const thisMonthLogs = monthLogs.filter(a => {
-    const d = new Date(a.date)
-    return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear
-  })
+  const thisMonthLogs = monthAttendance
   
   const accruedOTHoursRaw = thisMonthLogs.reduce((sum, a) => {
     const hrs = Number(a.overtime_hours || 0)

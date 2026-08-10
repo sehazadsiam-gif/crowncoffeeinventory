@@ -103,9 +103,10 @@ export default function AttendanceReportsPage() {
   // Date range filter (for Daily Breakdown tab)
   const todayStr = new Date().toISOString().split('T')[0]
   const firstOfMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`
-  const [dateFrom, setDateFrom] = useState(firstOfMonth)
+  const [selectedSingleDate, setSelectedSingleDate] = useState(todayStr)
+  const [dateFrom, setDateFrom] = useState(todayStr)
   const [dateTo, setDateTo] = useState(todayStr)
-  const [useCustomRange, setUseCustomRange] = useState(false)
+  const [filterMode, setFilterMode] = useState('single') // 'single' | 'range' | 'month'
 
   // Edit Log Modal State
   const [editingLog, setEditingLog] = useState(null)
@@ -130,8 +131,14 @@ export default function AttendanceReportsPage() {
       router.replace('/')
       return
     }
-    fetchReport()
-  }, [month, year, router])
+    if (filterMode === 'single') {
+      fetchReport(selectedSingleDate, selectedSingleDate)
+    } else if (filterMode === 'range') {
+      fetchReport(dateFrom, dateTo)
+    } else {
+      fetchReport()
+    }
+  }, [month, year, filterMode, selectedSingleDate, router])
 
   async function fetchReport(customFrom, customTo) {
     try {
@@ -139,6 +146,8 @@ export default function AttendanceReportsPage() {
       let url
       if (customFrom && customTo) {
         url = `/api/attendance/report?from=${customFrom}&to=${customTo}`
+      } else if (filterMode === 'single' && selectedSingleDate) {
+        url = `/api/attendance/report?from=${selectedSingleDate}&to=${selectedSingleDate}`
       } else {
         url = `/api/attendance/report?month=${month}&year=${year}`
       }
@@ -159,13 +168,14 @@ export default function AttendanceReportsPage() {
   function handleApplyDateRange() {
     if (!dateFrom || !dateTo) { addToast('Please select both dates', 'error'); return }
     if (dateFrom > dateTo) { addToast('From date must be before To date', 'error'); return }
-    setUseCustomRange(true)
+    setFilterMode('range')
     fetchReport(dateFrom, dateTo)
   }
 
   function handleClearRange() {
-    setUseCustomRange(false)
-    fetchReport()
+    setFilterMode('single')
+    setSelectedSingleDate(todayStr)
+    fetchReport(todayStr, todayStr)
   }
 
   async function handleBulkDayOff() {
@@ -514,41 +524,106 @@ export default function AttendanceReportsPage() {
 
           </div>
 
-          {/* Date Range Sub-Bar (Daily Breakdown only) */}
+          {/* Date Filter Sub-Bar */}
           {activeTab === 'daily' && (
             <div style={{ paddingTop: '12px', borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: '#475569' }}>Date Range Filter:</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={e => setDateFrom(e.target.value)}
-                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '6px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
-                />
-                <span style={{ color: '#94A3B8' }}>→</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={e => setDateTo(e.target.value)}
-                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '6px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
-                />
+              
+              {/* Mode Selector */}
+              <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '8px' }}>
                 <button
-                  onClick={handleApplyDateRange}
-                  style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}
+                  onClick={() => {
+                    setFilterMode('single')
+                    fetchReport(selectedSingleDate, selectedSingleDate)
+                  }}
+                  style={{
+                    border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    background: filterMode === 'single' ? '#0F172A' : 'transparent',
+                    color: filterMode === 'single' ? 'white' : '#64748B'
+                  }}
                 >
-                  Filter Range
+                  📅 Single Date Report
                 </button>
-                {useCustomRange && (
-                  <button
-                    onClick={handleClearRange}
-                    style={{ background: '#F1F5F9', color: '#374155', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '7px 12px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
-                  >
-                    Reset
-                  </button>
-                )}
+
+                <button
+                  onClick={() => setFilterMode('range')}
+                  style={{
+                    border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    background: filterMode === 'range' ? '#0F172A' : 'transparent',
+                    color: filterMode === 'range' ? 'white' : '#64748B'
+                  }}
+                >
+                  📆 Date Range
+                </button>
+
+                <button
+                  onClick={() => {
+                    setFilterMode('month')
+                    fetchReport()
+                  }}
+                  style={{
+                    border: 'none', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                    background: filterMode === 'month' ? '#0F172A' : 'transparent',
+                    color: filterMode === 'month' ? 'white' : '#64748B'
+                  }}
+                >
+                  🗓️ Full Month
+                </button>
               </div>
+
+              {/* Controls depending on mode */}
+              {filterMode === 'single' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>Select Date:</span>
+                  <input
+                    type="date"
+                    value={selectedSingleDate}
+                    onChange={e => {
+                      setSelectedSingleDate(e.target.value)
+                      fetchReport(e.target.value, e.target.value)
+                    }}
+                    style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '6px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
+                  />
+                  <button
+                    onClick={() => {
+                      const today = new Date().toISOString().split('T')[0]
+                      setSelectedSingleDate(today)
+                      fetchReport(today, today)
+                    }}
+                    style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 12px', fontWeight: 700, fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Today
+                  </button>
+                </div>
+              )}
+
+              {filterMode === 'range' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={e => setDateFrom(e.target.value)}
+                    style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '6px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
+                  />
+                  <span style={{ color: '#94A3B8' }}>→</span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={e => setDateTo(e.target.value)}
+                    style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '6px 10px', fontSize: '13px', fontWeight: 600, color: '#0F172A', outline: 'none' }}
+                  />
+                  <button
+                    onClick={handleApplyDateRange}
+                    style={{ background: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}
+                  >
+                    Filter Range
+                  </button>
+                </div>
+              )}
+
               <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-                {useCustomRange
+                {filterMode === 'single'
+                  ? `Showing Present Report for: ${selectedSingleDate}`
+                  : filterMode === 'range'
                   ? `Showing range: ${dateFrom} to ${dateTo}`
                   : `Showing full month: ${months[month - 1]} ${year}`}
               </div>
