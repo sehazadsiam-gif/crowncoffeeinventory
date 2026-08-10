@@ -1,14 +1,14 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, Eye, EyeOff, AlertCircle, Coffee, Lock, User } from 'lucide-react'
+import { ChevronLeft, Eye, EyeOff, AlertCircle, Coffee, Lock } from 'lucide-react'
 
 export default function StaffLoginPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' })
+  const [password, setPassword] = useState('')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -19,8 +19,8 @@ export default function StaffLoginPage() {
   }, [router])
 
   async function handleLogin() {
-    if (!loginForm.username || !loginForm.password) {
-      setError('Please enter your username and password')
+    if (!password.trim()) {
+      setError('Please enter your passcode')
       return
     }
     setLoading(true)
@@ -30,8 +30,7 @@ export default function StaffLoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: loginForm.username.toLowerCase().trim(),
-          password: loginForm.password
+          password: password.trim()
         })
       })
       const data = await res.json()
@@ -187,7 +186,7 @@ export default function StaffLoginPage() {
               Welcome back 👋
             </h2>
             <p style={{ fontSize: '14.5px', color: 'var(--text-muted)', marginTop: '8px', fontFamily: 'var(--font-sans)' }}>
-              Sign in with your username and password
+              Enter your passcode to access your account
             </p>
           </div>
 
@@ -213,39 +212,6 @@ export default function StaffLoginPage() {
           {/* Form */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-            {/* Username */}
-            <div>
-              <label style={{
-                display: 'block', fontSize: '11px', fontWeight: 700,
-                color: 'var(--text-muted)', marginBottom: '7px',
-                textTransform: 'uppercase', letterSpacing: '0.08em',
-                fontFamily: 'var(--font-sans)'
-              }}>Username</label>
-              <div style={{ position: 'relative' }}>
-                <User size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', pointerEvents: 'none' }} />
-                <input
-                  type="text"
-                  placeholder="Enter your username"
-                  value={loginForm.username}
-                  onChange={e => setLoginForm({ ...loginForm, username: e.target.value })}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  autoComplete="username"
-                  style={{
-                    width: '100%', padding: '12px 14px 12px 42px',
-                    fontSize: '14px', border: '1.5px solid var(--border-medium)',
-                    borderRadius: '12px', outline: 'none',
-                    background: 'var(--bg-subtle)', color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-sans)',
-                    transition: 'all 0.2s'
-                  }}
-                  onFocus={e => { e.target.style.borderColor = 'var(--accent-brown)'; e.target.style.boxShadow = '0 0 0 3px var(--accent-brown-glow)' }}
-                  onBlur={e => { e.target.style.borderColor = 'var(--border-medium)'; e.target.style.boxShadow = 'none' }}
-                />
-              </div>
-            </div>
-
             {/* Password */}
             <div>
               <label style={{
@@ -253,16 +219,18 @@ export default function StaffLoginPage() {
                 color: 'var(--text-muted)', marginBottom: '7px',
                 textTransform: 'uppercase', letterSpacing: '0.08em',
                 fontFamily: 'var(--font-sans)'
-              }}>Password</label>
+              }}>Passcode</label>
               <div style={{ position: 'relative' }}>
                 <Lock size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', pointerEvents: 'none' }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter password"
-                  value={loginForm.password}
-                  onChange={e => setLoginForm({ ...loginForm, password: e.target.value })}
+                  placeholder="e.g. shahadat@cc"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleLogin()}
                   autoComplete="current-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
                   style={{
                     width: '100%', padding: '12px 44px 12px 42px',
                     fontSize: '14px', border: '1.5px solid var(--border-medium)',
@@ -275,6 +243,7 @@ export default function StaffLoginPage() {
                   onBlur={e => { e.target.style.borderColor = 'var(--border-medium)'; e.target.style.boxShadow = 'none' }}
                 />
                 <button
+                  type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute', right: '12px', top: '50%',

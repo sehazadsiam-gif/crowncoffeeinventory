@@ -3,24 +3,59 @@ import { verifyPassword, createSession } from '../../../../lib/auth'
 
 export async function POST(request) {
   try {
-    const { username, password } = await request.json()
+    const body = await request.json()
+    const rawPassword = body.password || body.passcode || body.pin || ''
+    const rawUsername = body.username || ''
 
-    if (!username || !password) {
+    if (!rawPassword && !rawUsername) {
       return Response.json(
-        { error: 'Username and password are required' },
+        { error: 'Passcode is required' },
         { status: 400 }
       )
     }
 
-    const { data: account, error } = await supabase
-      .from('staff_accounts')
-      .select('*, staff(*)')
-      .eq('username', username.toLowerCase().trim())
-      .single()
+    const passcode = rawPassword.toLowerCase().trim()
+    let candidateUsername = rawUsername.toLowerCase().trim()
 
-    if (error || !account) {
+    if (!candidateUsername && passcode.includes('@cc')) {
+      candidateUsername = passcode.split('@cc')[0].trim()
+    }
+
+    let account = null
+
+    // 1. Try direct lookup by username if available
+    if (candidateUsername) {
+      const { data } = await supabase
+        .from('staff_accounts')
+        .select('*, staff(*)')
+        .eq('username', candidateUsername)
+        .maybeSingle()
+
+      if (data) {
+        account = data
+      }
+    }
+
+    // 2. Fallback: match by password verification across active staff accounts
+    if (!account) {
+      const { data: allAccounts } = await supabase
+        .from('staff_accounts')
+        .select('*, staff(*)')
+
+      if (allAccounts && allAccounts.length > 0) {
+        for (const candidate of allAccounts) {
+          const isMatch = await verifyPassword(passcode, candidate.password_hash)
+          if (isMatch) {
+            account = candidate
+            break
+          }
+        }
+      }
+    }
+
+    if (!account) {
       return Response.json(
-        { error: 'Invalid username or password' },
+        { error: 'Invalid passcode. Please try again.' },
         { status: 401 }
       )
     }
@@ -32,10 +67,11 @@ export async function POST(request) {
       )
     }
 
-    const valid = await verifyPassword(password, account.password_hash)
+    // Verify password if account was found via username lookup
+    const valid = await verifyPassword(passcode, account.password_hash)
     if (!valid) {
       return Response.json(
-        { error: 'Invalid username or password' },
+        { error: 'Invalid passcode. Please try again.' },
         { status: 401 }
       )
     }
@@ -47,8 +83,8 @@ export async function POST(request) {
       token,
       role: 'staff',
       staff_id: account.staff_id,
-      name: account.staff.name,
-      designation: account.staff.designation
+      name: account.staff ? account.staff.name : '',
+      designation: account.staff ? account.staff.designation : ''
     })
   } catch (error) {
     console.error('Staff login error:', error)
@@ -58,3 +94,4 @@ export async function POST(request) {
     )
   }
 }
+
