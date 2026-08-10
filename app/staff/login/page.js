@@ -224,7 +224,7 @@ export default function StaffLoginPage() {
                 <Lock size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)', pointerEvents: 'none' }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="e.g. shahadat@cc"
+                  placeholder="Enter your passcode"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleLogin()}
@@ -286,7 +286,6 @@ export default function StaffLoginPage() {
               ) : 'Sign In →'}
             </button>
 
-            {/* Info box */}
             <div style={{
               background: 'var(--bg-subtle)',
               border: '1px solid var(--border-light)',
@@ -297,7 +296,7 @@ export default function StaffLoginPage() {
               lineHeight: '1.65',
               fontFamily: 'var(--font-sans)'
             }}>
-              🔐 Your username and password were provided by your admin. Contact admin if you have trouble signing in.
+              🔐 Enter your assigned passcode to access your portal account. Contact admin if you need assistance.
             </div>
 
             {/* Recent updates */}
