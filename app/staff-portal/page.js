@@ -240,6 +240,25 @@ export default function StaffPortalPage() {
   const monthAdvances = advances.filter(a => a.month === selectedMonth && a.year === selectedYear)
   const totalPaidThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount_paid || p.amount || 0), 0)
   const monthAdvanceTotal = monthAdvances.reduce((s, a) => s + Number(a.amount), 0)
+
+  // Live Overtime calculation from daily attendance logs
+  const monthLogs = (attendanceLogs && attendanceLogs.length > 0) ? attendanceLogs : attendance
+  const thisMonthLogs = monthLogs.filter(a => {
+    const d = new Date(a.date)
+    return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear
+  })
+  
+  const accruedOTHoursRaw = thisMonthLogs.reduce((sum, a) => {
+    const hrs = Number(a.overtime_hours || 0)
+    const mins = Number(a.overtime_minutes || 0)
+    return sum + hrs + (mins > 0 ? mins / 60 : 0)
+  }, 0)
+  const accruedOTHours = Math.round(accruedOTHoursRaw * 100) / 100
+
+  const totalOTHours = (monthPayroll?.overtime_hours !== undefined && monthPayroll?.overtime_hours !== null && Number(monthPayroll.overtime_hours) > 0)
+    ? Number(monthPayroll.overtime_hours)
+    : accruedOTHours
+
   const presentDays = monthSummary ? monthSummary.present_days : monthAttendance.filter(a => a.status === 'present').length
   const absentDays = monthSummary ? monthSummary.absent_days : monthAttendance.filter(a => a.status === 'absent').length
   const lateDays = monthSummary ? monthSummary.late_days : monthAttendance.filter(a => a.status === 'late').length
@@ -250,7 +269,7 @@ export default function StaffPortalPage() {
   const lateDeduction = isLateWaived ? 0 : lateDeductionDays * perDay
   const base = Number(staff?.base_salary || 0)
   const perHourRate = Math.floor(Math.floor(base / 30) / 10)
-  const ot = (Number(monthPayroll?.overtime_hours) || 0) * perHourRate
+  const ot = Math.round(totalOTHours * perHourRate)
   const sc = Number(monthPayroll?.service_charge || 0)
   const bonus = Number(monthPayroll?.bonus || 0)
   const lunch = Number(monthPayroll?.lunch_dinner || 0)
@@ -718,15 +737,8 @@ export default function StaffPortalPage() {
 
             {/* ── Phase 3C: Overtime Transparency Card ── */}
             {(() => {
-              // Compute from attendance_log data (already fetched as `attendance` state)
-              const thisMonthLogs = attendance.filter(a => {
-                const d = new Date(a.date)
-                return d.getMonth() + 1 === selectedMonth && d.getFullYear() === selectedYear
-              })
               const totalHoursRaw = thisMonthLogs.reduce((sum, a) => sum + Number(a.hours_worked || 0), 0)
               const totalHours = Math.round(totalHoursRaw * 100) / 100
-              const totalOTMinutes = thisMonthLogs.reduce((sum, a) => sum + Number(a.overtime_minutes || 0), 0)
-              const totalOTHours = Math.round((totalOTMinutes / 60) * 100) / 100
               const accrued = Math.round(totalOTHours * perHourRate)
               const workingDays = thisMonthLogs.filter(a => a.status === 'present' || a.status === 'late').length
 
@@ -1156,7 +1168,7 @@ export default function StaffPortalPage() {
 
               <div style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
                 <p style={{ fontSize: '24px', fontWeight: 900, color: '#D4933A', margin: 0, lineHeight: 1 }}>
-                  {((monthPayroll?.overtime_hours) || 0)} <span style={{ fontSize: '12px', fontWeight: 600 }}>hrs</span>
+                  {totalOTHours} <span style={{ fontSize: '12px', fontWeight: 600 }}>hrs</span>
                 </p>
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '5px 0 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   {lang === 'bn' ? 'ওভারটাইম' : 'Overtime'}
