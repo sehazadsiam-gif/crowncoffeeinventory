@@ -21,6 +21,7 @@ export default function StaffPortalPage() {
   const [payroll, setPayroll] = useState([])
   const [payments, setPayments] = useState([])
   const [attendance, setAttendance] = useState([])
+  const [attendanceLogs, setAttendanceLogs] = useState([])
   const [advances, setAdvances] = useState([])
   const [notes, setNotes] = useState([])
   const [showIdCard, setShowIdCard] = useState(false)
@@ -82,11 +83,12 @@ export default function StaffPortalPage() {
     try {
       setLoading(true)
       const currentYear = new Date().getFullYear()
-      const [staffRes, payRes, paymentRes, attRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes, msgRes, tasksRes, dutyReqRes] = await Promise.all([
+      const [staffRes, payRes, paymentRes, attRes, attLogRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes, msgRes, tasksRes, dutyReqRes] = await Promise.all([
         supabase.from('staff').select('*').eq('id', staffId).single(),
         supabase.from('payroll_entries').select('*').eq('staff_id', staffId).order('year', { ascending: false }).order('month', { ascending: false }).limit(24),
         supabase.from('salary_payments').select('*').eq('staff_id', staffId).order('payment_date', { ascending: false }),
         supabase.from('attendance').select('*').eq('staff_id', staffId).order('date', { ascending: false }).limit(365),
+        supabase.from('attendance_log').select('*').eq('staff_id', staffId).order('date', { ascending: false }).limit(365),
         supabase.from('advance_log').select('*').eq('staff_id', staffId).order('date', { ascending: false }),
         supabase.from('staff_notes').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
         supabase.from('leave_balance').select('*').eq('staff_id', staffId).eq('year', currentYear).single(),
@@ -100,6 +102,7 @@ export default function StaffPortalPage() {
       setPayroll(payRes.data || [])
       setPayments(paymentRes.data || [])
       setAttendance(attRes.data || [])
+      setAttendanceLogs(attLogRes.data || [])
       setAdvances(advRes.data || [])
       setNotes(notesRes.data || [])
       setLeave(leaveRes.data)
@@ -1126,40 +1129,160 @@ export default function StaffPortalPage() {
 
         {/* ── ATTENDANCE TAB ── */}
         {activeTab === 'attendance' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} className="animate-in">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '4px' }}>
-              {[
-                { label: lang === 'bn' ? 'উপস্থিত' : 'Present', value: presentDays, color: 'var(--success)', bg: 'var(--success-bg)' },
-                { label: lang === 'bn' ? 'অনুপস্থিত' : 'Absent', value: absentDays, color: 'var(--danger)', bg: 'var(--danger-bg)' },
-                { label: lang === 'bn' ? 'আধা দিন' : 'Half Day', value: halfDays, color: 'var(--warning)', bg: 'var(--warning-bg)' },
-                { label: lang === 'bn' ? 'দেরি' : 'Late', value: lateDays, color: 'var(--info)', bg: 'var(--info-bg)' },
-              ].map((c, i) => (
-                <div key={i} style={{ background: c.bg, border: `1px solid ${c.color}30`, borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
-                  <p style={{ fontSize: '26px', fontWeight: 900, color: c.color, margin: 0, lineHeight: 1 }}>{c.value}</p>
-                  <p style={{ fontSize: '11px', color: c.color, margin: '5px 0 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{c.label}</p>
-                </div>
-              ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }} className="animate-in">
+            
+            {/* Top Attendance KPI Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+              <div style={{ background: 'var(--success-bg)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                <p style={{ fontSize: '26px', fontWeight: 900, color: 'var(--success)', margin: 0, lineHeight: 1 }}>{presentDays}</p>
+                <p style={{ fontSize: '11px', color: 'var(--success)', margin: '5px 0 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {lang === 'bn' ? 'উপস্থিত' : 'Present'}
+                </p>
+              </div>
+
+              <div style={{ background: 'var(--danger-bg)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                <p style={{ fontSize: '26px', fontWeight: 900, color: 'var(--danger)', margin: 0, lineHeight: 1 }}>{absentDays}</p>
+                <p style={{ fontSize: '11px', color: 'var(--danger)', margin: '5px 0 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {lang === 'bn' ? 'অনুপস্থিত' : 'Absent'}
+                </p>
+              </div>
+
+              <div style={{ background: 'var(--warning-bg)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                <p style={{ fontSize: '26px', fontWeight: 900, color: 'var(--warning)', margin: 0, lineHeight: 1 }}>{lateDays}</p>
+                <p style={{ fontSize: '11px', color: 'var(--warning)', margin: '5px 0 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {lang === 'bn' ? 'দেরি আগমন' : 'Late Arrivals'}
+                </p>
+              </div>
+
+              <div style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                <p style={{ fontSize: '24px', fontWeight: 900, color: '#D4933A', margin: 0, lineHeight: 1 }}>
+                  {((monthPayroll?.overtime_hours) || 0)} <span style={{ fontSize: '12px', fontWeight: 600 }}>hrs</span>
+                </p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '5px 0 0', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {lang === 'bn' ? 'ওভারটাইম' : 'Overtime'}
+                </p>
+              </div>
             </div>
 
+            {/* Attendance Rules Notice */}
+            <div style={{
+              background: 'var(--bg-subtle)',
+              border: '1px solid var(--border-light)',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              fontSize: '12.5px',
+              color: 'var(--text-secondary)',
+              lineHeight: '1.6',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              <span style={{ fontSize: '18px' }}>💡</span>
+              <div>
+                <b>{lang === 'bn' ? 'উপস্থিতি নিয়ম:' : 'Attendance Rules:'}</b>{' '}
+                {lang === 'bn' 
+                  ? 'প্রতি মাসে প্রথম ৪ দিন অনুপস্থিতি বিনামূল্যে (বেতন কাটা হয় না)। ৫ম দিন থেকে বেতন কাটা শুরু হয়। প্রতি ৩ দিন দেরিতে আগমনে ১ দিনের বেতন কর্তন হয় (অ্যাডমিন মৌকুফ না করলে)।' 
+                  : 'First 4 absent days per month are FREE (no salary cut). Unpaid deductions start from the 5th absent day. 3 late arrivals equal 1 day salary deduction unless waived.'}
+              </div>
+            </div>
+
+            {/* Daily Shift Timeline Cards */}
             {monthAttendance.length === 0 ? (
-              <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No attendance for {monthNames[selectedMonth - 1]} {selectedYear}</div>
-            ) : monthAttendance.map(a => {
-              const statusColors = { present: 'var(--success)', absent: 'var(--danger)', half_day: 'var(--warning)', late: 'var(--info)' }
-              const color = statusColors[a.status] || 'var(--text-muted)'
-              return (
-                <div key={a.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '10px', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <p style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
-                      {new Date(a.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
-                    </p>
-                    {a.note && <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>{a.note}</p>}
-                  </div>
-                  <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 12px', borderRadius: '20px', background: color + '18', color, textTransform: 'capitalize' }}>
-                    {a.status?.replace('_', ' ')}
-                  </span>
-                </div>
-              )
-            })}
+              <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                {lang === 'bn' ? `${monthNames[selectedMonth - 1]} ${selectedYear}-এর কোনো উপস্থিতি রেকর্ড পাওয়া যায়নি` : `No attendance log for ${monthNames[selectedMonth - 1]} ${selectedYear}`}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {monthAttendance.map(a => {
+                  const log = attendanceLogs.find(l => l.date === a.date)
+                  const statusColors = { present: 'var(--success)', absent: 'var(--danger)', half_day: 'var(--warning)', late: 'var(--info)' }
+                  const color = statusColors[a.status] || 'var(--text-muted)'
+
+                  const checkInStr = log?.check_in_at 
+                    ? new Date(log.check_in_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+                    : null
+                  const checkOutStr = log?.check_out_at 
+                    ? new Date(log.check_out_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
+                    : null
+
+                  const otMins = Number(log?.overtime_hours || a.overtime_hours || 0)
+                  const lateMins = Number(log?.minutes_late || 0)
+
+                  return (
+                    <div key={a.id} style={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: '12px',
+                      padding: '14px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                            {new Date(a.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                          </p>
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: 700, padding: '4px 12px', borderRadius: '20px', background: color + '18', color, textTransform: 'capitalize' }}>
+                          {a.status === 'present' ? (lang === 'bn' ? '🟢 উপস্থিত' : '🟢 Present') :
+                           a.status === 'absent' ? (lang === 'bn' ? '🔴 অনুপস্থিত' : '🔴 Absent') :
+                           a.status === 'late' ? (lang === 'bn' ? '🟡 দেরি' : '🟡 Late') :
+                           a.status === 'half_day' ? (lang === 'bn' ? '🟠 আধা দিন' : '🟠 Half Day') : a.status}
+                        </span>
+                      </div>
+
+                      {/* Shift Timings */}
+                      {(checkInStr || checkOutStr || log?.hours_worked) && (
+                        <div style={{
+                          background: 'var(--bg-subtle)',
+                          borderRadius: '8px',
+                          padding: '10px 12px',
+                          display: 'flex',
+                          justify: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: '8px',
+                          fontSize: '12.5px'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {checkInStr && <span><b>In:</b> {checkInStr}</span>}
+                            {checkOutStr && <span><b>Out:</b> {checkOutStr}</span>}
+                          </div>
+                          {log?.hours_worked > 0 && (
+                            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+                              {lang === 'bn' ? `মোট: ${log.hours_worked} ঘণ্টা` : `Total: ${log.hours_worked} hrs`}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Overtime & Late info badges */}
+                      {(otMins > 0 || lateMins > 0 || a.note) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '12px' }}>
+                          {otMins > 0 && (
+                            <span style={{ background: 'var(--success-bg)', color: 'var(--success)', padding: '3px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                              ⚡ +{otMins} {lang === 'bn' ? 'ঘণ্টা ওভারটাইম' : 'hrs Overtime'}
+                            </span>
+                          )}
+                          {lateMins > 0 && (
+                            <span style={{ background: 'var(--warning-bg)', color: 'var(--warning)', padding: '3px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                              ⏰ {lateMins} {lang === 'bn' ? 'মিনিট দেরি' : 'mins late'}
+                            </span>
+                          )}
+                          {a.note && (
+                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              💬 {a.note}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
           </div>
         )}
 
