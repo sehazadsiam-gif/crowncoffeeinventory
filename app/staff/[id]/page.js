@@ -112,12 +112,12 @@ export default function StaffProfile() {
   }
 
   async function handleSaveCredentials() {
-    if (!credForm.username || !credForm.password) {
-      addToast('Username and password are required', 'error')
+    if (!credForm.password) {
+      addToast('Passcode is required', 'error')
       return
     }
-    if (credForm.password.length < 6) {
-      addToast('Password must be at least 6 characters', 'error')
+    if (credForm.password.length < 4) {
+      addToast('Passcode must be at least 4 characters', 'error')
       return
     }
     try {
@@ -127,14 +127,14 @@ export default function StaffProfile() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           staff_id: id,
-          username: credForm.username,
+          username: credForm.username || '',
           password: credForm.password
         })
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to save credentials')
+      if (!res.ok) throw new Error(data.error || 'Failed to save passcode')
       
-      addToast('Portal credentials saved successfully', 'success')
+      addToast('Portal passcode saved successfully', 'success')
       setCredForm(f => ({ ...f, password: '' }))
       fetchProfileData()
     } catch (err) {
@@ -668,26 +668,16 @@ export default function StaffProfile() {
                     No portal access configured yet
                   </div>
                 )}
-                Set or update the credentials this staff member will use to log into the Staff Portal.
+                Set or update the passcode this staff member will use to log into the Staff Portal.
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
-                  <label className="label" style={{ color: 'var(--text-secondary)' }}>Username</label>
-                  <input
-                    className="input"
-                    placeholder="e.g. mehedi"
-                    value={credForm.username}
-                    onChange={e => setCredForm({ ...credForm, username: e.target.value })}
-                    autoCapitalize="none"
-                  />
-                </div>
-                <div>
-                  <label className="label" style={{ color: 'var(--text-secondary)' }}>New Password</label>
+                  <label className="label" style={{ color: 'var(--text-secondary)' }}>Staff Passcode / Password</label>
                   <input
                     className="input"
                     type="text"
-                    placeholder={account?.username ? "Enter to change password..." : "Create password (min 6 chars)"}
+                    placeholder={account?.username ? "Enter new passcode (e.g. name@cc)..." : "Set passcode (e.g. name@cc)"}
                     value={credForm.password}
                     onChange={e => setCredForm({ ...credForm, password: e.target.value })}
                   />
@@ -698,7 +688,7 @@ export default function StaffProfile() {
                   disabled={savingCreds}
                   style={{ marginTop: '8px' }}
                 >
-                  {savingCreds ? 'Saving...' : 'Save Credentials'}
+                  {savingCreds ? 'Saving...' : 'Save Passcode'}
                 </button>
               </div>
             </div>
