@@ -766,7 +766,7 @@ export default function StaffPortalPage() {
                       {lang === 'bn' ? 'বেতনের বিবরণ' : 'Salary Breakdown'} — {monthNames[selectedMonth - 1]} {selectedYear}
                     </h3>
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '3px 0 0', fontFamily: 'var(--font-sans)' }}>
-                      {lang === 'bn' ? 'মোট বেতনের বিশ্লেষণ' : 'All components of your salary'}
+                      {lang === 'bn' ? 'উপার্জন ও কর্তনের সহজ হিসাব' : 'Easy Earnings & Deductions Breakdown'}
                     </p>
                   </div>
                   <button
@@ -776,40 +776,220 @@ export default function StaffPortalPage() {
                     })}
                     style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 16px', borderRadius: '8px', background: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1.5px solid var(--border-light)', cursor: 'pointer', fontWeight: 600, fontSize: '12.5px', fontFamily: 'var(--font-sans)' }}
                   >
-                    <Printer size={14} /> Print Pay Slip
+                    <Printer size={14} /> {lang === 'bn' ? 'পে-স্লিপ প্রিন্ট' : 'Print Pay Slip'}
                   </button>
                 </div>
-                <div style={{ padding: '18px 22px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px', marginBottom: '16px' }}>
-                    {[
-                      { label: lang === 'bn' ? 'মূল বেতন' : 'Base Salary', value: base, neutral: true },
-                      { label: lang === 'bn' ? 'ওভারটাইম' : 'Overtime', value: ot, positive: true },
-                      { label: lang === 'bn' ? 'সার্ভিস চার্জ' : 'Service Charge', value: sc, positive: true },
-                      { label: lang === 'bn' ? 'বোনাস' : 'Bonus', value: bonus, positive: true },
-                      { label: lang === 'bn' ? 'লাঞ্চ+ডিনার' : 'Lunch + Dinner', value: lunch, positive: true },
-                      { label: lang === 'bn' ? 'সকালের খাবার' : 'Morning Food', value: morn, positive: true },
-                      { label: lang === 'bn' ? 'বিবিধ (+)' : 'Miscellaneous', value: misc },
-                      { label: lang === 'bn' ? 'অগ্রিম কাটা' : 'Advance Taken', value: adv, negative: true },
-                      { label: lang === 'bn' ? 'অন্যান্য কাটা' : 'Others Taken', value: others, negative: true },
-                      { label: lang === 'bn' ? 'অনুপস্থিত কাটা' : 'Unpaid Deduction', value: unpaidDeductionAmount, negative: true },
-                      { label: lang === 'bn' ? 'দেরি কাটা' : 'Late Deduction', value: lateDeduction, negative: true },
-                    ].filter(item => Number(item.value) !== 0).map((item, i) => (
-                      <div key={i} style={{
-                        background: item.negative ? 'var(--danger-bg)' : item.positive ? 'var(--success-bg)' : 'var(--bg-subtle)',
-                        borderRadius: '10px', padding: '10px 12px',
-                        border: `1px solid ${item.negative ? 'rgba(239,68,68,0.15)' : item.positive ? 'rgba(16,185,129,0.15)' : 'var(--border-light)'}`
-                      }}>
-                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>{item.label}</p>
-                        <p style={{ fontSize: '14px', fontWeight: 800, margin: 0, color: item.negative ? 'var(--danger)' : item.positive ? 'var(--success)' : 'var(--text-primary)' }}>
-                          {item.negative ? '-' : item.positive ? '+' : ''}৳{Math.abs(Number(item.value || 0)).toLocaleString()}
+
+                <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                  
+                  {/* Payment Progress Header */}
+                  <div style={{
+                    background: 'var(--bg-subtle)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: '12px',
+                    padding: '16px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', textAlign: 'center' }}>
+                      <div style={{ background: 'var(--bg-card)', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-light)' }}>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 4px', textTransform: 'uppercase', fontWeight: 700 }}>
+                          {lang === 'bn' ? 'মোট বেতন' : 'Net Salary'}
+                        </p>
+                        <p style={{ fontSize: '20px', fontWeight: 900, color: 'var(--accent-brown)', margin: 0, fontFamily: 'var(--font-mono)' }}>
+                          ৳{finalSalary.toLocaleString()}
                         </p>
                       </div>
-                    ))}
+
+                      <div style={{ background: 'var(--success-bg)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(16,185,129,0.2)' }}>
+                        <p style={{ fontSize: '11px', color: 'var(--success)', margin: '0 0 4px', textTransform: 'uppercase', fontWeight: 700 }}>
+                          {lang === 'bn' ? 'প্রদত্ত (Paid)' : 'Paid to Date'}
+                        </p>
+                        <p style={{ fontSize: '20px', fontWeight: 900, color: 'var(--success)', margin: 0, fontFamily: 'var(--font-mono)' }}>
+                          ৳{totalPaidThisMonth.toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div style={{ background: remaining > 0 ? 'var(--danger-bg)' : 'var(--success-bg)', padding: '12px', borderRadius: '10px', border: `1px solid ${remaining > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}` }}>
+                        <p style={{ fontSize: '11px', color: remaining > 0 ? 'var(--danger)' : 'var(--success)', margin: '0 0 4px', textTransform: 'uppercase', fontWeight: 700 }}>
+                          {remaining > 0 ? (lang === 'bn' ? 'বকেয়া (Due)' : 'Balance Due') : (lang === 'bn' ? 'অবস্থা' : 'Status')}
+                        </p>
+                        <p style={{ fontSize: '20px', fontWeight: 900, color: remaining > 0 ? 'var(--danger)' : 'var(--success)', margin: 0, fontFamily: 'var(--font-mono)' }}>
+                          {remaining > 0 ? `৳${remaining.toLocaleString()}` : (lang === 'bn' ? '✓ সম্পূর্ণ শোধ' : '✓ Paid')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    {finalSalary > 0 && (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '5px' }}>
+                          <span>{lang === 'bn' ? 'পেমেন্ট অগ্রগতির হার' : 'Payment Completed'}</span>
+                          <span>{Math.min(100, Math.round((totalPaidThisMonth / finalSalary) * 100))}%</span>
+                        </div>
+                        <div style={{ height: '8px', background: 'var(--border-light)', borderRadius: '10px', overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%',
+                            width: `${Math.min(100, (totalPaidThisMonth / finalSalary) * 100)}%`,
+                            background: totalPaidThisMonth >= finalSalary ? 'var(--success)' : 'linear-gradient(90deg, #6B3A2A, #D4933A)',
+                            borderRadius: '10px',
+                            transition: 'width 0.5s ease'
+                          }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ padding: '14px 18px', background: 'linear-gradient(135deg, #6B3A2A, #A05228)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ color: 'white', fontWeight: 700, fontSize: '15px' }}>{lang === 'bn' ? 'মোট বেতন' : 'Final Salary'}</span>
-                    <span style={{ color: 'white', fontWeight: 900, fontSize: '22px', letterSpacing: '-0.02em' }}>৳{finalSalary.toLocaleString()}</span>
+
+                  {/* Earnings vs Deductions 2-Column Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                    
+                    {/* 🟢 Earnings Card */}
+                    <div style={{
+                      background: 'var(--bg-card)',
+                      border: '1.5px solid rgba(16,185,129,0.25)',
+                      borderRadius: '14px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{ background: 'var(--success-bg)', padding: '12px 16px', borderBottom: '1px solid rgba(16,185,129,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🟢 {lang === 'bn' ? 'উপার্জন (Earnings)' : 'Gross Earnings'}
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>
+                          +৳{(base + ot + sc + bonus + lunch + morn + (misc > 0 ? misc : 0)).toLocaleString()}
+                        </span>
+                      </div>
+                      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                          <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'মূল বেতন (Base Salary)' : 'Base Salary'}</span>
+                          <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>৳{base.toLocaleString()}</span>
+                        </div>
+                        {ot > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'ওভারটাইম (Overtime)' : 'Overtime Pay'}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--success)' }}>+৳{ot.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {sc > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'সার্ভিস চার্জ (Service Charge)' : 'Service Charge'}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--success)' }}>+৳{sc.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {bonus > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'বোনাস (Bonus)' : 'Bonus'}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--success)' }}>+৳{bonus.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {(lunch + morn) > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'খাবার ভাতা (Food Allowance)' : 'Food Allowance'}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--success)' }}>+৳{(lunch + morn).toLocaleString()}</span>
+                          </div>
+                        )}
+                        {misc > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'বিবিধ যোগ (Misc)' : 'Miscellaneous Add'}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--success)' }}>+৳{misc.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 🔴 Deductions Card */}
+                    <div style={{
+                      background: 'var(--bg-card)',
+                      border: '1.5px solid rgba(239,68,68,0.25)',
+                      borderRadius: '14px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{ background: 'var(--danger-bg)', padding: '12px 16px', borderBottom: '1px solid rgba(239,68,68,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🔴 {lang === 'bn' ? 'কর্তন / কাটা (Deductions)' : 'Total Deductions'}
+                        </span>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--danger)', fontFamily: 'var(--font-mono)' }}>
+                          -৳{(adv + others + unpaidDeductionAmount + lateDeduction + (misc < 0 ? Math.abs(misc) : 0)).toLocaleString()}
+                        </span>
+                      </div>
+                      <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {adv > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'অগ্রিম গ্রহণ (Advance Taken)' : 'Advance Taken'}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-৳{adv.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {unpaidDeductionAmount > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                              {lang === 'bn' ? `অনুপস্থিতি (${unpaidDeductionDays} দিন)` : `Unpaid Leave (${unpaidDeductionDays}d)`}
+                            </span>
+                            <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-৳{unpaidDeductionAmount.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {lateDeduction > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                              {lang === 'bn' ? `দেরির জন্য কাটা (${lateDeductionDays} দিন)` : `Late Deduction (${lateDeductionDays}d)`}
+                            </span>
+                            <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-৳{lateDeduction.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {isLateWaived && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>{lang === 'bn' ? 'দেরি জরিমানা' : 'Late Penalty'}</span>
+                            <span style={{ color: 'var(--success)', fontWeight: 700 }}>✓ {lang === 'bn' ? 'মৌকুফ (Waived)' : 'Waived'}</span>
+                          </div>
+                        )}
+                        {others > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'অন্যান্য কাটা (Others)' : 'Others Deduction'}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-৳{others.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {misc < 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'বিবিধ কাটা (Misc)' : 'Miscellaneous Sub'}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-৳{Math.abs(misc).toLocaleString()}</span>
+                          </div>
+                        )}
+                        {adv === 0 && unpaidDeductionAmount === 0 && lateDeduction === 0 && others === 0 && misc >= 0 && (
+                          <div style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center', padding: '6px 0' }}>
+                            ✓ {lang === 'bn' ? 'কোনো টাকা কাটা হয়নি' : 'No deductions this month'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                   </div>
+
+                  {/* Math Equation Bar */}
+                  <div style={{
+                    padding: '14px 18px',
+                    background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '10px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94A3B8', fontSize: '13px', fontWeight: 600 }}>
+                      <span style={{ color: '#4ADE80' }}>+৳{(base + ot + sc + bonus + lunch + morn + (misc > 0 ? misc : 0)).toLocaleString()}</span>
+                      <span>−</span>
+                      <span style={{ color: '#F87171' }}>৳{(adv + others + unpaidDeductionAmount + lateDeduction + (misc < 0 ? Math.abs(misc) : 0)).toLocaleString()}</span>
+                      <span>=</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ color: '#E2E8F0', fontWeight: 700, fontSize: '14px' }}>
+                        {lang === 'bn' ? 'নিট দেয় বেতন' : 'Net Salary'}
+                      </span>
+                      <span style={{ color: '#F59E0B', fontWeight: 900, fontSize: '22px', fontFamily: 'var(--font-mono)' }}>
+                        ৳{finalSalary.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
                 </div>
               </div>
             ) : (
@@ -892,36 +1072,48 @@ export default function StaffPortalPage() {
                     </div>
                     <p style={{ fontSize: '22px', fontWeight: 900, color: 'var(--accent-brown)', margin: 0, letterSpacing: '-0.02em' }}>৳{pFinal.toLocaleString()}</p>
                   </div>
-                  <div style={{ padding: '16px 20px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px', marginBottom: '14px' }}>
-                      {[
-                        { label: 'Base', value: pBase },
-                        { label: 'OT', value: p.overtime_pay, positive: true },
-                        { label: 'Service', value: p.service_charge, positive: true },
-                        { label: 'Bonus', value: p.bonus, positive: true },
-                        { label: 'Lunch+Din', value: p.lunch_dinner, positive: true },
-                        { label: 'Morning', value: p.morning_food, positive: true },
-                        { label: 'Advance', value: p.advance_taken, negative: true },
-                        { label: 'Others', value: p.others_taken, negative: true },
-                        { label: 'Unpaid Lv', value: p.unpaid_leave_deduction, negative: true },
-                        { label: 'Late', value: pLateDeduct, negative: true },
-                        { label: 'Misc', value: p.miscellaneous },
-                      ].filter(item => Number(item.value) !== 0).map((item, i) => (
-                        <div key={i} style={{ background: item.negative ? 'var(--danger-bg)' : item.positive ? 'var(--success-bg)' : 'var(--bg-subtle)', borderRadius: '8px', padding: '8px 10px' }}>
-                          <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>{item.label}</p>
-                          <p style={{ fontSize: '13px', fontWeight: 700, color: item.negative ? 'var(--danger)' : item.positive ? 'var(--success)' : 'var(--text-primary)', margin: 0 }}>
-                            {item.negative ? '-' : item.positive ? '+' : ''}৳{Math.abs(Number(item.value || 0)).toLocaleString()}
-                          </p>
+                  <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                      {/* Earnings */}
+                      <div style={{ background: 'var(--success-bg)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px', padding: '12px 14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid rgba(16,185,129,0.15)', pb: '6px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--success)' }}>🟢 {lang === 'bn' ? 'মোট উপার্জন' : 'Earnings'}</span>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>+৳{(pBase + pOt + Number(p.service_charge || 0) + Number(p.bonus || 0) + Number(p.lunch_dinner || 0) + Number(p.morning_food || 0) + (pMisc > 0 ? pMisc : 0)).toLocaleString()}</span>
                         </div>
-                      ))}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Base:</span><b>৳{pBase.toLocaleString()}</b></div>
+                          {pOt > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>OT:</span><b>+৳{pOt.toLocaleString()}</b></div>}
+                          {Number(p.service_charge) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Service:</span><b>+৳{Number(p.service_charge).toLocaleString()}</b></div>}
+                          {Number(p.bonus) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Bonus:</span><b>+৳{Number(p.bonus).toLocaleString()}</b></div>}
+                          {(Number(p.lunch_dinner) + Number(p.morning_food)) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Food:</span><b>+৳{(Number(p.lunch_dinner) + Number(p.morning_food)).toLocaleString()}</b></div>}
+                        </div>
+                      </div>
+
+                      {/* Deductions */}
+                      <div style={{ background: 'var(--danger-bg)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', padding: '12px 14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid rgba(239,68,68,0.15)', pb: '6px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--danger)' }}>🔴 {lang === 'bn' ? 'মোট কর্তন' : 'Deductions'}</span>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--danger)', fontFamily: 'var(--font-mono)' }}>-৳{(pAdv + pOthers + pUnpaid + pLateDeduct + (pMisc < 0 ? Math.abs(pMisc) : 0)).toLocaleString()}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {pAdv > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Advance:</span><b>-৳{pAdv.toLocaleString()}</b></div>}
+                          {pUnpaid > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Unpaid Lv:</span><b>-৳{pUnpaid.toLocaleString()}</b></div>}
+                          {pLateDeduct > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Late:</span><b>-৳{pLateDeduct.toLocaleString()}</b></div>}
+                          {pOthers > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Others:</span><b>-৳{pOthers.toLocaleString()}</b></div>}
+                          {pAdv === 0 && pUnpaid === 0 && pLateDeduct === 0 && pOthers === 0 && (
+                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>✓ No deductions</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+
+                    <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
                       <div>
-                        <span style={{ color: 'var(--text-muted)' }}>Received: </span>
+                        <span style={{ color: 'var(--text-muted)' }}>{lang === 'bn' ? 'গৃহীত: ' : 'Received: '}</span>
                         <span style={{ color: 'var(--success)', fontWeight: 700 }}>৳{tPaid.toLocaleString()}</span>
                       </div>
                       <div>
-                        <span style={{ color: 'var(--text-muted)' }}>Remaining: </span>
+                        <span style={{ color: 'var(--text-muted)' }}>{lang === 'bn' ? 'বকেয়া: ' : 'Remaining: '}</span>
                         <span style={{ color: rem > 0 ? 'var(--danger)' : 'var(--success)', fontWeight: 700 }}>৳{rem.toLocaleString()}</span>
                       </div>
                     </div>
