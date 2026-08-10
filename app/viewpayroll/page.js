@@ -309,7 +309,7 @@ export default function ViewPayrollPage() {
   if (loading) {
     const progress = Math.round(((loadingStep + 1) / LOADING_STEPS.length) * 100)
     return (
-      <div style={{ background: '#000000', minHeight: '100vh', fontFamily: '"Inter", system-ui, sans-serif', boxSizing: 'border-box', color: '#E8D5A3', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: '#F8FAFC', minHeight: '100vh', fontFamily: '"Inter", system-ui, sans-serif', boxSizing: 'border-box', color: '#0F172A', display: 'flex', flexDirection: 'column' }}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
           @keyframes shimmerGold {
@@ -317,9 +317,9 @@ export default function ViewPayrollPage() {
             100% { background-position: 800px 0; }
           }
           @keyframes goldPulse {
-            0% { box-shadow: 0 0 0 0 rgba(212,175,55,0.5), 0 0 20px rgba(212,175,55,0.2); }
-            50% { box-shadow: 0 0 0 22px rgba(212,175,55,0), 0 0 40px rgba(212,175,55,0.35); }
-            100% { box-shadow: 0 0 0 0 rgba(212,175,55,0), 0 0 20px rgba(212,175,55,0.2); }
+            0% { box-shadow: 0 0 0 0 rgba(124,58,30,0.3), 0 0 20px rgba(212,147,58,0.2); }
+            50% { box-shadow: 0 0 0 18px rgba(124,58,30,0), 0 0 35px rgba(212,147,58,0.35); }
+            100% { box-shadow: 0 0 0 0 rgba(124,58,30,0), 0 0 20px rgba(212,147,58,0.2); }
           }
           @keyframes rotateRing {
             from { transform: rotate(0deg); }
@@ -334,11 +334,11 @@ export default function ViewPayrollPage() {
             50% { opacity: 0; }
           }
           @keyframes logoBreath {
-            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(212,175,55,0.3)); }
-            50% { transform: scale(1.03); filter: drop-shadow(0 0 28px rgba(212,175,55,0.55)); }
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 4px 12px rgba(124,58,30,0.15)); }
+            50% { transform: scale(1.03); filter: drop-shadow(0 8px 24px rgba(212,147,58,0.3)); }
           }
           .shimmer-gold {
-            background: linear-gradient(90deg, #111006 25%, #2a2208 50%, #111006 75%);
+            background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
             background-size: 800px 100%;
             animation: shimmerGold 1.8s infinite linear;
             border-radius: 6px;
@@ -351,12 +351,12 @@ export default function ViewPayrollPage() {
           {/* Logo with glow ring */}
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '36px' }}>
             {/* Outer spinning dashed ring */}
-            <svg style={{ position: 'absolute', width: '210px', height: '210px', animation: 'rotateRing 6s linear infinite', opacity: 0.5 }} viewBox="0 0 210 210">
-              <circle cx="105" cy="105" r="100" fill="none" stroke="#D4AF37" strokeWidth="1" strokeDasharray="6 10" strokeLinecap="round" />
+            <svg style={{ position: 'absolute', width: '210px', height: '210px', animation: 'rotateRing 6s linear infinite', opacity: 0.6 }} viewBox="0 0 210 210">
+              <circle cx="105" cy="105" r="100" fill="none" stroke="#7C3A1E" strokeWidth="1" strokeDasharray="6 10" strokeLinecap="round" />
             </svg>
             {/* Inner glow ring */}
-            <svg style={{ position: 'absolute', width: '185px', height: '185px', animation: 'rotateRing 10s linear infinite reverse', opacity: 0.3 }} viewBox="0 0 185 185">
-              <circle cx="92.5" cy="92.5" r="88" fill="none" stroke="#D4AF37" strokeWidth="0.8" strokeDasharray="2 14" strokeLinecap="round" />
+            <svg style={{ position: 'absolute', width: '185px', height: '185px', animation: 'rotateRing 10s linear infinite reverse', opacity: 0.4 }} viewBox="0 0 185 185">
+              <circle cx="92.5" cy="92.5" r="88" fill="none" stroke="#D4933A" strokeWidth="0.8" strokeDasharray="2 14" strokeLinecap="round" />
             </svg>
             {/* Logo image */}
             <img
@@ -376,27 +376,27 @@ export default function ViewPayrollPage() {
 
           {/* Brand text */}
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <p style={{ margin: 0, fontSize: '28px', fontWeight: 800, letterSpacing: '0.12em', color: '#D4AF37', textTransform: 'uppercase' }}>Crown Coffee</p>
-            <p style={{ margin: '4px 0 0 0', fontSize: '10px', letterSpacing: '0.3em', color: '#6B5A2A', textTransform: 'uppercase', fontWeight: 500 }}>Multi Cuisine Café · Payroll System</p>
+            <p style={{ margin: 0, fontSize: '28px', fontWeight: 900, letterSpacing: '0.12em', color: '#7C3A1E', textTransform: 'uppercase' }}>Crown Coffee</p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '10px', letterSpacing: '0.3em', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>Multi Cuisine Café · Payroll System</p>
           </div>
 
           {/* Status log panel */}
-          <div style={{ background: '#080800', border: '1px solid #2A2000', borderRadius: '10px', padding: '16px 20px', fontFamily: '"JetBrains Mono", "Fira Code", "Courier New", monospace', fontSize: '11.5px', lineHeight: '2', width: '100%', maxWidth: '440px', marginBottom: '20px' }}>
+          <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.03)', borderRadius: '12px', padding: '18px 22px', fontFamily: '"JetBrains Mono", "Fira Code", "Courier New", monospace', fontSize: '12px', lineHeight: '2', width: '100%', maxWidth: '440px', marginBottom: '20px' }}>
             {LOADING_STEPS.map((s, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
-                opacity: i < loadingStep ? 0.4 : i === loadingStep ? 1 : 0.15,
+                opacity: i < loadingStep ? 0.5 : i === loadingStep ? 1 : 0.25,
                 transition: 'opacity 0.5s ease',
                 animation: i === loadingStep ? 'fadeUp 0.35s ease' : 'none'
               }}>
-                <span style={{ color: i < loadingStep ? '#B8860B' : i === loadingStep ? '#D4AF37' : '#2A2000', fontWeight: 700, flexShrink: 0, width: '12px', textAlign: 'center' }}>
+                <span style={{ color: i < loadingStep ? '#059669' : i === loadingStep ? '#7C3A1E' : '#CBD5E1', fontWeight: 800, flexShrink: 0, width: '14px', textAlign: 'center' }}>
                   {i < loadingStep ? '✓' : i === loadingStep ? '›' : '·'}
                 </span>
-                <span style={{ color: i < loadingStep ? '#B8860B' : i === loadingStep ? '#E8D5A3' : '#2A2000' }}>
+                <span style={{ color: i < loadingStep ? '#059669' : i === loadingStep ? '#0F172A' : '#94A3B8', fontWeight: i === loadingStep ? 700 : 500 }}>
                   {s.label}
                 </span>
                 {i === loadingStep && (
-                  <span style={{ color: '#D4AF37', animation: 'blink 0.8s step-end infinite', marginLeft: '2px' }}>▋</span>
+                  <span style={{ color: '#7C3A1E', animation: 'blink 0.8s step-end infinite', marginLeft: '2px' }}>▋</span>
                 )}
               </div>
             ))}
@@ -405,29 +405,29 @@ export default function ViewPayrollPage() {
           {/* Gold progress bar */}
           <div style={{ width: '100%', maxWidth: '440px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '10px', color: '#4A3A0A', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Loading</span>
-              <span style={{ fontSize: '10px', color: '#D4AF37', fontWeight: 700, fontFamily: 'monospace' }}>{progress}%</span>
+              <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Loading</span>
+              <span style={{ fontSize: '10px', color: '#7C3A1E', fontWeight: 800, fontFamily: 'monospace' }}>{progress}%</span>
             </div>
-            <div style={{ height: '3px', background: '#1A1400', borderRadius: '2px', overflow: 'hidden' }}>
+            <div style={{ height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
               <div style={{
                 height: '100%',
                 width: `${progress}%`,
-                background: 'linear-gradient(90deg, #7B5D0A, #D4AF37, #F5E17A)',
-                borderRadius: '2px',
+                background: 'linear-gradient(90deg, #7C3A1E, #D4933A)',
+                borderRadius: '3px',
                 transition: 'width 0.9s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: '0 0 10px rgba(212,175,55,0.7)'
+                boxShadow: '0 2px 6px rgba(124,58,30,0.3)'
               }} />
             </div>
           </div>
         </div>
 
         {/* Bottom skeleton preview */}
-        <div style={{ padding: '0 16px 16px 16px', opacity: 0.35, maxWidth: '600px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        <div style={{ padding: '0 16px 16px 16px', opacity: 0.45, maxWidth: '600px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
           {/* KPI cards skeleton */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
             {[['Grand Total', '65%'], ['Total Paid', '42%'], ['Remaining', '50%']].map(([lbl, w], i) => (
-              <div key={i} style={{ background: '#0A0800', border: '1px solid #1E1600', borderRadius: '10px', padding: '14px' }}>
-                <div style={{ fontSize: '9px', color: '#3A2A00', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '8px' }}>{lbl}</div>
+              <div key={i} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
+                <div style={{ fontSize: '9px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: '8px' }}>{lbl}</div>
                 <div className="shimmer-gold" style={{ width: w, height: '20px' }} />
               </div>
             ))}
@@ -436,7 +436,7 @@ export default function ViewPayrollPage() {
           {/* Card list skeleton */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {[0, 1, 2].map(r => (
-              <div key={r} style={{ background: '#080800', border: '1px solid #1A1400', borderRadius: '14px', overflow: 'hidden', padding: '16px', opacity: 1 - r * 0.2 }}>
+              <div key={r} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', overflow: 'hidden', padding: '16px', opacity: 1 - r * 0.2 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                   <div style={{ width: '120px' }}>
                     <div className="shimmer-gold" style={{ height: '14px', marginBottom: '6px' }} />
@@ -444,7 +444,7 @@ export default function ViewPayrollPage() {
                   </div>
                   <div className="shimmer-gold" style={{ height: '12px', width: '60px' }} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px dashed #1A1400', paddingTop: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px dashed #E2E8F0', paddingTop: '12px' }}>
                   {[1, 2, 3].map(i => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <div className="shimmer-gold" style={{ height: '10px', width: '70px' }} />
@@ -461,36 +461,46 @@ export default function ViewPayrollPage() {
   }
 
   return (
-
-    <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: 'var(--text-primary)', transition: 'background-color 0.3s ease, color 0.3s ease' }}>
+    <div style={{ background: '#F8FAFC', minHeight: '100vh', fontFamily: 'Inter, system-ui, sans-serif', color: '#0F172A' }}>
       <Navbar />
-      <main style={{ width: '100%', maxWidth: '600px', margin: '0 auto', padding: '24px 16px', boxSizing: 'border-box' }}>
+      <main style={{ width: '100%', maxWidth: '640px', margin: '0 auto', padding: '24px 16px', boxSizing: 'border-box' }}>
 
+        {/* Header Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Payroll Center (View Only)</h1>
-            <p style={{ color: '#64748B', fontSize: '14px', margin: '4px 0 0 0' }}>{months[month - 1]} {year}</p>
+            <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>Payroll Center (View Only)</h1>
+            <p style={{ color: '#64748B', fontSize: '13px', margin: '4px 0 0 0', fontWeight: 600 }}>{months[month - 1]} {year}</p>
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <select style={{ width: '130px', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)', color: 'var(--text-primary)' }} value={month} onChange={e => setMonth(Number(e.target.value))}>
+            <select
+              style={{ width: '130px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#0F172A', fontWeight: 700, fontSize: '13px', outline: 'none' }}
+              value={month}
+              onChange={e => setMonth(Number(e.target.value))}
+            >
               {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
-            <input type="number" style={{ width: '85px', padding: '8px', borderRadius: '6px', border: '1px solid var(--border-medium)', background: 'var(--bg-surface)', color: 'var(--text-primary)', textAlign: 'center' }} value={year} onChange={e => setYear(Number(e.target.value))} />
+            <input
+              type="number"
+              style={{ width: '85px', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#0F172A', fontWeight: 700, fontSize: '13px', textAlign: 'center', outline: 'none' }}
+              value={year}
+              onChange={e => setYear(Number(e.target.value))}
+            />
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Total Salary</p>
-            <p style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>৳{grandTotal.toLocaleString()}</p>
+        {/* Top Summary Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+          <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+            <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Total Salary</p>
+            <p style={{ fontSize: '22px', fontWeight: 900, color: '#7C3A1E', margin: 0 }}>৳{grandTotal.toLocaleString()}</p>
           </div>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Paid Amount</p>
-            <p style={{ fontSize: '24px', fontWeight: 800, color: '#34D399', margin: 0 }}>৳{totalPaidAll.toLocaleString()}</p>
+          <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+            <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Paid Amount</p>
+            <p style={{ fontSize: '22px', fontWeight: 900, color: '#059669', margin: 0 }}>৳{totalPaidAll.toLocaleString()}</p>
           </div>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Remaining to Pay</p>
-            <p style={{ fontSize: '24px', fontWeight: 800, color: totalRemainingAll > 0 ? '#F87171' : '#34D399', margin: 0 }}>৳{totalRemainingAll.toLocaleString()}</p>
+          <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+            <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, margin: '0 0 4px 0' }}>Grand Remaining to Pay</p>
+            <p style={{ fontSize: '22px', fontWeight: 900, color: totalRemainingAll > 0 ? '#DC2626' : '#059669', margin: 0 }}>৳{totalRemainingAll.toLocaleString()}</p>
           </div>
         </div>
 
@@ -507,26 +517,26 @@ export default function ViewPayrollPage() {
             const autoUnpaid = Math.max(0, (Number(row.absent_days) || 0) - 4)
 
             const Row = ({ label, value, color, border }) => (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderTop: border ? '1px solid var(--border-light)' : 'none' }}>
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: color || 'var(--text-primary)' }}>{value}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderTop: border ? '1px solid #F1F5F9' : 'none' }}>
+                <span style={{ fontSize: '13px', color: '#475569', fontWeight: 500 }}>{label}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: color || '#0F172A' }}>{value}</span>
               </div>
             )
 
             return (
-              <div key={s.id} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+              <div key={s.id} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
 
                 {/* Card Header */}
-                <div style={{ background: 'var(--bg-subtle)', padding: '14px 16px', borderBottom: '1px solid var(--border-light)' }}>
+                <div style={{ background: '#F8FAFC', padding: '14px 16px', borderBottom: '1px solid #E2E8F0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <p style={{ margin: 0, fontWeight: 800, fontSize: '15px', color: 'var(--text-primary)' }}>{s.name}</p>
-                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>{s.designation}</p>
+                      <p style={{ margin: 0, fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>{s.name}</p>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748B', fontWeight: 500 }}>{s.designation}</p>
                     </div>
-                    <div style={{ textAlign: 'right', fontSize: '11px', fontWeight: 600 }}>
-                      {Number(row.present_days) > 0 && <p style={{ margin: 0, color: '#34D399' }}>Present {row.present_days}d</p>}
-                      {Number(row.late_days) > 0 && <p style={{ margin: 0, color: '#FBBF24' }}>Late {row.late_days}d</p>}
-                      {Number(row.absent_days) > 0 && <p style={{ margin: 0, color: '#F87171' }}>Absent {row.absent_days}d</p>}
+                    <div style={{ textAlign: 'right', fontSize: '11px', fontWeight: 700 }}>
+                      {Number(row.present_days) > 0 && <p style={{ margin: 0, color: '#059669' }}>Present {row.present_days}d</p>}
+                      {Number(row.late_days) > 0 && <p style={{ margin: 0, color: '#D97706' }}>Late {row.late_days}d</p>}
+                      {Number(row.absent_days) > 0 && <p style={{ margin: 0, color: '#DC2626' }}>Absent {row.absent_days}d</p>}
                     </div>
                   </div>
                 </div>
@@ -536,63 +546,63 @@ export default function ViewPayrollPage() {
 
                   {/* Earnings */}
                   <Row label="Base Salary" value={`৳${base.toLocaleString()}`} />
-                  {Number(row.overtime_pay) > 0 && <Row label={`Overtime (${row.overtime_hours || 0} hrs)`} value={`+৳${Number(row.overtime_pay).toLocaleString()}`} color="#34D399" />}
+                  {Number(row.overtime_pay) > 0 && <Row label={`Overtime (${row.overtime_hours || 0} hrs)`} value={`+৳${Number(row.overtime_pay).toLocaleString()}`} color="#059669" />}
                   {Number(row.service_charge) > 0 && <Row label="Service Charge" value={`৳${Number(row.service_charge).toLocaleString()}`} />}
-                  {Number(row.bonus) > 0 && <Row label="Bonus" value={`৳${Number(row.bonus).toLocaleString()}`} color="#34D399" />}
+                  {Number(row.bonus) > 0 && <Row label="Bonus" value={`৳${Number(row.bonus).toLocaleString()}`} color="#059669" />}
                   {Number(row.lunch_dinner) > 0 && <Row label="Lunch + Dinner" value={`৳${Number(row.lunch_dinner).toLocaleString()}`} />}
                   {Number(row.morning_food) > 0 && <Row label="Morning Food" value={`৳${Number(row.morning_food).toLocaleString()}`} />}
 
                   {/* Deductions */}
-                  {Number(row.advance_taken) > 0 && <Row label="Advance" value={`-৳${Number(row.advance_taken).toLocaleString()}`} color="#F87171" border />}
-                  {Number(row.others_taken) > 0 && <Row label="Others" value={`-৳${Number(row.others_taken).toLocaleString()}`} color="#F87171" />}
-                  {autoUnpaid > 0 && <Row label={`Unpaid Leave (${autoUnpaid}d)`} value={`-৳${(autoUnpaid * perDay).toLocaleString()}`} color="#F87171" />}
-                  {Number(row.late_days) > 0 && !waivedStaff[s.id] && <Row label={`Late Deduction (${row.late_days})`} value={`-৳${Number(row.late_deduction).toLocaleString()}`} color="#F87171" />}
-                  {waivedStaff[s.id] && <Row label="Late Deduction" value="Waived ✓" color="#34D399" />}
-                  {Number(row.miscellaneous) > 0 && <Row label="Miscellaneous" value={`-৳${Number(row.miscellaneous).toLocaleString()}`} color="#F87171" />}
+                  {Number(row.advance_taken) > 0 && <Row label="Advance" value={`-৳${Number(row.advance_taken).toLocaleString()}`} color="#DC2626" border />}
+                  {Number(row.others_taken) > 0 && <Row label="Others" value={`-৳${Number(row.others_taken).toLocaleString()}`} color="#DC2626" />}
+                  {autoUnpaid > 0 && <Row label={`Unpaid Leave (${autoUnpaid}d)`} value={`-৳${(autoUnpaid * perDay).toLocaleString()}`} color="#DC2626" />}
+                  {Number(row.late_days) > 0 && !waivedStaff[s.id] && <Row label={`Late Deduction (${row.late_days})`} value={`-৳${Number(row.late_deduction).toLocaleString()}`} color="#DC2626" />}
+                  {waivedStaff[s.id] && <Row label="Late Deduction" value="Waived ✓" color="#059669" />}
+                  {Number(row.miscellaneous) > 0 && <Row label="Miscellaneous" value={`-৳${Number(row.miscellaneous).toLocaleString()}`} color="#DC2626" />}
 
                   {/* Net Pay */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', marginTop: '4px', borderTop: '2px solid var(--border-medium)' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>NET PAY</span>
-                    <span style={{ fontSize: '18px', fontWeight: 900, color: '#34D399' }}>৳{finalSalary.toLocaleString()}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', marginTop: '4px', borderTop: '2px solid #E2E8F0' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>NET PAY</span>
+                    <span style={{ fontSize: '18px', fontWeight: 900, color: '#059669' }}>৳{finalSalary.toLocaleString()}</span>
                   </div>
-                  <Row label="Paid" value={`৳${paid.toLocaleString()}`} color="#34D399" />
-                  {rem > 0 && <Row label="Due" value={`৳${rem.toLocaleString()}`} color="#F87171" />}
-                  {rem <= 0 && paid >= finalSalary && <Row label="Status" value="Fully Paid ✓" color="#34D399" />}
+                  <Row label="Paid" value={`৳${paid.toLocaleString()}`} color="#059669" />
+                  {rem > 0 && <Row label="Due" value={`৳${rem.toLocaleString()}`} color="#DC2626" />}
+                  {rem <= 0 && paid >= finalSalary && <Row label="Status" value="Fully Paid ✓" color="#059669" />}
                 </div>
 
                 {/* Card Footer — buttons */}
-                <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-light)', display: 'flex', gap: '8px' }}>
+                <div style={{ padding: '12px 16px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '8px' }}>
                   <button
                     onClick={() => setPrintData({ staff: s, payroll: { ...row, final_salary: finalSalary, is_paid: paid >= finalSalary, is_waived: waivedStaff[s.id] }, month: months[month - 1], year })}
-                    style={{ flex: 1, padding: '9px', borderRadius: '8px', background: '#1C2233', color: '#94A3B8', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                    style={{ flex: 1, padding: '9px', borderRadius: '8px', background: '#F1F5F9', color: '#334155', border: '1px solid #CBD5E1', cursor: 'pointer', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                   >
                     <Printer size={13} /> Payslip
                   </button>
                   {staffPayments.length > 0 && (
                     <button
                       onClick={() => setShowHistory(showHistory === s.id ? null : s.id)}
-                      style={{ flex: 1, padding: '9px', borderRadius: '8px', background: showHistory === s.id ? '#6366F1' : '#1C2233', color: showHistory === s.id ? '#fff' : '#94A3B8', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                      style={{ flex: 1, padding: '9px', borderRadius: '8px', background: showHistory === s.id ? '#4F46E5' : '#F1F5F9', color: showHistory === s.id ? '#fff' : '#334155', border: showHistory === s.id ? 'none' : '1px solid #CBD5E1', cursor: 'pointer', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
                     >
                       <History size={13} /> History
                     </button>
                   )}
                 </div>
 
-                {/* Inline payment history (mobile — no popup) */}
+                {/* Inline payment history */}
                 {showHistory === s.id && staffPayments.length > 0 && (
-                  <div style={{ margin: '0 16px 14px 16px', background: '#1C2233', borderRadius: '10px', border: '1px solid #2D3A52', padding: '12px' }}>
+                  <div style={{ margin: '0 16px 14px 16px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', padding: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                      <h4 style={{ margin: 0, fontSize: '12px', fontWeight: 800, color: '#E2E8F0' }}>Payment History</h4>
+                      <h4 style={{ margin: 0, fontSize: '12px', fontWeight: 800, color: '#0F172A' }}>Payment History</h4>
                       <button onClick={() => setShowHistory(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={13} /></button>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {staffPayments.map(p => (
-                        <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '8px', background: '#252F45', borderRadius: '6px', border: '1px solid #2D3A52' }}>
+                        <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '8px 12px', background: '#FFFFFF', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
                           <div>
-                            <div style={{ fontWeight: 700, color: '#E2E8F0' }}>৳{Number(p.amount_paid || p.amount || 0).toLocaleString()}</div>
-                            {p.notes && <div style={{ color: '#94A3B8', fontSize: '10px', marginTop: '2px' }}>{p.notes}</div>}
+                            <div style={{ fontWeight: 800, color: '#059669' }}>৳{Number(p.amount_paid || p.amount || 0).toLocaleString()}</div>
+                            {p.notes && <div style={{ color: '#64748B', fontSize: '10px', marginTop: '2px' }}>{p.notes}</div>}
                           </div>
-                          <div style={{ color: '#64748B', fontSize: '11px' }}>{new Date(p.payment_date).toLocaleDateString()}</div>
+                          <div style={{ color: '#64748B', fontSize: '11px', fontWeight: 600 }}>{new Date(p.payment_date).toLocaleDateString()}</div>
                         </div>
                       ))}
                     </div>
