@@ -168,6 +168,7 @@ export default function Navbar() {
         { href: '/attendance/reports', label: 'Attendance Reports', flag: 'attendance_reports' },
         { href: '/admin/tasks', label: 'Assign Tasks', flag: 'tasks' },
         { href: '/admin/overtime', label: 'Overtime Management', flag: 'overtime' },
+        { href: '/staff/penalties', label: 'Service Penalties & Salary Cut', flag: 'payroll' },
         { href: '/staff/payroll', label: 'Payroll Ledger', flag: 'payroll' },
         { href: '/staff/advances', label: 'Staff Advances', flag: 'advances' },
         { href: '/staff/service-charge', label: 'Service Charge', flag: 'service_charge' },

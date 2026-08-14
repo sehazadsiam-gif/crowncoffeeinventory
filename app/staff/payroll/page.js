@@ -77,7 +77,7 @@ export default function PayrollPage() {
       // safe() wraps Supabase thenables in a real Promise so .catch() works
       const safe = (q) => Promise.resolve(q).catch(() => ({ data: [] }))
 
-      const [payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes] = await Promise.all([
+      const [payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes, penaltyRes] = await Promise.all([
         safe(supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y)),
         safe(supabase.from('advance_log').select('staff_id, amount').eq('month', m).eq('year', y)),
         safe(supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate)),
@@ -85,7 +85,8 @@ export default function PayrollPage() {
         safe(supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate)),
         safe(supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y)),
         safe(supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate)),
-        safe(supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes').gte('date', startDate).lte('date', endDate))
+        safe(supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes').gte('date', startDate).lte('date', endDate)),
+        safe(supabase.from('staff_penalties').select('staff_id, penalty_percent').gte('date', startDate).lte('date', endDate))
       ])
 
       const staffRes = { data: activeStaffList }
@@ -98,6 +99,11 @@ export default function PayrollPage() {
       const advancesMap = {}
       ;(advRes.data || []).forEach(a => {
         advancesMap[a.staff_id] = (advancesMap[a.staff_id] || 0) + Number(a.amount)
+      })
+
+      const penaltyPercentMap = {}
+      ;(penaltyRes.data || []).forEach(p => {
+        penaltyPercentMap[p.staff_id] = (penaltyPercentMap[p.staff_id] || 0) + Number(p.penalty_percent || 0)
       })
 
       const unpaidMap = {}
@@ -190,9 +196,11 @@ export default function PayrollPage() {
             late_deduction: lateDeduction,
             present_days: presentCount,
             absent_days: absentCount,
+            penalty_percent: penaltyPercentMap[s.id] || 0,
             isNew: true
           }
         } else {
+          payMap[s.id].penalty_percent = penaltyPercentMap[s.id] || 0
           payMap[s.id].late_days = lateDays
           payMap[s.id].late_deduction_days = lateDeductionDays
           payMap[s.id].late_deduction = lateDeduction
@@ -290,10 +298,11 @@ export default function PayrollPage() {
     const isWaived = isLateWaived !== undefined ? isLateWaived : Boolean(p.late_waived)
     const late = isWaived ? 0 : (Number(p.late_deduction) || 0)
 
-    return Math.round(
-      base + ot + sc + bonus + lunch + morn + misc
-      - adv - others - unpaidDeduction - late
-    )
+    const netBeforePenalty = Math.max(0, base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaidDeduction - late)
+    const penaltyPercent = Number(p.penalty_percent) || 0
+    const penaltyCut = Math.round(netBeforePenalty * (penaltyPercent / 100))
+
+    return Math.max(0, netBeforePenalty - penaltyCut)
   }
 
   function handleInput(staffId, field, value) {

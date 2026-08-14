@@ -21,7 +21,8 @@ import {
   Search,
   LogOut,
   Menu,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react'
 import { useFeatureFlags } from '../hooks/useFeatureFlags'
 
@@ -46,6 +47,7 @@ export default function Sidebar({ role, currentPage, staffName }) {
       { label: 'Recipe Book', icon: BookOpen, path: '/recipebook', flag: 'recipebook' },
       { label: 'Payroll', icon: DollarSign, path: '/admin/payroll', flag: 'payroll' },
       { label: 'Directory', icon: Users, path: '/admin/staff', flag: 'staff_directory' },
+      { label: 'Service Penalties', icon: AlertTriangle, path: '/staff/penalties', flag: 'payroll' },
       { label: 'Advances', icon: Hand, path: '/admin/advances', flag: 'advances' },
       { label: 'Attendance Import', icon: Upload, path: '/attendance-import', flag: 'attendance_reports' },
       { label: 'Service Charge', icon: Settings, path: '/admin/service-charge', flag: 'service_charge' },

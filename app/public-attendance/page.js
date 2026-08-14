@@ -742,7 +742,6 @@ function getRoleAvatarBg(dept, role) {
 
 // ── 1. Passive RFID Display Card ──
 function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
-  const [expanded, setExpanded] = useState(false)
   const hasCheckedIn = !!r.check_in_at
   const isOut = hasCheckedIn && !!r.check_out_at
   const isOnBreak = hasCheckedIn && !!r.break_start_at && !r.break_end_at
@@ -782,6 +781,18 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
     ? new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })
     : null
 
+  const formatShiftTime = (timeStr) => {
+    if (!timeStr) return '08:00 AM'
+    if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr
+    const [h, m] = timeStr.split(':')
+    if (!h) return timeStr
+    let hour = parseInt(h, 10)
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    hour = hour % 12 || 12
+    return `${hour}:${m || '00'} ${ampm}`
+  }
+
+  const dutyTimeText = r.is_off ? 'OFF' : r.is_leave ? 'LEAVE' : formatShiftTime(r.shift_start)
   const avatarBg = getRoleAvatarBg(r.department, r.designation)
 
   return (
@@ -801,7 +812,7 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
       }}
     >
       <div>
-        {/* Top Header Row: Avatar + Name + Role + Status Dot */}
+        {/* Top Header Row: Avatar + Name + Role & Duty Time + Status Dot */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
           {r.photo_url ? (
             <img
@@ -821,114 +832,75 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '15px', fontWeight: 800, color: '#1C1917', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</div>
-            <div style={{ fontSize: '11px', color: '#8B6E30', fontWeight: 600, marginTop: '2px' }}>{r.designation}</div>
+            <div style={{ fontSize: '11px', color: '#8B6E30', fontWeight: 600, marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <span>{r.designation}</span>
+              <span style={{ fontSize: '9px', opacity: 0.6 }}>·</span>
+              <span style={{
+                fontSize: '10.5px', fontWeight: 800, color: '#4338CA', background: '#EEF2FF', border: '1px solid #C7D2FE',
+                padding: '1px 7px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px'
+              }}>
+                Duty: {dutyTimeText}
+              </span>
+            </div>
           </div>
 
           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: statusDot, flexShrink: 0, boxShadow: `0 0 8px ${statusDot}44` }} />
         </div>
 
-        {/* 7. COLLAPSED VIEW FOR AWAITING RFID SCAN STAFF */}
-        {!hasCheckedIn ? (
-          <div style={{
-            marginTop: '10px',
-            background: '#FDFBF7',
-            border: '1.5px dashed #E2D1A9',
-            borderRadius: '10px',
-            padding: '10px',
-            textAlign: 'center',
-            color: '#8B6E30',
-            fontWeight: 800,
-            fontSize: '11px',
-            letterSpacing: '0.04em',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+        {/* Status Badge + Interactive Take Break Toggle */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+          <span style={{
+            fontSize: '10px', fontWeight: 800, letterSpacing: '0.04em',
+            color: statusColor, background: badgeBg, border: `1px solid ${badgeBorder}`,
+            padding: '3px 10px', borderRadius: '16px'
           }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#CBD5E1' }} />
-            Awaiting RFID Scan
-          </div>
-        ) : (
-          /* EXPANDED FULL VIEW FOR CHECKED-IN STAFF */
-          <div>
-            {/* Status Badge + Interactive Take Break Toggle */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-              <span style={{
-                fontSize: '10px', fontWeight: 800, letterSpacing: '0.04em',
-                color: statusColor, background: badgeBg, border: `1px solid ${badgeBorder}`,
-                padding: '3px 10px', borderRadius: '16px'
+            {statusText}
+            {isLate && !isOut && r.minutes_late > 0 && ` · ${r.minutes_late}m late`}
+          </span>
+
+          {/* Interactive Staff Take Break Toggle Switch */}
+          {hasCheckedIn && !isOut && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleBreak(!isBreakOn)
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: isBreakOn ? '#FEF3C7' : '#FDFBF7',
+                border: isBreakOn ? '1.5px solid #F59E0B' : '1.5px solid #E2D1A9',
+                padding: '3px 8px', borderRadius: '16px',
+                cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
+              }}
+            >
+              <div style={{
+                width: '22px', height: '12px', borderRadius: '10px',
+                background: isBreakOn ? '#D4933A' : '#CBD5E1',
+                position: 'relative', transition: 'all 0.2s ease'
               }}>
-                {statusText}
-                {isLate && !isOut && r.minutes_late > 0 && ` · ${r.minutes_late}m late`}
+                <div style={{
+                  width: '8px', height: '8px', borderRadius: '50%', background: 'white',
+                  position: 'absolute', top: '2px', left: isBreakOn ? '12px' : '2px',
+                  transition: 'all 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                }} />
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 800, color: isBreakOn ? '#92400E' : '#8B6E30' }}>
+                {isBreakOn ? 'Take Break ON ☕' : 'Take Break'}
               </span>
+            </button>
+          )}
+        </div>
 
-              {/* Interactive Staff Take Break Toggle Switch */}
-              {!isOut && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onToggleBreak(!isBreakOn)
-                  }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '6px',
-                    background: isBreakOn ? '#FEF3C7' : '#FDFBF7',
-                    border: isBreakOn ? '1.5px solid #F59E0B' : '1.5px solid #E2D1A9',
-                    padding: '3px 8px', borderRadius: '16px',
-                    cursor: 'pointer', transition: 'all 0.2s ease', outline: 'none'
-                  }}
-                >
-                  <div style={{
-                    width: '22px', height: '12px', borderRadius: '10px',
-                    background: isBreakOn ? '#D4933A' : '#CBD5E1',
-                    position: 'relative', transition: 'all 0.2s ease'
-                  }}>
-                    <div style={{
-                      width: '8px', height: '8px', borderRadius: '50%', background: 'white',
-                      position: 'absolute', top: '2px', left: isBreakOn ? '12px' : '2px',
-                      transition: 'all 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                    }} />
-                  </div>
-                  <span style={{ fontSize: '10px', fontWeight: 800, color: isBreakOn ? '#92400E' : '#8B6E30' }}>
-                    {isBreakOn ? 'Take Break ON ☕' : 'Take Break'}
-                  </span>
-                </button>
-              )}
-            </div>
-
-            {/* Collapsible View Toggle Summary */}
-            {!expanded ? (
-              <div 
-                onClick={() => setExpanded(true)}
-                style={{ 
-                  marginTop: '10px', padding: '8px 12px', background: '#FDFBF7', border: '1px solid #F3ECE0', borderRadius: '8px', 
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontSize: '12px', color: '#8B6E30', fontWeight: 700 
-                }}
-              >
-                <span>
-                  {isOnBreak ? `On Break since ${fmtTime(r.break_start_at)}` : 
-                   isOut ? `Checked Out: ${fmtTime(r.check_out_at)}` :
-                   isIn ? `Clocked In: ${fmtTime(r.check_in_at)}` : 
-                   isLate ? `Clocked In (Late): ${fmtTime(r.check_in_at)}` : ''}
-                </span>
-                <span style={{ fontSize: '10px', opacity: 0.7 }}>View Details ▾</span>
-              </div>
-            ) : (
-              /* Expanded Detailed Timeline */
-              <div style={{ marginTop: '12px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px', marginBottom: '10px' }}>
-                  <TimeChip label="IN" time={fmtTime(r.check_in_at)} color="#16A34A" />
-                  <TimeChip label="B.START" time={fmtTime(r.break_start_at)} color="#D97706" />
-                  <TimeChip label="B.END" time={fmtTime(r.break_end_at)} color="#0284C7" />
-                  <TimeChip label="OUT" time={fmtTime(r.check_out_at)} color="#2563EB" />
-                  <TimeChip label="DUTY" time={r.hours_worked > 0 ? `${r.hours_worked}h` : '—'} color="#7C3AED" />
-                </div>
-                <div 
-                  onClick={() => setExpanded(false)}
-                  style={{ textAlign: 'center', fontSize: '10px', color: '#8B6E30', cursor: 'pointer', fontWeight: 700, marginTop: '8px' }}
-                >
-                  Collapse ▴
-                </div>
-              </div>
-            )}
+        {/* ALWAYS-OPEN FULL TIMELINE (NO COLLAPSE / EXPAND TOGGLE) */}
+        <div style={{ marginTop: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
+            <TimeChip label="IN" time={fmtTime(r.check_in_at)} color="#16A34A" />
+            <TimeChip label="B.START" time={fmtTime(r.break_start_at)} color="#D97706" />
+            <TimeChip label="B.END" time={fmtTime(r.break_end_at)} color="#0284C7" />
+            <TimeChip label="OUT" time={fmtTime(r.check_out_at)} color="#2563EB" />
+            <TimeChip label="DUTY" time={r.hours_worked > 0 ? `${r.hours_worked}h` : r.duty_hours ? `${r.duty_hours}h` : '—'} color="#7C3AED" />
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

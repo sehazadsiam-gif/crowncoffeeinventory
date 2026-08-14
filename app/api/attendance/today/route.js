@@ -59,12 +59,24 @@ export async function GET(request) {
 
     const logMap = new Map((logs || []).map(l => [l.staff_id, l]))
 
+    // ── Fetch today's duty roster shifts ──────────────────────────────────────
+    const { data: rosterToday } = await supabaseAdmin
+      .from('duty_roster')
+      .select('staff_id, shift_start, shift_hours, is_off, is_leave')
+      .eq('day_date', today)
+
+    const rosterMap = new Map((rosterToday || []).map(r => [r.staff_id, r]))
+
     // ── Business Rule: No roster, no day off. If no check-in → absent. ────────
     const records = (staff || []).map(s => {
       const log = logMap.get(s.id)
+      const ros = rosterMap.get(s.id)
 
       // Status: use logged status, or absent if no log exists
       const status = log ? log.status : 'absent'
+      const shiftStartRaw = ros?.shift_start || s.shift_start || '08:00'
+      const isOff = ros?.is_off || false
+      const isLeave = ros?.is_leave || false
 
       return {
         staff_id: s.id,
@@ -74,7 +86,10 @@ export async function GET(request) {
         department: s.department || 'front',
         photo_url: s.photo_url ? `/api/staff/${s.id}/photo` : null,
         rfid_code: s.rfid_code || null,
-        shift_start: s.shift_start || '08:00',
+        shift_start: shiftStartRaw,
+        duty_hours: ros?.shift_hours || 10,
+        is_off: isOff,
+        is_leave: isLeave,
         is_rostered: s.is_rostered !== false,
         check_in_at: log?.check_in_at || null,
         check_out_at: log?.check_out_at || null,
