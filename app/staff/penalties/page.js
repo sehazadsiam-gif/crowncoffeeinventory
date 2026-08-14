@@ -15,7 +15,7 @@ export default function StaffPenaltiesPage() {
   // Modal State
   const [modalOpen, setModalOpen] = useState(false)
   const [modalDate, setModalDate] = useState('')
-  const [modalPercent, setModalPercent] = useState('1.0')
+  const [modalPercent, setModalPercent] = useState('0.5')
   const [modalReason, setModalReason] = useState('')
   const [existingPenaltyId, setExistingPenaltyId] = useState(null)
   const [toast, setToast] = useState(null)
@@ -84,11 +84,11 @@ export default function StaffPenaltiesPage() {
     setModalDate(dateStr)
     if (existing) {
       setExistingPenaltyId(existing.id)
-      setModalPercent(String(existing.penalty_percent || 1.0))
+      setModalPercent(String(existing.penalty_percent || 0.5))
       setModalReason(existing.reason || '')
     } else {
       setExistingPenaltyId(null)
-      setModalPercent('1.0')
+      setModalPercent('0.5')
       setModalReason('')
     }
     setModalOpen(true)
@@ -104,7 +104,7 @@ export default function StaffPenaltiesPage() {
         body: JSON.stringify({
           staff_id: selectedStaffId,
           date: modalDate,
-          penalty_percent: Number(modalPercent) || 1.0,
+          penalty_percent: Number(modalPercent) || 0.5,
           reason: modalReason
         })
       })
@@ -186,7 +186,7 @@ export default function StaffPenaltiesPage() {
             Staff Service Penalties & Salary Cut
           </h1>
           <p style={{ color: '#64748B', marginTop: '4px', fontSize: '14px', margin: '4px 0 0 0' }}>
-            Mark dates for poor service or policy violations to apply salary cuts (1% per date) automatically integrated with Payroll.
+            Mark dates for poor service or policy violations to apply salary cuts (0.5% per date) automatically integrated with Payroll.
           </p>
         </div>
 
@@ -264,7 +264,7 @@ export default function StaffPenaltiesPage() {
             Calendar View — Click any date to mark/unmark penalty
           </h2>
           <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>
-            🔴 Marked Date = 1% Salary Cut
+            🔴 Marked Date = 0.5% Salary Cut
           </span>
         </div>
 
@@ -419,7 +419,7 @@ export default function StaffPenaltiesPage() {
                 style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontSize: '15px', fontWeight: 700, outline: 'none' }}
               />
               <span style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', display: 'block' }}>
-                Default is 1.0% (1% cut from net monthly pay for this day).
+                Default is 0.5% (0.5% cut from net monthly pay for this day).
               </span>
             </div>
 

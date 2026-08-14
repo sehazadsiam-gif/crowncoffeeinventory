@@ -528,6 +528,7 @@ export default function PayrollPage() {
     'Others',
     'Unpaid Leave',
     'Late Deduction',
+    'Penalty Cut',
     'Miscellaneous',
     'Net Pay',
     'Payment'
@@ -800,6 +801,20 @@ export default function PayrollPage() {
                              }} style={{ padding: '2px 6px', fontSize: '10px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: waivedStaff[s.id] ? '#0D2B1A' : '#1C1500', color: waivedStaff[s.id] ? '#34D399' : '#D4A017' }}>{waivedStaff[s.id] ? 'Waived' : 'Waive'}</button>
                           </div>
                         ) : '—'}
+                      </td>
+                      <td style={{ padding: '14px 8px' }}>
+                        {Number(row.penalty_percent) > 0 ? (
+                          <div>
+                            <p style={{ fontSize: '12px', color: '#EF4444', fontWeight: 800, margin: 0 }}>
+                              -{row.penalty_percent}% Cut
+                            </p>
+                            <p style={{ fontSize: '11px', color: '#F87171', marginTop: '2px', fontWeight: 700 }}>
+                              -৳{Math.round(Math.max(0, base + (row.overtime_pay || 0) + Number(row.service_charge || 0) + Number(row.bonus || 0) + Number(row.lunch_dinner || 0) + Number(row.morning_food || 0) + Number(row.miscellaneous || 0) - Number(row.advance_taken || 0) - Number(row.others_taken || 0) - (finalUnpaidDays * perDay) - (waivedStaff[s.id] ? 0 : Number(row.late_deduction || 0))) * (Number(row.penalty_percent) / 100)).toLocaleString()}
+                            </p>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.miscellaneous} onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px', fontWeight: 800, color: '#34D399', fontSize: '14px' }}>৳{finalSalary.toLocaleString()}</td>

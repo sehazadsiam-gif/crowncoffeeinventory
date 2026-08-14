@@ -46,7 +46,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { staff_id, date, penalty_percent = 1.0, reason = '' } = body
+    const { staff_id, date, penalty_percent = 0.5, reason = '' } = body
 
     if (!staff_id || !date) {
       return NextResponse.json({ error: 'staff_id and date are required' }, { status: 400 })
@@ -57,7 +57,7 @@ export async function POST(request) {
       .upsert({
         staff_id,
         date,
-        penalty_percent: Number(penalty_percent) || 1.0,
+        penalty_percent: Number(penalty_percent) || 0.5,
         reason: reason || ''
       }, { onConflict: 'staff_id,date' })
       .select('*')

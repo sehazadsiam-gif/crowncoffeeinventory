@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS staff_penalties (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   staff_id UUID REFERENCES staff(id) ON DELETE CASCADE,
   date DATE NOT NULL,
-  penalty_percent NUMERIC NOT NULL DEFAULT 1.0,
+  penalty_percent NUMERIC NOT NULL DEFAULT 0.5,
   reason TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(staff_id, date)
