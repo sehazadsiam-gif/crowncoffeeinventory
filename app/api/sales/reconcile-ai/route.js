@@ -74,41 +74,46 @@ Instructions:
 
     // 1. Try Gemini Vision AI first
     if (geminiKey) {
-      try {
-        const genAI = new GoogleGenerativeAI(geminiKey)
-        const model = genAI.getGenerativeModel({
-          model: 'gemini-1.5-flash',
-          generationConfig: { responseMimeType: 'application/json' }
-        })
+      const candidateModels = ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-flash-latest', 'gemini-2.5-pro']
+      const genAI = new GoogleGenerativeAI(geminiKey)
 
-        const parts = [{ text: systemPrompt }]
-
-        const appendImages = (imgList, label) => {
-          imgList.forEach((base64Data, idx) => {
-            const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '')
-            parts.push({ text: `[IMAGE CATEGORY: ${label} #${idx + 1}]` })
-            parts.push({
-              inlineData: {
-                data: cleanBase64,
-                mimeType: 'image/jpeg'
-              }
-            })
+      for (const modelName of candidateModels) {
+        try {
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: { responseMimeType: 'application/json' }
           })
+
+          const parts = [{ text: systemPrompt }]
+
+          const appendImages = (imgList, label) => {
+            imgList.forEach((base64Data, idx) => {
+              const cleanBase64 = base64Data.replace(/^data:image\/\w+;base64,/, '')
+              parts.push({ text: `[IMAGE CATEGORY: ${label} #${idx + 1}]` })
+              parts.push({
+                inlineData: {
+                  data: cleanBase64,
+                  mimeType: 'image/jpeg'
+                }
+              })
+            })
+          }
+
+          appendImages(posImages, 'POS_REPORT')
+          appendImages(staffImages, 'STAFF_REPORT')
+          appendImages(foodpandaImages, 'FOODPANDA_PORTAL')
+          appendImages(pathaoImages, 'PATHAO_PORTAL')
+          appendImages(bazarImages, 'BAZAAR_RECEIPT')
+
+          const aiResult = await model.generateContent({ contents: [{ role: 'user', parts }] })
+          const text = aiResult.response.text()
+          const parsed = JSON.parse(text)
+          extractedData = { ...extractedData, ...parsed }
+          aiSuccess = true
+          break
+        } catch (geminiErr) {
+          console.warn(`[Reconcile AI] Gemini model ${modelName} failed:`, geminiErr.message)
         }
-
-        appendImages(posImages, 'POS_REPORT')
-        appendImages(staffImages, 'STAFF_REPORT')
-        appendImages(foodpandaImages, 'FOODPANDA_PORTAL')
-        appendImages(pathaoImages, 'PATHAO_PORTAL')
-        appendImages(bazarImages, 'BAZAAR_RECEIPT')
-
-        const aiResult = await model.generateContent({ contents: [{ role: 'user', parts }] })
-        const text = aiResult.response.text()
-        const parsed = JSON.parse(text)
-        extractedData = { ...extractedData, ...parsed }
-        aiSuccess = true
-      } catch (geminiErr) {
-        console.warn('Gemini extraction failed, attempting Anthropic fallback:', geminiErr.message)
       }
     }
 

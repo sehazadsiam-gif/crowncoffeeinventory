@@ -78,7 +78,7 @@ Respond ONLY with a valid JSON object matching this exact schema:
     let aiResponseText = ''
 
     if (process.env.GEMINI_API_KEY) {
-      const candidateModels = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash-exp']
+      const candidateModels = ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-flash-latest', 'gemini-2.5-pro']
       let geminiSuccess = false
 
       for (const modelName of candidateModels) {
