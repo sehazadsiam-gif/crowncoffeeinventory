@@ -265,37 +265,57 @@ export default function MembershipPage() {
 
             {/* Elite Club Values List */}
             <div className="benefits-card">
-              <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1E110A', margin: '0 0 4px 0', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Award size={18} style={{ color: '#C9943A' }} /> Exclusive Club Benefits
+              <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#1E110A', margin: '0 0 12px 0', letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Award size={18} style={{ color: '#C9943A' }} /> 5-Visit Auto-Rotating Reward Cycle
               </h3>
               
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                <div style={{ background: '#FAF6F0', borderRadius: '10px', padding: '8px', color: '#7B4A2E' }}>
-                  <Gift size={16} />
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <div style={{ background: '#FAF6F0', borderRadius: '8px', padding: '6px 10px', color: '#7B4A2E', fontWeight: 900, fontSize: '12px' }}>
+                  Visit 1
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1E110A', margin: '0 0 2px 0' }}>FREE Coffee Faster</h4>
-                  <p style={{ fontSize: '12px', color: '#5C524C', margin: '0', lineHeight: 1.4 }}>Earn your <strong>FREE coffee on every 5th visit</strong> (regularly 10 visits!).</p>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1E110A', margin: 0 }}>🎁 5% Discount</h4>
+                  <p style={{ fontSize: '11px', color: '#5C524C', margin: 0 }}>Enjoy 5% off your total bill instantly on Visit 1.</p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                <div style={{ background: '#FAF6F0', borderRadius: '10px', padding: '8px', color: '#7B4A2E' }}>
-                  <Award size={16} />
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <div style={{ background: '#FAF6F0', borderRadius: '8px', padding: '6px 10px', color: '#7B4A2E', fontWeight: 900, fontSize: '12px' }}>
+                  Visit 2
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1E110A', margin: '0 0 2px 0' }}>VIP Lifetime Gold Tier</h4>
-                  <p style={{ fontSize: '12px', color: '#5C524C', margin: '0', lineHeight: 1.4 }}>Upgrade automatically to Gold Tier at just <strong>11 visits</strong> for a lifetime 10% discount.</p>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1E110A', margin: 0 }}>☕ 1 Complimentary Coffee</h4>
+                  <p style={{ fontSize: '11px', color: '#5C524C', margin: 0 }}>Free house coffee on your 2nd visit.</p>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                <div style={{ background: '#FAF6F0', borderRadius: '10px', padding: '8px', color: '#7B4A2E' }}>
-                  <Zap size={16} />
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <div style={{ background: '#FAF6F0', borderRadius: '8px', padding: '6px 10px', color: '#7B4A2E', fontWeight: 900, fontSize: '12px' }}>
+                  Visit 3
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1E110A', margin: '0 0 2px 0' }}>Birthday & Anniversary Gifts</h4>
-                  <p style={{ fontSize: '12px', color: '#5C524C', margin: '0', lineHeight: 1.4 }}>Celebrate special dates with complimentary treats and custom VIP offers.</p>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1E110A', margin: 0 }}>🎁 10% Discount</h4>
+                  <p style={{ fontSize: '11px', color: '#5C524C', margin: 0 }}>Enjoy 10% off your total bill on Visit 3.</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: '10px' }}>
+                <div style={{ background: '#FAF6F0', borderRadius: '8px', padding: '6px 10px', color: '#7B4A2E', fontWeight: 900, fontSize: '12px' }}>
+                  Visit 4
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1E110A', margin: 0 }}>🍹 Free Fresh Juice / 🍸 Free Mocktail</h4>
+                  <p style={{ fontSize: '11px', color: '#5C524C', margin: 0 }}>Auto-rotates between Fresh Juice & Mocktail every 5 visits.</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div style={{ background: '#FAF6F0', borderRadius: '8px', padding: '6px 10px', color: '#7B4A2E', fontWeight: 900, fontSize: '12px' }}>
+                  Visit 5
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1E110A', margin: 0 }}>🍕 Pizza @ ৳99 / 🍳 BOGO Breakfast / 🎁 15% Off</h4>
+                  <p style={{ fontSize: '11px', color: '#5C524C', margin: 0 }}>Grand Milestone Reward auto-rotates every 5 visits, then resets!</p>
                 </div>
               </div>
             </div>

@@ -23,6 +23,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 import { logAttendance } from '../../../../lib/attendance-service'
+import { getMemberCycleReward } from '../../../../lib/membership-rewards'
 
 export const dynamic = 'force-dynamic'
 
@@ -202,6 +203,8 @@ async function handleMemberPunch(member, rfidCode, location) {
     // email errors must never break the punch
   }
 
+  const cycleReward = getMemberCycleReward(newTotalVisits)
+
   return {
     success: true,
     member: {
@@ -217,8 +220,9 @@ async function handleMemberPunch(member, rfidCode, location) {
     visit_recorded: {
       total_visits: newTotalVisits,
       punch_count: newPunchCount,
-      reward_unlocked: rewardUnlocked,
-      free_coffees_available: newFreeCoffees
+      reward_unlocked: rewardUnlocked || cycleReward.isFreeItem || cycleReward.discountPercent > 0,
+      free_coffees_available: newFreeCoffees,
+      cycle_reward: cycleReward
     }
   }
 }

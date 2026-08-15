@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { getMemberCycleReward } from '../../lib/membership-rewards'
 
 export default function MemberProgressViewPage() {
   const [rfidInput, setRfidInput] = useState('')
@@ -285,50 +286,57 @@ export default function MemberProgressViewPage() {
                 </div>
               </div>
 
-              {/* 5-Visit Punch Progress */}
-              <div style={{
-                backgroundColor: '#120A06',
-                padding: '24px',
-                borderRadius: '14px',
-                border: '1px solid #2C180E',
-                marginBottom: '28px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#F3EAD8' }}>
-                    5-Visit Free Coffee Punch Card Progress
-                  </span>
-                  <span style={{ fontSize: '14px', fontWeight: 900, color: '#D4AF37' }}>
-                    Punch {(activeMember.visit_punch_count || 0) % 5} of 5
-                  </span>
-                </div>
-
-                {/* Visual Punch Dots */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
-                  {[1, 2, 3, 4, 5].map(step => {
-                    const punches = (activeMember.visit_punch_count || 0) % 5
-                    const isPunched = step <= punches || (punches === 0 && (activeMember.visit_punch_count || 0) > 0 && step === 5)
-                    return (
-                      <div
-                        key={step}
-                        style={{
-                          height: '44px',
-                          borderRadius: '10px',
-                          backgroundColor: isPunched ? '#D4AF37' : '#1E110A',
-                          color: isPunched ? '#120A06' : '#573C2C',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '14px',
-                          fontWeight: 900,
-                          border: isPunched ? 'none' : '1px dashed #4A2810'
-                        }}
-                      >
-                        {isPunched ? 'PUNCHED' : `Visit ${step}`}
+              {/* 5-Visit Auto-Rotating Reward Cycle Roadmap */}
+              {(() => {
+                const currentReward = getMemberCycleReward(activeMember.total_visits || 1)
+                return (
+                  <div style={{
+                    backgroundColor: '#120A06',
+                    padding: '24px',
+                    borderRadius: '14px',
+                    border: '1px solid #4A2810',
+                    marginBottom: '28px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                      <div>
+                        <span style={{ fontSize: '14px', fontWeight: 900, color: '#F3EAD8' }}>
+                          5-Visit Reward Cycle Roadmap (Cycle #{currentReward.cycleNumber})
+                        </span>
+                        <div style={{ fontSize: '12px', color: '#D4AF37', marginTop: '2px', fontWeight: 700 }}>
+                          Current Visit: #{currentReward.total_visits} (Step {currentReward.visitInCycle} of 5) — {currentReward.rewardTitle}
+                        </div>
                       </div>
-                    )
-                  })}
-                </div>
-              </div>
+                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#86EFAC', background: '#064E3B', padding: '4px 10px', borderRadius: '8px' }}>
+                        Auto-Rotates Every 5 Visits
+                      </span>
+                    </div>
+
+                    {/* 5-Step Visual Roadmap Cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginTop: '16px' }}>
+                      {currentReward.roadmap.map(r => (
+                        <div
+                          key={r.step}
+                          style={{
+                            padding: '12px 8px',
+                            borderRadius: '10px',
+                            backgroundColor: r.isCurrent ? '#D4AF37' : r.step < currentReward.visitInCycle ? '#2E1A0F' : '#1E110A',
+                            color: r.isCurrent ? '#120A06' : r.step < currentReward.visitInCycle ? '#A89284' : '#6B4E3D',
+                            border: r.isCurrent ? '2px solid #FFF' : '1px solid #382215',
+                            textAlign: 'center'
+                          }}
+                        >
+                          <div style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', opacity: 0.8 }}>
+                            Visit {r.step} {r.isCurrent ? '★ TODAY' : ''}
+                          </div>
+                          <div style={{ fontSize: '12px', fontWeight: 900, marginTop: '4px' }}>
+                            {r.title}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Free Coffee Reward Redemption Box */}
               <div style={{
