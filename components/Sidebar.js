@@ -22,7 +22,9 @@ import {
   LogOut,
   Menu,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Trophy,
+  ArrowLeftRight
 } from 'lucide-react'
 import { useFeatureFlags } from '../hooks/useFeatureFlags'
 
@@ -44,6 +46,8 @@ export default function Sidebar({ role, currentPage, staffName }) {
     admin: [
       { label: 'Dashboard', icon: BarChart3, path: '/admin/dashboard' },
       { label: 'Feature Manager', icon: Sliders, path: '/admin/features' },
+      { label: 'Performance 🏆', icon: Trophy, path: '/admin/staff-performance' },
+      { label: 'Shift Swaps', icon: ArrowLeftRight, path: '/admin/shift-swaps' },
       { label: 'Recipe Book', icon: BookOpen, path: '/recipebook', flag: 'recipebook' },
       { label: 'Payroll', icon: DollarSign, path: '/admin/payroll', flag: 'payroll' },
       { label: 'Directory', icon: Users, path: '/admin/staff', flag: 'staff_directory' },

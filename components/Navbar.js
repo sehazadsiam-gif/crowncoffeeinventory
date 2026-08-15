@@ -166,6 +166,8 @@ export default function Navbar() {
         { href: '/public-attendance', label: 'Public Attendance Kiosk', flag: 'attendance_public' },
         { href: '/attendance/requests', label: 'Duty & Leave Requests', flag: 'leave_requests' },
         { href: '/attendance/reports', label: 'Attendance Reports', flag: 'attendance_reports' },
+        { href: '/admin/staff-performance', label: 'Performance Leaderboard 🏆' },
+        { href: '/admin/shift-swaps', label: 'Shift Swap Approvals' },
         { href: '/admin/tasks', label: 'Assign Tasks', flag: 'tasks' },
         { href: '/admin/overtime', label: 'Overtime Management', flag: 'overtime' },
         { href: '/staff/penalties', label: 'Service Penalties & Salary Cut', flag: 'payroll' },
