@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
 import { Calendar, ChevronLeft, ChevronRight, Sparkles, Save, CheckCircle } from 'lucide-react'
+import { normalizeShiftTime } from '../../../lib/roster-utils'
 
 export default function WeeklyRosterPage() {
   const router = useRouter()
@@ -54,15 +55,17 @@ export default function WeeklyRosterPage() {
             const isDefaultOff = s.weekly_off && dayName.toLowerCase() === s.weekly_off.toLowerCase()
 
             if (existing) {
+              const normalized = normalizeShiftTime(existing.shift_start, existing.is_off)
               initialGrid[s.id][d] = {
-                shift_start: existing.shift_start || '08:00',
-                is_off: existing.is_off,
+                shift_start: normalized,
+                is_off: existing.is_off || normalized === 'OFF',
                 is_leave: existing.is_leave
               }
             } else {
+              const defaultShift = normalizeShiftTime(s.shift_start || '8:00 AM', isDefaultOff)
               initialGrid[s.id][d] = {
-                shift_start: s.shift_start || '08:00',
-                is_off: isDefaultOff,
+                shift_start: defaultShift,
+                is_off: isDefaultOff || defaultShift === 'OFF',
                 is_leave: false
               }
             }
@@ -407,13 +410,14 @@ export default function WeeklyRosterPage() {
                               <span style={{ padding: '2px 8px', borderRadius: '4px', background: '#7b1fa2', color: 'white', fontWeight: 700, fontSize: '11px' }}>DAY OFF</span>
                             ) : (
                               <select
-                                value={cell.shift_start || '08:00'}
+                                value={normalizeShiftTime(cell.shift_start, cell.is_off)}
                                 onChange={e => handleCellChange(s.id, d, 'shift_start', e.target.value)}
                                 style={{ padding: '4px 6px', border: '1px solid #E0D6C8', borderRadius: '6px', fontSize: '12px', textAlign: 'center', background: 'white', fontWeight: 600 }}
                               >
-                                <option value="08:00">8:00 AM</option>
-                                <option value="11:00">11:00 AM</option>
-                                <option value="13:00">1:00 PM</option>
+                                <option value="8:00 AM">8:00 AM</option>
+                                <option value="11:00 AM">11:00 AM</option>
+                                <option value="1:00 PM">1:00 PM</option>
+                                <option value="5:00 PM">5:00 PM</option>
                               </select>
                             )}
 

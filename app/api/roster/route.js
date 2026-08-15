@@ -1,36 +1,9 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../lib/supabase'
+import { formatTo24HourTime, normalizeShiftTime } from '../../../lib/roster-utils'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-/**
- * Robustly parses and formats shift time inputs (e.g., '13:00', '1:00 PM', '8:00 AM', 'OFF')
- * into 24-hour Postgres TIME format 'HH:MM:SS'.
- */
-function formatTo24HourTime(str) {
-  if (!str || str === 'OFF') return { time: '08:00:00', isOff: true }
-  let s = String(str).trim().toUpperCase()
-  if (s === 'OFF') return { time: '08:00:00', isOff: true }
-
-  const isPM = s.includes('PM')
-  const isAM = s.includes('AM')
-  s = s.replace(/(AM|PM)/g, '').trim()
-
-  let [hStr, mStr] = s.split(':')
-  let h = parseInt(hStr, 10)
-  let m = parseInt(mStr || '0', 10)
-
-  if (isNaN(h)) return { time: '08:00:00', isOff: false }
-  if (isNaN(m)) m = 0
-
-  if (isPM && h < 12) h += 12
-  if (isAM && h === 12) h = 0
-
-  const hh = String(h).padStart(2, '0')
-  const mm = String(m).padStart(2, '0')
-  return { time: `${hh}:${mm}:00`, isOff: false }
-}
 
 export async function GET(request) {
   try {
@@ -57,12 +30,19 @@ export async function GET(request) {
     if (staffErr) throw staffErr
 
     // 2. Fetch existing roster logs for this week by date range or week_start
-    const { data: roster, error: rosterErr } = await supabaseAdmin
+    const { data: rosterRaw, error: rosterErr } = await supabaseAdmin
       .from('duty_roster')
       .select('*')
       .or(`week_start.eq.${weekStart},and(day_date.gte.${weekStart},day_date.lte.${endDateStr})`)
 
     if (rosterErr) throw rosterErr
+
+    // Normalize shift times to 12-Hour AM/PM format (e.g. '8:00 AM', '11:00 AM', '1:00 PM', 'OFF')
+    const roster = (rosterRaw || []).map(r => ({
+      ...r,
+      shift_start_display: normalizeShiftTime(r.shift_start, r.is_off),
+      shift_start_12h: normalizeShiftTime(r.shift_start, r.is_off)
+    }))
 
     return NextResponse.json({
       success: true,
@@ -85,7 +65,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'items array is required' }, { status: 400 })
     }
 
-    // Sanitize items with robust 24-hour time formatting
+    // Sanitize items with robust 12-hour -> 24-hour time formatting for Postgres
     const sanitizedItems = items.map(item => {
       const isExplicitOff = Boolean(item.is_off || item.shift_start === 'OFF')
       const { time: validTime, isOff: parsedIsOff } = formatTo24HourTime(item.shift_start)
@@ -101,7 +81,7 @@ export async function POST(request) {
       }
     })
 
-    // Upsert roster items into duty_roster (isolated from attendance/payroll)
+    // Upsert roster items into duty_roster
     const { data, error } = await supabaseAdmin
       .from('duty_roster')
       .upsert(sanitizedItems, { onConflict: 'staff_id,day_date' })

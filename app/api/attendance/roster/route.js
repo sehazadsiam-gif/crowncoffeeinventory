@@ -1,32 +1,9 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
+import { formatTo24HourTime, normalizeShiftTime } from '../../../../lib/roster-utils'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-function formatTo24HourTime(str) {
-  if (!str || str === 'OFF') return { time: '08:00:00', isOff: true }
-  let s = String(str).trim().toUpperCase()
-  if (s === 'OFF') return { time: '08:00:00', isOff: true }
-
-  const isPM = s.includes('PM')
-  const isAM = s.includes('AM')
-  s = s.replace(/(AM|PM)/g, '').trim()
-
-  let [hStr, mStr] = s.split(':')
-  let h = parseInt(hStr, 10)
-  let m = parseInt(mStr || '0', 10)
-
-  if (isNaN(h)) return { time: '08:00:00', isOff: false }
-  if (isNaN(m)) m = 0
-
-  if (isPM && h < 12) h += 12
-  if (isAM && h === 12) h = 0
-
-  const hh = String(h).padStart(2, '0')
-  const mm = String(m).padStart(2, '0')
-  return { time: `${hh}:${mm}:00`, isOff: false }
-}
 
 export async function GET(request) {
   try {
@@ -42,14 +19,20 @@ export async function GET(request) {
     const endDateStr = endDateObj.toISOString().split('T')[0]
 
     // Fetch roster entries for week
-    const { data: roster, error: rErr } = await supabaseAdmin
+    const { data: rosterRaw, error: rErr } = await supabaseAdmin
       .from('duty_roster')
       .select('*')
       .or(`week_start.eq.${weekStart},and(day_date.gte.${weekStart},day_date.lte.${endDateStr})`)
 
     if (rErr) throw rErr
 
-    // Fetch active staff (fallback if is_rostered column not yet created)
+    const roster = (rosterRaw || []).map(r => ({
+      ...r,
+      shift_start_display: normalizeShiftTime(r.shift_start, r.is_off),
+      shift_start_12h: normalizeShiftTime(r.shift_start, r.is_off)
+    }))
+
+    // Fetch active staff
     let staff = []
     let { data: sData, error: sErr } = await supabaseAdmin
       .from('staff')
