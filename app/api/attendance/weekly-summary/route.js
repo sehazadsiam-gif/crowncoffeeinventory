@@ -27,10 +27,10 @@ async function sendWeeklySummary() {
     }
 
     const today = new Date()
-    // Calculate last 7 days range
-    const endDateStr = today.toISOString().split('T')[0]
-    const startDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)
-    const startDateStr = startDate.toISOString().split('T')[0]
+    // Calculate last 7 days range in Bangladesh Standard Time (Asia/Dhaka)
+    const endDateStr = today.toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' })
+    const startDateObj = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)
+    const startDateStr = startDateObj.toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' })
 
     const { data: staffList } = await supabaseAdmin
       .from('staff')

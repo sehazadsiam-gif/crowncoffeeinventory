@@ -108,10 +108,10 @@ function AnalogClock({ size = 52, time = new Date() }) {
           fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', lineHeight: 1.1,
           boxShadow: '0 4px 12px rgba(0,0,0,0.3), 0 0 12px rgba(56,189,248,0.2)'
         }}>
-          {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+          {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })}
         </div>
         <div style={{ fontSize: '10px', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' }}>
-          {time.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+          {time.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Dhaka' })} · BST
         </div>
       </div>
     </div>

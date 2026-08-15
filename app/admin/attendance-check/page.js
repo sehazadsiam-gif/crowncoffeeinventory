@@ -388,10 +388,10 @@ export default function AttendanceCheckPage() {
 
             <div style={{ background: 'var(--bg-surface, #FFF)', border: '1px solid var(--border-light, #E8E0D4)', borderRadius: '10px', padding: '8px 16px', textAlign: 'right' }}>
               <div style={{ fontSize: '18px', fontWeight: 900, fontFamily: 'monospace', color: '#6B3A2A' }}>
-                {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+                {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Dhaka' })}
               </div>
               <div style={{ fontSize: '11px', color: '#888', fontWeight: 600 }}>
-                {currentTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                {currentTime.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Dhaka' })} · BST
               </div>
             </div>
           </div>
