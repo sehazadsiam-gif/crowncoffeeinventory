@@ -434,7 +434,7 @@ export default function RosterPage() {
                 transition: 'all 0.2s'
               }}
             >
-              <MessageCircle size={18} /> 📲 Share on WhatsApp
+              <MessageCircle size={18} /> Share on WhatsApp
             </button>
           </div>
         </div>

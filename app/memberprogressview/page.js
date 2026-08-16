@@ -282,7 +282,7 @@ export default function MemberProgressViewPage() {
                           borderRadius: '8px', fontSize: '12px', fontWeight: 800, textDecoration: 'none'
                         }}
                       >
-                        <MessageCircle size={14} /> 📲 Send WhatsApp Greeting
+                        <MessageCircle size={14} /> Send WhatsApp Greeting
                       </a>
                     )
                   })()}

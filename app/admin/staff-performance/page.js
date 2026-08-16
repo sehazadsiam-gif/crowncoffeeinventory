@@ -208,7 +208,7 @@ export default function StaffPerformancePage() {
                             borderRadius: '10px', fontSize: '12px', fontWeight: 800, textDecoration: 'none'
                           }}
                         >
-                          <MessageCircle size={15} /> 📲 Announce Winner on WhatsApp 👑
+                          <MessageCircle size={15} /> Announce Winner on WhatsApp
                         </a>
                       </div>
                     )
