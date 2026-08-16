@@ -51,6 +51,8 @@ export default function StaffPortalPage() {
 
   const t = translations[lang]
 
+  const [penalties, setPenalties] = useState([])
+
   useEffect(() => {
     setMounted(true)
     if (typeof window !== 'undefined') {
@@ -83,7 +85,7 @@ export default function StaffPortalPage() {
     try {
       setLoading(true)
       const currentYear = new Date().getFullYear()
-      const [staffRes, payRes, paymentRes, attRes, attLogRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes, msgRes, tasksRes, dutyReqRes] = await Promise.all([
+      const [staffRes, payRes, paymentRes, attRes, attLogRes, advRes, notesRes, leaveRes, summaryRes, leaveReqRes, msgRes, tasksRes, dutyReqRes, penaltyRes] = await Promise.all([
         supabase.from('staff').select('*').eq('id', staffId).single(),
         supabase.from('payroll_entries').select('*').eq('staff_id', staffId).order('year', { ascending: false }).order('month', { ascending: false }).limit(24),
         supabase.from('salary_payments').select('*').eq('staff_id', staffId).order('payment_date', { ascending: false }),
@@ -96,7 +98,8 @@ export default function StaffPortalPage() {
         supabase.from('leave_requests').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
         supabase.from('staff_queries').select('*').eq('staff_id', staffId).order('created_at', { ascending: false }),
         fetch(`/api/tasks/list?staff_id=${staffId}`).then(res => res.json()).then(data => ({ data: data.tasks || [], error: null })),
-        fetch(`/api/attendance/duty-change?staff_id=${staffId}`).then(res => res.json()).then(data => ({ data: data.requests || [], error: null }))
+        fetch(`/api/attendance/duty-change?staff_id=${staffId}`).then(res => res.json()).then(data => ({ data: data.requests || [], error: null })),
+        supabase.from('staff_penalties').select('*').eq('staff_id', staffId).order('date', { ascending: false })
       ])
       setStaff(staffRes.data)
       setPayroll(payRes.data || [])
@@ -111,6 +114,7 @@ export default function StaffPortalPage() {
       setMessages(msgRes.data || [])
       setTasks(tasksRes.data || [])
       setDutyRequests(dutyReqRes.data || [])
+      setPenalties(penaltyRes.data || [])
     } catch (err) {
       console.error('Error fetching staff data:', err)
     } finally {
@@ -304,7 +308,17 @@ export default function StaffPortalPage() {
   const calculatedUnpaidDays = Math.max(0, autoUnpaidDays - waivedDays)
   const unpaidDeductionDays = monthPayroll?.manual_unpaid_days !== null && monthPayroll?.manual_unpaid_days !== undefined ? Number(monthPayroll.manual_unpaid_days) : calculatedUnpaidDays
   const unpaidDeductionAmount = unpaidDeductionDays * perDay
-  const finalSalary = monthPayroll ? Math.round(base + lunch + morn + bonus + sc + misc) : 0
+  // Calculate 0.5% penalties for the selected month
+  const monthPenalties = (penalties || []).filter(p => {
+    if (!p.date) return false
+    const d = new Date(p.date)
+    return (d.getMonth() + 1) === selectedMonth && d.getFullYear() === selectedYear
+  })
+  const monthPenaltyPercent = monthPenalties.reduce((sum, p) => sum + Number(p.penalty_percent || 0.5), 0)
+  const grossBeforePenalty = Math.max(0, base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaidDeductionAmount - lateDeduction)
+  const penaltyCutAmount = Math.round(grossBeforePenalty * (monthPenaltyPercent / 100))
+
+  const finalSalary = monthPayroll ? Math.max(0, Math.round(base + ot + sc + bonus + lunch + morn + misc - adv - others - unpaidDeductionAmount - lateDeduction - penaltyCutAmount)) : 0
   const remaining = finalSalary - totalPaidThisMonth
   const isCurrentMonth = selectedMonth === new Date().getMonth() + 1 && selectedYear === new Date().getFullYear()
 
@@ -315,6 +329,7 @@ export default function StaffPortalPage() {
     { key: 'salary', icon: <Wallet size={15} />, label: lang === 'bn' ? 'বেতন' : 'Salary' },
     { key: 'attendance', icon: <CalendarDays size={15} />, label: lang === 'bn' ? 'উপস্থিতি' : 'Attendance' },
     { key: 'advances', icon: <TrendingUp size={15} />, label: lang === 'bn' ? 'অগ্রিম' : 'Advances' },
+    { key: 'penalties', icon: <AlertTriangle size={15} />, label: lang === 'bn' ? 'জরিমানা' : 'Penalties' },
     { key: 'remarks', icon: <FileText size={15} />, label: lang === 'bn' ? 'মন্তব্য' : 'Remarks' },
     { key: 'leave_requests', icon: <CalendarDays size={15} />, label: lang === 'bn' ? 'ছুটির আবেদন' : 'Leave' },
     { key: 'messages', icon: <MessageSquare size={15} />, label: lang === 'bn' ? 'মেসেজ' : 'Messages' },
@@ -933,6 +948,14 @@ export default function StaffPortalPage() {
                             <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-৳{others.toLocaleString()}</span>
                           </div>
                         )}
+                        {penaltyCutAmount > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>
+                              {lang === 'bn' ? `সার্ভিস জরিমানা (-0.5% × ${monthPenalties.length} দিন)` : `Service Penalty (-0.5% × ${monthPenalties.length}d)`}
+                            </span>
+                            <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-৳{penaltyCutAmount.toLocaleString()}</span>
+                          </div>
+                        )}
                         {misc < 0 && (
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
                             <span style={{ color: 'var(--text-secondary)' }}>{lang === 'bn' ? 'বিবিধ কাটা (Misc)' : 'Miscellaneous Sub'}</span>
@@ -1287,6 +1310,63 @@ export default function StaffPortalPage() {
                 <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--danger)' }}>৳{Number(a.amount).toLocaleString()}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── PENALTIES & SALARY CUTS TAB ── */}
+        {activeTab === 'penalties' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }} className="animate-in">
+            <div style={{ background: 'var(--danger-bg)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '14px', padding: '18px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '14px', color: 'var(--danger)', fontWeight: 800 }}>
+                  {lang === 'bn' ? 'সার্ভিস জরিমানা ও বেতন কর্তন' : 'Service Penalties & Salary Cuts'} — {monthNames[selectedMonth - 1]} {selectedYear}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  {lang === 'bn' ? `মোট চিহ্নিত তারিখ: ${monthPenalties.length} দিন (-0.5% প্রতি তারিখ)` : `Total Penalty Dates: ${monthPenalties.length} days (-0.5% per date)`}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--danger)', textTransform: 'uppercase' }}>
+                  -{monthPenaltyPercent}% {lang === 'bn' ? 'কাটা' : 'Cut'}
+                </div>
+                <div style={{ fontSize: '20px', fontWeight: 900, color: 'var(--danger)' }}>
+                  -৳{penaltyCutAmount.toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            {monthPenalties.length === 0 ? (
+              <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: '28px', marginBottom: '8px' }}>✓</div>
+                <p style={{ fontWeight: 600, margin: 0 }}>
+                  {lang === 'bn' ? `${monthNames[selectedMonth - 1]} মাসে কোনো সার্ভিস জরিমানা নেই!` : `No service penalties recorded for ${monthNames[selectedMonth - 1]} ${selectedYear}`}
+                </p>
+              </div>
+            ) : monthPenalties.map(p => {
+              const estCut = Math.round(grossBeforePenalty * (Number(p.penalty_percent || 0.5) / 100))
+              return (
+                <div key={p.id || p.date} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-light)', borderLeft: '4px solid var(--danger)', borderRadius: '12px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {new Date(p.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                    <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', marginTop: '3px' }}>
+                      {p.reason ? `Reason: "${p.reason}"` : (lang === 'bn' ? 'সার্ভিস জরিমানা (Service Penalty)' : 'Service Penalty')}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ background: 'var(--danger-bg)', color: 'var(--danger)', padding: '3px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 800 }}>
+                      -{p.penalty_percent || 0.5}% CUT
+                    </span>
+                    {estCut > 0 && (
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--danger)', marginTop: '4px' }}>
+                        -৳{estCut.toLocaleString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
 

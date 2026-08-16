@@ -323,7 +323,7 @@ export default function StaffPenaltiesPage() {
 
                 {penalty ? (
                   <div style={{ background: '#DC2626', color: '#FFFFFF', padding: '4px 6px', borderRadius: '6px', fontSize: '11px', fontWeight: 800 }}>
-                    <div>-{penalty.penalty_percent || 1}% CUT</div>
+                    <div>-{penalty.penalty_percent || 0.5}% CUT</div>
                     {penalty.reason && (
                       <div style={{ fontSize: '9.5px', opacity: 0.9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>
                         {penalty.reason}
