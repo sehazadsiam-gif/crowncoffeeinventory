@@ -910,7 +910,7 @@ export default function StaffPortalPage() {
                           🔴 {lang === 'bn' ? 'কর্তন / কাটা (Deductions)' : 'Total Deductions'}
                         </span>
                         <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--danger)', fontFamily: 'var(--font-mono)' }}>
-                          -৳{(adv + others + unpaidDeductionAmount + lateDeduction + (misc < 0 ? Math.abs(misc) : 0)).toLocaleString()}
+                          -৳{(adv + others + unpaidDeductionAmount + lateDeduction + penaltyCutAmount + (misc < 0 ? Math.abs(misc) : 0)).toLocaleString()}
                         </span>
                       </div>
                       <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -962,7 +962,7 @@ export default function StaffPortalPage() {
                             <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-৳{Math.abs(misc).toLocaleString()}</span>
                           </div>
                         )}
-                        {adv === 0 && unpaidDeductionAmount === 0 && lateDeduction === 0 && others === 0 && misc >= 0 && (
+                        {adv === 0 && unpaidDeductionAmount === 0 && lateDeduction === 0 && others === 0 && penaltyCutAmount === 0 && misc >= 0 && (
                           <div style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center', padding: '6px 0' }}>
                             ✓ {lang === 'bn' ? 'কোনো টাকা কাটা হয়নি' : 'No deductions this month'}
                           </div>
@@ -986,7 +986,7 @@ export default function StaffPortalPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94A3B8', fontSize: '13px', fontWeight: 600 }}>
                       <span style={{ color: '#4ADE80' }}>+৳{(base + ot + sc + bonus + lunch + morn + (misc > 0 ? misc : 0)).toLocaleString()}</span>
                       <span>−</span>
-                      <span style={{ color: '#F87171' }}>৳{(adv + others + unpaidDeductionAmount + lateDeduction + (misc < 0 ? Math.abs(misc) : 0)).toLocaleString()}</span>
+                      <span style={{ color: '#F87171' }}>৳{(adv + others + unpaidDeductionAmount + lateDeduction + penaltyCutAmount + (misc < 0 ? Math.abs(misc) : 0)).toLocaleString()}</span>
                       <span>=</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
