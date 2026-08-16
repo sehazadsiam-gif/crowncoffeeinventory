@@ -7,10 +7,11 @@ import { useToast } from '../../components/Toast'
 import {
   Calendar, ChevronLeft, ChevronRight, Save, Download,
   Users, UtensilsCrossed, Coffee, CheckCircle, RefreshCw,
-  Clock, ShieldAlert, Sparkles, AlertCircle, X, Brain, Edit3, Check
+  Clock, ShieldAlert, Sparkles, AlertCircle, X, Brain, Edit3, Check, MessageCircle, Share2
 } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import { normalizeShiftTime } from '../../lib/roster-utils'
+import { createWhatsAppLink, buildRosterWhatsAppMessage } from '../../lib/whatsapp-client'
 
 export default function RosterPage() {
   const router = useRouter()
@@ -31,8 +32,9 @@ export default function RosterPage() {
   const [staffList, setStaffList] = useState([])
   const [gridData, setGridData] = useState({}) // { [staffId]: { [dateStr]: { shift_start, is_off } } }
 
-  // ── AI Roster Assistant State ──
+  // ── AI Roster Assistant & WhatsApp Modal State ──
   const [showAiModal, setShowAiModal] = useState(false)
+  const [showWaModal, setShowWaModal] = useState(false)
   const [activeAiTab, setActiveAiTab] = useState('generate') // 'train' | 'generate'
   const [customRules, setCustomRules] = useState('')
   const [generatingAi, setGeneratingAi] = useState(false)
@@ -420,6 +422,20 @@ export default function RosterPage() {
             >
               <Download size={18} /> {exporting ? 'Generating JPG...' : 'Download JPG'}
             </button>
+
+            <button
+              onClick={() => setShowWaModal(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                background: 'linear-gradient(135deg, #16A34A, #22C55E)', color: 'white', border: 'none',
+                padding: '11px 20px', borderRadius: '12px', fontSize: '14px',
+                fontWeight: 800, cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(34,197,94,0.30)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <MessageCircle size={18} /> 📲 Share on WhatsApp
+            </button>
           </div>
         </div>
 
@@ -643,6 +659,89 @@ export default function RosterPage() {
                 </div>
               )}
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 1-CLICK WHATSAPP SHARE MODAL ── */}
+      {showWaModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)',
+          zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '24px', maxWidth: '580px', width: '100%',
+            overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)', border: '1px solid #E2E8F0'
+          }}>
+            <div style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)', color: 'white', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <MessageCircle size={24} />
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 900, margin: 0 }}>Share Roster on WhatsApp</h2>
+                  <p style={{ fontSize: '12px', color: '#DCFCE7', margin: 0 }}>1-Click Free Broadcast &amp; Direct Messaging</p>
+                </div>
+              </div>
+              <button onClick={() => setShowWaModal(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: 'white', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Option 1: Broadcast to Staff WhatsApp Group */}
+              <div style={{ backgroundColor: '#F0FDF4', border: '1.5px solid #BBF7D0', padding: '18px', borderRadius: '16px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: 900, color: '#166534', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Share2 size={18} /> Staff WhatsApp Group Broadcast
+                </h3>
+                <p style={{ fontSize: '12px', color: '#15803D', margin: '0 0 14px 0', lineHeight: 1.4 }}>
+                  Opens WhatsApp with pre-filled roster link for <strong>{weekRangeText}</strong> ready to send to your Staff Group.
+                </p>
+                <a
+                  href={createWhatsAppLink({ message: buildRosterWhatsAppMessage({ weekRangeText }) })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '8px',
+                    backgroundColor: '#16A34A', color: 'white', padding: '10px 18px',
+                    borderRadius: '10px', fontSize: '13px', fontWeight: 800, textDecoration: 'none'
+                  }}
+                >
+                  <MessageCircle size={16} /> Open WhatsApp Broadcast →
+                </a>
+              </div>
+
+              {/* Option 2: Direct Chat with Individual Staff */}
+              <div>
+                <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A', margin: '0 0 10px 0' }}>
+                  Direct Message Staff Members ({staffList.length} Active)
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {staffList.map(s => {
+                    const waMsg = buildRosterWhatsAppMessage({ weekRangeText })
+                    const waLink = createWhatsAppLink({ phone: s.phone || s.mobile || '', message: waMsg })
+                    return (
+                      <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{s.name}</div>
+                          <div style={{ fontSize: '11px', color: '#64748B' }}>{s.designation} {s.phone ? `• ${s.phone}` : ''}</div>
+                        </div>
+                        <a
+                          href={waLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            backgroundColor: '#22C55E', color: 'white', padding: '6px 12px',
+                            borderRadius: '8px', fontSize: '12px', fontWeight: 800, textDecoration: 'none'
+                          }}
+                        >
+                          <MessageCircle size={14} /> Send Roster
+                        </a>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>

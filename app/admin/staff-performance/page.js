@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Navbar from '../../../components/Navbar'
-import { Trophy, Award, Star, Medal, CheckCircle, AlertTriangle, UserCheck, ChevronLeft, ChevronRight, Edit3, Save, DollarSign } from 'lucide-react'
+import { Trophy, Award, Star, Medal, CheckCircle, AlertTriangle, UserCheck, ChevronLeft, ChevronRight, Edit3, Save, DollarSign, MessageCircle } from 'lucide-react'
+import { createWhatsAppLink, buildEmployeeOfMonthWhatsAppMessage } from '../../../lib/whatsapp-client'
 
 export default function StaffPerformancePage() {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -185,6 +186,33 @@ export default function StaffPerformancePage() {
                       "{winner.admin_comments}"
                     </p>
                   )}
+
+                  {/* 1-Click WhatsApp Winner Announcement Button */}
+                  {(() => {
+                    const waMsg = buildEmployeeOfMonthWhatsAppMessage({
+                      winnerName: winner.name,
+                      monthYear: `${monthNames[month - 1]} ${year}`,
+                      totalScore: winner.scores.total_score,
+                      bonusAmount: winner.awarded_bonus || 0
+                    })
+                    const waLink = createWhatsAppLink({ message: waMsg })
+                    return (
+                      <div style={{ marginTop: '14px' }}>
+                        <a
+                          href={waLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '6px',
+                            backgroundColor: '#16A34A', color: 'white', padding: '8px 14px',
+                            borderRadius: '10px', fontSize: '12px', fontWeight: 800, textDecoration: 'none'
+                          }}
+                        >
+                          <MessageCircle size={15} /> 📲 Announce Winner on WhatsApp 👑
+                        </a>
+                      </div>
+                    )
+                  })()}
                 </div>
 
                 {/* 2nd Place */}

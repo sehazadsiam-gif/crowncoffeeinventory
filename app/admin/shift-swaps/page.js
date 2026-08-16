@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Navbar from '../../../components/Navbar'
-import { ArrowLeftRight, CheckCircle, XCircle, Clock, Calendar, UserCheck, ShieldAlert } from 'lucide-react'
+import { ArrowLeftRight, CheckCircle, XCircle, Clock, Calendar, UserCheck, ShieldAlert, MessageCircle } from 'lucide-react'
+import { createWhatsAppLink, buildShiftSwapWhatsAppMessage } from '../../../lib/whatsapp-client'
 
 export default function AdminShiftSwapsPage() {
   const [swaps, setSwaps] = useState([])
@@ -185,6 +186,32 @@ export default function AdminShiftSwapsPage() {
                         </button>
                       </div>
                     )}
+
+                    {/* WhatsApp 1-Click Notification Link */}
+                    {(() => {
+                      const waMsg = buildShiftSwapWhatsAppMessage({
+                        requesterName: item.requester?.name || 'Staff',
+                        targetName: item.target_staff?.name || 'Teammate',
+                        dateStr: item.requester_date,
+                        status: item.status
+                      })
+                      const waLink = createWhatsAppLink({ phone: item.requester?.phone || item.requester?.mobile || '', message: waMsg })
+                      return (
+                        <a
+                          href={waLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            padding: '6px 12px', borderRadius: '8px', background: '#EFF6FF',
+                            border: '1px solid #BFDBFE', color: '#2563EB', fontWeight: 800,
+                            fontSize: '12px', textDecoration: 'none', display: 'inline-flex',
+                            alignItems: 'center', gap: '4px', marginTop: '4px'
+                          }}
+                        >
+                          <MessageCircle size={14} /> WhatsApp Notify Staff
+                        </a>
+                      )
+                    })()}
                   </div>
 
                 </div>

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { getMemberCycleReward } from '../../lib/membership-rewards'
+import { MessageCircle } from 'lucide-react'
+import { createWhatsAppLink, buildMemberRewardWhatsAppMessage } from '../../lib/whatsapp-client'
 
 export default function MemberProgressViewPage() {
   const [rfidInput, setRfidInput] = useState('')
@@ -247,16 +249,43 @@ export default function MemberProgressViewPage() {
                   </div>
                 </div>
 
-                <div style={{
-                  padding: '6px 14px',
-                  borderRadius: '12px',
-                  backgroundColor: '#2E1A0F',
-                  border: '1px solid #5A331B',
-                  color: '#E0C870',
-                  fontSize: '12px',
-                  fontWeight: 800
-                }}>
-                  {activeMember.tier || 'VIP MEMBER'}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                  <div style={{
+                    padding: '6px 14px',
+                    borderRadius: '12px',
+                    backgroundColor: '#2E1A0F',
+                    border: '1px solid #5A331B',
+                    color: '#E0C870',
+                    fontSize: '12px',
+                    fontWeight: 800
+                  }}>
+                    {activeMember.tier || 'VIP MEMBER'}
+                  </div>
+
+                  {(() => {
+                    const currentReward = getMemberCycleReward(activeMember.total_visits || 1)
+                    const waMsg = buildMemberRewardWhatsAppMessage({
+                      memberName: activeMember.full_name,
+                      totalVisits: activeMember.total_visits || 1,
+                      rewardTitle: currentReward.rewardTitle,
+                      rewardDescription: currentReward.rewardDescription
+                    })
+                    const waLink = createWhatsAppLink({ phone: activeMember.phone || activeMember.mobile || '', message: waMsg })
+                    return (
+                      <a
+                        href={waLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '6px',
+                          backgroundColor: '#16A34A', color: 'white', padding: '6px 12px',
+                          borderRadius: '8px', fontSize: '12px', fontWeight: 800, textDecoration: 'none'
+                        }}
+                      >
+                        <MessageCircle size={14} /> 📲 Send WhatsApp Greeting
+                      </a>
+                    )
+                  })()}
                 </div>
               </div>
 
