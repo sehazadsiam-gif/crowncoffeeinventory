@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 import nodemailer from 'nodemailer'
+import { injectAugustBaselineLogs } from '../../../../lib/attendance-service'
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.GMAIL_USER
 
@@ -38,11 +39,13 @@ async function sendWeeklySummary() {
       .eq('is_active', true)
       .order('name', { ascending: true })
 
-    const { data: logs } = await supabaseAdmin
+    const { data: rawLogs } = await supabaseAdmin
       .from('attendance_log')
       .select('*')
       .gte('date', startDateStr)
       .lte('date', endDateStr)
+
+    const logs = injectAugustBaselineLogs(rawLogs || [], staffList || [], startDateStr, endDateStr)
 
     const staffStats = (staffList || []).map(s => {
       const myLogs = (logs || []).filter(l => l.staff_id === s.id)

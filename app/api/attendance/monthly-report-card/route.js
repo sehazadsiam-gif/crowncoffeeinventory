@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 import nodemailer from 'nodemailer'
+import { injectAugustBaselineLogs } from '../../../../lib/attendance-service'
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -38,11 +39,13 @@ async function sendMonthlyReportCards() {
       .eq('is_active', true)
       .not('email', 'is', null)
 
-    const { data: logs } = await supabaseAdmin
+    const { data: rawLogs } = await supabaseAdmin
       .from('attendance_log')
       .select('*')
       .gte('date', startDate)
       .lte('date', endDate)
+
+    const logs = injectAugustBaselineLogs(rawLogs || [], staffList || [], startDate, endDate)
 
     let sentCount = 0
 

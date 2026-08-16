@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
+import { injectAugustBaselineLogs } from '../../../../lib/attendance-service'
 
 export async function GET(request) {
   try {
@@ -23,7 +24,7 @@ export async function GET(request) {
 
     if (staffErr) throw staffErr
 
-    const { data: logs, error: logsErr } = await supabaseAdmin
+    const { data: rawLogs, error: logsErr } = await supabaseAdmin
       .from('attendance_log')
       .select('*')
       .gte('date', startDate)
@@ -31,6 +32,9 @@ export async function GET(request) {
       .order('date', { ascending: true })
 
     if (logsErr) throw logsErr
+
+    // Inject August 1 to August 7 hardcoded 10-hour work baseline for active staff
+    const logs = injectAugustBaselineLogs(rawLogs || [], staff || [], startDate, endDate)
 
     // Map daily logs with readable format e.g. "19 July, 2026", "8:00am - 7:15pm"
     const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
