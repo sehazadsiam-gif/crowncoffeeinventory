@@ -50,8 +50,10 @@ export async function GET(request) {
       .lte('created_at', `${endDate}T23:59:59Z`)
     if (tData) tasks = tData
 
-    // 5. Fetch month admin evaluations
+    // 5. Fetch month admin evaluations from staff_evaluations OR staff_notes (performance_eval)
     let evaluationsMap = {}
+    
+    // Primary: try staff_evaluations
     try {
       const { data: evals } = await supabaseAdmin
         .from('staff_evaluations')
@@ -59,12 +61,39 @@ export async function GET(request) {
         .eq('month', month)
         .eq('year', year)
 
-      ;(evals || []).forEach(e => {
-        evaluationsMap[e.staff_id] = e
-      })
-    } catch (_) {
-      // table might not exist yet
-    }
+      if (evals && evals.length > 0) {
+        evals.forEach(e => {
+          evaluationsMap[e.staff_id] = e
+        })
+      }
+    } catch (_) {}
+
+    // Fallback/Unified: query staff_notes where note_type = 'performance_eval'
+    try {
+      const { data: noteEvals } = await supabaseAdmin
+        .from('staff_notes')
+        .select('*')
+        .eq('note_type', 'performance_eval')
+        .order('created_at', { ascending: true })
+
+      if (noteEvals && noteEvals.length > 0) {
+        noteEvals.forEach(n => {
+          try {
+            const parsed = JSON.parse(n.note)
+            if (Number(parsed.month) === month && Number(parsed.year) === year) {
+              evaluationsMap[n.staff_id] = {
+                staff_id: n.staff_id,
+                month: Number(parsed.month),
+                year: Number(parsed.year),
+                admin_score: Number(parsed.admin_score),
+                admin_comments: parsed.admin_comments || '',
+                awarded_bonus: Number(parsed.awarded_bonus) || 0
+              }
+            }
+          } catch (_) {}
+        })
+      }
+    } catch (_) {}
 
     // Process maps
     const attMap = {}
@@ -98,43 +127,39 @@ export async function GET(request) {
       let punctualityScore = 40 - (att.late * 5) - (att.absent * 10)
       if (punctualityScore < 0) punctualityScore = 0
 
-      // B. Task Completion Score (Max 30 Pts)
+      // B. Task Completion Rate Score (Max 30 Pts)
       let taskScore = 30
       if (tStats.total > 0) {
         taskScore = Math.round((tStats.done / tStats.total) * 30)
       }
 
-      // C. Service Quality Score (Max 30 Pts)
+      // C. Service Quality & Penalty Score (Max 30 Pts)
       let qualityScore = 30 - (penCount * 10)
       if (qualityScore < 0) qualityScore = 0
 
-      const systemScore = punctualityScore + taskScore + qualityScore // 0 - 100
+      // Combined System Auto-Score (Max 100 Pts)
+      const systemScore = punctualityScore + taskScore + qualityScore
 
-      // D. Admin Evaluation Score (0 - 100 Pts, default 100)
-      const adminScore = ev.admin_score !== undefined && ev.admin_score !== null
-        ? Number(ev.admin_score)
-        : 100
+      // D. Admin Manual Assessment Score (Max 100 Pts)
+      const adminScore = ev.admin_score !== undefined && ev.admin_score !== null ? Number(ev.admin_score) : 100
+
+      // Combined Final Performance Score (Max 200 Pts)
+      const totalScore = systemScore + adminScore
+
       const adminComments = ev.admin_comments || ''
       const awardedBonus = Number(ev.awarded_bonus) || 0
-
-      // Total Score out of 200
-      const totalScore = systemScore + adminScore
 
       return {
         staff_id: s.id,
         name: s.name,
         employee_id: s.employee_id || 'N/A',
         designation: s.designation || 'Staff',
-        department: s.department || 'front',
-        photo_url: s.photo_url ? `/api/staff/${s.id}/photo` : null,
-        base_salary: s.base_salary,
-        stats: {
-          late_days: att.late,
-          absent_days: att.absent,
-          penalties_count: penCount,
-          tasks_total: tStats.total,
-          tasks_done: tStats.done
-        },
+        department: s.department || 'Operations',
+        photo_url: s.photo_url || null,
+        base_salary: s.base_salary || 0,
+        attendance_stats: att,
+        penalty_count: penCount,
+        task_stats: tStats,
         scores: {
           punctuality_score: punctualityScore,
           task_score: taskScore,
@@ -172,25 +197,88 @@ export async function POST(request) {
       return NextResponse.json({ error: 'staff_id, month, and year are required' }, { status: 400 })
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('staff_evaluations')
-      .upsert({
-        staff_id,
-        month: Number(month),
-        year: Number(year),
-        admin_score: Math.min(100, Math.max(0, Number(admin_score) || 0)),
-        admin_comments: admin_comments || '',
-        awarded_bonus: Number(awarded_bonus) || 0,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'staff_id,month,year' })
-      .select('*')
+    const numScore = Math.min(100, Math.max(0, Number(admin_score) || 0))
+    const numBonus = Number(awarded_bonus) || 0
+    const mNum = Number(month)
+    const yNum = Number(year)
 
-    if (error) {
-      console.warn('[POST /api/staff/performance] DB error:', error.message)
-      return NextResponse.json({ success: true, warning: 'Saved locally' })
+    const evalPayload = {
+      month: mNum,
+      year: yNum,
+      admin_score: numScore,
+      admin_comments: admin_comments || '',
+      awarded_bonus: numBonus
     }
 
-    return NextResponse.json({ success: true, evaluation: data?.[0] })
+    // 1. Try staff_evaluations table
+    try {
+      await supabaseAdmin
+        .from('staff_evaluations')
+        .upsert({
+          staff_id,
+          ...evalPayload,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'staff_id,month,year' })
+    } catch (e) {
+      console.warn('[POST /api/staff/performance] staff_evaluations notice:', e.message)
+    }
+
+    // 2. Guaranteed persistence: Save to staff_notes table as performance_eval
+    const noteContent = JSON.stringify(evalPayload)
+
+    // Remove any previous performance_eval note for this staff & month/year
+    const { data: existingNotes } = await supabaseAdmin
+      .from('staff_notes')
+      .select('id, note')
+      .eq('staff_id', staff_id)
+      .eq('note_type', 'performance_eval')
+
+    if (existingNotes && existingNotes.length > 0) {
+      for (const en of existingNotes) {
+        try {
+          const p = JSON.parse(en.note)
+          if (Number(p.month) === mNum && Number(p.year) === yNum) {
+            await supabaseAdmin.from('staff_notes').delete().eq('id', en.id)
+          }
+        } catch (_) {}
+      }
+    }
+
+    const { data: insertedNote, error: noteErr } = await supabaseAdmin
+      .from('staff_notes')
+      .insert({
+        staff_id,
+        note_type: 'performance_eval',
+        note: noteContent
+      })
+      .select('*')
+
+    if (noteErr) {
+      console.error('[POST /api/staff/performance] staff_notes insert error:', noteErr.message)
+      throw noteErr
+    }
+
+    // 3. Sync bonus to payroll_entries if bonus > 0
+    if (numBonus > 0) {
+      try {
+        const { data: existingPay } = await supabaseAdmin
+          .from('payroll_entries')
+          .select('id')
+          .eq('staff_id', staff_id)
+          .eq('month', mNum)
+          .eq('year', yNum)
+          .single()
+
+        if (existingPay) {
+          await supabaseAdmin
+            .from('payroll_entries')
+            .update({ bonus: numBonus })
+            .eq('id', existingPay.id)
+        }
+      } catch (_) {}
+    }
+
+    return NextResponse.json({ success: true, evaluation: evalPayload })
   } catch (err) {
     console.error('[POST /api/staff/performance]', err)
     return NextResponse.json({ error: err.message || 'Failed to save evaluation' }, { status: 500 })
