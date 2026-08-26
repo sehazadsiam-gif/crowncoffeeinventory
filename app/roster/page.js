@@ -52,8 +52,8 @@ export default function RosterPage() {
     } else {
       setCustomRules(
         '1. Ensure each staff member gets 1 day off per week (preferably Friday or Saturday).\n' +
-        '2. Kitchen requires at least 1 Cook on 8:00 AM shift and 1 Cook on 1:00 PM shift every day.\n' +
-        '3. Front staff baristas prefer 8:00 AM or 11:00 AM shifts.'
+        '2. Kitchen requires at least 1 Cook on 11:00 AM shift and 1 Cook on 1:00 PM shift every day.\n' +
+        '3. Front staff baristas are balanced across 11:00 AM and 1:00 PM shifts.'
       )
     }
 
@@ -90,10 +90,10 @@ export default function RosterPage() {
                 is_off: normalized === 'OFF'
               }
             } else {
-              // Defaults: Friday is default OFF (index 6 = Friday), otherwise 8:00 AM
+              // Defaults: Friday is default OFF (index 6 = Friday), otherwise 11:00 AM
               const isFriday = dayIdx === 6
               initialGrid[s.id][d] = {
-                shift_start: isFriday ? 'OFF' : '8:00 AM',
+                shift_start: isFriday ? 'OFF' : '11:00 AM',
                 is_off: isFriday
               }
             }
@@ -145,7 +145,7 @@ export default function RosterPage() {
     Object.entries(currentGridData).forEach(([staffId, dates]) => {
       Object.entries(dates).forEach(([dayDate, val]) => {
         const isOff = Boolean(val.is_off || val.shift_start === 'OFF')
-        const timeVal = isOff || val.shift_start === 'OFF' ? '08:00' : (val.shift_start || '08:00')
+        const timeVal = isOff || val.shift_start === 'OFF' ? '11:00' : (val.shift_start || '11:00')
         items.push({
           staff_id: staffId,
           week_start: currentWeekStart,
@@ -298,7 +298,7 @@ export default function RosterPage() {
         Object.entries(dates).forEach(([dateStr, val]) => {
           const isOff = val === 'OFF'
           newGrid[staffId][dateStr] = {
-            shift_start: isOff ? '08:00' : val,
+            shift_start: isOff ? '11:00' : val,
             is_off: isOff
           }
         })
@@ -797,7 +797,6 @@ export default function RosterPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid #E2E8F0', fontSize: '12px', color: '#64748B' }}>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <span style={{ fontWeight: 800, color: '#0F172A' }}>SHIFT LEGEND:</span>
-              <span style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '3px 8px', borderRadius: '6px', fontWeight: 800 }}>8:00 AM (Morning)</span>
               <span style={{ background: '#FFFBEB', color: '#B45309', border: '1px solid #FDE68A', padding: '3px 8px', borderRadius: '6px', fontWeight: 800 }}>11:00 AM (Mid)</span>
               <span style={{ background: '#EEF2FF', color: '#4338CA', border: '1px solid #C7D2FE', padding: '3px 8px', borderRadius: '6px', fontWeight: 800 }}>1:00 PM (Evening)</span>
               <span style={{ background: '#FEF2F2', color: '#B91C1C', border: '1px solid #FCA5A5', padding: '3px 8px', borderRadius: '6px', fontWeight: 800 }}>OFF (Day Off)</span>
@@ -869,7 +868,7 @@ function RosterSectionTable({ title, icon, accentColor, staffList, days, gridDat
                   </td>
 
                   {days.map((d, dayIdx) => {
-                    const cell = staffGrid[d] || { shift_start: '8:00 AM', is_off: false }
+                    const cell = staffGrid[d] || { shift_start: '11:00 AM', is_off: false }
                     const val = normalizeShiftTime(cell.shift_start, cell.is_off)
 
                     return (
@@ -881,25 +880,25 @@ function RosterSectionTable({ title, icon, accentColor, staffList, days, gridDat
                             width: '100%', padding: '8px 6px', borderRadius: '10px',
                             border: val === 'OFF'
                               ? '1.5px solid #FCA5A5'
-                              : val === '8:00 AM'
-                              ? '1.5px solid #BFDBFE'
                               : val === '11:00 AM'
                               ? '1.5px solid #FDE68A'
-                              : '1.5px solid #C7D2FE',
+                              : val === '1:00 PM'
+                              ? '1.5px solid #C7D2FE'
+                              : '1.5px solid #CBD5E1',
                             background: val === 'OFF'
                               ? '#FEF2F2'
-                              : val === '8:00 AM'
-                              ? '#EFF6FF'
                               : val === '11:00 AM'
                               ? '#FFFBEB'
-                              : '#EEF2FF',
+                              : val === '1:00 PM'
+                              ? '#EEF2FF'
+                              : '#F8FAFC',
                             color: val === 'OFF'
                               ? '#991B1B'
-                              : val === '8:00 AM'
-                              ? '#1D4ED8'
                               : val === '11:00 AM'
                               ? '#B45309'
-                              : '#4338CA',
+                              : val === '1:00 PM'
+                              ? '#4338CA'
+                              : '#334155',
                             fontWeight: 800,
                             fontSize: '12px',
                             cursor: 'pointer',
@@ -907,10 +906,8 @@ function RosterSectionTable({ title, icon, accentColor, staffList, days, gridDat
                             textAlign: 'center'
                           }}
                         >
-                          <option value="8:00 AM">8:00 AM</option>
                           <option value="11:00 AM">11:00 AM</option>
                           <option value="1:00 PM">1:00 PM</option>
-                          <option value="5:00 PM">5:00 PM</option>
                           <option value="OFF">OFF (Day Off)</option>
                         </select>
                       </td>
@@ -965,13 +962,11 @@ function ExportGridTable({ staffList, days, gridData }) {
               </td>
 
               {days.map((d, i) => {
-                const cell = staffGrid[d] || { shift_start: '8:00 AM', is_off: false }
+                const cell = staffGrid[d] || { shift_start: '11:00 AM', is_off: false }
                 const val = normalizeShiftTime(cell.shift_start, cell.is_off)
 
-                const is8am = val === '8:00 AM'
                 const is11am = val === '11:00 AM'
                 const is1pm = val === '1:00 PM'
-                const is5pm = val === '5:00 PM'
                 const isOff = val === 'OFF'
 
                 return (
@@ -982,9 +977,9 @@ function ExportGridTable({ staffList, days, gridData }) {
                       borderRadius: '6px',
                       fontWeight: 900,
                       fontSize: '11px',
-                      background: isOff ? '#FEF2F2' : is8am ? '#EFF6FF' : is11am ? '#FFFBEB' : '#EEF2FF',
-                      color: isOff ? '#B91C1C' : is8am ? '#1D4ED8' : is11am ? '#B45309' : '#4338CA',
-                      border: isOff ? '1px solid #FCA5A5' : is8am ? '1px solid #BFDBFE' : is11am ? '1px solid #FDE68A' : '1px solid #C7D2FE'
+                      background: isOff ? '#FEF2F2' : is11am ? '#FFFBEB' : '#EEF2FF',
+                      color: isOff ? '#B91C1C' : is11am ? '#B45309' : '#4338CA',
+                      border: isOff ? '1px solid #FCA5A5' : is11am ? '1px solid #FDE68A' : '1px solid #C7D2FE'
                     }}>
                       {val}
                     </span>

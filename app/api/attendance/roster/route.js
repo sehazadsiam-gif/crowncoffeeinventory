@@ -83,7 +83,7 @@ export async function POST(request) {
         staff_id: item.staff_id,
         week_start: item.week_start,
         day_date: item.day_date,
-        shift_start: finalIsOff ? '08:00:00' : validTime,
+        shift_start: finalIsOff ? '11:00:00' : validTime,
         shift_hours: item.shift_hours || 10,
         is_off: finalIsOff
       }

@@ -127,7 +127,7 @@ export async function PUT(request) {
           .eq('day_date', swap.target_date || swap.requester_date)
           .maybeSingle()
 
-        const reqShift = reqRoster?.shift_start || '08:00'
+        const reqShift = reqRoster?.shift_start || '11:00'
         const tarShift = tarRoster?.shift_start || '13:00'
 
         // Swap shifts in duty_roster

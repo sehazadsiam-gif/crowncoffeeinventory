@@ -62,7 +62,7 @@ export default function WeeklyRosterPage() {
                 is_leave: existing.is_leave
               }
             } else {
-              const defaultShift = normalizeShiftTime(s.shift_start || '8:00 AM', isDefaultOff)
+              const defaultShift = normalizeShiftTime(s.shift_start || '11:00 AM', isDefaultOff)
               initialGrid[s.id][d] = {
                 shift_start: defaultShift,
                 is_off: isDefaultOff || defaultShift === 'OFF',
@@ -395,7 +395,7 @@ export default function WeeklyRosterPage() {
                     </td>
 
                     {days.map(d => {
-                      const cell = gridData[s.id]?.[d] || { shift_start: '08:00', is_off: false, is_leave: false }
+                      const cell = gridData[s.id]?.[d] || { shift_start: '11:00', is_off: false, is_leave: false }
 
                       let bg = 'white'
                       if (cell.is_leave) bg = '#e1f5fe'
@@ -414,10 +414,8 @@ export default function WeeklyRosterPage() {
                                 onChange={e => handleCellChange(s.id, d, 'shift_start', e.target.value)}
                                 style={{ padding: '4px 6px', border: '1px solid #E0D6C8', borderRadius: '6px', fontSize: '12px', textAlign: 'center', background: 'white', fontWeight: 600 }}
                               >
-                                <option value="8:00 AM">8:00 AM</option>
                                 <option value="11:00 AM">11:00 AM</option>
                                 <option value="1:00 PM">1:00 PM</option>
-                                <option value="5:00 PM">5:00 PM</option>
                               </select>
                             )}
 

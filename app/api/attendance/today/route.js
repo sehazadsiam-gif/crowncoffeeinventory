@@ -74,7 +74,7 @@ export async function GET(request) {
 
       // Status: use logged status, or absent if no log exists
       const status = log ? log.status : 'absent'
-      const shiftStartRaw = ros?.shift_start || s.shift_start || '08:00'
+      const shiftStartRaw = ros?.shift_start || s.shift_start || '11:00'
       const isOff = ros?.is_off || false
       const isLeave = ros?.is_leave || false
 

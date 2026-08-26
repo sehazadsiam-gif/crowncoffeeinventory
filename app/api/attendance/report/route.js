@@ -196,7 +196,8 @@ export async function GET(request) {
       year,
       summary: companySummary,
       reports: staffReports,
-      daily_logs: dailyLogs
+      daily_logs: dailyLogs,
+      staff: (staff || []).map(s => ({ id: s.id, name: s.name, employee_id: s.employee_id, designation: s.designation }))
     })
   } catch (err) {
     console.error('[GET /api/attendance/report]', err)
@@ -207,10 +208,21 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { action, log_id, month, year, ...payload } = body
+    const { action, log_id, staff_id, date, month, year, ...payload } = body
 
-    if (action === 'update_log') {
-      const { check_in_at, check_out_at, break_start_at, break_end_at, status, minutes_late, notes } = payload
+    if (action === 'update_log' || action === 'create_log') {
+      const {
+        check_in_at,
+        check_out_at,
+        break_start_at,
+        break_end_at,
+        status,
+        minutes_late,
+        notes,
+        hours_worked,
+        overtime_hours,
+        shift_start
+      } = payload
       
       let breakDurationMin = 0
       if (break_start_at && break_end_at) {
@@ -219,8 +231,8 @@ export async function POST(request) {
         breakDurationMin = Math.max(0, Math.floor((bEnd - bStart) / (1000 * 60)))
       }
 
-      let hoursWorked = null
-      let overtimeMins = 0
+      let computedHoursWorked = null
+      let computedOvertimeMins = 0
 
       if (check_in_at && check_out_at) {
         const inDate = new Date(check_in_at)
@@ -228,9 +240,19 @@ export async function POST(request) {
         let totalMins = Math.max(0, Math.floor((outDate - inDate) / (1000 * 60)))
         if (totalMins > 960) totalMins = 960 // Safety Cap: 16 hours max per shift
         const netMins = Math.max(0, totalMins - breakDurationMin)
-        hoursWorked = Math.round((netMins / 60) * 100) / 100
-        overtimeMins = Math.max(0, netMins - 660)
+        computedHoursWorked = Math.round((netMins / 60) * 100) / 100
+        computedOvertimeMins = Math.max(0, netMins - 660)
+      } else if (status === 'present' || status === 'late') {
+        computedHoursWorked = 10.0
       }
+
+      const finalHoursWorked = (hours_worked !== undefined && hours_worked !== null && hours_worked !== '')
+        ? parseFloat(hours_worked)
+        : computedHoursWorked
+
+      const finalOvertimeMins = (overtime_hours !== undefined && overtime_hours !== null && overtime_hours !== '')
+        ? Math.round(parseFloat(overtime_hours) * 60)
+        : computedOvertimeMins
 
       const updateData = {
         status: status || 'present',
@@ -240,31 +262,88 @@ export async function POST(request) {
         break_start_at: break_start_at || null,
         break_end_at: break_end_at || null,
         break_duration_minutes: breakDurationMin,
-        hours_worked: hoursWorked,
-        overtime_minutes: overtimeMins,
+        hours_worked: finalHoursWorked,
+        overtime_minutes: finalOvertimeMins,
+        shift_start: shift_start || '11:00',
+        admin_override: true,
+        source: 'admin_edit',
         notes: notes || null,
         updated_at: new Date().toISOString()
       }
 
-      const { error } = await supabaseAdmin
-        .from('attendance_log')
-        .update(updateData)
-        .eq('id', log_id)
+      const isUUID = log_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(log_id))
 
-      if (error) throw error
+      let targetStaffId = staff_id
+      let targetDate = date
+
+      if (isUUID && (!targetStaffId || !targetDate)) {
+        const { data: existing } = await supabaseAdmin.from('attendance_log').select('staff_id, date').eq('id', log_id).maybeSingle()
+        if (existing) {
+          targetStaffId = targetStaffId || existing.staff_id
+          targetDate = targetDate || existing.date
+        }
+      }
+
+      if (targetStaffId && targetDate) {
+        const { data: staffMember } = await supabaseAdmin.from('staff').select('employee_id').eq('id', targetStaffId).maybeSingle()
+        
+        const upsertData = {
+          ...updateData,
+          staff_id: targetStaffId,
+          employee_id: staffMember?.employee_id || 'N/A',
+          date: targetDate
+        }
+        if (isUUID) {
+          upsertData.id = log_id
+        }
+
+        const { error } = await supabaseAdmin
+          .from('attendance_log')
+          .upsert(upsertData, { onConflict: 'staff_id,date' })
+
+        if (error) throw error
+      } else if (isUUID) {
+        const { error } = await supabaseAdmin
+          .from('attendance_log')
+          .update(updateData)
+          .eq('id', log_id)
+
+        if (error) throw error
+      } else {
+        return NextResponse.json({ error: 'staff_id and date are required to save attendance record' }, { status: 400 })
+      }
 
       return NextResponse.json({ success: true, message: 'Daily attendance log updated successfully' })
     }
 
     if (action === 'delete_log') {
-      const { error } = await supabaseAdmin
-        .from('attendance_log')
-        .delete()
-        .eq('id', log_id)
+      const isUUID = log_id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(log_id))
 
-      if (error) throw error
+      if (isUUID) {
+        const { error } = await supabaseAdmin
+          .from('attendance_log')
+          .delete()
+          .eq('id', log_id)
 
-      return NextResponse.json({ success: true, message: 'Attendance record deleted successfully' })
+        if (error) throw error
+      } else if (staff_id && date) {
+        await supabaseAdmin
+          .from('attendance_log')
+          .upsert({
+            staff_id,
+            date,
+            status: 'off',
+            hours_worked: 0,
+            overtime_minutes: 0,
+            minutes_late: 0,
+            admin_override: true,
+            source: 'admin_delete',
+            notes: 'Record deleted/marked Off by admin',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'staff_id,date' })
+      }
+
+      return NextResponse.json({ success: true, message: 'Attendance record removed successfully' })
     }
 
     if (action === 'apply_to_payroll') {
@@ -275,7 +354,9 @@ export async function POST(request) {
       const endDate = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
       const { data: staffList } = await supabaseAdmin.from('staff').select('id, name, employee_id').eq('is_active', true)
-      const { data: logs } = await supabaseAdmin.from('attendance_log').select('*').gte('date', startDate).lte('date', endDate)
+      const { data: rawLogs } = await supabaseAdmin.from('attendance_log').select('*').gte('date', startDate).lte('date', endDate)
+
+      const logs = injectAugustBaselineLogs(rawLogs || [], staffList || [], startDate, endDate)
 
       const summaryUpserts = (staffList || []).map(s => {
         const sLogs = (logs || []).filter(l => l.staff_id === s.id)

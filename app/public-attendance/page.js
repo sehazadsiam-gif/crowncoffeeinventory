@@ -782,7 +782,7 @@ function RfidDisplayCard({ r, isScanned, isBreakOn = false, onToggleBreak }) {
     : null
 
   const formatShiftTime = (timeStr) => {
-    if (!timeStr) return '08:00 AM'
+    if (!timeStr) return '11:00 AM'
     if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr
     const [h, m] = timeStr.split(':')
     if (!h) return timeStr

@@ -21,7 +21,7 @@ export default function StaffDirectory() {
     base_salary: '', join_date: new Date().toISOString().split('T')[0],
     emergency_contact: '', emergency_phone: '', notes: '',
     serial: 999, email: '', employee_id: '',
-    shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true,
+    shift_start: '11:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true,
     department: 'front', rfid_code: '',
     nid: '', blood_group: '', photo_url: ''
   })
@@ -128,7 +128,7 @@ export default function StaffDirectory() {
         serial: parseInt(form.serial) || 999,
         email: form.email,
         employee_id: empId,
-        shift_start: form.shift_start || '08:00',
+        shift_start: form.shift_start || '11:00',
         weekly_off: form.weekly_off || 'Friday',
         grace_minutes: parseInt(form.grace_minutes) || 15,
         is_rostered: form.is_rostered !== false,
@@ -156,7 +156,7 @@ export default function StaffDirectory() {
         base_salary: '', join_date: new Date().toISOString().split('T')[0],
         emergency_contact: '', emergency_phone: '', notes: '',
         serial: 999, email: '', employee_id: '',
-        shift_start: '08:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true,
+        shift_start: '11:00', weekly_off: 'Friday', grace_minutes: 15, is_rostered: true,
         department: 'front', rfid_code: '',
         nid: '', blood_group: '', photo_url: ''
       })
@@ -175,7 +175,7 @@ export default function StaffDirectory() {
           name: editingStaff.name,
           employee_id: editingStaff.employee_id,
           designation: editingStaff.designation,
-          shift_start: editingStaff.shift_start || '08:00',
+          shift_start: editingStaff.shift_start || '11:00',
           weekly_off: editingStaff.weekly_off || 'Friday',
           grace_minutes: parseInt(editingStaff.grace_minutes) || 15,
           is_rostered: editingStaff.is_rostered !== false,
@@ -755,10 +755,9 @@ export default function StaffDirectory() {
               <label className="label" style={{ color: 'var(--text-secondary)' }}>Shift Start</label>
               <select
                 className="input"
-                value={form.shift_start || '08:00'}
+                value={form.shift_start || '11:00'}
                 onChange={e => setForm({ ...form, shift_start: e.target.value })}
               >
-                <option value="08:00">8:00 AM</option>
                 <option value="11:00">11:00 AM</option>
                 <option value="13:00">1:00 PM (13:00)</option>
               </select>
@@ -1055,10 +1054,9 @@ export default function StaffDirectory() {
                 <label className="label">Shift Start</label>
                 <select
                   className="input"
-                  value={editingStaff.shift_start || '08:00'}
+                  value={editingStaff.shift_start || '11:00'}
                   onChange={e => setEditingStaff({ ...editingStaff, shift_start: e.target.value })}
                 >
-                  <option value="08:00">8:00 AM</option>
                   <option value="11:00">11:00 AM</option>
                   <option value="13:00">1:00 PM (13:00)</option>
                 </select>

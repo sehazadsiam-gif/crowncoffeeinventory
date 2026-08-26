@@ -49,11 +49,10 @@ Your job is to generate an optimal weekly duty roster for a café operating Satu
 ${JSON.stringify(staffPromptData, null, 2)}
 
 3. ADMIN CUSTOM TRAINING RULES / PREFERENCES:
-"${custom_rules || 'Ensure each staff member gets 1 day off per week (preferably Friday or as specified). Maintain balanced staff coverage across Morning (8:00 AM), Mid (11:00 AM), and Evening (1:00 PM) shifts.'}"
+"${custom_rules || 'Ensure each staff member gets 1 day off per week (preferably Friday or as specified). Maintain balanced staff coverage across Mid (11:00 AM) and Evening (1:00 PM) shifts.'}"
 
 ### SHIFT RULES & OPTIONS:
-Each cell in the roster MUST be exactly ONE of the following 4 options:
-- "08:00"  (Morning Shift: 8:00 AM)
+Each cell in the roster MUST be exactly ONE of the following 3 options:
 - "11:00"  (Mid Shift: 11:00 AM)
 - "13:00"  (Evening Shift: 1:00 PM)
 - "OFF"    (Day Off)
@@ -69,7 +68,7 @@ Respond ONLY with a valid JSON object matching this exact schema:
   "reasoning": "A concise, professional 2-3 sentence summary explaining how you assigned shifts and satisfied the training rules.",
   "draft": {
     "STAFF_UUID_HERE": {
-      "YYYY-MM-DD": "08:00" | "11:00" | "13:00" | "OFF"
+      "YYYY-MM-DD": "11:00" | "13:00" | "OFF"
     }
   }
 }

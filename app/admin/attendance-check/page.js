@@ -33,7 +33,7 @@ export default function AttendanceCheckPage() {
 
   // Manual Override Modal state
   const [selectedStaffForOverride, setSelectedStaffForOverride] = useState(null)
-  const [overrideForm, setOverrideForm] = useState({ date: '', check_in_time: '08:00', check_out_time: '18:00', status: 'present', notes: '' })
+  const [overrideForm, setOverrideForm] = useState({ date: '', check_in_time: '11:00', check_out_time: '21:00', status: 'present', notes: '' })
   const [overrideSubmitting, setOverrideSubmitting] = useState(false)
 
   useEffect(() => {
@@ -674,8 +674,8 @@ export default function AttendanceCheckPage() {
                               setSelectedStaffForOverride(r)
                               setOverrideForm({
                                 date: todayData.date || new Date().toISOString().split('T')[0],
-                                check_in_time: '08:00',
-                                check_out_time: '18:00',
+                                check_in_time: '11:00',
+                                check_out_time: '21:00',
                                 status: 'present',
                                 notes: 'Admin manual time override'
                               })

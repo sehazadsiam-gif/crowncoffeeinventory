@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { translations } from '../../lib/i18n'
+import { normalizeShiftTime } from '../../lib/roster-utils'
 
 import Modal from '../../components/Modal'
 
@@ -35,7 +36,7 @@ export default function StaffPortalPage() {
   const [newLeave, setNewLeave] = useState({ start_date: '', end_date: '', leave_type: 'sick', reason: '' })
   const [submittingLeave, setSubmittingLeave] = useState(false)
   const [dutyRequests, setDutyRequests] = useState([])
-  const [newDutyChange, setNewDutyChange] = useState({ request_date: '', request_type: 'day_off_swap', new_shift_start: '10:00', reason: '' })
+  const [newDutyChange, setNewDutyChange] = useState({ request_date: '', request_type: 'day_off_swap', new_shift_start: '11:00', reason: '' })
   const [submittingDutyChange, setSubmittingDutyChange] = useState(false)
   const [printData, setPrintData] = useState(null)
   const [messages, setMessages] = useState([])
@@ -143,7 +144,7 @@ export default function StaffPortalPage() {
       const json = await res.json()
       if (res.ok) {
         alert(lang === 'bn' ? 'আবেদন সফলভাবে জমা হয়েছে!' : 'Request submitted successfully!')
-        setNewDutyChange({ request_date: '', request_type: 'day_off_swap', new_shift_start: '10:00', reason: '' })
+        setNewDutyChange({ request_date: '', request_type: 'day_off_swap', new_shift_start: '11:00', reason: '' })
         fetchStaffData(staff.id)
       } else {
         alert(json.error || 'Submission failed')
@@ -592,7 +593,8 @@ export default function StaffPortalPage() {
                       const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
                       const isDefaultOff = staff?.weekly_off && dayName.toLowerCase() === staff.weekly_off.toLowerCase()
                       if (isDefaultOff) return lang === 'bn' ? 'আজ আপনার সাপ্তাহিক ছুটি' : 'Today is your Weekly Off Day'
-                      return (lang === 'bn' ? 'আজ ডিউটি আছে: ' : 'Working Today: ') + (staff?.shift_start ? staff.shift_start.slice(0, 5) : '08:00') + ' AM'
+                      const shiftFormatted = staff?.shift_start ? normalizeShiftTime(staff.shift_start) : '11:00 AM'
+                      return (lang === 'bn' ? 'আজ ডিউটি আছে: ' : 'Working Today: ') + shiftFormatted
                     })()}
                   </h2>
                 </div>
@@ -656,10 +658,9 @@ export default function StaffPortalPage() {
                     <label className="label">{t.newTime}</label>
                     <select
                       className="input"
-                      value={newDutyChange.new_shift_start || '08:00'}
+                      value={newDutyChange.new_shift_start || '11:00'}
                       onChange={e => setNewDutyChange({ ...newDutyChange, new_shift_start: e.target.value })}
                     >
-                      <option value="08:00">8:00 AM</option>
                       <option value="11:00">11:00 AM</option>
                       <option value="13:00">1:00 PM (13:00)</option>
                     </select>
