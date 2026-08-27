@@ -62,6 +62,7 @@ CREATE TABLE payroll_entries (
   staff_id UUID REFERENCES staff(id) ON DELETE CASCADE,
   month INTEGER NOT NULL,
   year INTEGER NOT NULL,
+  late_days INTEGER DEFAULT 0,
   overtime_hours NUMERIC DEFAULT 0,
   overtime_pay NUMERIC DEFAULT 0,
   service_charge NUMERIC DEFAULT 0,
@@ -1086,6 +1087,7 @@ UPDATE staff SET hourly_rate = base_salary / 30 / 10 WHERE hourly_rate IS NULL;
 -- --------------------------------------------------------
 -- Run this in your Supabase SQL Editor to fix the payroll syncing issues
 
+ALTER TABLE payroll_entries ADD COLUMN IF NOT EXISTS late_days INTEGER DEFAULT 0;
 ALTER TABLE payroll_entries ADD COLUMN IF NOT EXISTS miscellaneous_plus INTEGER DEFAULT 0;
 ALTER TABLE payroll_entries ADD COLUMN IF NOT EXISTS late_waived BOOLEAN DEFAULT FALSE;
 ALTER TABLE payroll_entries ADD COLUMN IF NOT EXISTS unpaid_leave_deduction NUMERIC DEFAULT 0;
