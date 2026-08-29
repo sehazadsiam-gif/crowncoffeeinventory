@@ -46,6 +46,13 @@ export async function GET() {
         ALTER TABLE payroll_entries ADD COLUMN IF NOT EXISTS waived_unpaid_days INTEGER DEFAULT 0;
         ALTER TABLE payroll_entries ADD COLUMN IF NOT EXISTS absent_days INTEGER DEFAULT 0;
 
+        ALTER TABLE staff ADD COLUMN IF NOT EXISTS email TEXT;
+        ALTER TABLE staff ADD COLUMN IF NOT EXISTS employee_id TEXT;
+        ALTER TABLE staff ADD COLUMN IF NOT EXISTS rfid_code TEXT;
+        ALTER TABLE staff ADD COLUMN IF NOT EXISTS blood_group VARCHAR(10);
+        ALTER TABLE staff ADD COLUMN IF NOT EXISTS nid TEXT;
+        ALTER TABLE staff ADD COLUMN IF NOT EXISTS photo_url TEXT;
+
         ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS present_days INTEGER DEFAULT 0;
         ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS late_days INTEGER DEFAULT 0;
         ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS absent_days INTEGER DEFAULT 0;

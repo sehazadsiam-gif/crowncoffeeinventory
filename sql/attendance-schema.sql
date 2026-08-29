@@ -6,6 +6,7 @@
 
 -- ── 1. Extend staff table with roster fields ─────────────────
 ALTER TABLE staff
+  ADD COLUMN IF NOT EXISTS email         TEXT,
   ADD COLUMN IF NOT EXISTS employee_id   TEXT UNIQUE,
   ADD COLUMN IF NOT EXISTS shift_start   TIME DEFAULT '08:00',
   ADD COLUMN IF NOT EXISTS weekly_off    TEXT DEFAULT 'Friday',

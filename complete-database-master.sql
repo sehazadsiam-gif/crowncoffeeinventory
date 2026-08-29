@@ -51,6 +51,7 @@ CREATE TABLE staff (
   join_date DATE,
   emergency_contact TEXT,
   emergency_phone TEXT,
+  email TEXT,
   notes TEXT,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()

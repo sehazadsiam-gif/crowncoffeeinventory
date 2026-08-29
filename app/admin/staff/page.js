@@ -116,7 +116,7 @@ export default function StaffDirectory() {
       const nextNum = (staff.length || 0) + 1
       const empId = form.employee_id.trim() || `CC-${String(nextNum).padStart(3, '0')}`
 
-      const { data, error } = await supabase.from('staff').insert([{
+      const staffPayload = {
         name: form.name,
         designation: form.designation,
         contract_type: form.contract_type,
@@ -126,7 +126,7 @@ export default function StaffDirectory() {
         emergency_phone: form.emergency_phone,
         notes: form.notes,
         serial: parseInt(form.serial) || 999,
-        email: form.email,
+        email: form.email || null,
         employee_id: empId,
         shift_start: form.shift_start || '11:00',
         weekly_off: form.weekly_off || 'Friday',
@@ -137,7 +137,16 @@ export default function StaffDirectory() {
         nid: form.nid,
         blood_group: form.blood_group,
         photo_url: form.photo_url
-      }]).select()
+      }
+
+      let { data, error } = await supabase.from('staff').insert([staffPayload]).select()
+
+      if (error && error.message?.includes('email')) {
+        const { email: _email, ...fallbackPayload } = staffPayload
+        const retry = await supabase.from('staff').insert([fallbackPayload]).select()
+        data = retry.data
+        error = retry.error
+      }
 
       if (error) throw error
 
@@ -169,26 +178,35 @@ export default function StaffDirectory() {
   async function handleUpdateStaff() {
     if (!editingStaff || !editingStaff.id) return
     try {
-      const { error } = await supabase
+      const updatePayload = {
+        name: editingStaff.name,
+        employee_id: editingStaff.employee_id,
+        designation: editingStaff.designation,
+        email: editingStaff.email || null,
+        shift_start: editingStaff.shift_start || '11:00',
+        weekly_off: editingStaff.weekly_off || 'Friday',
+        grace_minutes: parseInt(editingStaff.grace_minutes) || 15,
+        is_rostered: editingStaff.is_rostered !== false,
+        department: editingStaff.department || 'front',
+        rfid_code: editingStaff.rfid_code ? editingStaff.rfid_code.trim() : null,
+        base_salary: parseFloat(editingStaff.base_salary) || 0,
+        nid: editingStaff.nid || null,
+        blood_group: editingStaff.blood_group || null,
+        photo_url: editingStaff.photo_url || null,
+        emergency_contact: editingStaff.emergency_contact || null,
+        emergency_phone: editingStaff.emergency_phone || null
+      }
+
+      let { error } = await supabase
         .from('staff')
-        .update({
-          name: editingStaff.name,
-          employee_id: editingStaff.employee_id,
-          designation: editingStaff.designation,
-          shift_start: editingStaff.shift_start || '11:00',
-          weekly_off: editingStaff.weekly_off || 'Friday',
-          grace_minutes: parseInt(editingStaff.grace_minutes) || 15,
-          is_rostered: editingStaff.is_rostered !== false,
-          department: editingStaff.department || 'front',
-          rfid_code: editingStaff.rfid_code ? editingStaff.rfid_code.trim() : null,
-          base_salary: parseFloat(editingStaff.base_salary) || 0,
-          nid: editingStaff.nid || null,
-          blood_group: editingStaff.blood_group || null,
-          photo_url: editingStaff.photo_url || null,
-          emergency_contact: editingStaff.emergency_contact || null,
-          emergency_phone: editingStaff.emergency_phone || null
-        })
+        .update(updatePayload)
         .eq('id', editingStaff.id)
+
+      if (error && error.message?.includes('email')) {
+        const { email: _email, ...fallbackUpdate } = updatePayload
+        const retry = await supabase.from('staff').update(fallbackUpdate).eq('id', editingStaff.id)
+        error = retry.error
+      }
 
       if (error) throw error
 
