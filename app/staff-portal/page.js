@@ -286,9 +286,9 @@ export default function StaffPortalPage() {
     ? Number(monthPayroll.overtime_hours)
     : accruedOTHours
 
-  const presentDays = monthSummary ? monthSummary.present_days : monthAttendance.filter(a => a.status === 'present').length
-  const absentDays = monthSummary ? monthSummary.absent_days : monthAttendance.filter(a => a.status === 'absent').length
-  const lateDays = monthSummary ? monthSummary.late_days : monthAttendance.filter(a => a.status === 'late').length
+  const presentDays = monthSummary ? (monthSummary.present_days ?? monthSummary.total_present) : monthAttendance.filter(a => a.status === 'present').length
+  const absentDays = monthSummary ? (monthSummary.absent_days ?? monthSummary.total_absent) : monthAttendance.filter(a => a.status === 'absent').length
+  const lateDays = monthSummary ? (monthSummary.late_days ?? monthSummary.total_late) : monthAttendance.filter(a => a.status === 'late').length
   const halfDays = monthAttendance.filter(a => a.status === 'half_day').length
   const lateDeductionDays = Math.floor(lateDays / 3)
   const perDay = Math.round(Number(staff?.base_salary || 0) / 30)

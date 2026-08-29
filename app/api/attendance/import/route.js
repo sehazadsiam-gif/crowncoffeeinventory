@@ -16,15 +16,33 @@ export async function POST(req) {
       present_days: parseInt(r.present_days) || 0,
       absent_days: parseInt(r.absent_days) || 0,
       late_days: parseInt(r.late_days) || 0,
+      total_present: parseInt(r.present_days) || 0,
+      total_absent: parseInt(r.absent_days) || 0,
+      total_late: parseInt(r.late_days) || 0,
       source: 'rysenova',
       updated_at: new Date().toISOString()
     }))
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from('monthly_attendance_summary')
       .upsert(upsertData, { onConflict: 'staff_id,month,year' })
 
-    if (error) throw error
+    if (error) {
+      // Fallback for legacy schema
+      const legacyData = records.map(r => ({
+        staff_id: r.staff_id,
+        month: parseInt(month),
+        year: parseInt(year),
+        total_present: parseInt(r.present_days) || 0,
+        total_absent: parseInt(r.absent_days) || 0,
+        total_late: parseInt(r.late_days) || 0
+      }))
+      const { error: legErr } = await supabase
+        .from('monthly_attendance_summary')
+        .upsert(legacyData, { onConflict: 'staff_id,month,year' })
+
+      if (legErr) throw error
+    }
 
     return NextResponse.json({ success: true, imported: records.length })
   } catch (err) {

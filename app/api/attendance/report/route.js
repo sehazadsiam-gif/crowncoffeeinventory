@@ -367,6 +367,7 @@ export async function POST(request) {
         const totalHours = Math.round(sLogs.reduce((sum, l) => sum + (l.hours_worked || 0), 0) * 10) / 10
         const totalLateMins = sLogs.reduce((sum, l) => sum + (l.minutes_late || 0), 0)
         const totalOtMins = sLogs.reduce((sum, l) => sum + (l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 600)), 0)
+        const totalOtHours = Math.round((totalOtMins / 60) * 100) / 100
 
         return {
           staff_id: s.id,
@@ -375,16 +376,84 @@ export async function POST(request) {
           present_days: present + late,
           late_days: late,
           absent_days: absent,
+          total_present: present + late,
+          total_late: late,
+          total_absent: absent,
+          total_leave: onLeave,
+          total_hours: totalHours,
+          total_overtime_hours: totalOtHours,
           updated_at: new Date().toISOString()
         }
       })
 
       if (summaryUpserts.length > 0) {
-        const { error: upsertErr } = await supabaseAdmin
-          .from('monthly_attendance_summary')
-          .upsert(summaryUpserts, { onConflict: 'staff_id,month,year' })
+        // Attempt upsert with all modern fields
+        let upsertSucceeded = false
+        try {
+          const { error: fullErr } = await supabaseAdmin
+            .from('monthly_attendance_summary')
+            .upsert(summaryUpserts, { onConflict: 'staff_id,month,year' })
 
-        if (upsertErr) throw upsertErr
+          if (!fullErr) {
+            upsertSucceeded = true
+          } else {
+            console.warn('[apply_to_payroll] Full upsert failed, trying fallback schema:', fullErr.message)
+          }
+        } catch (e) {
+          console.warn('[apply_to_payroll] Exception on full upsert:', e.message)
+        }
+
+        // If schema cache lacks absent_days / present_days, fallback to legacy schema columns
+        if (!upsertSucceeded) {
+          const legacyUpserts = summaryUpserts.map(r => ({
+            staff_id: r.staff_id,
+            month: r.month,
+            year: r.year,
+            total_present: r.total_present,
+            total_late: r.total_late,
+            total_absent: r.total_absent,
+            total_leave: r.total_leave,
+            total_overtime_hours: r.total_overtime_hours
+          }))
+
+          const { error: legacyErr } = await supabaseAdmin
+            .from('monthly_attendance_summary')
+            .upsert(legacyUpserts, { onConflict: 'staff_id,month,year' })
+
+          if (legacyErr) {
+            console.error('[apply_to_payroll] Legacy upsert also failed:', legacyErr.message)
+            // Try direct database connection as final safeguard
+            try {
+              const { Client } = await import('pg')
+              const connStr = process.env.DATABASE_URL || 'postgres://postgres:YJEwDbQHPOF6Te4Yk1c8vQqTaa6yaKwcv1dLnb9682HDFGmwDbSk0OdiwxcTFXts@169.58.136.137:5432/postgres'
+              const client = new Client({ connectionString: connStr, connectionTimeoutMillis: 3000 })
+              await client.connect()
+              for (const row of summaryUpserts) {
+                await client.query(`
+                  INSERT INTO monthly_attendance_summary (staff_id, month, year, present_days, late_days, absent_days, total_present, total_late, total_absent, total_leave, total_hours, total_overtime_hours, updated_at)
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+                  ON CONFLICT (staff_id, month, year)
+                  DO UPDATE SET
+                    present_days = EXCLUDED.present_days,
+                    late_days = EXCLUDED.late_days,
+                    absent_days = EXCLUDED.absent_days,
+                    total_present = EXCLUDED.total_present,
+                    total_late = EXCLUDED.total_late,
+                    total_absent = EXCLUDED.total_absent,
+                    total_leave = EXCLUDED.total_leave,
+                    total_hours = EXCLUDED.total_hours,
+                    total_overtime_hours = EXCLUDED.total_overtime_hours,
+                    updated_at = NOW()
+                `, [row.staff_id, row.month, row.year, row.present_days, row.late_days, row.absent_days, row.total_present, row.total_late, row.total_absent, row.total_leave, row.total_hours, row.total_overtime_hours])
+              }
+              await client.end()
+              upsertSucceeded = true
+            } catch (pgErr) {
+              console.error('[apply_to_payroll] Direct PG fallback failed:', pgErr.message)
+              throw legacyErr
+            }
+          }
+        }
       }
 
       return NextResponse.json({

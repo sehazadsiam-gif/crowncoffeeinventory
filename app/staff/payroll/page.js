@@ -161,9 +161,9 @@ export default function PayrollPage() {
       for (const s of activeStaff) {
         const summary = summaryMap[s.id]
 
-        const lateDays = summary ? Number(summary.late_days || 0) : (logLateMap[s.id] || lateMap[s.id] || 0)
-        const presentCount = summary ? Number(summary.present_days || 0) : (logPresentMap[s.id] || presentMap[s.id] || 0)
-        const absentCount = summary ? Number(summary.absent_days || 0) : (unpaidMap[s.id] || 0)
+        const lateDays = summary ? Number(summary.late_days ?? summary.total_late ?? 0) : (logLateMap[s.id] || lateMap[s.id] || 0)
+        const presentCount = summary ? Number(summary.present_days ?? summary.total_present ?? 0) : (logPresentMap[s.id] || presentMap[s.id] || 0)
+        const absentCount = summary ? Number(summary.absent_days ?? summary.total_absent ?? 0) : (unpaidMap[s.id] || 0)
         const totalPresentForFood = presentCount
 
         const perDay = Math.round(Number(s.base_salary) / 30)
