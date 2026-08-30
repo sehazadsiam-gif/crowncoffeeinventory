@@ -277,6 +277,7 @@ export default function PayrollPage() {
             payMap[s.id].morning_food = autoMorningFood
           }
         }
+      }
 
       setStaff(activeStaff)
       setPayroll(payMap)
