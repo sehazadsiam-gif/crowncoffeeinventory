@@ -8,6 +8,31 @@ import { Printer, Plus, Trash2, X, History, ChevronUp, ChevronDown, Calculator }
 import PayrollCalculator from '../../../components/PayrollCalculator'
 import dynamic from 'next/dynamic'
 
+function getShiftType(log, staffDefaultShift = '11:00') {
+  const shiftStr = String(log?.shift_start || staffDefaultShift || '').trim()
+  const timePrefix = shiftStr.slice(0, 5)
+  if (timePrefix === '08:00' || timePrefix === '11:00' || timePrefix === '10:00') {
+    return 'morning'
+  }
+  if (timePrefix === '13:00' || timePrefix === '14:00' || timePrefix === '15:00') {
+    return 'night'
+  }
+  const hourMatch = shiftStr.match(/^(\d{1,2})/)
+  if (hourMatch) {
+    const h = parseInt(hourMatch[1], 10)
+    if (h >= 7 && h <= 12) return 'morning'
+    if (h >= 13) return 'night'
+  }
+  if (log?.check_in_at) {
+    const d = new Date(log.check_in_at)
+    if (!isNaN(d.getTime())) {
+      const localHour = (d.getUTCHours() + 6) % 24
+      return localHour < 12.5 ? 'morning' : 'night'
+    }
+  }
+  return 'morning'
+}
+
 const PaySlip = dynamic(() => import('../../../components/PaySlip'), { ssr: false })
 
 export default function PayrollPage() {
@@ -85,7 +110,7 @@ export default function PayrollPage() {
         safe(supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate)),
         safe(supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y)),
         safe(supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate)),
-        safe(supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes').gte('date', startDate).lte('date', endDate)),
+        safe(supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes, shift_start, check_in_at').gte('date', startDate).lte('date', endDate)),
         safe(supabase.from('staff_penalties').select('staff_id, penalty_percent').gte('date', startDate).lte('date', endDate))
       ])
 
@@ -125,10 +150,20 @@ export default function PayrollPage() {
       const logLateMap = {}
       const logPresentMap = {}
       const logOtMap = {}
+      const logMorningDays = {}
+      const logNightDays = {}
 
       attLogs.forEach(l => {
         if (l.status === 'late') logLateMap[l.staff_id] = (logLateMap[l.staff_id] || 0) + 1
-        if (l.status === 'present' || l.status === 'late') logPresentMap[l.staff_id] = (logPresentMap[l.staff_id] || 0) + 1
+        if (l.status === 'present' || l.status === 'late') {
+          logPresentMap[l.staff_id] = (logPresentMap[l.staff_id] || 0) + 1
+          const shift = getShiftType(l)
+          if (shift === 'morning') {
+            logMorningDays[l.staff_id] = (logMorningDays[l.staff_id] || 0) + 1
+          } else {
+            logNightDays[l.staff_id] = (logNightDays[l.staff_id] || 0) + 1
+          }
+        }
         const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 660)
         logOtMap[l.staff_id] = (logOtMap[l.staff_id] || 0) + (otMins / 60)
       })
@@ -153,7 +188,9 @@ export default function PayrollPage() {
           advance_taken: Number(p.advance_taken || 0),
           manual_unpaid_days: p.manual_unpaid_days ?? null,
           waived_unpaid_days: p.waived_unpaid_days || 0,
-          overtime_manual: p.miscellaneous_plus === 1
+          overtime_manual: p.miscellaneous_plus === 1,
+          lunch_dinner_manual: Boolean(p.lunch_dinner_manual),
+          morning_food_manual: Boolean(p.morning_food_manual)
         }
       })
 
@@ -165,6 +202,11 @@ export default function PayrollPage() {
         const presentCount = summary ? Number(summary.present_days ?? summary.total_present ?? 0) : (logPresentMap[s.id] || presentMap[s.id] || 0)
         const absentCount = summary ? Number(summary.absent_days ?? summary.total_absent ?? 0) : (unpaidMap[s.id] || 0)
         const totalPresentForFood = presentCount
+
+        const morningDays = logMorningDays[s.id] || 0
+        const nightDays = logNightDays[s.id] !== undefined ? logNightDays[s.id] : Math.max(0, presentCount - morningDays)
+        const autoMorningFood = morningDays * 110
+        const autoLunchDinner = nightDays * 140
 
         const perDay = Math.round(Number(s.base_salary) / 30)
         const lateDeductionDays = Math.floor(lateDays / 3)
@@ -188,9 +230,14 @@ export default function PayrollPage() {
             overtime_auto_pay: autoOtPay,
             overtime_manual: false,
             service_charge: 0, bonus: 0,
-            lunch_dinner: totalPresentForFood * 140, morning_food: 0,
-            lunch_dinner_auto: totalPresentForFood * 140,
+            lunch_dinner: autoLunchDinner,
+            lunch_dinner_auto: autoLunchDinner,
             lunch_dinner_manual: false,
+            morning_food: autoMorningFood,
+            morning_food_auto: autoMorningFood,
+            morning_food_manual: false,
+            morning_days: morningDays,
+            night_days: nightDays,
             advance_taken: advancesMap[s.id] || 0,
             others_taken: 0, miscellaneous: 0,
             is_paid: false,
@@ -211,6 +258,10 @@ export default function PayrollPage() {
           payMap[s.id].late_deduction = lateDeduction
           payMap[s.id].present_days = presentCount
           payMap[s.id].absent_days = absentCount
+          payMap[s.id].morning_days = morningDays
+          payMap[s.id].night_days = nightDays
+          payMap[s.id].lunch_dinner_auto = autoLunchDinner
+          payMap[s.id].morning_food_auto = autoMorningFood
           // Update auto OT values
           payMap[s.id].overtime_auto_hours = autoOtHours
           payMap[s.id].overtime_auto_pay = autoOtPay
@@ -219,16 +270,13 @@ export default function PayrollPage() {
             payMap[s.id].overtime_hours = autoOtHours
             payMap[s.id].overtime_pay = autoOtPay
           }
+          if (!payMap[s.id].lunch_dinner_manual) {
+            payMap[s.id].lunch_dinner = autoLunchDinner
+          }
+          if (!payMap[s.id].morning_food_manual) {
+            payMap[s.id].morning_food = autoMorningFood
+          }
         }
-
-        // Auto calculate lunch dinner if not manually set
-        if (!payMap[s.id].lunch_dinner_manual) {
-          payMap[s.id].lunch_dinner = totalPresentForFood * 140
-          payMap[s.id].lunch_dinner_auto = totalPresentForFood * 140
-        } else {
-          payMap[s.id].lunch_dinner_auto = totalPresentForFood * 140
-        }
-      }
 
       setStaff(activeStaff)
       setPayroll(payMap)
@@ -368,6 +416,7 @@ export default function PayrollPage() {
         absent_days: Number(row.absent_days) || 0,
         late_waived: waivedStaff[staffId] || false,
         lunch_dinner_manual: row.lunch_dinner_manual || false,
+        morning_food_manual: row.morning_food_manual || false,
         final_salary: finalSalary
       }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
@@ -527,8 +576,8 @@ export default function PayrollPage() {
     'Overtime Hours',
     'Service Charge',
     'Bonus',
-    'Lunch + Dinner',
-    'Morning Food',
+    'Night Food (৳140)',
+    'Morning Food (৳110)',
     'Advance',
     'Others',
     'Unpaid Leave',
@@ -598,7 +647,7 @@ export default function PayrollPage() {
           flexDirection: 'column',
           gap: '6px'
         }}>
-          <p style={{ margin: 0, fontWeight: 700 }}>Automatic Deduction Rules:</p>
+          <p style={{ margin: 0, fontWeight: 700 }}>Automatic Deduction & Allowance Rules:</p>
           <p style={{ margin: 0 }}>
             1. Unpaid Leave: First 4 absent days are free. From the 5th absent day, each day deducts Base Salary / 30 from final salary. You can waive days or override manually.
           </p>
@@ -607,6 +656,9 @@ export default function PayrollPage() {
           </p>
           <p style={{ margin: 0 }}>
             3. Advance: Total advance taken in the month is automatically deducted.
+          </p>
+          <p style={{ margin: 0 }}>
+            4. Food Allowance: Morning shift (8 AM / 11 AM) receives ৳110/day. Night shift (1 PM) receives ৳140/day.
           </p>
         </div>
 
@@ -704,7 +756,7 @@ export default function PayrollPage() {
                       </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.service_charge} onChange={e => handleInput(s.id, 'service_charge', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.bonus} onChange={e => handleInput(s.id, 'bonus', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
-                      <td style={{ padding: '14px' }}>
+                      <td style={{ padding: '14px 8px' }}>
                         <input
                           type="number"
                           style={inputStyle}
@@ -712,11 +764,11 @@ export default function PayrollPage() {
                           onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)}
                           onBlur={() => handleBlur(s.id)}
                         />
-                        <p style={{ fontSize: '10px', color: '#64748B', marginTop: '3px' }}>
-                           Auto: ৳{row.lunch_dinner_auto || 0}
-                         </p>
+                        <p style={{ fontSize: '10px', color: '#64748B', margin: '3px 0 0' }}>
+                          {row.night_days || 0}d × ৳140
+                        </p>
                         {row.lunch_dinner_manual && (
-                          <p style={{ fontSize: '10px', color: '#FBBF24', marginTop: '2px', fontWeight: 600 }}>
+                          <p style={{ fontSize: '10px', color: '#FBBF24', margin: '2px 0 0', fontWeight: 600 }}>
                             Manual
                           </p>
                         )}
@@ -745,7 +797,47 @@ export default function PayrollPage() {
                           </button>
                         )}
                       </td>
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.morning_food} onChange={e => handleInput(s.id, 'morning_food', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '14px 8px' }}>
+                        <input
+                          type="number"
+                          style={inputStyle}
+                          value={row.morning_food}
+                          onChange={e => handleInput(s.id, 'morning_food', e.target.value)}
+                          onBlur={() => handleBlur(s.id)}
+                        />
+                        <p style={{ fontSize: '10px', color: '#64748B', margin: '3px 0 0' }}>
+                          {row.morning_days || 0}d × ৳110
+                        </p>
+                        {row.morning_food_manual && (
+                          <p style={{ fontSize: '10px', color: '#FBBF24', margin: '2px 0 0', fontWeight: 600 }}>
+                            Manual
+                          </p>
+                        )}
+                        {row.morning_food_manual && (
+                          <button
+                            onClick={() => {
+                              handleInput(s.id, 'morning_food', row.morning_food_auto || 0)
+                              setPayroll(prev => ({
+                                ...prev,
+                                [s.id]: {
+                                  ...prev[s.id],
+                                  morning_food: row.morning_food_auto || 0,
+                                  morning_food_manual: false
+                                }
+                              }))
+                              setTimeout(() => handleBlur(s.id), 100)
+                            }}
+                            style={{
+                              fontSize: '10px', color: '#94A3B8',
+                              background: 'none', border: 'none',
+                              cursor: 'pointer', padding: 0,
+                              marginTop: '2px', textDecoration: 'underline'
+                            }}
+                          >
+                            Reset
+                          </button>
+                        )}
+                      </td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
 

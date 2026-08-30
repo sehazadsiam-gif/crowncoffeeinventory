@@ -1,5 +1,30 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
+
+export function getShiftType(log, staffDefaultShift = '11:00') {
+  const shiftStr = String(log?.shift_start || staffDefaultShift || '').trim()
+  const timePrefix = shiftStr.slice(0, 5)
+  if (timePrefix === '08:00' || timePrefix === '11:00' || timePrefix === '10:00') {
+    return 'morning'
+  }
+  if (timePrefix === '13:00' || timePrefix === '14:00' || timePrefix === '15:00') {
+    return 'night'
+  }
+  const hourMatch = shiftStr.match(/^(\d{1,2})/)
+  if (hourMatch) {
+    const h = parseInt(hourMatch[1], 10)
+    if (h >= 7 && h <= 12) return 'morning'
+    if (h >= 13) return 'night'
+  }
+  if (log?.check_in_at) {
+    const d = new Date(log.check_in_at)
+    if (!isNaN(d.getTime())) {
+      const localHour = (d.getUTCHours() + 6) % 24
+      return localHour < 12.5 ? 'morning' : 'night'
+    }
+  }
+  return 'morning'
+}
 import { injectAugustBaselineLogs } from '../../../../lib/attendance-service'
 
 export async function GET(request) {
@@ -119,6 +144,11 @@ export async function GET(request) {
         check_out_formatted: checkOutTime || '--',
         time_range: timeRange,
         status: l.status || 'present',
+        shift_start: l.shift_start || s.shift_start || '11:00',
+        shift_type: getShiftType(l, s.shift_start),
+        food_fee: (l.status === 'present' || l.status === 'late')
+          ? (getShiftType(l, s.shift_start) === 'morning' ? 110 : 140)
+          : 0,
         minutes_late: lateMins,
         late_hours: lateHours,
         hours_worked: hoursWorked,
@@ -160,18 +190,29 @@ export async function GET(request) {
         return sum + ot
       }, 0) * 100) / 100
 
+      const morningDays = sLogs.filter(l => (l.status === 'present' || l.status === 'late') && getShiftType(l, s.shift_start) === 'morning').length
+      const nightDays = sLogs.filter(l => (l.status === 'present' || l.status === 'late') && getShiftType(l, s.shift_start) === 'night').length
+      const morningFood = morningDays * 110
+      const nightFood = nightDays * 140
+
       return {
         staff_id: s.id,
         name: s.name,
         employee_id: s.employee_id || 'N/A',
         designation: s.designation,
         base_salary: s.base_salary,
+        shift_start: s.shift_start || '11:00',
         present,
         late,
         absent,
         on_leave: onLeave,
         off,
         total_days_worked: present + late,
+        morning_days: morningDays,
+        night_days: nightDays,
+        morning_food: morningFood,
+        night_food: nightFood,
+        total_food: morningFood + nightFood,
         total_hours: totalHours,
         total_late_minutes: totalLateMinutes,
         total_late_hours: totalLateHours,
@@ -184,6 +225,11 @@ export async function GET(request) {
       year,
       total_staff: staffReports.length,
       total_present_days: staffReports.reduce((acc, r) => acc + r.total_days_worked, 0),
+      total_morning_days: staffReports.reduce((acc, r) => acc + r.morning_days, 0),
+      total_night_days: staffReports.reduce((acc, r) => acc + r.night_days, 0),
+      total_morning_food: staffReports.reduce((acc, r) => acc + r.morning_food, 0),
+      total_night_food: staffReports.reduce((acc, r) => acc + r.night_food, 0),
+      total_food_allowance: staffReports.reduce((acc, r) => acc + r.total_food, 0),
       total_late_occurrences: staffReports.reduce((acc, r) => acc + r.late, 0),
       total_late_hours: Math.round(staffReports.reduce((acc, r) => acc + r.total_late_hours, 0) * 10) / 10,
       total_absent_days: staffReports.reduce((acc, r) => acc + r.absent, 0),
@@ -353,7 +399,7 @@ export async function POST(request) {
       const lastDay = new Date(y, m, 0).getDate()
       const endDate = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-      const { data: staffList } = await supabaseAdmin.from('staff').select('id, name, employee_id, base_salary, hourly_rate').eq('is_active', true)
+      const { data: staffList } = await supabaseAdmin.from('staff').select('id, name, employee_id, base_salary, hourly_rate, shift_start').eq('is_active', true)
       const { data: rawLogs } = await supabaseAdmin.from('attendance_log').select('*').gte('date', startDate).lte('date', endDate)
 
       const logs = injectAugustBaselineLogs(rawLogs || [], staffList || [], startDate, endDate)
@@ -496,6 +542,12 @@ export async function POST(request) {
             const base = Number(s.base_salary) || 0
             const perDay = Math.round(base / 30)
 
+            const sLogs = (logs || []).filter(l => l.staff_id === s.id)
+            const morningDays = sLogs.filter(l => (l.status === 'present' || l.status === 'late') && getShiftType(l, s.shift_start) === 'morning').length
+            const nightDays = sLogs.filter(l => (l.status === 'present' || l.status === 'late') && getShiftType(l, s.shift_start) === 'night').length
+            const autoMorningFood = morningDays * 110
+            const autoNightFood = nightDays * 140
+
             const isManualOt = existing && existing.miscellaneous_plus === 1
             const otHours = isManualOt ? Number(existing.overtime_hours || 0) : (summary?.overtime_hours || 0)
             const otPay = isManualOt ? Number(existing.overtime_pay || 0) : (summary?.overtime_pay || 0)
@@ -515,13 +567,16 @@ export async function POST(request) {
               : Math.max(0, autoUnpaidDays - waivedUnpaidDays)
             const unpaidDeduction = finalUnpaidDays * perDay
 
+            const morn = existing?.morning_food_manual
+              ? Number(existing.morning_food || 0)
+              : autoMorningFood
+
             const lunchDinner = existing?.lunch_dinner_manual
               ? Number(existing.lunch_dinner || 0)
-              : presentDays * 140
+              : autoNightFood
 
             const sc = Number(existing?.service_charge || 0)
             const bonus = Number(existing?.bonus || 0)
-            const morn = Number(existing?.morning_food || 0)
             const misc = Number(existing?.miscellaneous || 0)
             const adv = Number(existing?.advance_taken || 0)
             const others = Number(existing?.others_taken || 0)
@@ -543,6 +598,7 @@ export async function POST(request) {
               service_charge: sc,
               bonus: bonus,
               morning_food: morn,
+              morning_food_manual: existing?.morning_food_manual || false,
               miscellaneous: misc,
               miscellaneous_note: existing?.miscellaneous_note || '',
               advance_taken: adv,
@@ -576,6 +632,7 @@ export async function POST(request) {
                   late_deduction = EXCLUDED.late_deduction,
                   unpaid_leave_deduction = EXCLUDED.unpaid_leave_deduction,
                   lunch_dinner = EXCLUDED.lunch_dinner,
+                  morning_food = EXCLUDED.morning_food,
                   final_salary = EXCLUDED.final_salary
               `, [row.staff_id, row.month, row.year, row.overtime_hours, row.overtime_pay, row.late_days, row.absent_days, row.late_deduction, row.unpaid_leave_deduction, row.lunch_dinner, row.lunch_dinner_manual, row.service_charge, row.bonus, row.morning_food, row.miscellaneous, row.miscellaneous_note, row.advance_taken, row.others_taken, row.final_salary, row.is_paid, row.miscellaneous_plus])
             }

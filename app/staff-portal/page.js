@@ -1096,7 +1096,8 @@ export default function StaffPortalPage() {
                           {pOt > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>OT:</span><b>+৳{pOt.toLocaleString()}</b></div>}
                           {Number(p.service_charge) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Service:</span><b>+৳{Number(p.service_charge).toLocaleString()}</b></div>}
                           {Number(p.bonus) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Bonus:</span><b>+৳{Number(p.bonus).toLocaleString()}</b></div>}
-                          {(Number(p.lunch_dinner) + Number(p.morning_food)) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Food:</span><b>+৳{(Number(p.lunch_dinner) + Number(p.morning_food)).toLocaleString()}</b></div>}
+                          {Number(p.lunch_dinner) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Night Food (1pm):</span><b>+৳{Number(p.lunch_dinner).toLocaleString()}</b></div>}
+                          {Number(p.morning_food) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Morning Food (8/11am):</span><b>+৳{Number(p.morning_food).toLocaleString()}</b></div>}
                         </div>
                       </div>
 

@@ -7,6 +7,31 @@ import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
 
+function getShiftType(log, staffDefaultShift = '11:00') {
+  const shiftStr = String(log?.shift_start || staffDefaultShift || '').trim()
+  const timePrefix = shiftStr.slice(0, 5)
+  if (timePrefix === '08:00' || timePrefix === '11:00' || timePrefix === '10:00') {
+    return 'morning'
+  }
+  if (timePrefix === '13:00' || timePrefix === '14:00' || timePrefix === '15:00') {
+    return 'night'
+  }
+  const hourMatch = shiftStr.match(/^(\d{1,2})/)
+  if (hourMatch) {
+    const h = parseInt(hourMatch[1], 10)
+    if (h >= 7 && h <= 12) return 'morning'
+    if (h >= 13) return 'night'
+  }
+  if (log?.check_in_at) {
+    const d = new Date(log.check_in_at)
+    if (!isNaN(d.getTime())) {
+      const localHour = (d.getUTCHours() + 6) % 24
+      return localHour < 12.5 ? 'morning' : 'night'
+    }
+  }
+  return 'morning'
+}
+
 const LOADING_STEPS = [
   { label: 'Connecting to database...' },
   { label: 'Fetching staff records...' },
@@ -81,7 +106,7 @@ export default function ViewPayrollPage() {
         safe(supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate)),
         safe(supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y)),
         safe(supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate)),
-        safe(supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes').gte('date', startDate).lte('date', endDate))
+        safe(supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes, shift_start, check_in_at').gte('date', startDate).lte('date', endDate))
       ])
 
       const staffRes = { data: activeStaffList }
@@ -115,10 +140,20 @@ export default function ViewPayrollPage() {
       const logLateMap = {}
       const logPresentMap = {}
       const logOtMap = {}
+      const logMorningDays = {}
+      const logNightDays = {}
 
       attLogs.forEach(l => {
         if (l.status === 'late') logLateMap[l.staff_id] = (logLateMap[l.staff_id] || 0) + 1
-        if (l.status === 'present' || l.status === 'late') logPresentMap[l.staff_id] = (logPresentMap[l.staff_id] || 0) + 1
+        if (l.status === 'present' || l.status === 'late') {
+          logPresentMap[l.staff_id] = (logPresentMap[l.staff_id] || 0) + 1
+          const shift = getShiftType(l)
+          if (shift === 'morning') {
+            logMorningDays[l.staff_id] = (logMorningDays[l.staff_id] || 0) + 1
+          } else {
+            logNightDays[l.staff_id] = (logNightDays[l.staff_id] || 0) + 1
+          }
+        }
         const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 660)
         logOtMap[l.staff_id] = (logOtMap[l.staff_id] || 0) + (otMins / 60)
       })
@@ -143,7 +178,9 @@ export default function ViewPayrollPage() {
           advance_taken: Number(p.advance_taken || 0),
           manual_unpaid_days: p.manual_unpaid_days ?? null,
           waived_unpaid_days: p.waived_unpaid_days || 0,
-          overtime_manual: p.miscellaneous_plus === 1
+          overtime_manual: p.miscellaneous_plus === 1,
+          lunch_dinner_manual: Boolean(p.lunch_dinner_manual),
+          morning_food_manual: Boolean(p.morning_food_manual)
         }
       })
 
@@ -155,6 +192,11 @@ export default function ViewPayrollPage() {
         const presentCount = summary ? Number(summary.present_days ?? summary.total_present ?? 0) : (logPresentMap[s.id] || presentMap[s.id] || 0)
         const absentCount = summary ? Number(summary.absent_days ?? summary.total_absent ?? 0) : (unpaidMap[s.id] || 0)
         const totalPresentForFood = presentCount
+
+        const morningDays = logMorningDays[s.id] || 0
+        const nightDays = logNightDays[s.id] !== undefined ? logNightDays[s.id] : Math.max(0, presentCount - morningDays)
+        const autoMorningFood = morningDays * 110
+        const autoLunchDinner = nightDays * 140
 
         const perDay = Math.round(Number(s.base_salary) / 30)
         const lateDeductionDays = Math.floor(lateDays / 3)
@@ -178,9 +220,14 @@ export default function ViewPayrollPage() {
             overtime_auto_pay: autoOtPay,
             overtime_manual: false,
             service_charge: 0, bonus: 0,
-            lunch_dinner: totalPresentForFood * 140, morning_food: 0,
-            lunch_dinner_auto: totalPresentForFood * 140,
+            lunch_dinner: autoLunchDinner,
+            lunch_dinner_auto: autoLunchDinner,
             lunch_dinner_manual: false,
+            morning_food: autoMorningFood,
+            morning_food_auto: autoMorningFood,
+            morning_food_manual: false,
+            morning_days: morningDays,
+            night_days: nightDays,
             advance_taken: advancesMap[s.id] || 0,
             others_taken: 0, miscellaneous: 0,
             is_paid: false,
@@ -199,19 +246,22 @@ export default function ViewPayrollPage() {
           payMap[s.id].late_deduction = lateDeduction
           payMap[s.id].present_days = presentCount
           payMap[s.id].absent_days = absentCount
+          payMap[s.id].morning_days = morningDays
+          payMap[s.id].night_days = nightDays
+          payMap[s.id].lunch_dinner_auto = autoLunchDinner
+          payMap[s.id].morning_food_auto = autoMorningFood
           payMap[s.id].overtime_auto_hours = autoOtHours
           payMap[s.id].overtime_auto_pay = autoOtPay
           if (!payMap[s.id].overtime_manual) {
             payMap[s.id].overtime_hours = autoOtHours
             payMap[s.id].overtime_pay = autoOtPay
           }
-        }
-
-        if (!payMap[s.id].lunch_dinner_manual) {
-          payMap[s.id].lunch_dinner = totalPresentForFood * 140
-          payMap[s.id].lunch_dinner_auto = totalPresentForFood * 140
-        } else {
-          payMap[s.id].lunch_dinner_auto = totalPresentForFood * 140
+          if (!payMap[s.id].lunch_dinner_manual) {
+            payMap[s.id].lunch_dinner = autoLunchDinner
+          }
+          if (!payMap[s.id].morning_food_manual) {
+            payMap[s.id].morning_food = autoMorningFood
+          }
         }
       }
 
@@ -554,8 +604,8 @@ export default function ViewPayrollPage() {
                   {Number(row.overtime_pay) > 0 && <Row label={`Overtime (${row.overtime_hours || 0} hrs)`} value={`+৳${Number(row.overtime_pay).toLocaleString()}`} color="#059669" />}
                   {Number(row.service_charge) > 0 && <Row label="Service Charge" value={`৳${Number(row.service_charge).toLocaleString()}`} />}
                   {Number(row.bonus) > 0 && <Row label="Bonus" value={`৳${Number(row.bonus).toLocaleString()}`} color="#059669" />}
-                  {Number(row.lunch_dinner) > 0 && <Row label="Lunch + Dinner" value={`৳${Number(row.lunch_dinner).toLocaleString()}`} />}
-                  {Number(row.morning_food) > 0 && <Row label="Morning Food" value={`৳${Number(row.morning_food).toLocaleString()}`} />}
+                  {Number(row.lunch_dinner) > 0 && <Row label={`Night Food (${row.night_days || 0}d × ৳140)`} value={`৳${Number(row.lunch_dinner).toLocaleString()}`} />}
+                  {Number(row.morning_food) > 0 && <Row label={`Morning Food (${row.morning_days || 0}d × ৳110)`} value={`৳${Number(row.morning_food).toLocaleString()}`} />}
 
                   {/* Deductions */}
                   {Number(row.advance_taken) > 0 && <Row label="Advance" value={`-৳${Number(row.advance_taken).toLocaleString()}`} color="#DC2626" border />}
