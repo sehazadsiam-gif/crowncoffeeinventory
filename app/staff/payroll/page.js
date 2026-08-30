@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
-import { Printer, Plus, Trash2, X, History, ChevronUp, ChevronDown, Calculator } from 'lucide-react'
+import { Printer, Plus, Trash2, X, History, ChevronUp, ChevronDown, Calculator, RefreshCw } from 'lucide-react'
 import PayrollCalculator from '../../../components/PayrollCalculator'
 import dynamic from 'next/dynamic'
 
@@ -57,6 +57,19 @@ export default function PayrollPage() {
   const [showCalculator, setShowCalculator] = useState(false)
   const [editingSalary, setEditingSalary] = useState(null)
   const [salaryInput, setSalaryInput] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+
+  async function handleRefresh() {
+    setRefreshing(true)
+    try {
+      await fetchAll(month, year)
+      addToast('Payroll refreshed', 'success')
+    } catch (e) {
+      addToast('Failed to refresh payroll', 'error')
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('cc_token')
@@ -603,6 +616,25 @@ export default function PayrollPage() {
               {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
             <input type="number" className="input" style={{ width: '85px' }} value={year} onChange={e => setYear(Number(e.target.value))} />
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '9px 14px', borderRadius: '8px',
+                background: 'var(--bg-surface)',
+                color: 'var(--text-primary)',
+                border: '1.5px solid var(--border-medium)',
+                cursor: refreshing ? 'wait' : 'pointer',
+                fontSize: '13px', fontWeight: 700,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                transition: 'all 0.15s ease'
+              }}
+              title="Refresh payroll data"
+            >
+              <RefreshCw size={15} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+              <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
             <button
               onClick={() => setShowCalculator(true)}
               style={{

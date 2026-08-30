@@ -367,6 +367,29 @@ export default function AttendanceDashboardPage() {
               <Wifi size={18} /> Tap Card / Manual Code
             </button>
 
+            <button
+              onClick={() => fetchTodayData()}
+              disabled={loading}
+              title="Refresh Today's Attendance"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                color: '#F8FAFC',
+                border: '1px solid rgba(255,255,255,0.18)',
+                padding: '10px 16px',
+                borderRadius: '12px',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: loading ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <RefreshCw size={16} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+              <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+
             {/* Round Ticking Analog Clock */}
             <AnalogClock time={currentTime} />
           </div>

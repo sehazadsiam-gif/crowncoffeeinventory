@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import Navbar from '../../components/Navbar'
-import { Printer, X, History, ChevronUp, ChevronDown } from 'lucide-react'
+import { Printer, X, History, ChevronUp, ChevronDown, RefreshCw } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
@@ -537,6 +537,20 @@ export default function ViewPayrollPage() {
               value={year}
               onChange={e => setYear(Number(e.target.value))}
             />
+            <button
+              onClick={() => fetchPayrollData(month, year)}
+              disabled={loading}
+              style={{
+                padding: '8px 14px', borderRadius: '8px', border: '1px solid #CBD5E1',
+                background: '#FFFFFF', color: '#0F172A', fontWeight: 700, fontSize: '13px',
+                cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+              }}
+              title="Refresh payroll data"
+            >
+              <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+              <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
           </div>
         </div>
 

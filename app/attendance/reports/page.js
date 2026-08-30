@@ -26,7 +26,8 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react'
 import * as xlsx from 'xlsx'
 import html2canvas from 'html2canvas'
@@ -524,6 +525,23 @@ export default function AttendanceReportsPage() {
 
           {/* Action Buttons Group */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => fetchReport()}
+              disabled={loading}
+              title="Refresh Attendance Report & Ledger"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '6px',
+                background: '#FFFFFF', color: '#0F172A', fontWeight: 800,
+                padding: '9px 14px', borderRadius: '10px', fontSize: '13px',
+                border: '1.5px solid #CBD5E1', cursor: loading ? 'wait' : 'pointer',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <RefreshCw size={15} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+              <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+
             <button
               onClick={openNewLogModal}
               style={{
