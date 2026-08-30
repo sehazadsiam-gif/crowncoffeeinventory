@@ -408,8 +408,13 @@ export async function POST(request) {
         const sLogs = (logs || []).filter(l => l.staff_id === s.id)
         const present = sLogs.filter(l => l.status === 'present').length
         const late = sLogs.filter(l => l.status === 'late').length
-        const absent = sLogs.filter(l => l.status === 'absent').length
+        const directAbsent = sLogs.filter(l => l.status === 'absent').length
+        const off = sLogs.filter(l => l.status === 'off').length
         const onLeave = sLogs.filter(l => l.status === 'on_leave').length
+        const worked = present + late
+        const unworked = Math.max(0, 30 - worked)
+        // User directive: consider off days as absent (and unworked days in standard 30-day month)
+        const absent = Math.max(directAbsent + off, unworked)
         const totalHours = Math.round(sLogs.reduce((sum, l) => {
           let hw = l.hours_worked || 0
           if ((!hw || hw === 0) && l.check_in_at && l.check_out_at) {
@@ -553,8 +558,11 @@ export async function POST(request) {
             const otPay = isManualOt ? Number(existing.overtime_pay || 0) : (summary?.overtime_pay || 0)
 
             const lateDays = summary ? summary.late_days : Number(existing?.late_days || 0)
-            const absentDays = summary ? summary.absent_days : Number(existing?.absent_days || 0)
             const presentDays = summary ? summary.present_days : Number(existing?.present_days || 0)
+            const directAbsent = sLogs.filter(l => l.status === 'absent').length
+            const off = sLogs.filter(l => l.status === 'off').length
+            const unworked = Math.max(0, 30 - presentDays)
+            const absentDays = summary ? summary.absent_days : Math.max(directAbsent + off, unworked)
 
             const isLateWaived = Boolean(existing?.late_waived)
             const lateDeductionDays = Math.floor(lateDays / 3)

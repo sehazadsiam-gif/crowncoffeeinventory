@@ -162,6 +162,8 @@ export default function PayrollPage() {
       const attLogs = logRes?.data || []
       const logLateMap = {}
       const logPresentMap = {}
+      const logAbsentMap = {}
+      const logOffMap = {}
       const logOtMap = {}
       const logMorningDays = {}
       const logNightDays = {}
@@ -177,6 +179,8 @@ export default function PayrollPage() {
             logNightDays[l.staff_id] = (logNightDays[l.staff_id] || 0) + 1
           }
         }
+        if (l.status === 'absent') logAbsentMap[l.staff_id] = (logAbsentMap[l.staff_id] || 0) + 1
+        if (l.status === 'off') logOffMap[l.staff_id] = (logOffMap[l.staff_id] || 0) + 1
         const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 660)
         logOtMap[l.staff_id] = (logOtMap[l.staff_id] || 0) + (otMins / 60)
       })
@@ -212,7 +216,14 @@ export default function PayrollPage() {
 
         const lateDays = summary ? Number(summary.late_days ?? summary.total_late ?? 0) : (logLateMap[s.id] || lateMap[s.id] || 0)
         const presentCount = summary ? Number(summary.present_days ?? summary.total_present ?? 0) : (logPresentMap[s.id] || presentMap[s.id] || 0)
-        const absentCount = summary ? Number(summary.absent_days ?? summary.total_absent ?? 0) : (unpaidMap[s.id] || 0)
+        
+        // Consider off days as absent (and unworked days in standard 30-day month)
+        const explicitOffAbsent = (logAbsentMap[s.id] || 0) + (logOffMap[s.id] || 0)
+        const unworkedDays = Math.max(0, 30 - presentCount)
+        const computedAbsent = Math.max(explicitOffAbsent, unworkedDays)
+        const absentCount = summary && Number(summary.absent_days) > 0
+          ? Math.max(Number(summary.absent_days), computedAbsent)
+          : computedAbsent
         const totalPresentForFood = presentCount
 
         const morningDays = logMorningDays[s.id] || 0
@@ -737,7 +748,7 @@ export default function PayrollPage() {
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>{s.designation}</p>
                         {Number(row.present_days) > 0 && <p style={{ fontSize: '11px', color: '#34D399', marginTop: '3px', fontWeight: 600 }}>Present: {row.present_days}d</p>}
                         {Number(row.late_days) > 0 && <p style={{ fontSize: '11px', color: '#FBBF24', marginTop: '3px', fontWeight: 600 }}>Late: {row.late_days}d</p>}
-                        {Number(row.absent_days) > 0 && <p style={{ fontSize: '11px', color: '#F87171', marginTop: '3px', fontWeight: 600 }}>Absent: {row.absent_days}d</p>}
+                        {Number(row.absent_days) > 0 && <p style={{ fontSize: '11px', color: '#F87171', marginTop: '3px', fontWeight: 600 }}>Off/Absent: {row.absent_days}d</p>}
                       </td>
                       <td style={{ padding: '10px 8px' }}>
                         {editingSalary === s.id ? (

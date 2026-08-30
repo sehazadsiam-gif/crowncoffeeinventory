@@ -139,6 +139,8 @@ export default function ViewPayrollPage() {
       const attLogs = logRes?.data || []
       const logLateMap = {}
       const logPresentMap = {}
+      const logAbsentMap = {}
+      const logOffMap = {}
       const logOtMap = {}
       const logMorningDays = {}
       const logNightDays = {}
@@ -154,6 +156,8 @@ export default function ViewPayrollPage() {
             logNightDays[l.staff_id] = (logNightDays[l.staff_id] || 0) + 1
           }
         }
+        if (l.status === 'absent') logAbsentMap[l.staff_id] = (logAbsentMap[l.staff_id] || 0) + 1
+        if (l.status === 'off') logOffMap[l.staff_id] = (logOffMap[l.staff_id] || 0) + 1
         const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 660)
         logOtMap[l.staff_id] = (logOtMap[l.staff_id] || 0) + (otMins / 60)
       })
@@ -189,7 +193,14 @@ export default function ViewPayrollPage() {
 
         const lateDays = summary ? Number(summary.late_days ?? summary.total_late ?? 0) : (logLateMap[s.id] || lateMap[s.id] || 0)
         const presentCount = summary ? Number(summary.present_days ?? summary.total_present ?? 0) : (logPresentMap[s.id] || presentMap[s.id] || 0)
-        const absentCount = summary ? Number(summary.absent_days ?? summary.total_absent ?? 0) : (unpaidMap[s.id] || 0)
+        
+        // Consider off days as absent (and unworked days in standard 30-day month)
+        const explicitOffAbsent = (logAbsentMap[s.id] || 0) + (logOffMap[s.id] || 0)
+        const unworkedDays = Math.max(0, 30 - presentCount)
+        const computedAbsent = Math.max(explicitOffAbsent, unworkedDays)
+        const absentCount = summary && Number(summary.absent_days) > 0
+          ? Math.max(Number(summary.absent_days), computedAbsent)
+          : computedAbsent
         const totalPresentForFood = presentCount
 
         const morningDays = logMorningDays[s.id] || 0
@@ -581,6 +592,10 @@ export default function ViewPayrollPage() {
             const base = Number(s.base_salary) || 0
             const perDay = Math.round(base / 30)
             const autoUnpaid = Math.max(0, (Number(row.absent_days) || 0) - 4)
+            const waived = Number(row.waived_unpaid_days) || 0
+            const finalUnpaidDays = row.manual_unpaid_days !== undefined && row.manual_unpaid_days !== null
+              ? Number(row.manual_unpaid_days)
+              : Math.max(0, autoUnpaid - waived)
 
             const Row = ({ label, value, color, border }) => (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderTop: border ? '1px solid #F1F5F9' : 'none' }}>
@@ -602,7 +617,7 @@ export default function ViewPayrollPage() {
                     <div style={{ textAlign: 'right', fontSize: '11px', fontWeight: 700 }}>
                       {Number(row.present_days) > 0 && <p style={{ margin: 0, color: '#059669' }}>Present {row.present_days}d</p>}
                       {Number(row.late_days) > 0 && <p style={{ margin: 0, color: '#D97706' }}>Late {row.late_days}d</p>}
-                      {Number(row.absent_days) > 0 && <p style={{ margin: 0, color: '#DC2626' }}>Absent {row.absent_days}d</p>}
+                      {Number(row.absent_days) > 0 && <p style={{ margin: 0, color: '#DC2626' }}>Off/Absent {row.absent_days}d</p>}
                     </div>
                   </div>
                 </div>
@@ -621,7 +636,7 @@ export default function ViewPayrollPage() {
                   {/* Deductions */}
                   {Number(row.advance_taken) > 0 && <Row label="Advance" value={`-৳${Number(row.advance_taken).toLocaleString()}`} color="#DC2626" border />}
                   {Number(row.others_taken) > 0 && <Row label="Others" value={`-৳${Number(row.others_taken).toLocaleString()}`} color="#DC2626" />}
-                  {autoUnpaid > 0 && <Row label={`Unpaid Leave (${autoUnpaid}d)`} value={`-৳${(autoUnpaid * perDay).toLocaleString()}`} color="#DC2626" />}
+                  {finalUnpaidDays > 0 && <Row label={`Unpaid Leave (${finalUnpaidDays}d)`} value={`-৳${(finalUnpaidDays * perDay).toLocaleString()}`} color="#DC2626" />}
                   {Number(row.late_days) > 0 && !waivedStaff[s.id] && <Row label={`Late Deduction (${row.late_days})`} value={`-৳${Number(row.late_deduction).toLocaleString()}`} color="#DC2626" />}
                   {waivedStaff[s.id] && <Row label="Late Deduction" value="Waived ✓" color="#059669" />}
                   {Number(row.miscellaneous) > 0 && <Row label="Miscellaneous" value={`-৳${Number(row.miscellaneous).toLocaleString()}`} color="#DC2626" />}
