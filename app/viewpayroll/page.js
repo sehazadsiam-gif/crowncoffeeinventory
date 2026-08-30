@@ -160,9 +160,14 @@ export default function ViewPayrollPage() {
         const lateDeductionDays = Math.floor(lateDays / 3)
         const lateDeduction = lateDeductionDays * perDay
 
-        const autoOtHours = summary ? Number(summary.overtime_hours || 0) : (otMap[s.id]?.hours || Math.round((logOtMap[s.id] || 0) * 100) / 100)
-        const hourlyRate = (Number(s.base_salary) / 30) / 10
-        const autoOtPay = otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate)
+        const summaryOtHours = summary ? Number(summary.overtime_hours ?? summary.total_overtime_hours ?? 0) : 0
+        const logOt = Math.round((logOtMap[s.id] || 0) * 100) / 100
+        const trackedOt = otMap[s.id]?.hours || 0
+        const autoOtHours = summaryOtHours > 0 ? summaryOtHours : (trackedOt > 0 ? trackedOt : logOt)
+
+        const hourlyRate = s.hourly_rate || Math.floor(Math.round((Number(s.base_salary) || 0) / 30) / 10)
+        const summaryOtPay = summary ? Number(summary.overtime_pay ?? summary.total_overtime_pay ?? 0) : 0
+        const autoOtPay = summaryOtPay > 0 ? summaryOtPay : (otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate))
 
         if (!payMap[s.id]) {
           payMap[s.id] = {

@@ -282,9 +282,10 @@ export default function StaffPortalPage() {
   }, 0)
   const accruedOTHours = Math.round(accruedOTHoursRaw * 100) / 100
 
+  const summaryOTHours = Number(monthSummary?.overtime_hours ?? monthSummary?.total_overtime_hours ?? 0)
   const totalOTHours = (monthPayroll?.overtime_hours !== undefined && monthPayroll?.overtime_hours !== null && Number(monthPayroll.overtime_hours) > 0)
     ? Number(monthPayroll.overtime_hours)
-    : accruedOTHours
+    : (summaryOTHours > 0 ? summaryOTHours : accruedOTHours)
 
   const presentDays = monthSummary ? (monthSummary.present_days ?? monthSummary.total_present) : monthAttendance.filter(a => a.status === 'present').length
   const absentDays = monthSummary ? (monthSummary.absent_days ?? monthSummary.total_absent) : monthAttendance.filter(a => a.status === 'absent').length

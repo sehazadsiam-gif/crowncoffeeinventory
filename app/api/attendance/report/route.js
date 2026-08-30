@@ -353,7 +353,7 @@ export async function POST(request) {
       const lastDay = new Date(y, m, 0).getDate()
       const endDate = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
-      const { data: staffList } = await supabaseAdmin.from('staff').select('id, name, employee_id').eq('is_active', true)
+      const { data: staffList } = await supabaseAdmin.from('staff').select('id, name, employee_id, base_salary, hourly_rate').eq('is_active', true)
       const { data: rawLogs } = await supabaseAdmin.from('attendance_log').select('*').gte('date', startDate).lte('date', endDate)
 
       const logs = injectAugustBaselineLogs(rawLogs || [], staffList || [], startDate, endDate)
@@ -364,10 +364,32 @@ export async function POST(request) {
         const late = sLogs.filter(l => l.status === 'late').length
         const absent = sLogs.filter(l => l.status === 'absent').length
         const onLeave = sLogs.filter(l => l.status === 'on_leave').length
-        const totalHours = Math.round(sLogs.reduce((sum, l) => sum + (l.hours_worked || 0), 0) * 10) / 10
-        const totalLateMins = sLogs.reduce((sum, l) => sum + (l.minutes_late || 0), 0)
-        const totalOtMins = sLogs.reduce((sum, l) => sum + (l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 600)), 0)
-        const totalOtHours = Math.round((totalOtMins / 60) * 100) / 100
+        const totalHours = Math.round(sLogs.reduce((sum, l) => {
+          let hw = l.hours_worked || 0
+          if ((!hw || hw === 0) && l.check_in_at && l.check_out_at) {
+            const ci = new Date(l.check_in_at).getTime()
+            const co = new Date(l.check_out_at).getTime()
+            const bm = l.break_duration_minutes || 0
+            hw = Math.max(0, Math.floor((co - ci) / (1000 * 60)) - bm) / 60
+          }
+          return sum + hw
+        }, 0) * 10) / 10
+
+        const sOvertimeHours = Math.round(sLogs.reduce((sum, l) => {
+          let hw = l.hours_worked || 0
+          if ((!hw || hw === 0) && l.check_in_at && l.check_out_at) {
+            const ci = new Date(l.check_in_at).getTime()
+            const co = new Date(l.check_out_at).getTime()
+            const bm = l.break_duration_minutes || 0
+            hw = Math.max(0, Math.floor((co - ci) / (1000 * 60)) - bm) / 60
+          }
+          const ot = l.overtime_hours || (hw > 11.0 ? hw - 11.0 : 0)
+          return sum + ot
+        }, 0) * 100) / 100
+
+        const base = Number(s.base_salary) || 0
+        const hourlyRate = s.hourly_rate || Math.floor(Math.round(base / 30) / 10)
+        const sOvertimePay = Math.round(sOvertimeHours * hourlyRate)
 
         return {
           staff_id: s.id,
@@ -381,13 +403,16 @@ export async function POST(request) {
           total_absent: absent,
           total_leave: onLeave,
           total_hours: totalHours,
-          total_overtime_hours: totalOtHours,
+          overtime_hours: sOvertimeHours,
+          total_overtime_hours: sOvertimeHours,
+          overtime_pay: sOvertimePay,
+          total_overtime_pay: sOvertimePay,
           updated_at: new Date().toISOString()
         }
       })
 
       if (summaryUpserts.length > 0) {
-        // Attempt upsert with all modern fields
+        // 1. Attempt upsert into monthly_attendance_summary
         let upsertSucceeded = false
         try {
           const { error: fullErr } = await supabaseAdmin
@@ -403,7 +428,7 @@ export async function POST(request) {
           console.warn('[apply_to_payroll] Exception on full upsert:', e.message)
         }
 
-        // If schema cache lacks absent_days / present_days, fallback to legacy schema columns
+        // If schema cache lacks modern fields, fallback to legacy schema columns
         if (!upsertSucceeded) {
           const legacyUpserts = summaryUpserts.map(r => ({
             staff_id: r.staff_id,
@@ -422,7 +447,7 @@ export async function POST(request) {
 
           if (legacyErr) {
             console.error('[apply_to_payroll] Legacy upsert also failed:', legacyErr.message)
-            // Try direct database connection as final safeguard
+            // Direct database connection as safeguard
             try {
               const { Client } = await import('pg')
               const connStr = process.env.DATABASE_URL || 'postgres://postgres:YJEwDbQHPOF6Te4Yk1c8vQqTaa6yaKwcv1dLnb9682HDFGmwDbSk0OdiwxcTFXts@169.58.136.137:5432/postgres'
@@ -430,8 +455,8 @@ export async function POST(request) {
               await client.connect()
               for (const row of summaryUpserts) {
                 await client.query(`
-                  INSERT INTO monthly_attendance_summary (staff_id, month, year, present_days, late_days, absent_days, total_present, total_late, total_absent, total_leave, total_hours, total_overtime_hours, updated_at)
-                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+                  INSERT INTO monthly_attendance_summary (staff_id, month, year, present_days, late_days, absent_days, total_present, total_late, total_absent, total_leave, total_hours, overtime_hours, total_overtime_hours, overtime_pay, total_overtime_pay, updated_at)
+                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW())
                   ON CONFLICT (staff_id, month, year)
                   DO UPDATE SET
                     present_days = EXCLUDED.present_days,
@@ -442,23 +467,128 @@ export async function POST(request) {
                     total_absent = EXCLUDED.total_absent,
                     total_leave = EXCLUDED.total_leave,
                     total_hours = EXCLUDED.total_hours,
+                    overtime_hours = EXCLUDED.overtime_hours,
                     total_overtime_hours = EXCLUDED.total_overtime_hours,
+                    overtime_pay = EXCLUDED.overtime_pay,
+                    total_overtime_pay = EXCLUDED.total_overtime_pay,
                     updated_at = NOW()
-                `, [row.staff_id, row.month, row.year, row.present_days, row.late_days, row.absent_days, row.total_present, row.total_late, row.total_absent, row.total_leave, row.total_hours, row.total_overtime_hours])
+                `, [row.staff_id, row.month, row.year, row.present_days, row.late_days, row.absent_days, row.total_present, row.total_late, row.total_absent, row.total_leave, row.total_hours, row.overtime_hours, row.total_overtime_hours, row.overtime_pay, row.total_overtime_pay])
               }
               await client.end()
               upsertSucceeded = true
             } catch (pgErr) {
               console.error('[apply_to_payroll] Direct PG fallback failed:', pgErr.message)
-              throw legacyErr
             }
           }
+        }
+
+        // 2. Direct Sync into payroll_entries table
+        try {
+          const { data: existingPayrolls } = await supabaseAdmin
+            .from('payroll_entries')
+            .select('*')
+            .eq('month', m)
+            .eq('year', y)
+
+          const payrollUpserts = (staffList || []).map(s => {
+            const summary = summaryUpserts.find(u => u.staff_id === s.id)
+            const existing = (existingPayrolls || []).find(p => p.staff_id === s.id)
+            const base = Number(s.base_salary) || 0
+            const perDay = Math.round(base / 30)
+
+            const isManualOt = existing && existing.miscellaneous_plus === 1
+            const otHours = isManualOt ? Number(existing.overtime_hours || 0) : (summary?.overtime_hours || 0)
+            const otPay = isManualOt ? Number(existing.overtime_pay || 0) : (summary?.overtime_pay || 0)
+
+            const lateDays = summary ? summary.late_days : Number(existing?.late_days || 0)
+            const absentDays = summary ? summary.absent_days : Number(existing?.absent_days || 0)
+            const presentDays = summary ? summary.present_days : Number(existing?.present_days || 0)
+
+            const isLateWaived = Boolean(existing?.late_waived)
+            const lateDeductionDays = Math.floor(lateDays / 3)
+            const lateDeduction = isLateWaived ? 0 : lateDeductionDays * perDay
+
+            const autoUnpaidDays = Math.max(0, absentDays - 4)
+            const waivedUnpaidDays = Number(existing?.waived_unpaid_days || 0)
+            const finalUnpaidDays = existing?.manual_unpaid_days !== undefined && existing?.manual_unpaid_days !== null
+              ? Number(existing.manual_unpaid_days)
+              : Math.max(0, autoUnpaidDays - waivedUnpaidDays)
+            const unpaidDeduction = finalUnpaidDays * perDay
+
+            const lunchDinner = existing?.lunch_dinner_manual
+              ? Number(existing.lunch_dinner || 0)
+              : presentDays * 140
+
+            const sc = Number(existing?.service_charge || 0)
+            const bonus = Number(existing?.bonus || 0)
+            const morn = Number(existing?.morning_food || 0)
+            const misc = Number(existing?.miscellaneous || 0)
+            const adv = Number(existing?.advance_taken || 0)
+            const others = Number(existing?.others_taken || 0)
+
+            const netBeforePenalty = Math.max(0, base + otPay + sc + bonus + lunchDinner + morn + misc - adv - others - unpaidDeduction - lateDeduction)
+
+            return {
+              staff_id: s.id,
+              month: m,
+              year: y,
+              overtime_hours: otHours,
+              overtime_pay: otPay,
+              late_days: lateDays,
+              absent_days: absentDays,
+              late_deduction: lateDeduction,
+              unpaid_leave_deduction: unpaidDeduction,
+              lunch_dinner: lunchDinner,
+              lunch_dinner_manual: existing?.lunch_dinner_manual || false,
+              service_charge: sc,
+              bonus: bonus,
+              morning_food: morn,
+              miscellaneous: misc,
+              miscellaneous_note: existing?.miscellaneous_note || '',
+              advance_taken: adv,
+              others_taken: others,
+              final_salary: netBeforePenalty,
+              is_paid: existing?.is_paid || false,
+              miscellaneous_plus: isManualOt ? 1 : 0
+            }
+          })
+
+          const { error: payUpsertErr } = await supabaseAdmin
+            .from('payroll_entries')
+            .upsert(payrollUpserts, { onConflict: 'staff_id,month,year' })
+
+          if (payUpsertErr) {
+            console.warn('[apply_to_payroll] Supabase payroll_entries upsert failed, trying direct pg:', payUpsertErr.message)
+            const { Client } = await import('pg')
+            const connStr = process.env.DATABASE_URL || 'postgres://postgres:YJEwDbQHPOF6Te4Yk1c8vQqTaa6yaKwcv1dLnb9682HDFGmwDbSk0OdiwxcTFXts@169.58.136.137:5432/postgres'
+            const client = new Client({ connectionString: connStr, connectionTimeoutMillis: 3000 })
+            await client.connect()
+            for (const row of payrollUpserts) {
+              await client.query(`
+                INSERT INTO payroll_entries (staff_id, month, year, overtime_hours, overtime_pay, late_days, absent_days, late_deduction, unpaid_leave_deduction, lunch_dinner, lunch_dinner_manual, service_charge, bonus, morning_food, miscellaneous, miscellaneous_note, advance_taken, others_taken, final_salary, is_paid, miscellaneous_plus)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+                ON CONFLICT (staff_id, month, year)
+                DO UPDATE SET
+                  overtime_hours = EXCLUDED.overtime_hours,
+                  overtime_pay = EXCLUDED.overtime_pay,
+                  late_days = EXCLUDED.late_days,
+                  absent_days = EXCLUDED.absent_days,
+                  late_deduction = EXCLUDED.late_deduction,
+                  unpaid_leave_deduction = EXCLUDED.unpaid_leave_deduction,
+                  lunch_dinner = EXCLUDED.lunch_dinner,
+                  final_salary = EXCLUDED.final_salary
+              `, [row.staff_id, row.month, row.year, row.overtime_hours, row.overtime_pay, row.late_days, row.absent_days, row.late_deduction, row.unpaid_leave_deduction, row.lunch_dinner, row.lunch_dinner_manual, row.service_charge, row.bonus, row.morning_food, row.miscellaneous, row.miscellaneous_note, row.advance_taken, row.others_taken, row.final_salary, row.is_paid, row.miscellaneous_plus])
+            }
+            await client.end()
+          }
+        } catch (paySyncErr) {
+          console.error('[apply_to_payroll] Error syncing to payroll_entries:', paySyncErr.message)
         }
       }
 
       return NextResponse.json({
         success: true,
-        message: `Applied ${month}/${year} attendance report to Payroll successfully (${summaryUpserts.length} staff updated)`
+        message: `Applied ${month}/${year} attendance and overtime report to Payroll successfully (${summaryUpserts.length} staff updated)`
       })
     }
 

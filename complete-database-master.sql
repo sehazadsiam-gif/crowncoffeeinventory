@@ -1111,6 +1111,8 @@ ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS present_days INT
 ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS late_days INTEGER DEFAULT 0;
 ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS absent_days INTEGER DEFAULT 0;
 ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS total_hours NUMERIC DEFAULT 0;
+ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS overtime_hours NUMERIC DEFAULT 0;
+ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS overtime_pay NUMERIC DEFAULT 0;
 ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'system';
 ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
