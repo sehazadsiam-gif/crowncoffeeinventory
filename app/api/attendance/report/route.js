@@ -567,11 +567,12 @@ export async function POST(request) {
               : Math.max(0, autoUnpaidDays - waivedUnpaidDays)
             const unpaidDeduction = finalUnpaidDays * perDay
 
-            const morn = existing?.morning_food_manual
+            const isManualFood = Boolean(existing?.lunch_dinner_manual)
+            const morn = isManualFood
               ? Number(existing.morning_food || 0)
               : autoMorningFood
 
-            const lunchDinner = existing?.lunch_dinner_manual
+            const lunchDinner = isManualFood
               ? Number(existing.lunch_dinner || 0)
               : autoNightFood
 
@@ -598,7 +599,6 @@ export async function POST(request) {
               service_charge: sc,
               bonus: bonus,
               morning_food: morn,
-              morning_food_manual: existing?.morning_food_manual || false,
               miscellaneous: misc,
               miscellaneous_note: existing?.miscellaneous_note || '',
               advance_taken: adv,

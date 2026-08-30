@@ -179,8 +179,7 @@ export default function ViewPayrollPage() {
           manual_unpaid_days: p.manual_unpaid_days ?? null,
           waived_unpaid_days: p.waived_unpaid_days || 0,
           overtime_manual: p.miscellaneous_plus === 1,
-          lunch_dinner_manual: Boolean(p.lunch_dinner_manual),
-          morning_food_manual: Boolean(p.morning_food_manual)
+          lunch_dinner_manual: Boolean(p.lunch_dinner_manual)
         }
       })
 
@@ -258,8 +257,6 @@ export default function ViewPayrollPage() {
           }
           if (!payMap[s.id].lunch_dinner_manual) {
             payMap[s.id].lunch_dinner = autoLunchDinner
-          }
-          if (!payMap[s.id].morning_food_manual) {
             payMap[s.id].morning_food = autoMorningFood
           }
         }

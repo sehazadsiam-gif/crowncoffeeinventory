@@ -189,8 +189,7 @@ export default function PayrollPage() {
           manual_unpaid_days: p.manual_unpaid_days ?? null,
           waived_unpaid_days: p.waived_unpaid_days || 0,
           overtime_manual: p.miscellaneous_plus === 1,
-          lunch_dinner_manual: Boolean(p.lunch_dinner_manual),
-          morning_food_manual: Boolean(p.morning_food_manual)
+          lunch_dinner_manual: Boolean(p.lunch_dinner_manual)
         }
       })
 
@@ -272,9 +271,10 @@ export default function PayrollPage() {
           }
           if (!payMap[s.id].lunch_dinner_manual) {
             payMap[s.id].lunch_dinner = autoLunchDinner
-          }
-          if (!payMap[s.id].morning_food_manual) {
             payMap[s.id].morning_food = autoMorningFood
+            payMap[s.id].morning_food_manual = false
+          } else {
+            payMap[s.id].morning_food_manual = Number(payMap[s.id].morning_food || 0) !== autoMorningFood
           }
         }
       }
@@ -416,8 +416,7 @@ export default function PayrollPage() {
         waived_unpaid_days: Number(row.waived_unpaid_days) || 0,
         absent_days: Number(row.absent_days) || 0,
         late_waived: waivedStaff[staffId] || false,
-        lunch_dinner_manual: row.lunch_dinner_manual || false,
-        morning_food_manual: row.morning_food_manual || false,
+        lunch_dinner_manual: row.lunch_dinner_manual || row.morning_food_manual || false,
         final_salary: finalSalary
       }, { onConflict: 'staff_id,month,year' })
       if (error) throw error
