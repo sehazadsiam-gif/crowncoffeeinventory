@@ -9,26 +9,24 @@ import PayrollCalculator from '../../../components/PayrollCalculator'
 import dynamic from 'next/dynamic'
 
 function getShiftType(log, staffDefaultShift = '11:00') {
-  const shiftStr = String(log?.shift_start || staffDefaultShift || '').trim()
-  const timePrefix = shiftStr.slice(0, 5)
-  if (timePrefix === '08:00' || timePrefix === '11:00' || timePrefix === '10:00') {
-    return 'morning'
-  }
-  if (timePrefix === '13:00' || timePrefix === '14:00' || timePrefix === '15:00') {
-    return 'night'
-  }
-  const hourMatch = shiftStr.match(/^(\d{1,2})/)
-  if (hourMatch) {
-    const h = parseInt(hourMatch[1], 10)
-    if (h >= 7 && h <= 12) return 'morning'
-    if (h >= 13) return 'night'
-  }
   if (log?.check_in_at) {
     const d = new Date(log.check_in_at)
     if (!isNaN(d.getTime())) {
-      const localHour = (d.getUTCHours() + 6) % 24
-      return localHour < 12.5 ? 'morning' : 'night'
+      const bstHour = (d.getUTCHours() + 6) % 24
+      const bstMin = d.getUTCMinutes()
+      const totalMins = bstHour * 60 + bstMin
+      // Checked in before 12:30 PM (e.g. 8:00 AM, 10:00 AM, 11:00 AM) -> morning shift (৳110)
+      // Checked in at or after 12:30 PM (e.g. 1:00 PM / 13:00) -> night shift (৳140)
+      return totalMins < 750 ? 'morning' : 'night'
     }
+  }
+
+  const shiftStr = String(log?.shift_start || staffDefaultShift || '').trim()
+  const hourMatch = shiftStr.match(/^(\d{1,2})/)
+  if (hourMatch) {
+    const h = parseInt(hourMatch[1], 10)
+    if (h >= 13) return 'night'
+    return 'morning'
   }
   return 'morning'
 }
@@ -184,7 +182,8 @@ export default function PayrollPage() {
         if (l.status === 'late') logLateMap[l.staff_id] = (logLateMap[l.staff_id] || 0) + 1
         if (l.status === 'present' || l.status === 'late') {
           logPresentMap[l.staff_id] = (logPresentMap[l.staff_id] || 0) + 1
-          const shift = getShiftType(l)
+          const staffMember = activeStaffList.find(st => st.id === l.staff_id)
+          const shift = getShiftType(l, staffMember?.shift_start)
           if (shift === 'morning') {
             logMorningDays[l.staff_id] = (logMorningDays[l.staff_id] || 0) + 1
           } else {
@@ -238,8 +237,12 @@ export default function PayrollPage() {
           : computedAbsent
         const totalPresentForFood = presentCount
 
-        const morningDays = logMorningDays[s.id] || 0
-        const nightDays = logNightDays[s.id] !== undefined ? logNightDays[s.id] : Math.max(0, presentCount - morningDays)
+        const loggedMorning = logMorningDays[s.id] || 0
+        const loggedNight = logNightDays[s.id] || 0
+        const unassigned = Math.max(0, presentCount - (loggedMorning + loggedNight))
+        const defaultShift = getShiftType({ shift_start: s.shift_start }, s.shift_start)
+        const morningDays = defaultShift === 'night' ? loggedMorning : loggedMorning + unassigned
+        const nightDays = defaultShift === 'night' ? loggedNight + unassigned : loggedNight
         const autoMorningFood = morningDays * 110
         const autoLunchDinner = nightDays * 140
 

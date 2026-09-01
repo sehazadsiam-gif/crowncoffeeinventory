@@ -2,26 +2,24 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
 
 export function getShiftType(log, staffDefaultShift = '11:00') {
-  const shiftStr = String(log?.shift_start || staffDefaultShift || '').trim()
-  const timePrefix = shiftStr.slice(0, 5)
-  if (timePrefix === '08:00' || timePrefix === '11:00' || timePrefix === '10:00') {
-    return 'morning'
-  }
-  if (timePrefix === '13:00' || timePrefix === '14:00' || timePrefix === '15:00') {
-    return 'night'
-  }
-  const hourMatch = shiftStr.match(/^(\d{1,2})/)
-  if (hourMatch) {
-    const h = parseInt(hourMatch[1], 10)
-    if (h >= 7 && h <= 12) return 'morning'
-    if (h >= 13) return 'night'
-  }
   if (log?.check_in_at) {
     const d = new Date(log.check_in_at)
     if (!isNaN(d.getTime())) {
-      const localHour = (d.getUTCHours() + 6) % 24
-      return localHour < 12.5 ? 'morning' : 'night'
+      const bstHour = (d.getUTCHours() + 6) % 24
+      const bstMin = d.getUTCMinutes()
+      const totalMins = bstHour * 60 + bstMin
+      // Checked in before 12:30 PM (e.g. 8:00 AM, 10:00 AM, 11:00 AM) -> morning shift (৳110)
+      // Checked in at or after 12:30 PM (e.g. 1:00 PM / 13:00) -> night shift (৳140)
+      return totalMins < 750 ? 'morning' : 'night'
     }
+  }
+
+  const shiftStr = String(log?.shift_start || staffDefaultShift || '').trim()
+  const hourMatch = shiftStr.match(/^(\d{1,2})/)
+  if (hourMatch) {
+    const h = parseInt(hourMatch[1], 10)
+    if (h >= 13) return 'night'
+    return 'morning'
   }
   return 'morning'
 }
