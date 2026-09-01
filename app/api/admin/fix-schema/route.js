@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const passwords = [
-    'ojUc3lohC4MfvqZvLUXgi9fU27grUF4Z', // Supabase DB password
+    'ojUc3lohC4MhvqZvLUXgi9fU27grUF4Z', // Supabase DB password
     'YJEwDbQHPOF6Te4Yk1c8vQqTaa6yaKwcv1dLnb9682HDFGmwDbSk0OdiwxcTFXts' // Standalone DB password
   ]
 
@@ -61,6 +61,30 @@ export async function GET() {
         ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS overtime_pay NUMERIC DEFAULT 0;
         ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'system';
         ALTER TABLE monthly_attendance_summary ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+        CREATE TABLE IF NOT EXISTS staff_penalties (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+          date DATE NOT NULL,
+          penalty_percent NUMERIC DEFAULT 0,
+          reason TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE(staff_id, date)
+        );
+
+        INSERT INTO staff_penalties (staff_id, date, penalty_percent, reason)
+        VALUES
+          ('d4c47a39-da06-4823-95f6-3725cc7ea02f', '2026-08-16', 0.5, NULL),
+          ('808d17e2-8e73-46af-a473-682cddb5c945', '2026-08-16', 0.5, NULL),
+          ('cdf26b9d-2e76-4b88-9172-f50f5640a7a1', '2026-08-16', 0.5, NULL),
+          ('cdf26b9d-2e76-4b88-9172-f50f5640a7a1', '2026-08-17', 0.5, 'Handgloves'),
+          ('cdf26b9d-2e76-4b88-9172-f50f5640a7a1', '2026-08-20', 0.5, 'Poor customer handling'),
+          ('9f0814e0-249a-4548-ad5c-219019ec68d6', '2026-08-20', 0.5, 'Late Pizza and oven off'),
+          ('cdf26b9d-2e76-4b88-9172-f50f5640a7a1', '2026-08-15', 0.5, 'Time of deliverling food'),
+          ('808d17e2-8e73-46af-a473-682cddb5c945', '2026-08-18', 0.5, 'No feedback reported back from sector-12 program')
+        ON CONFLICT (staff_id, date) DO UPDATE
+        SET penalty_percent = EXCLUDED.penalty_percent, reason = EXCLUDED.reason;
+
         NOTIFY pgrst, 'reload schema';
       `)
       await client.end()
