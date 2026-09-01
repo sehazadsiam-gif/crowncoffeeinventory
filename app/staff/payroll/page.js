@@ -140,9 +140,21 @@ export default function PayrollPage() {
       })
 
       const penaltyPercentMap = {}
-      ;(penaltyRes.data || []).forEach(p => {
-        penaltyPercentMap[p.staff_id] = (penaltyPercentMap[p.staff_id] || 0) + Number(p.penalty_percent || 0)
-      })
+      if (penaltyRes?.data && penaltyRes.data.length > 0) {
+        penaltyRes.data.forEach(p => {
+          penaltyPercentMap[p.staff_id] = (penaltyPercentMap[p.staff_id] || 0) + Number(p.penalty_percent || 0)
+        })
+      } else {
+        try {
+          const pRes = await fetch(`/api/staff/penalties?month=${m}&year=${y}`)
+          const pJson = await pRes.json()
+          ;(pJson.penalties || []).forEach(p => {
+            penaltyPercentMap[p.staff_id] = (penaltyPercentMap[p.staff_id] || 0) + Number(p.penalty_percent || 0)
+          })
+        } catch (e) {
+          console.warn('Failed to load penalties fallback:', e)
+        }
+      }
 
       const unpaidMap = {}
       ;(unpaidRes.data || []).forEach(a => {
