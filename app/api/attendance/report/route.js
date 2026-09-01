@@ -188,8 +188,17 @@ export async function GET(request) {
         return sum + ot
       }, 0) * 100) / 100
 
-      const morningDays = sLogs.filter(l => (l.status === 'present' || l.status === 'late') && getShiftType(l, s.shift_start) === 'morning').length
-      const nightDays = sLogs.filter(l => (l.status === 'present' || l.status === 'late') && getShiftType(l, s.shift_start) === 'night').length
+      const workedLogs = sLogs.filter(l => l.status === 'present' || l.status === 'late')
+      let morningDays = workedLogs.filter(l => getShiftType(l, s.shift_start) === 'morning').length
+      let nightDays = workedLogs.filter(l => getShiftType(l, s.shift_start) === 'night').length
+      const totalPresent = present + late
+      const unassigned = Math.max(0, totalPresent - (morningDays + nightDays))
+      const defaultShift = getShiftType({ shift_start: s.shift_start }, s.shift_start)
+      if (defaultShift === 'night') {
+        nightDays += unassigned
+      } else {
+        morningDays += unassigned
+      }
       const morningFood = morningDays * 110
       const nightFood = nightDays * 140
 
@@ -546,8 +555,17 @@ export async function POST(request) {
             const perDay = Math.round(base / 30)
 
             const sLogs = (logs || []).filter(l => l.staff_id === s.id)
-            const morningDays = sLogs.filter(l => (l.status === 'present' || l.status === 'late') && getShiftType(l, s.shift_start) === 'morning').length
-            const nightDays = sLogs.filter(l => (l.status === 'present' || l.status === 'late') && getShiftType(l, s.shift_start) === 'night').length
+            const workedLogs = sLogs.filter(l => l.status === 'present' || l.status === 'late')
+            let morningDays = workedLogs.filter(l => getShiftType(l, s.shift_start) === 'morning').length
+            let nightDays = workedLogs.filter(l => getShiftType(l, s.shift_start) === 'night').length
+            const presentDays = summary ? summary.present_days : Number(existing?.present_days || workedLogs.length)
+            const unassigned = Math.max(0, presentDays - (morningDays + nightDays))
+            const defaultShift = getShiftType({ shift_start: s.shift_start }, s.shift_start)
+            if (defaultShift === 'night') {
+              nightDays += unassigned
+            } else {
+              morningDays += unassigned
+            }
             const autoMorningFood = morningDays * 110
             const autoNightFood = nightDays * 140
 
@@ -556,7 +574,6 @@ export async function POST(request) {
             const otPay = isManualOt ? Number(existing.overtime_pay || 0) : (summary?.overtime_pay || 0)
 
             const lateDays = summary ? summary.late_days : Number(existing?.late_days || 0)
-            const presentDays = summary ? summary.present_days : Number(existing?.present_days || 0)
             const directAbsent = sLogs.filter(l => l.status === 'absent').length
             const off = sLogs.filter(l => l.status === 'off').length
             const unworked = Math.max(0, 30 - presentDays)
