@@ -7,7 +7,7 @@ import {
   UserCheck, ShieldCheck, LogOut, ChevronDown, ChevronUp,
   Search, CheckCircle2, Clock, AlertCircle, Coffee, DollarSign,
   Calendar, ArrowDownRight, ArrowUpRight, FileText, Info, Globe,
-  CalendarDays, Sun, Moon, LogIn, LogOut as LogOutIcon, Sparkles
+  CalendarDays, Sun, Moon, LogIn, LogOut as LogOutIcon, Sparkles, Timer
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -104,6 +104,9 @@ const I18N = {
     lateArrivals: 'Late Arrivals',
     absentOffDays: 'Absent / Off Days',
     daysUnit: 'days',
+    monthlyWorkedHours: 'Monthly Hours Worked',
+    totalHoursWorkedLabel: 'Total Worked Hours',
+    hoursUnit: 'hrs',
     earningsBreakdown: '2. Earnings Breakdown',
     overtimeAllowance: 'Overtime Allowance',
     morningShiftFood: 'Morning Shift Food',
@@ -128,7 +131,11 @@ const I18N = {
     tabSalaryBreakdown: 'Salary Breakdown',
     tabAttendanceHeatmap: 'Attendance Heatmap',
     heatmapTitle: 'Attendance Heatmap Calendar',
-    heatmapSubtitle: 'Synced with Admin Attendance: Arrival, Departure & Overtime Breakdown',
+    heatmapSubtitle: 'Synced with Admin Attendance: Arrival, Departure, Overtime & Total Monthly Hours',
+    summaryTotalHours: 'Total Monthly Hours',
+    summaryDaysWorked: 'Days Present',
+    summaryTotalOT: 'Total Overtime',
+    summaryFoodFee: 'Food Allowance',
     weekDays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     legendMorning: 'Morning (৳110)',
     legendNight: 'Night (৳140)',
@@ -149,7 +156,7 @@ const I18N = {
       'Verifying credentials & access...',
       'Connecting to database...',
       'Fetching staff payroll records...',
-      'Syncing attendance arrival, departures & overtime...',
+      'Syncing attendance arrival, departures & monthly hours...',
       'Preparing itemized salary breakdown...'
     ]
   },
@@ -193,6 +200,9 @@ const I18N = {
     lateArrivals: 'দেরিতে উপস্থিতি',
     absentOffDays: 'ছুটি / অনুপস্থিত দিন',
     daysUnit: 'দিন',
+    monthlyWorkedHours: 'মাসে মোট কাজের সময়',
+    totalHoursWorkedLabel: 'মোট কাজের সময়',
+    hoursUnit: 'ঘণ্টা',
     earningsBreakdown: '২. মোট আয় বিবরণী',
     overtimeAllowance: 'ওভারটাইম ভাতা',
     morningShiftFood: 'মর্নিং শিফট খাবার ভাতা',
@@ -217,7 +227,11 @@ const I18N = {
     tabSalaryBreakdown: 'বেতন বিবরণী',
     tabAttendanceHeatmap: 'উপস্থিতি হিটম্যাপ',
     heatmapTitle: 'উপস্থিতি হিটম্যাপ ক্যালেন্ডার',
-    heatmapSubtitle: 'অ্যাডমিন উপস্থিতির সাথে সিঙ্ককৃত: আসার সময়, যাওয়ার সময় ও ওভারটাইম',
+    heatmapSubtitle: 'অ্যাডমিন উপস্থিতির সাথে সিঙ্ককৃত: আসার সময়, যাওয়ার সময়, ওভারটাইম ও মোট ঘণ্টা',
+    summaryTotalHours: 'মাসে মোট কাজের সময়',
+    summaryDaysWorked: 'উপস্থিত দিন',
+    summaryTotalOT: 'মোট ওভারটাইম',
+    summaryFoodFee: 'খাবার ভাতা',
     weekDays: ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'],
     legendMorning: 'মর্নিং (৳১১০)',
     legendNight: 'নাইট (৳১৪০)',
@@ -238,7 +252,7 @@ const I18N = {
       'লগইন তথ্য যাচাই করা হচ্ছে...',
       'ডাটাবেসে সংযুক্ত হচ্ছে...',
       'পেরোল ডাটা লোড করা হচ্ছে...',
-      'আসার সময়, যাওয়ার সময় ও ওভারটাইম সিঙ্ক হচ্ছে...',
+      'আসার সময়, যাওয়ার সময় ও মাসিক মোট ঘণ্টা সিঙ্ক হচ্ছে...',
       'বিস্তারিত বেতন তালিকা প্রস্তুত হচ্ছে...'
     ]
   }
@@ -428,7 +442,6 @@ export default function ViewPayrollPage() {
       const dailyMap = {}
 
       // 1. Primary Source: Authoritative reportDailyLogs from /api/attendance/report
-      // (Contains August baseline, arrival/departure format, accurate overtime, and shifts)
       reportDailyLogs.forEach(l => {
         if (!dailyMap[l.staff_id]) dailyMap[l.staff_id] = {}
         dailyMap[l.staff_id][l.date] = {
@@ -558,6 +571,11 @@ export default function ViewPayrollPage() {
         const summaryOtPay = summary ? Number(summary.overtime_pay ?? summary.total_overtime_pay ?? 0) : 0
         const autoOtPay = summaryOtPay > 0 ? summaryOtPay : (otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate))
 
+        // Compute total hours worked for the month
+        const staffDaily = dailyMap[s.id] || {}
+        const sumHoursFromLogs = Object.values(staffDaily).reduce((sum, dl) => sum + (Number(dl.hours_worked || dl.hoursWorked || 0)), 0)
+        const totalHoursWorked = reportEntry?.total_hours || (Math.round(sumHoursFromLogs * 10) / 10) || (presentCount * 10)
+
         if (!payMap[s.id]) {
           payMap[s.id] = {
             staff_id: s.id, month: m, year: y,
@@ -575,6 +593,7 @@ export default function ViewPayrollPage() {
             morning_food_manual: false,
             morning_days: morningDays,
             night_days: nightDays,
+            total_hours: totalHoursWorked,
             advance_taken: advancesMap[s.id] || 0,
             others_taken: 0, miscellaneous: 0,
             is_paid: false,
@@ -595,6 +614,7 @@ export default function ViewPayrollPage() {
           payMap[s.id].absent_days = absentCount
           payMap[s.id].morning_days = morningDays
           payMap[s.id].night_days = nightDays
+          payMap[s.id].total_hours = totalHoursWorked
           payMap[s.id].lunch_dinner_auto = autoLunchDinner
           payMap[s.id].morning_food_auto = autoMorningFood
           payMap[s.id].overtime_auto_hours = autoOtHours
@@ -747,7 +767,8 @@ export default function ViewPayrollPage() {
         adv: 0, others: 0, unpaidDays: 0, unpaidDeduction: 0,
         lateDays: 0, lateDeductionDays: 0, lateDeduction: 0,
         miscDeductions: 0, totalDeductions: 0,
-        finalSalary: 0
+        finalSalary: 0,
+        totalHoursWorked: 0
       }
     }
 
@@ -791,6 +812,7 @@ export default function ViewPayrollPage() {
 
     const totalDeductions = Math.round(adv + others + unpaidDeduction + lateDeduction + miscDeductions)
     const finalSalary = Math.round(grossEarnings - totalDeductions)
+    const totalHoursWorked = Number(p.total_hours) || 0
 
     return {
       base, perDay, hourlyRate,
@@ -800,7 +822,8 @@ export default function ViewPayrollPage() {
       adv, others, unpaidDays, unpaidDeduction,
       lateDays, lateDeductionDays, lateDeduction, isWaived,
       miscDeductions, totalDeductions,
-      finalSalary
+      finalSalary,
+      totalHoursWorked
     }
   }
 
@@ -1312,6 +1335,7 @@ export default function ViewPayrollPage() {
               const firstDayOfWeek = new Date(year, month - 1, 1).getDay() // 0=Sun .. 6=Sat
               const logsForStaff = dailyAttendanceLogs[s.id] || {}
               const activeDay = selectedDayInfo[s.id]
+              const totalMonthlyHours = calc.totalHoursWorked || row.total_hours || 0
 
               return (
                 <div
@@ -1345,7 +1369,24 @@ export default function ViewPayrollPage() {
                           </span>
                         )}
                       </div>
-                      <p style={{ margin: '2px 0 0 0', fontSize: '12.5px', color: '#64748B', fontWeight: 600 }}>{s.designation}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                        <span style={{ fontSize: '12.5px', color: '#64748B', fontWeight: 600 }}>{s.designation}</span>
+                        <span style={{ color: '#CBD5E1' }}>•</span>
+                        <span style={{
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          color: '#0F172A',
+                          background: 'rgba(212, 147, 58, 0.15)',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <Timer size={12} color="#7C3A1E" />
+                          <span>{totalMonthlyHours} {t.hoursUnit}</span>
+                        </span>
+                      </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1386,14 +1427,14 @@ export default function ViewPayrollPage() {
                     </div>
                   </div>
 
-                  {/* High-Level Settlement KPI Strip */}
+                  {/* High-Level Settlement KPI Strip (Includes Total Monthly Hours) */}
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
                     background: '#FAFAFA',
                     borderBottom: '1px solid #E2E8F0',
                     padding: '12px 20px',
-                    gap: '10px'
+                    gap: '12px'
                   }}>
                     <div>
                       <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>{t.netSalary}</span>
@@ -1406,6 +1447,12 @@ export default function ViewPayrollPage() {
                     <div>
                       <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>{t.remainingDue}</span>
                       <p style={{ margin: '2px 0 0 0', fontSize: '17px', fontWeight: 900, color: remaining > 0 ? '#DC2626' : '#059669' }}>৳{remaining.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>{t.totalHoursWorkedLabel}</span>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '17px', fontWeight: 900, color: '#0F172A' }}>
+                        {totalMonthlyHours} <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#64748B' }}>{t.hoursUnit}</span>
+                      </p>
                     </div>
                   </div>
 
@@ -1486,6 +1533,10 @@ export default function ViewPayrollPage() {
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                             <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.ratePerHour}</div>
                             <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>৳{calc.hourlyRate.toLocaleString()}</div>
+                          </div>
+                          <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.monthlyWorkedHours}</div>
+                            <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{totalMonthlyHours} {t.hoursUnit}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                             <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.daysPresent}</div>
@@ -1779,6 +1830,42 @@ export default function ViewPayrollPage() {
                         <p style={{ margin: '3px 0 0 0', fontSize: '11.5px', color: '#64748B' }}>
                           {t.heatmapSubtitle}
                         </p>
+                      </div>
+
+                      {/* Monthly Work Summary Strip */}
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                        gap: '8px',
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '10px',
+                        padding: '10px 14px'
+                      }}>
+                        <div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.summaryTotalHours}</div>
+                          <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
+                            {totalMonthlyHours} {t.hoursUnit}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.summaryDaysWorked}</div>
+                          <div style={{ fontSize: '15px', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+                            {row.present_days || 0} {t.daysUnit}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.summaryTotalOT}</div>
+                          <div style={{ fontSize: '15px', fontWeight: 900, color: (calc.otHours || row.overtime_hours) > 0 ? '#B45309' : '#64748B', marginTop: '2px' }}>
+                            {calc.otHours || row.overtime_hours || 0} {t.hoursUnit}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.summaryFoodFee}</div>
+                          <div style={{ fontSize: '15px', fontWeight: 900, color: '#7C3A1E', marginTop: '2px' }}>
+                            ৳{((row.morning_food || 0) + (row.lunch_dinner || 0)).toLocaleString()}
+                          </div>
+                        </div>
                       </div>
 
                       {/* Heatmap Legend */}
@@ -2129,6 +2216,7 @@ export default function ViewPayrollPage() {
                         payroll: {
                           ...row,
                           final_salary: calc.finalSalary,
+                          total_hours: totalMonthlyHours,
                           is_paid: isFullyPaid,
                           is_waived: calc.isWaived
                         },
