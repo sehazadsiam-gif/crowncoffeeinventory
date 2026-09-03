@@ -6,7 +6,8 @@ import {
   Printer, X, History, RefreshCw, Lock, Eye, EyeOff,
   UserCheck, ShieldCheck, LogOut, ChevronDown, ChevronUp,
   Search, CheckCircle2, Clock, AlertCircle, Coffee, DollarSign,
-  Calendar, ArrowDownRight, ArrowUpRight, FileText, Info, Globe
+  Calendar, ArrowDownRight, ArrowUpRight, FileText, Info, Globe,
+  CalendarDays, Sun, Moon
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -32,6 +33,13 @@ function getShiftType(log, staffDefaultShift = '11:00') {
     return 'morning'
   }
   return 'morning'
+}
+
+function formatCheckInTime(dateStr) {
+  if (!dateStr) return null
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return null
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' })
 }
 
 const I18N = {
@@ -96,6 +104,23 @@ const I18N = {
     disbursementsTitle: 'Payment Disbursements',
     noPaymentYet: 'No payment recorded yet for this month.',
     printSlipBtn: 'Print Salary Slip',
+    tabSalaryBreakdown: 'Salary Breakdown',
+    tabAttendanceHeatmap: 'Attendance Heatmap',
+    heatmapTitle: 'Attendance Heatmap Calendar',
+    heatmapSubtitle: 'Daily visual shift timings, attendance & food allowance',
+    weekDays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    legendMorning: 'Morning (৳110)',
+    legendNight: 'Night (৳140)',
+    legendLate: 'Late Arrival',
+    legendAbsent: 'Absent / Unpaid',
+    legendOff: 'Off Day',
+    legendUpcoming: 'Upcoming',
+    selectedDayDetails: 'Selected Day Details:',
+    checkInTimeText: 'Check-in Time',
+    hoursWorkedText: 'Hours Worked',
+    overtimeMinText: 'Overtime',
+    foodAllowanceText: 'Food Allowance',
+    noRecordDay: 'No attendance log found for this day.',
     loadingSteps: [
       'Verifying credentials & access...',
       'Connecting to database...',
@@ -165,6 +190,23 @@ const I18N = {
     disbursementsTitle: 'বেতন পরিশোধ বিবরণী',
     noPaymentYet: 'এই মাসে এখনো কোনো অর্থ পরিশোধ রেকর্ড করা হয়নি।',
     printSlipBtn: 'বেতন রশিদ প্রিন্ট করুন',
+    tabSalaryBreakdown: 'বেতন বিবরণী',
+    tabAttendanceHeatmap: 'উপস্থিতি হিটম্যাপ',
+    heatmapTitle: 'উপস্থিতি হিটম্যাপ ক্যালেন্ডার',
+    heatmapSubtitle: 'দৈনিক ডিউটি শিফটের সময়, উপস্থিতি ও খাবার ভাতার হিসাব',
+    weekDays: ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'],
+    legendMorning: 'মর্নিং (৳১১০)',
+    legendNight: 'নাইট (৳১৪০)',
+    legendLate: 'দেরিতে উপস্থিতি',
+    legendAbsent: 'অনুপস্থিত',
+    legendOff: 'সাপ্তাহিক ছুটি',
+    legendUpcoming: 'আসন্ন দিন',
+    selectedDayDetails: 'নির্বাচিত দিনের বিস্তারিত:',
+    checkInTimeText: 'প্রবেশের সময়',
+    hoursWorkedText: 'কাজের সময়',
+    overtimeMinText: 'ওভারটাইম',
+    foodAllowanceText: 'খাবার ভাতা',
+    noRecordDay: 'এই দিনে কোনো প্রবেশের রেকর্ড নেই।',
     loadingSteps: [
       'লগইন তথ্য যাচাই করা হচ্ছে...',
       'ডাটাবেসে সংযুক্ত হচ্ছে...',
@@ -196,8 +238,11 @@ export default function ViewPayrollPage() {
   const [payroll, setPayroll] = useState({})
   const [payments, setPayments] = useState({})
   const [advanceDetails, setAdvanceDetails] = useState({})
+  const [dailyAttendanceLogs, setDailyAttendanceLogs] = useState({}) // staffId -> { [date]: log }
   const [showHistory, setShowHistory] = useState(null)
   const [expandedBreakdowns, setExpandedBreakdowns] = useState({})
+  const [staffActiveTab, setStaffActiveTab] = useState({}) // staffId -> 'breakdown' | 'heatmap'
+  const [selectedDayInfo, setSelectedDayInfo] = useState({}) // staffId -> selected day log
   const [loading, setLoading] = useState(true)
   const [loadingStep, setLoadingStep] = useState(0)
   const [printData, setPrintData] = useState(null)
@@ -287,12 +332,12 @@ export default function ViewPayrollPage() {
       const [payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes] = await Promise.all([
         safe(supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y)),
         safe(supabase.from('advance_log').select('id, staff_id, amount, date, reason').eq('month', m).eq('year', y).order('date', { ascending: false })),
-        safe(supabase.from('attendance').select('staff_id').eq('leave_type', 'unpaid').gte('date', startDate).lte('date', endDate)),
+        safe(supabase.from('attendance').select('staff_id, date, status, leave_type').gte('date', startDate).lte('date', endDate)),
         safe(supabase.from('attendance').select('staff_id').eq('status', 'late').gte('date', startDate).lte('date', endDate)),
         safe(supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate)),
         safe(supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y)),
         safe(supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate)),
-        safe(supabase.from('attendance_log').select('staff_id, status, hours_worked, overtime_minutes, shift_start, check_in_at').gte('date', startDate).lte('date', endDate))
+        safe(supabase.from('attendance_log').select('staff_id, date, status, hours_worked, overtime_minutes, shift_start, check_in_at, check_out_at').gte('date', startDate).lte('date', endDate))
       ])
 
       const summaryMap = {}
@@ -346,7 +391,12 @@ export default function ViewPayrollPage() {
       const logMorningDays = {}
       const logNightDays = {}
 
+      // Map daily logs for visual heatmap
+      const dailyMap = {}
       attLogs.forEach(l => {
+        if (!dailyMap[l.staff_id]) dailyMap[l.staff_id] = {}
+        dailyMap[l.staff_id][l.date] = l
+
         if (l.status === 'late') logLateMap[l.staff_id] = (logLateMap[l.staff_id] || 0) + 1
         if (l.status === 'present' || l.status === 'late') {
           logPresentMap[l.staff_id] = (logPresentMap[l.staff_id] || 0) + 1
@@ -363,6 +413,21 @@ export default function ViewPayrollPage() {
         const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 660)
         logOtMap[l.staff_id] = (logOtMap[l.staff_id] || 0) + (otMins / 60)
       })
+
+      // Also merge records from attendance table if missing in attendance_log
+      ;(unpaidRes.data || []).forEach(a => {
+        if (a.date) {
+          if (!dailyMap[a.staff_id]) dailyMap[a.staff_id] = {}
+          if (!dailyMap[a.staff_id][a.date]) {
+            dailyMap[a.staff_id][a.date] = {
+              staff_id: a.staff_id,
+              date: a.date,
+              status: a.status || (a.leave_type === 'unpaid' ? 'absent' : 'off')
+            }
+          }
+        }
+      })
+      setDailyAttendanceLogs(dailyMap)
 
       const otLogs = otRes?.data || []
       const otMap = {}
@@ -595,6 +660,13 @@ export default function ViewPayrollPage() {
     setExpandedBreakdowns(prev => ({
       ...prev,
       [staffId]: !prev[staffId]
+    }))
+  }
+
+  function toggleStaffCardTab(staffId, tabKey) {
+    setStaffActiveTab(prev => ({
+      ...prev,
+      [staffId]: tabKey
     }))
   }
 
@@ -1149,7 +1221,7 @@ export default function ViewPayrollPage() {
           </div>
         )}
 
-        {/* ── PAYROLL CARDS WITH COMPLETE BREAKDOWN ── */}
+        {/* ── PAYROLL CARDS WITH COMPLETE BREAKDOWN & ATTENDANCE HEATMAP ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {sortedStaff.length === 0 ? (
             <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '36px 20px', textAlign: 'center', color: '#64748B' }}>
@@ -1166,6 +1238,13 @@ export default function ViewPayrollPage() {
               const staffAdvances = advanceDetails[s.id] || []
               const isFullyPaid = paid >= calc.finalSalary && calc.finalSalary > 0
               const isExpanded = expandedBreakdowns[s.id] ?? true
+              const activeTab = staffActiveTab[s.id] || 'breakdown' // 'breakdown' | 'heatmap'
+
+              // Heatmap Calendar Computations
+              const daysInMonth = new Date(year, month, 0).getDate()
+              const firstDayOfWeek = new Date(year, month - 1, 1).getDay() // 0=Sun .. 6=Sat
+              const logsForStaff = dailyAttendanceLogs[s.id] || {}
+              const activeDay = selectedDayInfo[s.id]
 
               return (
                 <div
@@ -1263,8 +1342,55 @@ export default function ViewPayrollPage() {
                     </div>
                   </div>
 
-                  {/* ── COMPLETE ITEM-BY-ITEM BREAKDOWN ── */}
+                  {/* ── CARD TABS: [💰 SALARY BREAKDOWN] vs [📅 ATTENDANCE HEATMAP] ── */}
                   {isExpanded && (
+                    <div style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', padding: '6px 20px', display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => toggleStaffCardTab(s.id, 'breakdown')}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: '8px',
+                          border: activeTab === 'breakdown' ? '1.5px solid #7C3A1E' : '1px solid #CBD5E1',
+                          background: activeTab === 'breakdown' ? '#7C3A1E' : '#FFFFFF',
+                          color: activeTab === 'breakdown' ? '#FFFFFF' : '#475569',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <DollarSign size={13} />
+                        <span>{t.tabSalaryBreakdown}</span>
+                      </button>
+
+                      <button
+                        onClick={() => toggleStaffCardTab(s.id, 'heatmap')}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: '8px',
+                          border: activeTab === 'heatmap' ? '1.5px solid #7C3A1E' : '1px solid #CBD5E1',
+                          background: activeTab === 'heatmap' ? '#7C3A1E' : '#FFFFFF',
+                          color: activeTab === 'heatmap' ? '#FFFFFF' : '#475569',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <CalendarDays size={13} />
+                        <span>{t.tabAttendanceHeatmap}</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* ── TAB 1: SALARY BREAKDOWN ── */}
+                  {isExpanded && activeTab === 'breakdown' && (
                     <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
                       {/* 1. Base Rates & Attendance Summary */}
@@ -1567,6 +1693,272 @@ export default function ViewPayrollPage() {
                           </div>
                         )}
                       </div>
+
+                    </div>
+                  )}
+
+                  {/* ── TAB 2: ATTENDANCE HEATMAP CALENDAR ── */}
+                  {isExpanded && activeTab === 'heatmap' && (
+                    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                      {/* Header & Subtitle */}
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <CalendarDays size={16} color="#7C3A1E" />
+                            <span>{t.heatmapTitle} ({t.months[month - 1]} {year})</span>
+                          </h3>
+                        </div>
+                        <p style={{ margin: '3px 0 0 0', fontSize: '11.5px', color: '#64748B' }}>
+                          {t.heatmapSubtitle}
+                        </p>
+                      </div>
+
+                      {/* Heatmap Legend */}
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '10px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        background: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '10px',
+                        padding: '8px 12px'
+                      }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#065F46' }}>
+                          <span style={{ width: 10, height: 10, borderRadius: 3, background: '#10B981' }} /> {t.legendMorning}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#0E7490' }}>
+                          <span style={{ width: 10, height: 10, borderRadius: 3, background: '#06B6D4' }} /> {t.legendNight}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#B45309' }}>
+                          <span style={{ width: 10, height: 10, borderRadius: 3, background: '#F59E0B' }} /> {t.legendLate}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#B91C1C' }}>
+                          <span style={{ width: 10, height: 10, borderRadius: 3, background: '#EF4444' }} /> {t.legendAbsent}
+                        </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748B' }}>
+                          <span style={{ width: 10, height: 10, borderRadius: 3, background: '#CBD5E1' }} /> {t.legendOff}
+                        </span>
+                      </div>
+
+                      {/* 7-Column Calendar Grid */}
+                      <div style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
+                        padding: '12px',
+                        overflowX: 'auto'
+                      }}>
+                        {/* Day of Week Headers */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', marginBottom: '8px', textAlign: 'center' }}>
+                          {t.weekDays.map((wd, i) => (
+                            <div key={i} style={{ fontSize: '11px', fontWeight: 800, color: i === 5 ? '#D97706' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              {wd}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Calendar Day Cells */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                          {/* Empty Spacers before 1st of month */}
+                          {Array.from({ length: firstDayOfWeek }).map((_, i) => (
+                            <div key={`spacer-${i}`} style={{ background: 'transparent', height: '48px' }} />
+                          ))}
+
+                          {/* Days 1 to daysInMonth */}
+                          {Array.from({ length: daysInMonth }).map((_, i) => {
+                            const dayNum = i + 1
+                            const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`
+                            const log = logsForStaff[dateKey]
+                            const isToday = today.getFullYear() === year && (today.getMonth() + 1) === month && today.getDate() === dayNum
+                            const isSelected = activeDay?.date === dateKey
+
+                            let cellBg = '#F8FAFC'
+                            let cellBorder = '#E2E8F0'
+                            let textColor = '#475569'
+                            let chipText = ''
+                            let chipBg = 'transparent'
+                            let chipColor = 'inherit'
+                            let shiftType = null
+
+                            if (log) {
+                              shiftType = getShiftType(log, s.shift_start)
+                              if (log.status === 'present') {
+                                if (shiftType === 'morning') {
+                                  cellBg = '#ECFDF5'
+                                  cellBorder = '#A7F3D0'
+                                  textColor = '#065F46'
+                                  chipText = '🌅 ৳110'
+                                  chipBg = '#D1FAE5'
+                                  chipColor = '#065F46'
+                                } else {
+                                  cellBg = '#F0FDFA'
+                                  cellBorder = '#99F6E4'
+                                  textColor = '#0E7490'
+                                  chipText = '🌙 ৳140'
+                                  chipBg = '#CCFBF1'
+                                  chipColor = '#0E7490'
+                                }
+                              } else if (log.status === 'late') {
+                                cellBg = '#FFFBEB'
+                                cellBorder = '#FDE68A'
+                                textColor = '#92400E'
+                                chipText = shiftType === 'morning' ? '⏰ ৳110' : '⏰ ৳140'
+                                chipBg = '#FEF3C7'
+                                chipColor = '#92400E'
+                              } else if (log.status === 'absent') {
+                                cellBg = '#FEF2F2'
+                                cellBorder = '#FECACA'
+                                textColor = '#991B1B'
+                                chipText = '❌ Cut'
+                                chipBg = '#FEE2E2'
+                                chipColor = '#991B1B'
+                              } else if (log.status === 'off') {
+                                cellBg = '#F1F5F9'
+                                cellBorder = '#E2E8F0'
+                                textColor = '#64748B'
+                                chipText = '🏖️ Off'
+                                chipBg = '#E2E8F0'
+                                chipColor = '#475569'
+                              }
+                            } else {
+                              // If no log exists for past date in month
+                              const cellDate = new Date(year, month - 1, dayNum)
+                              if (cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+                                cellBg = '#F8FAFC'
+                                cellBorder = '#E2E8F0'
+                                textColor = '#94A3B8'
+                                chipText = '—'
+                              }
+                            }
+
+                            return (
+                              <button
+                                key={dayNum}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedDayInfo(prev => ({
+                                    ...prev,
+                                    [s.id]: {
+                                      dayNum,
+                                      date: dateKey,
+                                      log: log || null,
+                                      shiftType
+                                    }
+                                  }))
+                                }}
+                                style={{
+                                  height: '52px',
+                                  padding: '4px',
+                                  borderRadius: '8px',
+                                  background: cellBg,
+                                  border: isSelected ? '2px solid #7C3A1E' : `1px solid ${cellBorder}`,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  position: 'relative',
+                                  boxSizing: 'border-box',
+                                  transition: 'transform 0.15s, box-shadow 0.15s',
+                                  boxShadow: isToday ? '0 0 0 2px #D4933A' : 'none'
+                                }}
+                                title={`${dateKey}: ${log ? log.status : 'No record'}`}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '11px', fontWeight: 800, color: textColor }}>
+                                    {dayNum}
+                                  </span>
+                                  {isToday && (
+                                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#D4933A' }} />
+                                  )}
+                                </div>
+
+                                {chipText && (
+                                  <span style={{
+                                    fontSize: '9px',
+                                    fontWeight: 800,
+                                    padding: '1px 3px',
+                                    borderRadius: '4px',
+                                    background: chipBg,
+                                    color: chipColor,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    maxWidth: '100%'
+                                  }}>
+                                    {chipText}
+                                  </span>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Interactive Selected Day Inspector Box */}
+                      {activeDay && (
+                        <div style={{
+                          background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
+                          border: '1.5px solid #CBD5E1',
+                          borderRadius: '12px',
+                          padding: '12px 16px',
+                          fontSize: '12px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <span style={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Calendar size={14} color="#7C3A1E" />
+                              <span>{t.selectedDayDetails} {activeDay.date}</span>
+                            </span>
+                            <span style={{
+                              fontWeight: 800,
+                              fontSize: '11px',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              background: activeDay.log?.status === 'present' ? '#DCFCE7' : activeDay.log?.status === 'late' ? '#FEF3C7' : '#FEE2E2',
+                              color: activeDay.log?.status === 'present' ? '#15803D' : activeDay.log?.status === 'late' ? '#B45309' : '#B91C1C',
+                              textTransform: 'uppercase'
+                            }}>
+                              {activeDay.log ? activeDay.log.status : 'No Check-in'}
+                            </span>
+                          </div>
+
+                          {activeDay.log ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginTop: '6px' }}>
+                              <div style={{ background: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                <span style={{ color: '#64748B', fontSize: '10.5px' }}>{t.checkInTimeText}</span>
+                                <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '1px' }}>
+                                  {formatCheckInTime(activeDay.log.check_in_at) || activeDay.log.shift_start || '—'}
+                                </div>
+                              </div>
+                              <div style={{ background: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                <span style={{ color: '#64748B', fontSize: '10.5px' }}>Shift & Food</span>
+                                <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '1px' }}>
+                                  {activeDay.shiftType === 'morning' ? '🌅 Morning (৳110)' : '🌙 Night (৳140)'}
+                                </div>
+                              </div>
+                              <div style={{ background: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                <span style={{ color: '#64748B', fontSize: '10.5px' }}>{t.hoursWorkedText}</span>
+                                <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '1px' }}>
+                                  {activeDay.log.hours_worked ? `${activeDay.log.hours_worked} ${t.hoursWorkedText}` : '—'}
+                                </div>
+                              </div>
+                              <div style={{ background: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                <span style={{ color: '#64748B', fontSize: '10.5px' }}>{t.overtimeMinText}</span>
+                                <div style={{ fontWeight: 800, color: '#059669', marginTop: '1px' }}>
+                                  {activeDay.log.overtime_minutes ? `${activeDay.log.overtime_minutes} mins` : '0 min'}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <p style={{ margin: 0, color: '#64748B', fontStyle: 'italic' }}>
+                              {t.noRecordDay}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                     </div>
                   )}
