@@ -6,7 +6,7 @@ import {
   Printer, X, History, RefreshCw, Lock, Eye, EyeOff,
   UserCheck, ShieldCheck, LogOut, ChevronDown, ChevronUp,
   Search, CheckCircle2, Clock, AlertCircle, Coffee, DollarSign,
-  Calendar, ArrowDownRight, ArrowUpRight, FileText, Info
+  Calendar, ArrowDownRight, ArrowUpRight, FileText, Info, Globe
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
@@ -34,18 +34,154 @@ function getShiftType(log, staffDefaultShift = '11:00') {
   return 'morning'
 }
 
-const LOADING_STEPS = [
-  { label: 'Verifying credentials & access...' },
-  { label: 'Connecting to database...' },
-  { label: 'Fetching staff payroll records...' },
-  { label: 'Calculating overtime, food & deductions...' },
-  { label: 'Preparing itemized salary breakdown...' },
-]
+const I18N = {
+  en: {
+    months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    brandSubtitle: 'Payroll View Center',
+    portalPasscode: 'Enter Portal Passcode',
+    passcodePlaceholder: 'Enter Passcode',
+    unlockBtn: 'Unlock Payroll',
+    errorEmpty: 'Please enter your passcode.',
+    errorInvalid: 'Incorrect passcode. Please try again.',
+    multiMatchTitle: 'Multiple staff members matched. Please choose:',
+    adminCenterTitle: 'Payroll Center (Admin Master)',
+    reportSuffix: 'Payroll Report',
+    adminBadge: 'Admin Access',
+    staffBadge: 'Staff',
+    lockSignOut: 'Lock / Sign Out',
+    refresh: 'Refresh',
+    searchPlaceholder: 'Search staff...',
+    grandNet: 'Grand Total Net Pay',
+    grandPaid: 'Grand Paid Amount',
+    grandDue: 'Grand Remaining Due',
+    noRecord: 'No payroll record found',
+    noRecordSub: 'Check month/year or search keywords.',
+    fullyPaid: 'Fully Paid ✓',
+    due: 'Due',
+    settled: 'Settled',
+    collapse: 'Collapse',
+    breakdown: 'Breakdown',
+    netSalary: 'Net Salary',
+    paidSoFar: 'Paid So Far',
+    remainingDue: 'Remaining Due',
+    dutyFoundation: '1. Duty & Rate Foundation',
+    standardMonth: 'Standard 30 Days Month',
+    baseSalary: 'Base Salary',
+    ratePerDay: 'Rate / Day (৳Base/30)',
+    ratePerHour: 'Rate / Hour (OT)',
+    daysPresent: 'Days Present',
+    morningShifts: 'Morning Shifts (৳110)',
+    nightShifts: 'Night Shifts (৳140)',
+    lateArrivals: 'Late Arrivals',
+    absentOffDays: 'Absent / Off Days',
+    daysUnit: 'days',
+    earningsBreakdown: '2. Earnings Breakdown',
+    overtimeAllowance: 'Overtime Allowance',
+    morningShiftFood: 'Morning Shift Food',
+    nightShiftFood: 'Night Shift Food',
+    serviceChargePool: 'Service Charge Pool',
+    bonusIncentive: 'Bonus / Incentive',
+    miscAddition: 'Miscellaneous Addition',
+    deductionsBreakdown: '3. Deductions Breakdown',
+    salaryAdvanceTaken: 'Salary Advance Taken',
+    advanceLogDetails: 'Advance Log Details:',
+    records: 'record',
+    unpaidLeaveDeduction: 'Unpaid Leave Deduction',
+    lateAttendanceDeduction: 'Late Attendance Deduction',
+    waived: 'Waived ✓ (৳0)',
+    latesToCut: 'lates → cut days',
+    othersTaken: 'Others Taken / Deductions',
+    penaltiesDeductions: 'Penalties / Misc Deductions',
+    netPayableTitle: 'Net Payable Salary',
+    disbursementsTitle: 'Payment Disbursements',
+    noPaymentYet: 'No payment recorded yet for this month.',
+    printSlipBtn: 'Print Salary Slip',
+    loadingSteps: [
+      'Verifying credentials & access...',
+      'Connecting to database...',
+      'Fetching staff payroll records...',
+      'Calculating overtime, food & deductions...',
+      'Preparing itemized salary breakdown...'
+    ]
+  },
+  bn: {
+    months: ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'],
+    brandSubtitle: 'বেতন বিবরণী পোর্টাল',
+    portalPasscode: 'পোর্টাল পাসকোড লিখুন',
+    passcodePlaceholder: 'পাসকোড দিন',
+    unlockBtn: 'বেতন বিবরণী দেখুন',
+    errorEmpty: 'অনুগ্রহ করে পাসকোড দিন।',
+    errorInvalid: 'ভুল পাসকোড। আবার চেষ্টা করুন।',
+    multiMatchTitle: 'একাধিক কর্মী পাওয়া গেছে। আপনার পদবী নির্বাচন করুন:',
+    adminCenterTitle: 'পেরোল সেন্টার (অ্যাডমিন মাস্টার)',
+    reportSuffix: 'বেতন বিবরণী',
+    adminBadge: 'অ্যাডমিন অ্যাক্সেস',
+    staffBadge: 'কর্মী',
+    lockSignOut: 'লক / সাইন আউট',
+    refresh: 'রিফ্রেশ',
+    searchPlaceholder: 'কর্মী খুঁজুন...',
+    grandNet: 'সর্বমোট নিট বেতন',
+    grandPaid: 'সর্বমোট পরিশোধিত',
+    grandDue: 'সর্বমোট বকেয়া',
+    noRecord: 'কোনো পেরোল রেকর্ড পাওয়া যায়নি',
+    noRecordSub: 'মাস/বছর যাচাই করুন বা নাম দিয়ে খুঁজুন।',
+    fullyPaid: 'সম্পূর্ণ পরিশোধিত ✓',
+    due: 'বকেয়া',
+    settled: 'নিষ্পন্ন',
+    collapse: 'সংক্ষেপ',
+    breakdown: 'বিস্তারিত',
+    netSalary: 'নিট বেতন',
+    paidSoFar: 'পরিশোধিত',
+    remainingDue: 'অবশিষ্ট বকেয়া',
+    dutyFoundation: '১. কাজের দিন ও বেতনের ভিত্তি',
+    standardMonth: 'স্ট্যান্ডার্ড ৩০ দিনের মাস',
+    baseSalary: 'মূল বেতন',
+    ratePerDay: 'দৈনিক হার (মূল/৩০)',
+    ratePerHour: 'ঘণ্টার হার (ওভারটাইম)',
+    daysPresent: 'উপস্থিত দিন',
+    morningShifts: 'মর্নিং শিফট (৳১১০)',
+    nightShifts: 'নাইট শিফট (৳১৪০)',
+    lateArrivals: 'দেরিতে উপস্থিতি',
+    absentOffDays: 'ছুটি / অনুপস্থিত দিন',
+    daysUnit: 'দিন',
+    earningsBreakdown: '২. মোট আয় বিবরণী',
+    overtimeAllowance: 'ওভারটাইম ভাতা',
+    morningShiftFood: 'মর্নিং শিফট খাবার ভাতা',
+    nightShiftFood: 'নাইট শিফট খাবার ভাতা',
+    serviceChargePool: 'সার্ভিস চার্জ তহবিল',
+    bonusIncentive: 'বোনাস / ইনসেন্টিভ',
+    miscAddition: 'বিবিধ সংযোজন',
+    deductionsBreakdown: '৩. মোট কর্তন বিবরণী',
+    salaryAdvanceTaken: 'অগ্রিম বেতন গ্রহণ',
+    advanceLogDetails: 'অগ্রিম গ্রহণের বিস্তারিত:',
+    records: 'টি রেকর্ড',
+    unpaidLeaveDeduction: 'বিনা বেতনে ছুটির কর্তন',
+    lateAttendanceDeduction: 'দেরিতে উপস্থিতির কর্তন',
+    waived: 'মওকুফ করা হয়েছে ✓ (৳০)',
+    latesToCut: 'টি লেট → দিনের বেতন কর্তন',
+    othersTaken: 'অন্যান্য কর্তন',
+    penaltiesDeductions: 'জরিমানা / বিবিধ কর্তন',
+    netPayableTitle: 'চূড়ান্ত প্রদেয় নিট বেতন',
+    disbursementsTitle: 'বেতন পরিশোধ বিবরণী',
+    noPaymentYet: 'এই মাসে এখনো কোনো অর্থ পরিশোধ রেকর্ড করা হয়নি।',
+    printSlipBtn: 'বেতন রশিদ প্রিন্ট করুন',
+    loadingSteps: [
+      'লগইন তথ্য যাচাই করা হচ্ছে...',
+      'ডাটাবেসে সংযুক্ত হচ্ছে...',
+      'পেরোল ডাটা লোড করা হচ্ছে...',
+      'ওভারটাইম ও খাবার ভাতা গণনা হচ্ছে...',
+      'বিস্তারিত বেতন তালিকা প্রস্তুত হচ্ছে...'
+    ]
+  }
+}
 
 export default function ViewPayrollPage() {
   const today = new Date()
   const [month, setMonth] = useState(today.getMonth() + 1)
   const [year, setYear] = useState(today.getFullYear())
+
+  // Language state: 'bn' or 'en'
+  const [lang, setLang] = useState('bn')
 
   // Auth State
   const [authRole, setAuthRole] = useState(null) // null | 'admin' | 'staff'
@@ -68,9 +204,13 @@ export default function ViewPayrollPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [waivedStaff, setWaivedStaff] = useState({})
 
-  // Check existing session on mount
+  // Read saved language preference and session
   useEffect(() => {
     try {
+      const savedLang = localStorage.getItem('cc_viewpayroll_lang')
+      if (savedLang === 'en' || savedLang === 'bn') {
+        setLang(savedLang)
+      }
       const saved = sessionStorage.getItem('cc_viewpayroll_session')
       if (saved) {
         const parsed = JSON.parse(saved)
@@ -82,9 +222,18 @@ export default function ViewPayrollPage() {
         }
       }
     } catch (e) {
-      console.warn('Could not read session:', e)
+      console.warn('Could not read session/lang:', e)
     }
   }, [])
+
+  const handleLanguageChange = (l) => {
+    setLang(l)
+    try {
+      localStorage.setItem('cc_viewpayroll_lang', l)
+    } catch (e) {}
+  }
+
+  const t = I18N[lang] || I18N.bn
 
   useEffect(() => {
     fetchAll(month, year)
@@ -93,10 +242,10 @@ export default function ViewPayrollPage() {
   useEffect(() => {
     if (!loading) return
     const interval = setInterval(() => {
-      setLoadingStep(prev => (prev + 1) % LOADING_STEPS.length)
+      setLoadingStep(prev => (prev + 1) % t.loadingSteps.length)
     }, 800)
     return () => clearInterval(interval)
-  }, [loading])
+  }, [loading, t.loadingSteps.length])
 
   async function fetchAll(m, y) {
     setLoading(true)
@@ -110,7 +259,6 @@ export default function ViewPayrollPage() {
       const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0]
       const endDate = new Date(y, m, 0).toISOString().split('T')[0]
 
-      // Fetch active staff
       let activeStaffList = []
       try {
         const staffApiResponse = await fetch('/api/staff')
@@ -333,7 +481,6 @@ export default function ViewPayrollPage() {
       setStaff(activeStaffList)
       setPayroll(payMap)
 
-      // If already logged in as staff, keep the authStaff reference fresh
       if (authStaff) {
         const fresh = activeStaffList.find(st => st.id === authStaff.id)
         if (fresh) setAuthStaff(fresh)
@@ -373,7 +520,7 @@ export default function ViewPayrollPage() {
 
     const raw = passwordInput.trim()
     if (!raw) {
-      setAuthError('Please enter a password.')
+      setAuthError(t.errorEmpty)
       return
     }
 
@@ -387,18 +534,17 @@ export default function ViewPayrollPage() {
       return
     }
 
-    // 2. Staff login: <name>@cc (handles <shahadat>@cc, shahadat@cc, Shahadat@CC, etc.)
+    // 2. Staff login: <name>@cc
     const cleaned = raw.replace(/[<>]/g, '').trim().toLowerCase()
     const namePart = cleaned.includes('@cc')
       ? cleaned.split('@cc')[0].trim()
       : cleaned
 
     if (!namePart) {
-      setAuthError('Please enter your passcode.')
+      setAuthError(t.errorEmpty)
       return
     }
 
-    // Match candidate in active staff
     const matches = staff.filter(s => {
       const sName = s.name.trim().toLowerCase()
       const firstName = sName.split(/\s+/)[0]
@@ -411,7 +557,7 @@ export default function ViewPayrollPage() {
     })
 
     if (matches.length === 0) {
-      setAuthError('Incorrect passcode. Please try again.')
+      setAuthError(t.errorInvalid)
       return
     }
 
@@ -423,7 +569,6 @@ export default function ViewPayrollPage() {
       setAuthStaff(matched)
       setPasswordInput('')
     } else {
-      // Multiple staff with matching name (e.g. Esa)
       setDisambiguationOptions(matches)
     }
   }
@@ -520,8 +665,6 @@ export default function ViewPayrollPage() {
     }
   }
 
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-
   // Filtered staff list based on role
   const roleFilteredStaff = authRole === 'admin'
     ? staff
@@ -540,7 +683,6 @@ export default function ViewPayrollPage() {
     return a.name.localeCompare(b.name)
   })
 
-  // Grand totals (only relevant for admin)
   const grandTotal = roleFilteredStaff.reduce((acc, s) => {
     const calc = calculateFullPayroll(s, payroll[s.id] || {}, waivedStaff[s.id])
     return acc + calc.finalSalary
@@ -567,11 +709,43 @@ export default function ViewPayrollPage() {
         justifyContent: 'center',
         padding: '24px 16px',
         boxSizing: 'border-box',
-        color: '#FFFFFF'
+        color: '#FFFFFF',
+        position: 'relative'
       }}>
+        {/* Language switcher on top right */}
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 10 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '9999px',
+            padding: '3px'
+          }}>
+            {['en', 'bn'].map(l => (
+              <button
+                key={l}
+                onClick={() => handleLanguageChange(l)}
+                style={{
+                  padding: '4px 12px',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  borderRadius: '9999px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: lang === l ? '#D4933A' : 'transparent',
+                  color: lang === l ? '#000000' : '#E2E8F0',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {l === 'en' ? 'EN' : 'বাং'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div style={{
           width: '100%',
-          maxWidth: '440px',
+          maxWidth: '420px',
           background: 'rgba(255, 255, 255, 0.05)',
           backdropFilter: 'blur(20px)',
           border: '1.5px solid rgba(212, 147, 58, 0.25)',
@@ -604,7 +778,7 @@ export default function ViewPayrollPage() {
               Crown Coffee
             </h1>
             <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#D4933A', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              Payroll View Center
+              {t.brandSubtitle}
             </p>
           </div>
 
@@ -612,12 +786,12 @@ export default function ViewPayrollPage() {
           <form onSubmit={handlePasswordSubmit}>
             <div style={{ marginBottom: '18px' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#E2E8F0', marginBottom: '8px', letterSpacing: '0.02em' }}>
-                Enter Portal Passcode
+                {t.portalPasscode}
               </label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter Passcode"
+                  placeholder={t.passcodePlaceholder}
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   autoFocus
@@ -687,7 +861,7 @@ export default function ViewPayrollPage() {
                 marginBottom: '18px'
               }}>
                 <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: 700, color: '#FDE68A' }}>
-                  Multiple staff members matched. Please choose:
+                  {t.multiMatchTitle}
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {disambiguationOptions.map(st => (
@@ -742,7 +916,7 @@ export default function ViewPayrollPage() {
               onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
             >
               <Lock size={16} />
-              <span>Unlock Payroll</span>
+              <span>{t.unlockBtn}</span>
             </button>
           </form>
         </div>
@@ -754,7 +928,7 @@ export default function ViewPayrollPage() {
   // 2. LOADING STATE
   // ─────────────────────────────────────────────────────────────
   if (loading) {
-    const progress = Math.round(((loadingStep + 1) / LOADING_STEPS.length) * 100)
+    const progress = Math.round(((loadingStep + 1) / t.loadingSteps.length) * 100)
     return (
       <div style={{ background: '#F8FAFC', minHeight: '100vh', fontFamily: '"Inter", system-ui, sans-serif', color: '#0F172A', display: 'flex', flexDirection: 'column' }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
@@ -770,14 +944,14 @@ export default function ViewPayrollPage() {
             Crown Coffee
           </p>
           <p style={{ margin: '4px 0 24px 0', fontSize: '11px', letterSpacing: '0.2em', color: '#64748B', textTransform: 'uppercase', fontWeight: 700 }}>
-            {authRole === 'admin' ? 'Admin Payroll Console' : `${authStaff?.name}'s Payroll`}
+            {authRole === 'admin' ? t.adminCenterTitle : `${authStaff?.name} - ${t.reportSuffix}`}
           </p>
 
           <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.03)', borderRadius: '12px', padding: '18px 22px', width: '100%', maxWidth: '420px', marginBottom: '20px' }}>
-            {LOADING_STEPS.map((s, i) => (
+            {t.loadingSteps.map((label, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: i <= loadingStep ? 1 : 0.3, padding: '4px 0' }}>
                 <span style={{ color: i < loadingStep ? '#059669' : '#7C3A1E', fontWeight: 800 }}>{i < loadingStep ? '✓' : '›'}</span>
-                <span style={{ fontSize: '13px', color: i === loadingStep ? '#0F172A' : '#64748B', fontWeight: i === loadingStep ? 700 : 500 }}>{s.label}</span>
+                <span style={{ fontSize: '13px', color: i === loadingStep ? '#0F172A' : '#64748B', fontWeight: i === loadingStep ? 700 : 500 }}>{label}</span>
               </div>
             ))}
           </div>
@@ -823,7 +997,7 @@ export default function ViewPayrollPage() {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <h1 style={{ fontSize: '18px', fontWeight: 900, color: '#0F172A', margin: 0 }}>
-                    {authRole === 'admin' ? 'Payroll Center (Admin Master)' : `${authStaff?.name}`}
+                    {authRole === 'admin' ? t.adminCenterTitle : `${authStaff?.name}`}
                   </h1>
                   <span style={{
                     fontSize: '11px',
@@ -837,37 +1011,69 @@ export default function ViewPayrollPage() {
                     gap: '4px'
                   }}>
                     {authRole === 'admin' ? <ShieldCheck size={12} /> : <UserCheck size={12} />}
-                    {authRole === 'admin' ? 'Admin Access' : (authStaff?.designation || 'Staff')}
+                    {authRole === 'admin' ? t.adminBadge : (authStaff?.designation || t.staffBadge)}
                   </span>
                 </div>
                 <p style={{ color: '#64748B', fontSize: '12.5px', margin: '2px 0 0 0', fontWeight: 600 }}>
-                  {months[month - 1]} {year} Payroll Report
+                  {t.months[month - 1]} {year} {t.reportSuffix}
                 </p>
               </div>
             </div>
 
-            {/* Logout / Switch Account */}
-            <button
-              onClick={handleLogout}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '10px',
+            {/* Language Switcher & Logout */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Language Pills */}
+              <div style={{
+                display: 'flex', alignItems: 'center',
+                background: '#F1F5F9',
                 border: '1px solid #CBD5E1',
-                background: '#F8FAFC',
-                color: '#475569',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'background 0.2s'
-              }}
-              title="Lock and sign out"
-            >
-              <LogOut size={14} />
-              <span>Lock / Sign Out</span>
-            </button>
+                borderRadius: '9999px',
+                padding: '2px'
+              }}>
+                {['en', 'bn'].map(l => (
+                  <button
+                    key={l}
+                    onClick={() => handleLanguageChange(l)}
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      borderRadius: '9999px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: lang === l ? '#7C3A1E' : 'transparent',
+                      color: lang === l ? '#FFFFFF' : '#64748B',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {l === 'en' ? 'EN' : 'বাং'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: '#F8FAFC',
+                  color: '#475569',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                title={t.lockSignOut}
+              >
+                <LogOut size={14} />
+                <span>{t.lockSignOut}</span>
+              </button>
+            </div>
           </div>
 
           {/* Month & Year Selectors */}
@@ -878,15 +1084,14 @@ export default function ViewPayrollPage() {
                 value={month}
                 onChange={e => setMonth(Number(e.target.value))}
               >
-                {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                {t.months.map((mName, i) => <option key={i} value={i + 1}>{mName}</option>)}
               </select>
               <input
                 type="number"
                 style={{ width: '82px', padding: '8px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', color: '#0F172A', fontWeight: 700, fontSize: '13px', textAlign: 'center', outline: 'none' }}
                 value={year}
                 onChange={e => setYear(Number(e.target.value))}
-              >
-              </input>
+              />
               <button
                 onClick={() => fetchAll(month, year)}
                 disabled={loading}
@@ -895,10 +1100,10 @@ export default function ViewPayrollPage() {
                   background: '#FFFFFF', color: '#0F172A', fontWeight: 700, fontSize: '13px',
                   cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
                 }}
-                title="Refresh payroll data"
+                title={t.refresh}
               >
                 <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-                <span>Refresh</span>
+                <span>{t.refresh}</span>
               </button>
             </div>
 
@@ -908,7 +1113,7 @@ export default function ViewPayrollPage() {
                 <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
                 <input
                   type="text"
-                  placeholder="Search staff..."
+                  placeholder={t.searchPlaceholder}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
@@ -930,15 +1135,15 @@ export default function ViewPayrollPage() {
         {authRole === 'admin' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px' }}>
             <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-              <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 800, margin: '0 0 4px 0' }}>Grand Total Net Pay</p>
+              <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 800, margin: '0 0 4px 0' }}>{t.grandNet}</p>
               <p style={{ fontSize: '20px', fontWeight: 900, color: '#7C3A1E', margin: 0 }}>৳{grandTotal.toLocaleString()}</p>
             </div>
             <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-              <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 800, margin: '0 0 4px 0' }}>Grand Paid Amount</p>
+              <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 800, margin: '0 0 4px 0' }}>{t.grandPaid}</p>
               <p style={{ fontSize: '20px', fontWeight: 900, color: '#059669', margin: 0 }}>৳{totalPaidAll.toLocaleString()}</p>
             </div>
             <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-              <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 800, margin: '0 0 4px 0' }}>Grand Remaining Due</p>
+              <p style={{ fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 800, margin: '0 0 4px 0' }}>{t.grandDue}</p>
               <p style={{ fontSize: '20px', fontWeight: 900, color: totalRemainingAll > 0 ? '#DC2626' : '#059669', margin: 0 }}>৳{totalRemainingAll.toLocaleString()}</p>
             </div>
           </div>
@@ -948,8 +1153,8 @@ export default function ViewPayrollPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {sortedStaff.length === 0 ? (
             <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '36px 20px', textAlign: 'center', color: '#64748B' }}>
-              <p style={{ fontSize: '15px', fontWeight: 700, margin: 0 }}>No payroll record found</p>
-              <p style={{ fontSize: '12px', margin: '4px 0 0 0' }}>Check month/year or search keywords.</p>
+              <p style={{ fontSize: '15px', fontWeight: 700, margin: 0 }}>{t.noRecord}</p>
+              <p style={{ fontSize: '12px', margin: '4px 0 0 0' }}>{t.noRecordSub}</p>
             </div>
           ) : (
             sortedStaff.map(s => {
@@ -960,7 +1165,7 @@ export default function ViewPayrollPage() {
               const remaining = calc.finalSalary - paid
               const staffAdvances = advanceDetails[s.id] || []
               const isFullyPaid = paid >= calc.finalSalary && calc.finalSalary > 0
-              const isExpanded = expandedBreakdowns[s.id] ?? true // default expanded for clear breakdown visibility
+              const isExpanded = expandedBreakdowns[s.id] ?? true
 
               return (
                 <div
@@ -1010,7 +1215,7 @@ export default function ViewPayrollPage() {
                         gap: '4px'
                       }}>
                         {isFullyPaid ? <CheckCircle2 size={12} /> : <Clock size={12} />}
-                        {isFullyPaid ? 'Fully Paid ✓' : remaining > 0 ? `Due: ৳${remaining.toLocaleString()}` : 'Settled'}
+                        {isFullyPaid ? t.fullyPaid : remaining > 0 ? `${t.due}: ৳${remaining.toLocaleString()}` : t.settled}
                       </span>
 
                       <button
@@ -1029,7 +1234,7 @@ export default function ViewPayrollPage() {
                           color: '#475569'
                         }}
                       >
-                        <span>{isExpanded ? 'Collapse' : 'Breakdown'}</span>
+                        <span>{isExpanded ? t.collapse : t.breakdown}</span>
                         {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
                     </div>
@@ -1045,15 +1250,15 @@ export default function ViewPayrollPage() {
                     gap: '10px'
                   }}>
                     <div>
-                      <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Net Salary</span>
+                      <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>{t.netSalary}</span>
                       <p style={{ margin: '2px 0 0 0', fontSize: '17px', fontWeight: 900, color: '#7C3A1E' }}>৳{calc.finalSalary.toLocaleString()}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Paid So Far</span>
+                      <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>{t.paidSoFar}</span>
                       <p style={{ margin: '2px 0 0 0', fontSize: '17px', fontWeight: 900, color: '#059669' }}>৳{paid.toLocaleString()}</p>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Remaining Due</span>
+                      <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>{t.remainingDue}</span>
                       <p style={{ margin: '2px 0 0 0', fontSize: '17px', fontWeight: 900, color: remaining > 0 ? '#DC2626' : '#059669' }}>৳{remaining.toLocaleString()}</p>
                     </div>
                   </div>
@@ -1071,43 +1276,43 @@ export default function ViewPayrollPage() {
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                           <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            1. Duty & Rate Foundation
+                            {t.dutyFoundation}
                           </span>
-                          <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Standard 30 Days Month</span>
+                          <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>{t.standardMonth}</span>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', fontSize: '12px' }}>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>Base Salary</div>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.baseSalary}</div>
                             <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>৳{calc.base.toLocaleString()}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>Rate / Day (৳Base/30)</div>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.ratePerDay}</div>
                             <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>৳{calc.perDay.toLocaleString()}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>Rate / Hour (OT)</div>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.ratePerHour}</div>
                             <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>৳{calc.hourlyRate.toLocaleString()}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>Days Present</div>
-                            <div style={{ fontWeight: 800, color: '#059669', marginTop: '2px' }}>{row.present_days || 0} days</div>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.daysPresent}</div>
+                            <div style={{ fontWeight: 800, color: '#059669', marginTop: '2px' }}>{row.present_days || 0} {t.daysUnit}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>Morning Shifts (৳110)</div>
-                            <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{row.morning_days || 0} days</div>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.morningShifts}</div>
+                            <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{row.morning_days || 0} {t.daysUnit}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>Night Shifts (৳140)</div>
-                            <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{row.night_days || 0} days</div>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.nightShifts}</div>
+                            <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{row.night_days || 0} {t.daysUnit}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>Late Arrivals</div>
-                            <div style={{ fontWeight: 800, color: '#D97706', marginTop: '2px' }}>{row.late_days || 0} days</div>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.lateArrivals}</div>
+                            <div style={{ fontWeight: 800, color: '#D97706', marginTop: '2px' }}>{row.late_days || 0} {t.daysUnit}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>Absent / Off Days</div>
-                            <div style={{ fontWeight: 800, color: '#DC2626', marginTop: '2px' }}>{row.absent_days || 0} days</div>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.absentOffDays}</div>
+                            <div style={{ fontWeight: 800, color: '#DC2626', marginTop: '2px' }}>{row.absent_days || 0} {t.daysUnit}</div>
                           </div>
                         </div>
                       </div>
@@ -1121,7 +1326,7 @@ export default function ViewPayrollPage() {
                       }}>
                         <div style={{ background: 'rgba(5, 150, 105, 0.06)', padding: '10px 16px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '12px', fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <ArrowUpRight size={14} /> 2. Earnings Breakdown (মোট আয়)
+                            <ArrowUpRight size={14} /> {t.earningsBreakdown}
                           </span>
                           <span style={{ fontSize: '13px', fontWeight: 900, color: '#059669' }}>
                             ৳{calc.grossEarnings.toLocaleString()}
@@ -1130,13 +1335,13 @@ export default function ViewPayrollPage() {
 
                         <div style={{ padding: '8px 16px', fontSize: '12.5px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-                            <span style={{ color: '#475569' }}>Base Salary</span>
+                            <span style={{ color: '#475569' }}>{t.baseSalary}</span>
                             <span style={{ fontWeight: 700, color: '#0F172A' }}>৳{calc.base.toLocaleString()}</span>
                           </div>
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
                             <div>
-                              <span style={{ color: '#475569' }}>Overtime Allowance</span>
+                              <span style={{ color: '#475569' }}>{t.overtimeAllowance}</span>
                               <span style={{ color: '#94A3B8', fontSize: '11px', marginLeft: '6px' }}>
                                 ({calc.otHours} hrs @ ৳{calc.hourlyRate}/hr)
                               </span>
@@ -1148,9 +1353,9 @@ export default function ViewPayrollPage() {
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
                             <div>
-                              <span style={{ color: '#475569' }}>Morning Shift Food</span>
+                              <span style={{ color: '#475569' }}>{t.morningShiftFood}</span>
                               <span style={{ color: '#94A3B8', fontSize: '11px', marginLeft: '6px' }}>
-                                ({row.morning_days || 0}d × ৳110)
+                                ({row.morning_days || 0}{t.daysUnit} × ৳110)
                               </span>
                             </div>
                             <span style={{ fontWeight: 700, color: calc.mornFood > 0 ? '#0F172A' : '#94A3B8' }}>
@@ -1160,9 +1365,9 @@ export default function ViewPayrollPage() {
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
                             <div>
-                              <span style={{ color: '#475569' }}>Night Shift Food</span>
+                              <span style={{ color: '#475569' }}>{t.nightShiftFood}</span>
                               <span style={{ color: '#94A3B8', fontSize: '11px', marginLeft: '6px' }}>
-                                ({row.night_days || 0}d × ৳140)
+                                ({row.night_days || 0}{t.daysUnit} × ৳140)
                               </span>
                             </div>
                             <span style={{ fontWeight: 700, color: calc.nightFood > 0 ? '#0F172A' : '#94A3B8' }}>
@@ -1172,21 +1377,21 @@ export default function ViewPayrollPage() {
 
                           {calc.sc > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
-                              <span style={{ color: '#475569' }}>Service Charge Pool</span>
+                              <span style={{ color: '#475569' }}>{t.serviceChargePool}</span>
                               <span style={{ fontWeight: 700, color: '#059669' }}>+৳{calc.sc.toLocaleString()}</span>
                             </div>
                           )}
 
                           {calc.bonus > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
-                              <span style={{ color: '#475569' }}>Bonus / Incentive</span>
+                              <span style={{ color: '#475569' }}>{t.bonusIncentive}</span>
                               <span style={{ fontWeight: 700, color: '#059669' }}>+৳{calc.bonus.toLocaleString()}</span>
                             </div>
                           )}
 
                           {calc.miscEarnings > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
-                              <span style={{ color: '#475569' }}>Miscellaneous Addition {row.miscellaneous_note ? `(${row.miscellaneous_note})` : ''}</span>
+                              <span style={{ color: '#475569' }}>{t.miscAddition} {row.miscellaneous_note ? `(${row.miscellaneous_note})` : ''}</span>
                               <span style={{ fontWeight: 700, color: '#059669' }}>+৳{calc.miscEarnings.toLocaleString()}</span>
                             </div>
                           )}
@@ -1202,7 +1407,7 @@ export default function ViewPayrollPage() {
                       }}>
                         <div style={{ background: 'rgba(220, 38, 38, 0.05)', padding: '10px 16px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span style={{ fontSize: '12px', fontWeight: 800, color: '#DC2626', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <ArrowDownRight size={14} /> 3. Deductions Breakdown (কর্তন বিবরণী)
+                            <ArrowDownRight size={14} /> {t.deductionsBreakdown}
                           </span>
                           <span style={{ fontSize: '13px', fontWeight: 900, color: '#DC2626' }}>
                             -৳{calc.totalDeductions.toLocaleString()}
@@ -1214,10 +1419,10 @@ export default function ViewPayrollPage() {
                           {/* Advance Taken */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
                             <div>
-                              <span style={{ color: '#475569' }}>Salary Advance Taken</span>
+                              <span style={{ color: '#475569' }}>{t.salaryAdvanceTaken}</span>
                               {staffAdvances.length > 0 && (
                                 <span style={{ color: '#64748B', fontSize: '11px', marginLeft: '6px' }}>
-                                  ({staffAdvances.length} record{staffAdvances.length > 1 ? 's' : ''})
+                                  ({staffAdvances.length} {t.records})
                                 </span>
                               )}
                             </div>
@@ -1229,7 +1434,7 @@ export default function ViewPayrollPage() {
                           {/* Itemized Advance Logs if any */}
                           {staffAdvances.length > 0 && (
                             <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '8px 12px', margin: '2px 0 4px', fontSize: '11.5px', border: '1px solid #E2E8F0' }}>
-                              <div style={{ fontWeight: 700, color: '#64748B', marginBottom: '4px' }}>Advance Log Details:</div>
+                              <div style={{ fontWeight: 700, color: '#64748B', marginBottom: '4px' }}>{t.advanceLogDetails}</div>
                               {staffAdvances.map(advItem => (
                                 <div key={advItem.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', color: '#475569' }}>
                                   <span>{advItem.date ? new Date(advItem.date).toLocaleDateString() : 'Advance'} {advItem.reason ? `· ${advItem.reason}` : ''}</span>
@@ -1242,9 +1447,9 @@ export default function ViewPayrollPage() {
                           {/* Unpaid Leave Deduction */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
                             <div>
-                              <span style={{ color: '#475569' }}>Unpaid Leave Deduction</span>
+                              <span style={{ color: '#475569' }}>{t.unpaidLeaveDeduction}</span>
                               <span style={{ color: '#94A3B8', fontSize: '11px', marginLeft: '6px' }}>
-                                ({calc.unpaidDays} days @ ৳{calc.perDay}/day)
+                                ({calc.unpaidDays} {t.daysUnit} @ ৳{calc.perDay}/{t.daysUnit})
                               </span>
                             </div>
                             <span style={{ fontWeight: 700, color: calc.unpaidDeduction > 0 ? '#DC2626' : '#94A3B8' }}>
@@ -1255,13 +1460,13 @@ export default function ViewPayrollPage() {
                           {/* Late Deduction */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
                             <div>
-                              <span style={{ color: '#475569' }}>Late Attendance Deduction</span>
+                              <span style={{ color: '#475569' }}>{t.lateAttendanceDeduction}</span>
                               <span style={{ color: '#94A3B8', fontSize: '11px', marginLeft: '6px' }}>
-                                ({calc.lateDays} lates → {calc.lateDeductionDays} cut days)
+                                ({calc.lateDays} {t.latesToCut})
                               </span>
                             </div>
                             {calc.isWaived ? (
-                              <span style={{ fontWeight: 700, color: '#059669' }}>Waived ✓ (৳0)</span>
+                              <span style={{ fontWeight: 700, color: '#059669' }}>{t.waived}</span>
                             ) : (
                               <span style={{ fontWeight: 700, color: calc.lateDeduction > 0 ? '#DC2626' : '#94A3B8' }}>
                                 {calc.lateDeduction > 0 ? `-৳${calc.lateDeduction.toLocaleString()}` : '৳0'}
@@ -1272,7 +1477,7 @@ export default function ViewPayrollPage() {
                           {/* Others Taken */}
                           {calc.others > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
-                              <span style={{ color: '#475569' }}>Others Taken / Deductions</span>
+                              <span style={{ color: '#475569' }}>{t.othersTaken}</span>
                               <span style={{ fontWeight: 700, color: '#DC2626' }}>-৳{calc.others.toLocaleString()}</span>
                             </div>
                           )}
@@ -1280,7 +1485,7 @@ export default function ViewPayrollPage() {
                           {/* Misc Deductions */}
                           {calc.miscDeductions > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
-                              <span style={{ color: '#475569' }}>Penalties / Misc Deductions {row.miscellaneous_note ? `(${row.miscellaneous_note})` : ''}</span>
+                              <span style={{ color: '#475569' }}>{t.penaltiesDeductions} {row.miscellaneous_note ? `(${row.miscellaneous_note})` : ''}</span>
                               <span style={{ fontWeight: 700, color: '#DC2626' }}>-৳{calc.miscDeductions.toLocaleString()}</span>
                             </div>
                           )}
@@ -1301,10 +1506,10 @@ export default function ViewPayrollPage() {
                       }}>
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 900, color: '#78350F', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                            Net Payable Salary (চূড়ান্ত প্রদেয় বেতন)
+                            {t.netPayableTitle}
                           </div>
                           <div style={{ fontSize: '11.5px', color: '#92400E', marginTop: '2px' }}>
-                            ৳{calc.grossEarnings.toLocaleString()} (আয়) - ৳{calc.totalDeductions.toLocaleString()} (কর্তন)
+                            ৳{calc.grossEarnings.toLocaleString()} - ৳{calc.totalDeductions.toLocaleString()}
                           </div>
                         </div>
                         <div style={{ fontSize: '22px', fontWeight: 900, color: '#7C3A1E' }}>
@@ -1321,16 +1526,16 @@ export default function ViewPayrollPage() {
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                           <span style={{ fontSize: '12px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <History size={14} /> Payment Disbursements ({staffPayments.length})
+                            <History size={14} /> {t.disbursementsTitle} ({staffPayments.length})
                           </span>
                           <span style={{ fontSize: '12px', fontWeight: 800, color: isFullyPaid ? '#059669' : '#D97706' }}>
-                            Paid: ৳{paid.toLocaleString()} | Due: ৳{remaining.toLocaleString()}
+                            {t.paidSoFar}: ৳{paid.toLocaleString()} | {t.due}: ৳{remaining.toLocaleString()}
                           </span>
                         </div>
 
                         {staffPayments.length === 0 ? (
                           <p style={{ margin: 0, fontSize: '12px', color: '#94A3B8', fontStyle: 'italic' }}>
-                            No payment recorded yet for this month.
+                            {t.noPaymentYet}
                           </p>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1385,7 +1590,7 @@ export default function ViewPayrollPage() {
                           is_paid: isFullyPaid,
                           is_waived: calc.isWaived
                         },
-                        month: months[month - 1],
+                        month: t.months[month - 1],
                         year
                       })}
                       style={{
@@ -1406,7 +1611,7 @@ export default function ViewPayrollPage() {
                       }}
                     >
                       <Printer size={14} />
-                      <span>Print Salary Slip (বেতন রশিদ)</span>
+                      <span>{t.printSlipBtn}</span>
                     </button>
                   </div>
 
