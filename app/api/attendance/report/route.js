@@ -8,9 +8,11 @@ export function getShiftType(log, staffDefaultShift = '11:00') {
       const bstHour = (d.getUTCHours() + 6) % 24
       const bstMin = d.getUTCMinutes()
       const totalMins = bstHour * 60 + bstMin
-      // Checked in before 12:30 PM (e.g. 8:00 AM, 10:00 AM, 11:00 AM) -> morning shift (৳110)
-      // Checked in at or after 12:30 PM (e.g. 1:00 PM / 13:00) -> night shift (৳140)
-      return totalMins < 750 ? 'morning' : 'night'
+      // Overnight check-ins (e.g. 00:00 - 05:59 BST) are night shifts
+      if (bstHour < 6) return 'night'
+      // Checked in before 12:15 PM (735m, e.g. 8:00 AM, 10:00 AM, 11:00 AM) -> morning shift (৳110)
+      // Checked in at or after 12:15 PM (e.g. 12:30 PM, 1:00 PM / 13:00) -> night shift (৳140)
+      return totalMins < 735 ? 'morning' : 'night'
     }
   }
 

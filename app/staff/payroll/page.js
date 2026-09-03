@@ -15,9 +15,11 @@ function getShiftType(log, staffDefaultShift = '11:00') {
       const bstHour = (d.getUTCHours() + 6) % 24
       const bstMin = d.getUTCMinutes()
       const totalMins = bstHour * 60 + bstMin
-      // Checked in before 12:30 PM (e.g. 8:00 AM, 10:00 AM, 11:00 AM) -> morning shift (৳110)
-      // Checked in at or after 12:30 PM (e.g. 1:00 PM / 13:00) -> night shift (৳140)
-      return totalMins < 750 ? 'morning' : 'night'
+      // Overnight check-ins (e.g. 00:00 - 05:59 BST) are night shifts
+      if (bstHour < 6) return 'night'
+      // Checked in before 12:15 PM (735m, e.g. 8:00 AM, 10:00 AM, 11:00 AM) -> morning shift (৳110)
+      // Checked in at or after 12:15 PM (e.g. 12:30 PM, 1:00 PM / 13:00) -> night shift (৳140)
+      return totalMins < 735 ? 'morning' : 'night'
     }
   }
 
@@ -154,6 +156,20 @@ export default function PayrollPage() {
         }
       }
 
+      // Fetch month-wise attendance report holding the exact duty times and shift classifications
+      const reportStaffMap = {}
+      try {
+        const reportRes = await fetch(`/api/attendance/report?month=${m}&year=${y}`)
+        if (reportRes.ok) {
+          const reportJson = await reportRes.json()
+          ;(reportJson.reports || []).forEach(r => {
+            reportStaffMap[r.staff_id] = r
+          })
+        }
+      } catch (err) {
+        console.warn('Failed to fetch attendance report in payroll:', err)
+      }
+
       const unpaidMap = {}
       ;(unpaidRes.data || []).forEach(a => {
         unpaidMap[a.staff_id] = (unpaidMap[a.staff_id] || 0) + 1
@@ -224,9 +240,10 @@ export default function PayrollPage() {
       const activeStaff = staffRes.data || []
       for (const s of activeStaff) {
         const summary = summaryMap[s.id]
+        const reportEntry = reportStaffMap[s.id]
 
-        const lateDays = summary ? Number(summary.late_days ?? summary.total_late ?? 0) : (logLateMap[s.id] || lateMap[s.id] || 0)
-        const presentCount = summary ? Number(summary.present_days ?? summary.total_present ?? 0) : (logPresentMap[s.id] || presentMap[s.id] || 0)
+        const lateDays = reportEntry ? reportEntry.late : (summary ? Number(summary.late_days ?? summary.total_late ?? 0) : (logLateMap[s.id] || lateMap[s.id] || 0))
+        const presentCount = reportEntry ? reportEntry.total_days_worked : (summary ? Number(summary.present_days ?? summary.total_present ?? 0) : (logPresentMap[s.id] || presentMap[s.id] || 0))
         
         // Consider off days as absent (and unworked days in standard 30-day month)
         const explicitOffAbsent = (logAbsentMap[s.id] || 0) + (logOffMap[s.id] || 0)
@@ -235,16 +252,17 @@ export default function PayrollPage() {
         const absentCount = summary && Number(summary.absent_days) > 0
           ? Math.max(Number(summary.absent_days), computedAbsent)
           : computedAbsent
-        const totalPresentForFood = presentCount
 
         const loggedMorning = logMorningDays[s.id] || 0
         const loggedNight = logNightDays[s.id] || 0
         const unassigned = Math.max(0, presentCount - (loggedMorning + loggedNight))
         const defaultShift = getShiftType({ shift_start: s.shift_start }, s.shift_start)
-        const morningDays = defaultShift === 'night' ? loggedMorning : loggedMorning + unassigned
-        const nightDays = defaultShift === 'night' ? loggedNight + unassigned : loggedNight
-        const autoMorningFood = morningDays * 110
-        const autoLunchDinner = nightDays * 140
+        
+        // Use exact duty time shift counts from month-wise attendance report
+        const morningDays = reportEntry ? reportEntry.morning_days : (defaultShift === 'night' ? loggedMorning : loggedMorning + unassigned)
+        const nightDays = reportEntry ? reportEntry.night_days : (defaultShift === 'night' ? loggedNight + unassigned : loggedNight)
+        const autoMorningFood = reportEntry ? reportEntry.morning_food : (morningDays * 110)
+        const autoLunchDinner = reportEntry ? reportEntry.night_food : (nightDays * 140)
 
         const perDay = Math.round(Number(s.base_salary) / 30)
         const lateDeductionDays = Math.floor(lateDays / 3)
