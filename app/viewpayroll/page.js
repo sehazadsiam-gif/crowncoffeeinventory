@@ -7,13 +7,14 @@ import {
   UserCheck, ShieldCheck, LogOut, ChevronDown, ChevronUp,
   Search, CheckCircle2, Clock, AlertCircle, Coffee, DollarSign,
   Calendar, ArrowDownRight, ArrowUpRight, FileText, Info, Globe,
-  CalendarDays, Sun, Moon
+  CalendarDays, Sun, Moon, LogIn, LogOut as LogOutIcon, Sparkles
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
 
 function getShiftType(log, staffDefaultShift = '11:00') {
+  if (log?.shift_type) return log.shift_type
   if (log?.check_in_at) {
     const d = new Date(log.check_in_at)
     if (!isNaN(d.getTime())) {
@@ -35,11 +36,31 @@ function getShiftType(log, staffDefaultShift = '11:00') {
   return 'morning'
 }
 
-function formatCheckInTime(dateStr) {
-  if (!dateStr) return null
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return null
-  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dhaka' })
+function formatTime12(val) {
+  if (!val || val === '--' || val === 'null') return null
+  if (typeof val === 'string') {
+    const trimmed = val.trim()
+    if (trimmed.toLowerCase().includes('am') || trimmed.toLowerCase().includes('pm')) {
+      return trimmed
+    }
+    const d = new Date(trimmed)
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Dhaka'
+      })
+    }
+    return trimmed
+  }
+  return null
+}
+
+function formatTimeCompact(val) {
+  const formatted = formatTime12(val)
+  if (!formatted) return ''
+  return formatted.replace(/\s+/g, '').toLowerCase()
 }
 
 const I18N = {
@@ -107,25 +128,28 @@ const I18N = {
     tabSalaryBreakdown: 'Salary Breakdown',
     tabAttendanceHeatmap: 'Attendance Heatmap',
     heatmapTitle: 'Attendance Heatmap Calendar',
-    heatmapSubtitle: 'Daily visual shift timings, attendance & food allowance',
+    heatmapSubtitle: 'Synced with Admin Attendance: Arrival, Departure & Overtime Breakdown',
     weekDays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     legendMorning: 'Morning (৳110)',
     legendNight: 'Night (৳140)',
     legendLate: 'Late Arrival',
     legendAbsent: 'Absent / Unpaid',
     legendOff: 'Off Day',
-    legendUpcoming: 'Upcoming',
+    legendOvertime: 'Overtime (OT)',
     selectedDayDetails: 'Selected Day Details:',
-    checkInTimeText: 'Check-in Time',
-    hoursWorkedText: 'Hours Worked',
-    overtimeMinText: 'Overtime',
-    foodAllowanceText: 'Food Allowance',
-    noRecordDay: 'No attendance log found for this day.',
+    arrivalTimeText: 'Arrival (Check-in)',
+    departureTimeText: 'Departure (Check-out)',
+    stillWorkingText: 'On duty (Checked In)',
+    totalHoursText: 'Hours Worked',
+    overtimeText: 'Overtime Worked',
+    noOvertimeText: '0 mins (Standard Shift)',
+    foodAllowanceText: 'Shift & Food Allowance',
+    noRecordDay: 'No attendance log recorded for this date.',
     loadingSteps: [
       'Verifying credentials & access...',
       'Connecting to database...',
       'Fetching staff payroll records...',
-      'Calculating overtime, food & deductions...',
+      'Syncing attendance arrival, departures & overtime...',
       'Preparing itemized salary breakdown...'
     ]
   },
@@ -193,25 +217,28 @@ const I18N = {
     tabSalaryBreakdown: 'বেতন বিবরণী',
     tabAttendanceHeatmap: 'উপস্থিতি হিটম্যাপ',
     heatmapTitle: 'উপস্থিতি হিটম্যাপ ক্যালেন্ডার',
-    heatmapSubtitle: 'দৈনিক ডিউটি শিফটের সময়, উপস্থিতি ও খাবার ভাতার হিসাব',
+    heatmapSubtitle: 'অ্যাডমিন উপস্থিতির সাথে সিঙ্ককৃত: আসার সময়, যাওয়ার সময় ও ওভারটাইম',
     weekDays: ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'],
     legendMorning: 'মর্নিং (৳১১০)',
     legendNight: 'নাইট (৳১৪০)',
     legendLate: 'দেরিতে উপস্থিতি',
     legendAbsent: 'অনুপস্থিত',
     legendOff: 'সাপ্তাহিক ছুটি',
-    legendUpcoming: 'আসন্ন দিন',
+    legendOvertime: 'ওভারটাইম (OT)',
     selectedDayDetails: 'নির্বাচিত দিনের বিস্তারিত:',
-    checkInTimeText: 'প্রবেশের সময়',
-    hoursWorkedText: 'কাজের সময়',
-    overtimeMinText: 'ওভারটাইম',
-    foodAllowanceText: 'খাবার ভাতা',
-    noRecordDay: 'এই দিনে কোনো প্রবেশের রেকর্ড নেই।',
+    arrivalTimeText: 'আসার সময় (চেক-ইন)',
+    departureTimeText: 'যাওয়ার সময় (চেক-আউট)',
+    stillWorkingText: 'ডিউটিতে আছেন (চলমান)',
+    totalHoursText: 'কাজের সময়',
+    overtimeText: 'ওভারটাইম',
+    noOvertimeText: 'নেই (০ মি. সাধারণ শিফট)',
+    foodAllowanceText: 'শিফট ও খাবার ভাতা',
+    noRecordDay: 'এই তারিখে কোনো প্রবেশের রেকর্ড নেই।',
     loadingSteps: [
       'লগইন তথ্য যাচাই করা হচ্ছে...',
       'ডাটাবেসে সংযুক্ত হচ্ছে...',
       'পেরোল ডাটা লোড করা হচ্ছে...',
-      'ওভারটাইম ও খাবার ভাতা গণনা হচ্ছে...',
+      'আসার সময়, যাওয়ার সময় ও ওভারটাইম সিঙ্ক হচ্ছে...',
       'বিস্তারিত বেতন তালিকা প্রস্তুত হচ্ছে...'
     ]
   }
@@ -329,6 +356,7 @@ export default function ViewPayrollPage() {
 
       const safe = (q) => Promise.resolve(q).catch(() => ({ data: [] }))
 
+      // Query database tables and attendance report API concurrently
       const [payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes] = await Promise.all([
         safe(supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y)),
         safe(supabase.from('advance_log').select('id, staff_id, amount, date, reason').eq('month', m).eq('year', y).order('date', { ascending: false })),
@@ -354,7 +382,9 @@ export default function ViewPayrollPage() {
       })
       setAdvanceDetails(advanceListMap)
 
+      // Fetch the EXACT same attendance report API that powers the Admin Attendance Heatmap
       const reportStaffMap = {}
+      let reportDailyLogs = []
       try {
         const reportRes = await fetch(`/api/attendance/report?month=${m}&year=${y}`)
         if (reportRes.ok) {
@@ -362,6 +392,7 @@ export default function ViewPayrollPage() {
           ;(reportJson.reports || []).forEach(r => {
             reportStaffMap[r.staff_id] = r
           })
+          reportDailyLogs = reportJson.daily_logs || []
         }
       } catch (err) {
         console.warn('Failed to fetch attendance report in viewpayroll:', err)
@@ -391,11 +422,46 @@ export default function ViewPayrollPage() {
       const logMorningDays = {}
       const logNightDays = {}
 
-      // Map daily logs for visual heatmap
+      // ─────────────────────────────────────────────────────────────
+      // BUILD SYNCHRONIZED DAILY LOGS MAP FOR THE HEATMAP
+      // ─────────────────────────────────────────────────────────────
       const dailyMap = {}
+
+      // 1. Primary Source: Authoritative reportDailyLogs from /api/attendance/report
+      // (Contains August baseline, arrival/departure format, accurate overtime, and shifts)
+      reportDailyLogs.forEach(l => {
+        if (!dailyMap[l.staff_id]) dailyMap[l.staff_id] = {}
+        dailyMap[l.staff_id][l.date] = {
+          ...l,
+          checkInDisplay: formatTime12(l.check_in_formatted || l.check_in_at),
+          checkOutDisplay: formatTime12(l.check_out_formatted || l.check_out_at),
+          hoursWorked: Number(l.hours_worked || 0),
+          overtimeMins: Number(l.overtime_minutes || (Number(l.overtime_hours || 0) * 60) || 0)
+        }
+      })
+
+      // 2. Secondary: Merge direct attendance_log rows if any date wasn't in reportDailyLogs
       attLogs.forEach(l => {
         if (!dailyMap[l.staff_id]) dailyMap[l.staff_id] = {}
-        dailyMap[l.staff_id][l.date] = l
+        if (!dailyMap[l.staff_id][l.date]) {
+          const shift = getShiftType(l)
+          const inFormatted = formatTime12(l.check_in_at)
+          const outFormatted = formatTime12(l.check_out_at)
+          dailyMap[l.staff_id][l.date] = {
+            id: l.id,
+            staff_id: l.staff_id,
+            date: l.date,
+            status: l.status,
+            shift_start: l.shift_start,
+            shift_type: shift,
+            check_in_at: l.check_in_at,
+            check_out_at: l.check_out_at,
+            checkInDisplay: inFormatted,
+            checkOutDisplay: outFormatted,
+            hoursWorked: Number(l.hours_worked || 0),
+            overtimeMins: Number(l.overtime_minutes || 0)
+          }
+        }
 
         if (l.status === 'late') logLateMap[l.staff_id] = (logLateMap[l.staff_id] || 0) + 1
         if (l.status === 'present' || l.status === 'late') {
@@ -414,7 +480,7 @@ export default function ViewPayrollPage() {
         logOtMap[l.staff_id] = (logOtMap[l.staff_id] || 0) + (otMins / 60)
       })
 
-      // Also merge records from attendance table if missing in attendance_log
+      // 3. Tertiary: Merge records from attendance table if missing (leaves, unpaid off)
       ;(unpaidRes.data || []).forEach(a => {
         if (a.date) {
           if (!dailyMap[a.staff_id]) dailyMap[a.staff_id] = {}
@@ -427,6 +493,7 @@ export default function ViewPayrollPage() {
           }
         }
       })
+
       setDailyAttendanceLogs(dailyMap)
 
       const otLogs = otRes?.data || []
@@ -1697,7 +1764,7 @@ export default function ViewPayrollPage() {
                     </div>
                   )}
 
-                  {/* ── TAB 2: ATTENDANCE HEATMAP CALENDAR ── */}
+                  {/* ── TAB 2: ATTENDANCE HEATMAP CALENDAR (Synced with Admin) ── */}
                   {isExpanded && activeTab === 'heatmap' && (
                     <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
@@ -1741,6 +1808,9 @@ export default function ViewPayrollPage() {
                         <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748B' }}>
                           <span style={{ width: 10, height: 10, borderRadius: 3, background: '#CBD5E1' }} /> {t.legendOff}
                         </span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#92400E' }}>
+                          <Sparkles size={11} color="#D97706" /> {t.legendOvertime}
+                        </span>
                       </div>
 
                       {/* 7-Column Calendar Grid */}
@@ -1764,7 +1834,7 @@ export default function ViewPayrollPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
                           {/* Empty Spacers before 1st of month */}
                           {Array.from({ length: firstDayOfWeek }).map((_, i) => (
-                            <div key={`spacer-${i}`} style={{ background: 'transparent', height: '48px' }} />
+                            <div key={`spacer-${i}`} style={{ background: 'transparent', minHeight: '64px' }} />
                           ))}
 
                           {/* Days 1 to daysInMonth */}
@@ -1778,59 +1848,58 @@ export default function ViewPayrollPage() {
                             let cellBg = '#F8FAFC'
                             let cellBorder = '#E2E8F0'
                             let textColor = '#475569'
-                            let chipText = ''
-                            let chipBg = 'transparent'
-                            let chipColor = 'inherit'
                             let shiftType = null
+                            let shiftBadge = ''
+                            let inTimeCompact = ''
+                            let outTimeCompact = ''
+                            let hasOvertime = false
+                            let otHours = 0
+                            let otMins = 0
 
                             if (log) {
                               shiftType = getShiftType(log, s.shift_start)
+                              inTimeCompact = formatTimeCompact(log.checkInDisplay || log.check_in_formatted || log.check_in_at)
+                              outTimeCompact = formatTimeCompact(log.checkOutDisplay || log.check_out_formatted || log.check_out_at)
+                              
+                              otMins = Number(log.overtimeMins || log.overtime_minutes || (Number(log.overtime_hours || 0) * 60) || 0)
+                              otHours = Math.round((otMins / 60) * 10) / 10
+                              hasOvertime = otMins > 0
+
                               if (log.status === 'present') {
                                 if (shiftType === 'morning') {
                                   cellBg = '#ECFDF5'
                                   cellBorder = '#A7F3D0'
                                   textColor = '#065F46'
-                                  chipText = '🌅 ৳110'
-                                  chipBg = '#D1FAE5'
-                                  chipColor = '#065F46'
+                                  shiftBadge = '🌅 ৳110'
                                 } else {
                                   cellBg = '#F0FDFA'
                                   cellBorder = '#99F6E4'
                                   textColor = '#0E7490'
-                                  chipText = '🌙 ৳140'
-                                  chipBg = '#CCFBF1'
-                                  chipColor = '#0E7490'
+                                  shiftBadge = '🌙 ৳140'
                                 }
                               } else if (log.status === 'late') {
                                 cellBg = '#FFFBEB'
                                 cellBorder = '#FDE68A'
                                 textColor = '#92400E'
-                                chipText = shiftType === 'morning' ? '⏰ ৳110' : '⏰ ৳140'
-                                chipBg = '#FEF3C7'
-                                chipColor = '#92400E'
+                                shiftBadge = shiftType === 'morning' ? '⏰ ৳110' : '⏰ ৳140'
                               } else if (log.status === 'absent') {
                                 cellBg = '#FEF2F2'
                                 cellBorder = '#FECACA'
                                 textColor = '#991B1B'
-                                chipText = '❌ Cut'
-                                chipBg = '#FEE2E2'
-                                chipColor = '#991B1B'
+                                shiftBadge = '❌ Absent'
                               } else if (log.status === 'off') {
                                 cellBg = '#F1F5F9'
                                 cellBorder = '#E2E8F0'
                                 textColor = '#64748B'
-                                chipText = '🏖️ Off'
-                                chipBg = '#E2E8F0'
-                                chipColor = '#475569'
+                                shiftBadge = '🏖️ Off'
                               }
                             } else {
-                              // If no log exists for past date in month
                               const cellDate = new Date(year, month - 1, dayNum)
                               if (cellDate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
                                 cellBg = '#F8FAFC'
                                 cellBorder = '#E2E8F0'
                                 textColor = '#94A3B8'
-                                chipText = '—'
+                                shiftBadge = '—'
                               }
                             }
 
@@ -1850,8 +1919,8 @@ export default function ViewPayrollPage() {
                                   }))
                                 }}
                                 style={{
-                                  height: '52px',
-                                  padding: '4px',
+                                  minHeight: '66px',
+                                  padding: '5px 4px',
                                   borderRadius: '8px',
                                   background: cellBg,
                                   border: isSelected ? '2px solid #7C3A1E' : `1px solid ${cellBorder}`,
@@ -1863,51 +1932,93 @@ export default function ViewPayrollPage() {
                                   position: 'relative',
                                   boxSizing: 'border-box',
                                   transition: 'transform 0.15s, box-shadow 0.15s',
-                                  boxShadow: isToday ? '0 0 0 2px #D4933A' : 'none'
+                                  boxShadow: isToday ? '0 0 0 2px #D4933A' : isSelected ? '0 2px 8px rgba(124, 58, 30, 0.2)' : 'none'
                                 }}
                                 title={`${dateKey}: ${log ? log.status : 'No record'}`}
                               >
+                                {/* Top Line: Day Number + Dot indicator */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                                   <span style={{ fontSize: '11px', fontWeight: 800, color: textColor }}>
                                     {dayNum}
                                   </span>
-                                  {isToday && (
-                                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#D4933A' }} />
-                                  )}
+                                  {isToday ? (
+                                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#D4933A' }} />
+                                  ) : shiftType === 'morning' ? (
+                                    <span style={{ fontSize: '9px' }}>🌅</span>
+                                  ) : shiftType === 'night' ? (
+                                    <span style={{ fontSize: '9px' }}>🌙</span>
+                                  ) : null}
                                 </div>
 
-                                {chipText && (
-                                  <span style={{
+                                {/* Middle Line: Arrival & Departure Time */}
+                                {log && (inTimeCompact || outTimeCompact) ? (
+                                  <div style={{
                                     fontSize: '9px',
-                                    fontWeight: 800,
-                                    padding: '1px 3px',
-                                    borderRadius: '4px',
-                                    background: chipBg,
-                                    color: chipColor,
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%'
+                                    fontWeight: 700,
+                                    color: '#0F172A',
+                                    textAlign: 'center',
+                                    lineHeight: '1.2',
+                                    margin: '1px 0'
                                   }}>
-                                    {chipText}
-                                  </span>
+                                    {inTimeCompact && outTimeCompact ? (
+                                      <span>{inTimeCompact}–{outTimeCompact}</span>
+                                    ) : inTimeCompact ? (
+                                      <span>{inTimeCompact}</span>
+                                    ) : null}
+                                  </div>
+                                ) : (
+                                  shiftBadge && (
+                                    <span style={{ fontSize: '9px', fontWeight: 700, color: textColor }}>
+                                      {shiftBadge}
+                                    </span>
+                                  )
                                 )}
+
+                                {/* Bottom Line: Overtime Badge (if any) or Food chip */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', maxWidth: '100%', overflow: 'hidden' }}>
+                                  {hasOvertime ? (
+                                    <span style={{
+                                      fontSize: '8.5px',
+                                      fontWeight: 800,
+                                      padding: '1px 3px',
+                                      borderRadius: '4px',
+                                      background: '#FEF3C7',
+                                      color: '#B45309',
+                                      border: '1px solid #FDE68A',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      +{otHours > 0 ? `${otHours}h` : `${otMins}m`} OT
+                                    </span>
+                                  ) : log && (log.status === 'present' || log.status === 'late') ? (
+                                    <span style={{
+                                      fontSize: '8.5px',
+                                      fontWeight: 800,
+                                      padding: '1px 3px',
+                                      borderRadius: '4px',
+                                      background: shiftType === 'morning' ? '#D1FAE5' : '#CCFBF1',
+                                      color: shiftType === 'morning' ? '#065F46' : '#0E7490',
+                                      whiteSpace: 'nowrap'
+                                    }}>
+                                      {shiftType === 'morning' ? '৳110' : '৳140'}
+                                    </span>
+                                  ) : null}
+                                </div>
                               </button>
                             )
                           })}
                         </div>
                       </div>
 
-                      {/* Interactive Selected Day Inspector Box */}
+                      {/* ── INTERACTIVE SELECTED DAY INSPECTOR BOX ── */}
                       {activeDay && (
                         <div style={{
                           background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
                           border: '1.5px solid #CBD5E1',
                           borderRadius: '12px',
-                          padding: '12px 16px',
-                          fontSize: '12px'
+                          padding: '14px 18px',
+                          fontSize: '12.5px'
                         }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
                             <span style={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <Calendar size={14} color="#7C3A1E" />
                               <span>{t.selectedDayDetails} {activeDay.date}</span>
@@ -1915,10 +2026,10 @@ export default function ViewPayrollPage() {
                             <span style={{
                               fontWeight: 800,
                               fontSize: '11px',
-                              padding: '2px 8px',
+                              padding: '3px 9px',
                               borderRadius: '6px',
-                              background: activeDay.log?.status === 'present' ? '#DCFCE7' : activeDay.log?.status === 'late' ? '#FEF3C7' : '#FEE2E2',
-                              color: activeDay.log?.status === 'present' ? '#15803D' : activeDay.log?.status === 'late' ? '#B45309' : '#B91C1C',
+                              background: activeDay.log?.status === 'present' ? '#DCFCE7' : activeDay.log?.status === 'late' ? '#FEF3C7' : activeDay.log?.status === 'off' ? '#E2E8F0' : '#FEE2E2',
+                              color: activeDay.log?.status === 'present' ? '#15803D' : activeDay.log?.status === 'late' ? '#B45309' : activeDay.log?.status === 'off' ? '#475569' : '#B91C1C',
                               textTransform: 'uppercase'
                             }}>
                               {activeDay.log ? activeDay.log.status : 'No Check-in'}
@@ -1926,29 +2037,68 @@ export default function ViewPayrollPage() {
                           </div>
 
                           {activeDay.log ? (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginTop: '6px' }}>
-                              <div style={{ background: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                                <span style={{ color: '#64748B', fontSize: '10.5px' }}>{t.checkInTimeText}</span>
-                                <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '1px' }}>
-                                  {formatCheckInTime(activeDay.log.check_in_at) || activeDay.log.shift_start || '—'}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
+                              {/* 1. Time of Arrival */}
+                              <div style={{ background: '#FFFFFF', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <LogIn size={12} color="#059669" />
+                                  <span>{t.arrivalTimeText}</span>
+                                </div>
+                                <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px', fontSize: '13px' }}>
+                                  {formatTime12(activeDay.log.checkInDisplay || activeDay.log.check_in_formatted || activeDay.log.check_in_at) || '—'}
                                 </div>
                               </div>
-                              <div style={{ background: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                                <span style={{ color: '#64748B', fontSize: '10.5px' }}>Shift & Food</span>
-                                <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '1px' }}>
-                                  {activeDay.shiftType === 'morning' ? '🌅 Morning (৳110)' : '🌙 Night (৳140)'}
+
+                              {/* 2. Time of Departure */}
+                              <div style={{ background: '#FFFFFF', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <LogOutIcon size={12} color="#D97706" />
+                                  <span>{t.departureTimeText}</span>
+                                </div>
+                                <div style={{ fontWeight: 800, color: activeDay.log.check_out_at ? '#0F172A' : '#D97706', marginTop: '2px', fontSize: '13px' }}>
+                                  {formatTime12(activeDay.log.checkOutDisplay || activeDay.log.check_out_formatted || activeDay.log.check_out_at) || t.stillWorkingText}
                                 </div>
                               </div>
-                              <div style={{ background: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                                <span style={{ color: '#64748B', fontSize: '10.5px' }}>{t.hoursWorkedText}</span>
-                                <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '1px' }}>
-                                  {activeDay.log.hours_worked ? `${activeDay.log.hours_worked} ${t.hoursWorkedText}` : '—'}
+
+                              {/* 3. Overtime (Highlighted if any) */}
+                              <div style={{
+                                background: (activeDay.log.overtimeMins || activeDay.log.overtime_minutes || activeDay.log.overtime_hours) > 0 ? '#FFFBEB' : '#FFFFFF',
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: (activeDay.log.overtimeMins || activeDay.log.overtime_minutes || activeDay.log.overtime_hours) > 0 ? '1.5px solid #FDE68A' : '1px solid #E2E8F0'
+                              }}>
+                                <div style={{ color: (activeDay.log.overtimeMins || activeDay.log.overtime_minutes || activeDay.log.overtime_hours) > 0 ? '#B45309' : '#64748B', fontSize: '10.5px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Sparkles size={12} color="#D97706" />
+                                  <span>{t.overtimeText}</span>
+                                </div>
+                                <div style={{ fontWeight: 900, color: (activeDay.log.overtimeMins || activeDay.log.overtime_minutes || activeDay.log.overtime_hours) > 0 ? '#B45309' : '#475569', marginTop: '2px', fontSize: '13px' }}>
+                                  {(activeDay.log.overtimeMins || activeDay.log.overtime_minutes || activeDay.log.overtime_hours) > 0 ? (
+                                    <span>
+                                      +{activeDay.log.overtime_hours ? `${activeDay.log.overtime_hours} hrs` : `${Math.round(activeDay.log.overtimeMins / 60 * 10) / 10} hrs`} ({activeDay.log.overtimeMins || Math.round(Number(activeDay.log.overtime_hours) * 60)} mins)
+                                    </span>
+                                  ) : (
+                                    <span>{t.noOvertimeText}</span>
+                                  )}
                                 </div>
                               </div>
-                              <div style={{ background: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
-                                <span style={{ color: '#64748B', fontSize: '10.5px' }}>{t.overtimeMinText}</span>
-                                <div style={{ fontWeight: 800, color: '#059669', marginTop: '1px' }}>
-                                  {activeDay.log.overtime_minutes ? `${activeDay.log.overtime_minutes} mins` : '0 min'}
+
+                              {/* 4. Hours Worked */}
+                              <div style={{ background: '#FFFFFF', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>
+                                  {t.totalHoursText}
+                                </div>
+                                <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px', fontSize: '13px' }}>
+                                  {activeDay.log.hours_worked || activeDay.log.hoursWorked ? `${activeDay.log.hours_worked || activeDay.log.hoursWorked} hrs` : '—'}
+                                </div>
+                              </div>
+
+                              {/* 5. Shift & Food Allowance */}
+                              <div style={{ background: '#FFFFFF', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                                <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>
+                                  {t.foodAllowanceText}
+                                </div>
+                                <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px', fontSize: '13px' }}>
+                                  {activeDay.shiftType === 'morning' ? '🌅 Morning Shift (৳110)' : '🌙 Night Shift (৳140)'}
                                 </div>
                               </div>
                             </div>
