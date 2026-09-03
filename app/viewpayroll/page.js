@@ -394,7 +394,7 @@ export default function ViewPayrollPage() {
       : cleaned
 
     if (!namePart) {
-      setAuthError('Please enter a valid staff password, e.g. shahadat@cc')
+      setAuthError('Please enter your passcode.')
       return
     }
 
@@ -411,7 +411,7 @@ export default function ViewPayrollPage() {
     })
 
     if (matches.length === 0) {
-      setAuthError('Incorrect passcode. Use 1590 for Admin or <name>@cc for Staff (e.g. shahadat@cc).')
+      setAuthError('Incorrect passcode. Please try again.')
       return
     }
 
@@ -617,7 +617,7 @@ export default function ViewPayrollPage() {
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="e.g. 1590 or shahadat@cc"
+                  placeholder="Enter Passcode"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   autoFocus
@@ -745,25 +745,6 @@ export default function ViewPayrollPage() {
               <span>Unlock Payroll</span>
             </button>
           </form>
-
-          {/* Instruction Pill */}
-          <div style={{
-            marginTop: '24px',
-            padding: '14px',
-            background: 'rgba(255, 255, 255, 0.03)',
-            borderRadius: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            fontSize: '11.5px',
-            lineHeight: '1.6',
-            color: '#94A3B8'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#E2E8F0', fontWeight: 700, marginBottom: '4px' }}>
-              <Info size={13} color="#D4933A" />
-              <span>Access Guide:</span>
-            </div>
-            <div>• <strong>Admin:</strong> Enter passcode <code style={{ color: '#FDE68A', background: 'rgba(0,0,0,0.3)', padding: '2px 5px', borderRadius: '4px' }}>1590</code> to view all staff.</div>
-            <div style={{ marginTop: '2px' }}>• <strong>Staff:</strong> Enter <code style={{ color: '#FDE68A', background: 'rgba(0,0,0,0.3)', padding: '2px 5px', borderRadius: '4px' }}>&lt;name&gt;@cc</code> (e.g. <code style={{ color: '#FDE68A' }}>shahadat@cc</code>) to view only your payroll.</div>
-          </div>
         </div>
       </div>
     )
