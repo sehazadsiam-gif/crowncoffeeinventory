@@ -99,8 +99,10 @@ const I18N = {
     ratePerDay: 'Rate / Day (৳Base/30)',
     ratePerHour: 'Rate / Hour (OT)',
     daysPresent: 'Days Present',
-    morningShifts: 'Morning Shifts (৳110)',
-    nightShifts: 'Night Shifts (৳140)',
+    morningShifts: 'Food Days (৳140/day)',
+    nightShifts: 'Food Allowance (৳140)',
+    foodAllowanceDays: 'Food Days (৳140/day)',
+    foodAllowance: 'Food Allowance',
     lateArrivals: 'Late Arrivals',
     absentOffDays: 'Absent / Off Days',
     daysUnit: 'days',
@@ -109,7 +111,7 @@ const I18N = {
     hoursUnit: 'hrs',
     earningsBreakdown: '2. Earnings Breakdown',
     overtimeAllowance: 'Overtime Allowance',
-    morningShiftFood: 'Morning Shift Food',
+    morningShiftFood: 'Food Allowance',
     nightShiftFood: 'Night Shift Food',
     serviceChargePool: 'Service Charge Pool',
     bonusIncentive: 'Bonus / Incentive',
@@ -137,8 +139,10 @@ const I18N = {
     summaryTotalOT: 'Total Overtime',
     summaryFoodFee: 'Food Allowance',
     weekDays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
-    legendMorning: 'Morning (৳110)',
-    legendNight: 'Night (৳140)',
+    legendPresent: 'Present',
+    legendFood: 'Food Allowance: ৳140',
+    legendMorning: 'Morning Shift',
+    legendNight: 'Night Shift',
     legendLate: 'Late Arrival',
     legendAbsent: 'Absent / Unpaid',
     legendOff: 'Off Day',
@@ -195,8 +199,10 @@ const I18N = {
     ratePerDay: 'দৈনিক হার (মূল/৩০)',
     ratePerHour: 'ঘণ্টার হার (ওভারটাইম)',
     daysPresent: 'উপস্থিত দিন',
-    morningShifts: 'মর্নিং শিফট (৳১১০)',
-    nightShifts: 'নাইট শিফট (৳১৪০)',
+    morningShifts: 'খাবার ভাতা (৳১৪০/দিন)',
+    nightShifts: 'খাবার ভাতা (৳১৪০)',
+    foodAllowanceDays: 'খাবার ভাতা (৳১৪০/দিন)',
+    foodAllowance: 'খাবার ভাতা',
     lateArrivals: 'দেরিতে উপস্থিতি',
     absentOffDays: 'ছুটি / অনুপস্থিত দিন',
     daysUnit: 'দিন',
@@ -205,7 +211,7 @@ const I18N = {
     hoursUnit: 'ঘণ্টা',
     earningsBreakdown: '২. মোট আয় বিবরণী',
     overtimeAllowance: 'ওভারটাইম ভাতা',
-    morningShiftFood: 'মর্নিং শিফট খাবার ভাতা',
+    morningShiftFood: 'খাবার ভাতা',
     nightShiftFood: 'নাইট শিফট খাবার ভাতা',
     serviceChargePool: 'সার্ভিস চার্জ তহবিল',
     bonusIncentive: 'বোনাস / ইনসেন্টিভ',
@@ -233,8 +239,10 @@ const I18N = {
     summaryTotalOT: 'মোট ওভারটাইম',
     summaryFoodFee: 'খাবার ভাতা',
     weekDays: ['রবি', 'সোম', 'মঙ্গল', 'বুধ', 'বৃহঃ', 'শুক্র', 'শনি'],
-    legendMorning: 'মর্নিং (৳১১০)',
-    legendNight: 'নাইট (৳১৪০)',
+    legendPresent: 'উপস্থিত',
+    legendFood: 'খাবার ভাতা: ৳১৪০',
+    legendMorning: 'মর্নিং শিফট',
+    legendNight: 'নাইট শিফট',
     legendLate: 'দেরিতে উপস্থিতি',
     legendAbsent: 'অনুপস্থিত',
     legendOff: 'সাপ্তাহিক ছুটি',
@@ -555,8 +563,9 @@ export default function ViewPayrollPage() {
 
         const morningDays = reportEntry ? reportEntry.morning_days : (defaultShift === 'night' ? loggedMorning : loggedMorning + unassigned)
         const nightDays = reportEntry ? reportEntry.night_days : (defaultShift === 'night' ? loggedNight + unassigned : loggedNight)
-        const autoMorningFood = reportEntry ? reportEntry.morning_food : (morningDays * 110)
-        const autoLunchDinner = reportEntry ? reportEntry.night_food : (nightDays * 140)
+        const autoFoodTotal = reportEntry ? reportEntry.total_food : (presentCount * 140)
+        const autoMorningFood = 0
+        const autoLunchDinner = autoFoodTotal
 
         const perDay = Math.round(Number(s.base_salary) / 30)
         const lateDeductionDays = Math.floor(lateDays / 3)
@@ -1543,12 +1552,8 @@ export default function ViewPayrollPage() {
                             <div style={{ fontWeight: 800, color: '#059669', marginTop: '2px' }}>{row.present_days || 0} {t.daysUnit}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.morningShifts}</div>
-                            <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{row.morning_days || 0} {t.daysUnit}</div>
-                          </div>
-                          <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.nightShifts}</div>
-                            <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{row.night_days || 0} {t.daysUnit}</div>
+                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.foodAllowanceDays}</div>
+                            <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{row.present_days || 0} {t.daysUnit} (৳{((row.present_days || 0) * 140).toLocaleString()})</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                             <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.lateArrivals}</div>
@@ -1597,25 +1602,13 @@ export default function ViewPayrollPage() {
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
                             <div>
-                              <span style={{ color: '#475569' }}>{t.morningShiftFood}</span>
+                              <span style={{ color: '#475569' }}>{t.foodAllowance}</span>
                               <span style={{ color: '#94A3B8', fontSize: '11px', marginLeft: '6px' }}>
-                                ({row.morning_days || 0}{t.daysUnit} × ৳110)
+                                ({row.present_days || (Number(row.night_days || 0) + Number(row.morning_days || 0))}{t.daysUnit} × ৳140)
                               </span>
                             </div>
-                            <span style={{ fontWeight: 700, color: calc.mornFood > 0 ? '#0F172A' : '#94A3B8' }}>
-                              +৳{calc.mornFood.toLocaleString()}
-                            </span>
-                          </div>
-
-                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderTop: '1px dashed #F1F5F9' }}>
-                            <div>
-                              <span style={{ color: '#475569' }}>{t.nightShiftFood}</span>
-                              <span style={{ color: '#94A3B8', fontSize: '11px', marginLeft: '6px' }}>
-                                ({row.night_days || 0}{t.daysUnit} × ৳140)
-                              </span>
-                            </div>
-                            <span style={{ fontWeight: 700, color: calc.nightFood > 0 ? '#0F172A' : '#94A3B8' }}>
-                              +৳{calc.nightFood.toLocaleString()}
+                            <span style={{ fontWeight: 700, color: (calc.mornFood + calc.nightFood) > 0 ? '#0F172A' : '#94A3B8' }}>
+                              +৳{(calc.mornFood + calc.nightFood).toLocaleString()}
                             </span>
                           </div>
 
@@ -1881,10 +1874,10 @@ export default function ViewPayrollPage() {
                         padding: '8px 12px'
                       }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#065F46' }}>
-                          <span style={{ width: 10, height: 10, borderRadius: 3, background: '#10B981' }} /> {t.legendMorning}
+                          <span style={{ width: 10, height: 10, borderRadius: 3, background: '#10B981' }} /> {t.legendPresent}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#0E7490' }}>
-                          <span style={{ width: 10, height: 10, borderRadius: 3, background: '#06B6D4' }} /> {t.legendNight}
+                          <span style={{ width: 10, height: 10, borderRadius: 3, background: '#06B6D4' }} /> {t.legendFood}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#B45309' }}>
                           <span style={{ width: 10, height: 10, borderRadius: 3, background: '#F59E0B' }} /> {t.legendLate}
@@ -1953,22 +1946,15 @@ export default function ViewPayrollPage() {
                               hasOvertime = otMins > 0
 
                               if (log.status === 'present') {
-                                if (shiftType === 'morning') {
-                                  cellBg = '#ECFDF5'
-                                  cellBorder = '#A7F3D0'
-                                  textColor = '#065F46'
-                                  shiftBadge = '🌅 ৳110'
-                                } else {
-                                  cellBg = '#F0FDFA'
-                                  cellBorder = '#99F6E4'
-                                  textColor = '#0E7490'
-                                  shiftBadge = '🌙 ৳140'
-                                }
+                                cellBg = '#ECFDF5'
+                                cellBorder = '#A7F3D0'
+                                textColor = '#065F46'
+                                shiftBadge = '🍽️ ৳140'
                               } else if (log.status === 'late') {
                                 cellBg = '#FFFBEB'
                                 cellBorder = '#FDE68A'
                                 textColor = '#92400E'
-                                shiftBadge = shiftType === 'morning' ? '⏰ ৳110' : '⏰ ৳140'
+                                shiftBadge = '⏰ ৳140'
                               } else if (log.status === 'absent') {
                                 cellBg = '#FEF2F2'
                                 cellBorder = '#FECACA'
@@ -2082,11 +2068,11 @@ export default function ViewPayrollPage() {
                                       fontWeight: 800,
                                       padding: '1px 3px',
                                       borderRadius: '4px',
-                                      background: shiftType === 'morning' ? '#D1FAE5' : '#CCFBF1',
-                                      color: shiftType === 'morning' ? '#065F46' : '#0E7490',
+                                      background: '#CCFBF1',
+                                      color: '#0E7490',
                                       whiteSpace: 'nowrap'
                                     }}>
-                                      {shiftType === 'morning' ? '৳110' : '৳140'}
+                                      ৳140
                                     </span>
                                   ) : null}
                                 </div>
@@ -2185,7 +2171,9 @@ export default function ViewPayrollPage() {
                                   {t.foodAllowanceText}
                                 </div>
                                 <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px', fontSize: '13px' }}>
-                                  {activeDay.shiftType === 'morning' ? '🌅 Morning Shift (৳110)' : '🌙 Night Shift (৳140)'}
+                                  {(activeDay.log?.status === 'present' || activeDay.log?.status === 'late')
+                                    ? `🍽️ ৳140 (${activeDay.shiftType === 'morning' ? (t.legendMorning || 'Morning') : (t.legendNight || 'Night')})`
+                                    : '—'}
                                 </div>
                               </div>
                             </div>

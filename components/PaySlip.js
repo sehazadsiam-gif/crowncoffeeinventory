@@ -33,8 +33,12 @@ export default function PaySlip({ data, onClose }) {
     { label: overtimeLabel, amount: Number(payroll.overtime_pay) },
     { label: 'Service Charge', amount: Number(payroll.service_charge) },
     { label: 'Bonus', amount: Number(payroll.bonus) },
-    { label: payroll.night_days ? `Night Shift Food (${payroll.night_days}d @ ৳140)` : 'Night Shift Food (1 PM)', amount: Number(payroll.lunch_dinner) },
-    { label: payroll.morning_days ? `Morning Shift Food (${payroll.morning_days}d @ ৳110)` : 'Morning Shift Food (8/11 AM)', amount: Number(payroll.morning_food) }
+    {
+      label: (payroll.present_days || (Number(payroll.night_days || 0) + Number(payroll.morning_days || 0)))
+        ? `Food Allowance (${payroll.present_days || (Number(payroll.night_days || 0) + Number(payroll.morning_days || 0))}d @ ৳140)`
+        : 'Food Allowance (@ ৳140)',
+      amount: Number(payroll.lunch_dinner || 0) + Number(payroll.morning_food || 0)
+    }
   ]
 
   if (Number(payroll.miscellaneous) > 0) {

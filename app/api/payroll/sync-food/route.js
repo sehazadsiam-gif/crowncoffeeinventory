@@ -54,8 +54,9 @@ export async function GET(request) {
         else nightDays++
       })
 
-      const morningFood = morningDays * 110
-      const lunchDinner = nightDays * 140
+      const totalFood = sLogs.length * 140
+      const morningFood = 0
+      const lunchDinner = totalFood
 
       const existing = (payrollEntries || []).find(p => p.staff_id === s.id)
       if (!existing) continue

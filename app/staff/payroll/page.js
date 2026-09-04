@@ -261,8 +261,9 @@ export default function PayrollPage() {
         // Use exact duty time shift counts from month-wise attendance report
         const morningDays = reportEntry ? reportEntry.morning_days : (defaultShift === 'night' ? loggedMorning : loggedMorning + unassigned)
         const nightDays = reportEntry ? reportEntry.night_days : (defaultShift === 'night' ? loggedNight + unassigned : loggedNight)
-        const autoMorningFood = reportEntry ? reportEntry.morning_food : (morningDays * 110)
-        const autoLunchDinner = reportEntry ? reportEntry.night_food : (nightDays * 140)
+        const autoFoodTotal = reportEntry ? reportEntry.total_food : (presentCount * 140)
+        const autoMorningFood = 0
+        const autoLunchDinner = autoFoodTotal
 
         const perDay = Math.round(Number(s.base_salary) / 30)
         const lateDeductionDays = Math.floor(lateDays / 3)
@@ -633,8 +634,8 @@ export default function PayrollPage() {
     'Overtime Hours',
     'Service Charge',
     'Bonus',
-    'Night Food (৳140)',
-    'Morning Food (৳110)',
+    'Food Allowance (৳140)',
+    'Morning Food (৳0)',
     'Advance',
     'Others',
     'Unpaid Leave',
@@ -734,7 +735,7 @@ export default function PayrollPage() {
             3. Advance: Total advance taken in the month is automatically deducted.
           </p>
           <p style={{ margin: 0 }}>
-            4. Food Allowance: Morning shift (8 AM / 11 AM) receives ৳110/day. Night shift (1 PM) receives ৳140/day.
+            4. Food Allowance: Flat ৳140/day for all shifts (both morning and night).
           </p>
         </div>
 
@@ -841,7 +842,7 @@ export default function PayrollPage() {
                           onBlur={() => handleBlur(s.id)}
                         />
                         <p style={{ fontSize: '10px', color: '#64748B', margin: '3px 0 0' }}>
-                          {row.night_days || 0}d × ৳140
+                          {row.present_days || (Number(row.night_days || 0) + Number(row.morning_days || 0))}d × ৳140
                         </p>
                         {row.lunch_dinner_manual && (
                           <p style={{ fontSize: '10px', color: '#FBBF24', margin: '2px 0 0', fontWeight: 600 }}>
@@ -882,7 +883,7 @@ export default function PayrollPage() {
                           onBlur={() => handleBlur(s.id)}
                         />
                         <p style={{ fontSize: '10px', color: '#64748B', margin: '3px 0 0' }}>
-                          {row.morning_days || 0}d × ৳110
+                          ৳0 (Unified @ ৳140)
                         </p>
                         {row.morning_food_manual && (
                           <p style={{ fontSize: '10px', color: '#FBBF24', margin: '2px 0 0', fontWeight: 600 }}>

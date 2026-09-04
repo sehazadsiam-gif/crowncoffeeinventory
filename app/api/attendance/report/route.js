@@ -146,9 +146,7 @@ export async function GET(request) {
         status: l.status || 'present',
         shift_start: l.shift_start || s.shift_start || '11:00',
         shift_type: getShiftType(l, s.shift_start),
-        food_fee: (l.status === 'present' || l.status === 'late')
-          ? (getShiftType(l, s.shift_start) === 'morning' ? 110 : 140)
-          : 0,
+        food_fee: (l.status === 'present' || l.status === 'late') ? 140 : 0,
         minutes_late: lateMins,
         late_hours: lateHours,
         hours_worked: hoursWorked,
@@ -201,8 +199,10 @@ export async function GET(request) {
       } else {
         morningDays += unassigned
       }
-      const morningFood = morningDays * 110
-      const nightFood = nightDays * 140
+      const totalDaysWorked = present + late
+      const morningFood = 0
+      const nightFood = totalDaysWorked * 140
+      const totalFood = totalDaysWorked * 140
 
       return {
         staff_id: s.id,
@@ -216,12 +216,12 @@ export async function GET(request) {
         absent,
         on_leave: onLeave,
         off,
-        total_days_worked: present + late,
+        total_days_worked: totalDaysWorked,
         morning_days: morningDays,
         night_days: nightDays,
         morning_food: morningFood,
         night_food: nightFood,
-        total_food: morningFood + nightFood,
+        total_food: totalFood,
         total_hours: totalHours,
         total_late_minutes: totalLateMinutes,
         total_late_hours: totalLateHours,
@@ -568,8 +568,8 @@ export async function POST(request) {
             } else {
               morningDays += unassigned
             }
-            const autoMorningFood = morningDays * 110
-            const autoNightFood = nightDays * 140
+            const autoMorningFood = 0
+            const autoNightFood = presentDays * 140
 
             const isManualOt = existing && existing.miscellaneous_plus === 1
             const otHours = isManualOt ? Number(existing.overtime_hours || 0) : (summary?.overtime_hours || 0)
