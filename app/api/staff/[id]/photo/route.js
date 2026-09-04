@@ -40,6 +40,7 @@ export async function GET(request, { params }) {
           headers: {
             'Content-Type': mimeType,
             'Cache-Control': 'public, max-age=86400, s-maxage=86400',
+            'Access-Control-Allow-Origin': '*',
           },
         })
       }

@@ -20,14 +20,20 @@ export async function GET(request) {
     const endDateStr = endDateObj.toISOString().split('T')[0]
 
     // 1. Fetch active rostered staff list
-    const { data: staff, error: staffErr } = await supabaseAdmin
+    const { data: staffRaw, error: staffErr } = await supabaseAdmin
       .from('staff')
-      .select('id, name, employee_id, designation, department, serial, is_active, photo_url, phone, mobile')
+      .select('id, name, employee_id, designation, department, serial, is_active, photo_url, emergency_phone')
       .eq('is_active', true)
       .eq('is_rostered', true)
       .order('serial', { ascending: true })
 
     if (staffErr) throw staffErr
+
+    const staff = (staffRaw || []).map(s => ({
+      ...s,
+      photo_url: s.photo_url ? (s.photo_url.startsWith('http') ? s.photo_url : `/api/staff/${s.id}/photo`) : null,
+      phone: s.emergency_phone || ''
+    }))
 
     // 2. Fetch existing roster logs for this week by date range or week_start
     const { data: rosterRaw, error: rosterErr } = await supabaseAdmin

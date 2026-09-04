@@ -52,6 +52,11 @@ export async function GET(request) {
       staff = sData || []
     }
 
+    const formattedStaff = (staff || []).map(s => ({
+      ...s,
+      photo_url: s.photo_url ? (s.photo_url.startsWith('http') ? s.photo_url : `/api/staff/${s.id}/photo`) : null
+    }))
+
     // Fetch AI draft for this week if any
     const { data: draft } = await supabaseAdmin
       .from('ai_roster_drafts')
@@ -59,7 +64,7 @@ export async function GET(request) {
       .eq('week_start', weekStart)
       .maybeSingle()
 
-    return NextResponse.json({ roster: roster || [], staff: staff || [], draft: draft || null })
+    return NextResponse.json({ roster: roster || [], staff: formattedStaff, draft: draft || null })
   } catch (err) {
     console.error('[GET /api/attendance/roster]', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
