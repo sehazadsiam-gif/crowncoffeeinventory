@@ -9,15 +9,8 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
     const weekStart = searchParams.get('week_start')
-
-    if (!weekStart) {
-      return NextResponse.json({ error: 'week_start parameter is required' }, { status: 400 })
-    }
-
-    // Calculate 7-day date range for week
-    const startDateObj = new Date(`${weekStart}T00:00:00Z`)
-    const endDateObj = new Date(startDateObj.getTime() + 6 * 24 * 60 * 60 * 1000)
-    const endDateStr = endDateObj.toISOString().split('T')[0]
+    const startDateParam = searchParams.get('start_date')
+    const endDateParam = searchParams.get('end_date')
 
     // 1. Fetch active rostered staff list
     const { data: staffRaw, error: staffErr } = await supabaseAdmin
@@ -35,20 +28,63 @@ export async function GET(request) {
       phone: s.emergency_phone || ''
     }))
 
-    // 2. Fetch existing roster logs for this week by date range or week_start
-    const { data: rosterRaw, error: rosterErr } = await supabaseAdmin
-      .from('duty_roster')
-      .select('*')
-      .or(`week_start.eq.${weekStart},and(day_date.gte.${weekStart},day_date.lte.${endDateStr})`)
+    // 2. Fetch existing roster logs from duty_roster with supabaseAdmin
+    let rosterRaw = []
+    if (startDateParam && endDateParam) {
+      const { data, error } = await supabaseAdmin
+        .from('duty_roster')
+        .select('*')
+        .gte('day_date', startDateParam)
+        .lte('day_date', endDateParam)
+        .order('day_date', { ascending: true })
+      if (error) throw error
+      rosterRaw = data || []
+    } else if (weekStart) {
+      const wsList = weekStart.split(',').map(s => s.trim()).filter(Boolean)
+      if (wsList.length === 1) {
+        const startDateObj = new Date(`${wsList[0]}T00:00:00Z`)
+        const endDateObj = new Date(startDateObj.getTime() + 6 * 24 * 60 * 60 * 1000)
+        const endDateStr = endDateObj.toISOString().split('T')[0]
+        const { data, error } = await supabaseAdmin
+          .from('duty_roster')
+          .select('*')
+          .or(`week_start.eq.${wsList[0]},and(day_date.gte.${wsList[0]},day_date.lte.${endDateStr})`)
+          .order('day_date', { ascending: true })
+        if (error) throw error
+        rosterRaw = data || []
+      } else {
+        const { data, error } = await supabaseAdmin
+          .from('duty_roster')
+          .select('*')
+          .in('week_start', wsList)
+          .order('day_date', { ascending: true })
+        if (error) throw error
+        rosterRaw = data || []
+      }
+    } else {
+      // Default: recent roster
+      const { data, error } = await supabaseAdmin
+        .from('duty_roster')
+        .select('*')
+        .order('day_date', { ascending: true })
+        .limit(1000)
+      if (error) throw error
+      rosterRaw = data || []
+    }
 
-    if (rosterErr) throw rosterErr
-
-    // Normalize shift times to 12-Hour AM/PM format (e.g. '8:00 AM', '11:00 AM', '1:00 PM', 'OFF')
-    const roster = (rosterRaw || []).map(r => ({
-      ...r,
-      shift_start_display: normalizeShiftTime(r.shift_start, r.is_off),
-      shift_start_12h: normalizeShiftTime(r.shift_start, r.is_off)
-    }))
+    // Normalize shift times strictly to 12-Hour AM/PM format ('11:00 AM', '1:00 PM', 'OFF')
+    const roster = (rosterRaw || []).map(r => {
+      const norm = normalizeShiftTime(r.shift_start, r.is_off)
+      return {
+        ...r,
+        shift_start: norm,
+        shift_start_display: norm,
+        shift_start_12h: norm,
+        is_off: Boolean(r.is_off || norm === 'OFF'),
+        is_leave: Boolean(r.is_leave),
+        is_duty_change: Boolean(r.is_duty_change)
+      }
+    })
 
     return NextResponse.json({
       success: true,

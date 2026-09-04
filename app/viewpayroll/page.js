@@ -140,6 +140,13 @@ function getRosterWeeks(baseDate = new Date()) {
   const curStartObj = parseLocalDate(currentDays[0])
   const curEndObj = parseLocalDate(currentDays[6])
 
+  const prevSatObj = parseLocalDate(currentSatStr)
+  prevSatObj.setDate(prevSatObj.getDate() - 7)
+  const prevSatStr = formatDateStr(prevSatObj)
+  const prevDays = get7Days(prevSatStr)
+  const prevStartObj = parseLocalDate(prevDays[0])
+  const prevEndObj = parseLocalDate(prevDays[6])
+
   const nextSatObj = parseLocalDate(currentSatStr)
   nextSatObj.setDate(nextSatObj.getDate() + 7)
   const nextSatStr = formatDateStr(nextSatObj)
@@ -147,17 +154,28 @@ function getRosterWeeks(baseDate = new Date()) {
   const nextStartObj = parseLocalDate(nextDays[0])
   const nextEndObj = parseLocalDate(nextDays[6])
 
+  const prevLabel = `${prevStartObj.getDate()} ${prevStartObj.toLocaleDateString('en-US', { month: 'short' })} – ${prevEndObj.getDate()} ${prevEndObj.toLocaleDateString('en-US', { month: 'short' })}`
   const curLabel = `${curStartObj.getDate()} ${curStartObj.toLocaleDateString('en-US', { month: 'short' })} – ${curEndObj.getDate()} ${curEndObj.toLocaleDateString('en-US', { month: 'short' })}`
   const nextLabel = `${nextStartObj.getDate()} ${nextStartObj.toLocaleDateString('en-US', { month: 'short' })} – ${nextEndObj.getDate()} ${nextEndObj.toLocaleDateString('en-US', { month: 'short' })}`
 
   return [
+    {
+      id: 'prev',
+      start: prevSatStr,
+      end: prevDays[6],
+      label: prevLabel,
+      days: prevDays,
+      isCurrent: false,
+      isPrev: true
+    },
     {
       id: 'current',
       start: currentSatStr,
       end: currentDays[6],
       label: curLabel,
       days: currentDays,
-      isCurrent: true
+      isCurrent: true,
+      isPrev: false
     },
     {
       id: 'next',
@@ -165,7 +183,8 @@ function getRosterWeeks(baseDate = new Date()) {
       end: nextDays[6],
       label: nextLabel,
       days: nextDays,
-      isCurrent: false
+      isCurrent: false,
+      isPrev: false
     }
   ]
 }
@@ -178,42 +197,49 @@ const I18N = {
     passcodePlaceholder: 'Enter Passcode',
     unlockBtn: 'Unlock Payroll',
     errorEmpty: 'Please enter your passcode.',
-    errorInvalid: 'Incorrect passcode. Please try again.',
-    multiMatchTitle: 'Multiple staff members matched. Please choose:',
-    adminCenterTitle: 'Payroll Center (Admin Master)',
-    reportSuffix: 'Payroll Report',
-    adminBadge: 'Admin Access',
-    staffBadge: 'Staff',
-    lockSignOut: 'Lock / Sign Out',
-    refresh: 'Refresh',
-    searchPlaceholder: 'Search staff...',
-    grandNet: 'Grand Total Net Pay',
-    grandPaid: 'Grand Paid Amount',
-    grandDue: 'Grand Remaining Due',
-    noRecord: 'No payroll record found',
-    noRecordSub: 'Check month/year or search keywords.',
-    fullyPaid: 'Fully Paid ✓',
-    due: 'Due',
-    settled: 'Settled',
-    collapse: 'Collapse',
-    breakdown: 'Breakdown',
-    netSalary: 'Net Salary',
-    paidSoFar: 'Paid So Far',
-    remainingDue: 'Remaining Due',
-    dutyFoundation: '1. Duty & Rate Foundation',
-    standardMonth: 'Standard 30 Days Month',
+    errorInvalid: 'Incorrect passcode. Please contact administration.',
+    loadingPayroll: 'Verifying credentials & syncing payroll records...',
+    adminBadge: 'Admin Management View',
+    staffBadge: 'Staff Member View',
+    lockPortal: 'Lock Session',
+    totalPayable: 'Total Net Salary Payable',
+    totalBaseSalary: 'Total Base Salaries',
+    totalFoodAllowances: 'Total Food Allowance',
+    totalOvertimePay: 'Total Overtime Pay',
+    totalAdvances: 'Total Advances Deducted',
+    staffCount: 'Staff Count',
+    membersUnit: 'Members',
+    searchPlaceholder: 'Search staff by name or designation...',
+    allDepartments: 'All Departments',
+    selectMonth: 'Select Payroll Month:',
+    filterByDept: 'Department Filter:',
+    deptKitchen: 'Kitchen',
+    deptService: 'Service / Floor',
+    deptBarista: 'Barista / Beverage',
+    deptManagement: 'Management / Cash',
+    deptCleaning: 'Cleaning / Utility',
+    payrollOverview: 'Staff Payroll Directory',
+    activeStaffTitle: 'Employees on Record',
+    baseSalaryLabel: 'Base Salary',
+    totalEarningsLabel: 'Total Gross Earnings',
+    totalDeductionsLabel: 'Total Deductions',
+    netPayableSalaryLabel: 'Net Payable Salary',
+    paidSoFar: 'Paid to Date',
+    remainingDue: 'Remaining Balance',
+    dutyFoundation: '1. Working Days & Salary Foundation',
+    standardMonth: 'Standard 30-Day Month',
     baseSalary: 'Base Salary',
-    ratePerDay: 'Rate / Day (৳Base/30)',
-    ratePerHour: 'Rate / Hour (OT)',
+    ratePerDay: 'Rate per Day (Base/30)',
+    ratePerHour: 'Rate per Hour (Overtime)',
     daysPresent: 'Days Present',
-    morningShifts: 'Food Days (৳140/day)',
+    morningShifts: 'Food Allowance (৳140/day)',
     nightShifts: 'Food Allowance (৳140)',
-    foodAllowanceDays: 'Food Days (৳140/day)',
+    foodAllowanceDays: 'Food Allowance (৳140/day)',
     foodAllowance: 'Food Allowance',
     lateArrivals: 'Late Arrivals',
-    absentOffDays: 'Absent / Off Days',
+    absentOffDays: 'Absences / Off Days',
     daysUnit: 'days',
-    monthlyWorkedHours: 'Monthly Hours Worked',
+    monthlyWorkedHours: 'Total Monthly Hours',
     totalHoursWorkedLabel: 'Total Worked Hours',
     hoursUnit: 'hrs',
     earningsBreakdown: '2. Earnings Breakdown',
@@ -241,7 +267,7 @@ const I18N = {
     tabAttendanceHeatmap: 'Attendance Heatmap',
     tabWeeklyRoster: 'Weekly Roster',
     rosterTitle: 'Weekly Duty Roster Schedule',
-    rosterSubtitle: 'Official working shift hours & weekly off days assigned by management',
+    rosterSubtitle: 'Official working shift hours & weekly off days assigned by management in Weekly Duty Roster',
     rosterCurrentWeek: 'Current Week',
     rosterDayOff: 'DAY OFF',
     rosterLeave: 'ON LEAVE',
@@ -254,6 +280,8 @@ const I18N = {
     rosterHoursUnit: 'hrs',
     rosterTodayBadge: 'TODAY',
     rosterUpcomingBadge: 'UPCOMING',
+    rosterRecentBadge: 'RECENT',
+    rosterPrevWeekTab: 'Previous Week',
     rosterCurrentWeekTab: 'Current Week',
     rosterNextWeekTab: 'Next Week (+1 Week)',
     rosterSelectWeek: 'Select Week:',
@@ -373,6 +401,8 @@ const I18N = {
     rosterHoursUnit: 'ঘণ্টা',
     rosterTodayBadge: 'আজ',
     rosterUpcomingBadge: 'আসন্ন',
+    rosterRecentBadge: 'বিগত',
+    rosterPrevWeekTab: 'পূর্ববর্তী সপ্তাহ',
     rosterCurrentWeekTab: 'চলতি সপ্তাহ',
     rosterNextWeekTab: 'পরবর্তী সপ্তাহ (+১ সপ্তাহ)',
     rosterSelectWeek: 'সপ্তাহ নির্বাচন:',
@@ -525,14 +555,18 @@ export default function ViewPayrollPage() {
         activeStaffList = clientStaffRes.data || []
       }
 
-      // Calculate range for duty roster: ensure Current Week and Next Week (+1 Week) are ALWAYS fetched
+      // Calculate range for duty roster: ensure Previous Week, Current Week, and Next Week (+1 Week) are ALWAYS fetched
       const curToday = new Date()
       const curSatStr = getSaturdayOf(curToday)
+      const prevSatObj = parseLocalDate(curSatStr)
+      prevSatObj.setDate(prevSatObj.getDate() - 7)
+      const prevSatStr = formatDateStr(prevSatObj)
+
       const nextSatObj = parseLocalDate(curSatStr)
       nextSatObj.setDate(nextSatObj.getDate() + 14)
       const nextWeekEndStr = formatDateStr(nextSatObj)
 
-      const rosterStartDate = startDate < curSatStr ? startDate : curSatStr
+      const rosterStartDate = startDate < prevSatStr ? startDate : prevSatStr
       const rosterEndDate = endDate > nextWeekEndStr ? endDate : nextWeekEndStr
 
       const safe = (q) => Promise.resolve(q).catch(() => ({ data: [] }))
@@ -550,10 +584,39 @@ export default function ViewPayrollPage() {
         safe(supabase.from('duty_roster').select('*').gte('day_date', rosterStartDate).lte('day_date', rosterEndDate).order('day_date', { ascending: true }))
       ])
 
+      // Fetch authoritative Weekly Duty Roster from /api/roster (identical to admin/weeklyroster)
       const rosterMap = {}
+      try {
+        const rosterFetchRes = await fetch(`/api/roster?start_date=${rosterStartDate}&end_date=${rosterEndDate}`)
+        if (rosterFetchRes.ok) {
+          const rosterJson = await rosterFetchRes.json()
+          ;(rosterJson.roster || []).forEach(r => {
+            if (!rosterMap[r.staff_id]) rosterMap[r.staff_id] = {}
+            rosterMap[r.staff_id][r.day_date] = {
+              ...r,
+              shift_start: normalizeShiftTime(r.shift_start, r.is_off),
+              is_off: Boolean(r.is_off || r.shift_start === 'OFF'),
+              is_leave: Boolean(r.is_leave),
+              is_duty_change: Boolean(r.is_duty_change)
+            }
+          })
+        }
+      } catch (err) {
+        console.warn('Failed to fetch from /api/roster in viewpayroll:', err)
+      }
+
+      // Also merge direct query if returned
       ;(rosterRes?.data || []).forEach(r => {
         if (!rosterMap[r.staff_id]) rosterMap[r.staff_id] = {}
-        rosterMap[r.staff_id][r.day_date] = r
+        if (!rosterMap[r.staff_id][r.day_date]) {
+          rosterMap[r.staff_id][r.day_date] = {
+            ...r,
+            shift_start: normalizeShiftTime(r.shift_start, r.is_off),
+            is_off: Boolean(r.is_off || r.shift_start === 'OFF'),
+            is_leave: Boolean(r.is_leave),
+            is_duty_change: Boolean(r.is_duty_change)
+          }
+        }
       })
       setStaffRosters(rosterMap)
 
@@ -2406,8 +2469,9 @@ export default function ViewPayrollPage() {
                   {/* ── TAB 3: WEEKLY ROSTER SCHEDULE (Assigned Duty Roster) ── */}
                   {isExpanded && activeTab === 'roster' && (() => {
                     const weeks = getRosterWeeks(new Date())
-                    const activeWeekStart = staffSelectedWeek[s.id] || (weeks.length > 0 ? weeks[0].start : getSaturdayOf(new Date()))
-                    const activeWeek = weeks.find(w => w.start === activeWeekStart) || weeks[0] || { start: activeWeekStart, end: activeWeekStart, days: get7Days(activeWeekStart), label: 'Current Week' }
+                    const todayStr = formatDateStr(new Date())
+                    const activeWeekStart = staffSelectedWeek[s.id] || (weeks.find(w => w.days.includes(todayStr))?.start || weeks.find(w => w.isCurrent)?.start || weeks[0]?.start)
+                    const activeWeek = weeks.find(w => w.start === activeWeekStart) || weeks.find(w => w.isCurrent) || weeks[0] || { start: activeWeekStart, end: activeWeekStart, days: get7Days(activeWeekStart), label: 'Current Week' }
                     const staffRosterByDate = staffRosters[s.id] || {}
                     const selectedRosterDate = staffSelectedRosterDay[s.id] || activeWeek.days[0]
 
@@ -2429,8 +2493,6 @@ export default function ViewPayrollPage() {
                         weekScheduledDays++
                       }
                     })
-
-                    const todayStr = formatDateStr(new Date())
 
                     return (
                       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -2489,18 +2551,20 @@ export default function ViewPayrollPage() {
                                     boxShadow: isSelected ? '0 2px 4px rgba(124, 58, 30, 0.15)' : 'none'
                                   }}
                                 >
-                                  <span>{w.isCurrent ? t.rosterCurrentWeekTab : t.rosterNextWeekTab} ({w.label})</span>
+                                  <span>
+                                    {w.isCurrent ? t.rosterCurrentWeekTab : w.isPrev ? t.rosterPrevWeekTab : t.rosterNextWeekTab} ({w.label})
+                                  </span>
                                   <span style={{
                                     fontSize: '9.5px',
                                     padding: '2px 6px',
                                     borderRadius: '5px',
                                     background: isSelected 
                                       ? 'rgba(255,255,255,0.25)' 
-                                      : w.isCurrent ? '#D97706' : '#2563EB',
+                                      : isCur ? '#D97706' : w.isPrev ? '#64748B' : '#2563EB',
                                     color: '#FFFFFF',
                                     fontWeight: 800
                                   }}>
-                                    {w.isCurrent ? t.rosterTodayBadge : t.rosterUpcomingBadge}
+                                    {isCur ? t.rosterTodayBadge : w.isPrev ? t.rosterRecentBadge : t.rosterUpcomingBadge}
                                   </span>
                                 </button>
                               )
