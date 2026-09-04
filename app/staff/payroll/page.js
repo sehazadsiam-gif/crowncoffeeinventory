@@ -637,7 +637,6 @@ export default function PayrollPage() {
     'Service Charge',
     'Bonus',
     'Food Allowance (৳140)',
-    'Morning Food (৳0)',
     'Advance',
     'Others',
     'Unpaid Leave',
@@ -779,12 +778,54 @@ export default function PayrollPage() {
 
                   return (
                     <tr key={s.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
-                      <td style={{ padding: '12px 12px', textAlign: 'left', position: 'sticky', left: 0, zIndex: 15, background: 'var(--bg-surface)', boxShadow: '2px 0 5px rgba(0,0,0,0.05)' }}>
-                        <p style={{ fontWeight: 700, fontSize: '13px', margin: 0, color: 'var(--text-primary)' }}>{s.name}</p>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>{s.designation}</p>
-                        {Number(row.present_days) > 0 && <p style={{ fontSize: '11px', color: '#34D399', marginTop: '3px', fontWeight: 600 }}>Present: {row.present_days}d</p>}
-                        {Number(row.late_days) > 0 && <p style={{ fontSize: '11px', color: '#FBBF24', marginTop: '3px', fontWeight: 600 }}>Late: {row.late_days}d</p>}
-                        {Number(row.absent_days) > 0 && <p style={{ fontSize: '11px', color: '#F87171', marginTop: '3px', fontWeight: 600 }}>Off/Absent: {row.absent_days}d</p>}
+                      <td style={{ padding: '10px 12px', textAlign: 'left', position: 'sticky', left: 0, zIndex: 15, background: 'var(--bg-surface)', boxShadow: '2px 0 5px rgba(0,0,0,0.05)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '50%',
+                            overflow: 'hidden',
+                            border: '2px solid #8B5E3C',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+                            background: '#FAF7F2',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            {s.photo_url ? (
+                              <img
+                                src={s.photo_url}
+                                alt={s.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                            ) : null}
+                            <div style={{
+                              display: s.photo_url ? 'none' : 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: '100%',
+                              height: '100%',
+                              background: 'linear-gradient(135deg, #6B3A2A 0%, #8B5E3C 100%)',
+                              color: 'white',
+                              fontWeight: 700,
+                              fontSize: '14px'
+                            }}>
+                              {s.name?.charAt(0)?.toUpperCase() || 'S'}
+                            </div>
+                          </div>
+                          <div>
+                            <p style={{ fontWeight: 700, fontSize: '13px', margin: 0, color: 'var(--text-primary)' }}>{s.name}</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>{s.designation}</p>
+                            {Number(row.present_days) > 0 && <p style={{ fontSize: '11px', color: '#34D399', marginTop: '3px', fontWeight: 600 }}>Present: {row.present_days}d</p>}
+                            {Number(row.late_days) > 0 && <p style={{ fontSize: '11px', color: '#FBBF24', marginTop: '3px', fontWeight: 600 }}>Late: {row.late_days}d</p>}
+                            {Number(row.absent_days) > 0 && <p style={{ fontSize: '11px', color: '#F87171', marginTop: '3px', fontWeight: 600 }}>Off/Absent: {row.absent_days}d</p>}
+                          </div>
+                        </div>
                       </td>
                       <td style={{ padding: '10px 8px' }}>
                         {editingSalary === s.id ? (
@@ -876,47 +917,7 @@ export default function PayrollPage() {
                           </button>
                         )}
                       </td>
-                      <td style={{ padding: '14px 8px' }}>
-                        <input
-                          type="number"
-                          style={inputStyle}
-                          value={row.morning_food}
-                          onChange={e => handleInput(s.id, 'morning_food', e.target.value)}
-                          onBlur={() => handleBlur(s.id)}
-                        />
-                        <p style={{ fontSize: '10px', color: '#64748B', margin: '3px 0 0' }}>
-                          ৳0 (Unified @ ৳140)
-                        </p>
-                        {row.morning_food_manual && (
-                          <p style={{ fontSize: '10px', color: '#FBBF24', margin: '2px 0 0', fontWeight: 600 }}>
-                            Manual
-                          </p>
-                        )}
-                        {row.morning_food_manual && (
-                          <button
-                            onClick={() => {
-                              handleInput(s.id, 'morning_food', row.morning_food_auto || 0)
-                              setPayroll(prev => ({
-                                ...prev,
-                                [s.id]: {
-                                  ...prev[s.id],
-                                  morning_food: row.morning_food_auto || 0,
-                                  morning_food_manual: false
-                                }
-                              }))
-                              setTimeout(() => handleBlur(s.id), 100)
-                            }}
-                            style={{
-                              fontSize: '10px', color: '#94A3B8',
-                              background: 'none', border: 'none',
-                              cursor: 'pointer', padding: 0,
-                              marginTop: '2px', textDecoration: 'underline'
-                            }}
-                          >
-                            Reset
-                          </button>
-                        )}
-                      </td>
+
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
                       <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
 

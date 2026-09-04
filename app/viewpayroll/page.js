@@ -1162,9 +1162,10 @@ export default function ViewPayrollPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <img
-                src="/crown-coffee-logo.jpg"
-                alt="Crown Coffee"
+                src={authRole === 'staff' && authStaff?.photo_url ? authStaff.photo_url : "/crown-coffee-logo.jpg"}
+                alt={authRole === 'staff' ? (authStaff?.name || 'Staff') : "Crown Coffee"}
                 style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #D4933A' }}
+                onError={(e) => { e.target.src = "/crown-coffee-logo.jpg" }}
               />
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1370,32 +1371,73 @@ export default function ViewPayrollPage() {
                     flexWrap: 'wrap',
                     gap: '12px'
                   }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A' }}>{s.name}</span>
-                        {s.serial && (
-                          <span style={{ fontSize: '10.5px', fontWeight: 800, background: '#E2E8F0', color: '#475569', padding: '2px 6px', borderRadius: '6px' }}>
-                            #{s.serial}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                        <span style={{ fontSize: '12.5px', color: '#64748B', fontWeight: 600 }}>{s.designation}</span>
-                        <span style={{ color: '#CBD5E1' }}>•</span>
-                        <span style={{
-                          fontSize: '11.5px',
-                          fontWeight: 700,
-                          color: '#0F172A',
-                          background: 'rgba(212, 147, 58, 0.15)',
-                          padding: '2px 8px',
-                          borderRadius: '6px',
-                          display: 'flex',
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: '2px solid #8B5E3C',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        background: '#FAF7F2',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        {s.photo_url ? (
+                          <img
+                            src={s.photo_url}
+                            alt={s.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div style={{
+                          display: s.photo_url ? 'none' : 'flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          justifyContent: 'center',
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(135deg, #6B3A2A 0%, #8B5E3C 100%)',
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '18px'
                         }}>
-                          <Timer size={12} color="#7C3A1E" />
-                          <span>{totalMonthlyHours} {t.hoursUnit}</span>
-                        </span>
+                          {s.name?.charAt(0)?.toUpperCase() || 'S'}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A' }}>{s.name}</span>
+                          {s.serial && (
+                            <span style={{ fontSize: '10.5px', fontWeight: 800, background: '#E2E8F0', color: '#475569', padding: '2px 6px', borderRadius: '6px' }}>
+                              #{s.serial}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                          <span style={{ fontSize: '12.5px', color: '#64748B', fontWeight: 600 }}>{s.designation}</span>
+                          <span style={{ color: '#CBD5E1' }}>•</span>
+                          <span style={{
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            color: '#0F172A',
+                            background: 'rgba(212, 147, 58, 0.15)',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <Timer size={12} color="#7C3A1E" />
+                            <span>{totalMonthlyHours} {t.hoursUnit}</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
 

@@ -91,9 +91,18 @@ export default function PaySlip({ data, onClose }) {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px', background: '#fcfcfc', padding: '15px', border: '1px solid #eee', fontSize: '12px' }}>
-            <div>
-              <p style={{ margin: '5px 0' }}><strong>Employee Name:</strong> {staff.name}</p>
-              <p style={{ margin: '5px 0' }}><strong>Designation:</strong> {staff.designation}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {staff.photo_url ? (
+                <img
+                  src={staff.photo_url}
+                  alt={staff.name}
+                  style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #8B5E3C', flexShrink: 0 }}
+                />
+              ) : null}
+              <div>
+                <p style={{ margin: '3px 0' }}><strong>Employee Name:</strong> {staff.name}</p>
+                <p style={{ margin: '3px 0' }}><strong>Designation:</strong> {staff.designation}</p>
+              </div>
             </div>
             <div>
               <p style={{ margin: '5px 0' }}><strong>Base Salary:</strong> ৳{Number(staff.base_salary).toLocaleString()}</p>
