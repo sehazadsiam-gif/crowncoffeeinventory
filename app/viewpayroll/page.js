@@ -12,6 +12,7 @@ import {
 import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
+import { normalizeShiftTime } from '../../lib/roster-utils'
 
 function getShiftType(log, staffDefaultShift = '11:00') {
   if (log?.shift_type) return log.shift_type
@@ -61,6 +62,76 @@ function formatTimeCompact(val) {
   const formatted = formatTime12(val)
   if (!formatted) return ''
   return formatted.replace(/\s+/g, '').toLowerCase()
+}
+
+function parseLocalDate(str) {
+  if (!str) return new Date()
+  const [y, m, d] = str.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+function formatDateStr(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function getSaturdayOf(d = new Date()) {
+  const date = new Date(d)
+  const day = date.getDay() // 0 = Sun, 6 = Sat
+  const diff = (day === 6 ? 0 : -(day + 1))
+  date.setDate(date.getDate() + diff)
+  return formatDateStr(date)
+}
+
+function get7Days(saturdayStr) {
+  const list = []
+  const start = parseLocalDate(saturdayStr)
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start)
+    d.setDate(d.getDate() + i)
+    list.push(formatDateStr(d))
+  }
+  return list
+}
+
+function getWeeksForMonth(y, m) {
+  const firstDay = new Date(y, m - 1, 1)
+  const lastDay = new Date(y, m, 0)
+  let currentSat = getSaturdayOf(firstDay)
+  const weeks = []
+  const seen = new Set()
+  
+  while (true) {
+    if (seen.has(currentSat)) break
+    seen.add(currentSat)
+    
+    const days = get7Days(currentSat)
+    const startObj = parseLocalDate(days[0])
+    const endObj = parseLocalDate(days[6])
+    
+    const overlaps = days.some(d => {
+      const dt = parseLocalDate(d)
+      return dt.getFullYear() === y && (dt.getMonth() + 1) === m
+    })
+    
+    if (overlaps) {
+      weeks.push({
+        start: currentSat,
+        end: days[6],
+        label: `${startObj.getDate()} ${startObj.toLocaleDateString('en-US', { month: 'short' })} – ${endObj.getDate()} ${endObj.toLocaleDateString('en-US', { month: 'short' })}`,
+        days
+      })
+    }
+    
+    const nextSat = parseLocalDate(currentSat)
+    nextSat.setDate(nextSat.getDate() + 7)
+    currentSat = formatDateStr(nextSat)
+    
+    if (parseLocalDate(currentSat) > lastDay) break
+  }
+  return weeks
 }
 
 const I18N = {
@@ -132,6 +203,22 @@ const I18N = {
     printSlipBtn: 'Print Salary Slip',
     tabSalaryBreakdown: 'Salary Breakdown',
     tabAttendanceHeatmap: 'Attendance Heatmap',
+    tabWeeklyRoster: 'Weekly Roster',
+    rosterTitle: 'Weekly Duty Roster Schedule',
+    rosterSubtitle: 'Official working shift hours & weekly off days assigned by management',
+    rosterCurrentWeek: 'Current Week',
+    rosterDayOff: 'DAY OFF',
+    rosterLeave: 'ON LEAVE',
+    rosterDutyChange: 'Duty Swap',
+    rosterShiftAssigned: 'Standard Shift',
+    rosterWeeklyOff: 'Weekly Off Day',
+    rosterScheduledDays: 'Work Days',
+    rosterScheduledHours: 'Total Hours',
+    rosterShiftLabel: 'Shift',
+    rosterHoursUnit: 'hrs',
+    rosterTodayBadge: 'TODAY',
+    rosterSelectWeek: 'Select Week:',
+    rosterActualAtt: 'Actual Attendance on this Day:',
     heatmapTitle: 'Attendance Heatmap Calendar',
     heatmapSubtitle: 'Synced with Admin Attendance: Arrival, Departure, Overtime & Total Monthly Hours',
     summaryTotalHours: 'Total Monthly Hours',
@@ -232,6 +319,22 @@ const I18N = {
     printSlipBtn: 'বেতন রশিদ প্রিন্ট করুন',
     tabSalaryBreakdown: 'বেতন বিবরণী',
     tabAttendanceHeatmap: 'উপস্থিতি হিটম্যাপ',
+    tabWeeklyRoster: 'সাপ্তাহিক রোস্টার',
+    rosterTitle: 'সাপ্তাহিক ডিউটি রোস্টার শিডিউল',
+    rosterSubtitle: 'ম্যানেজমেন্ট কর্তৃক নির্ধারিত শিফট ও সাপ্তাহিক ছুটির তালিকা',
+    rosterCurrentWeek: 'চলতি সপ্তাহ',
+    rosterDayOff: 'সাপ্তাহিক ছুটি',
+    rosterLeave: 'ছুটিতে',
+    rosterDutyChange: 'শিফট পরিবর্তন',
+    rosterShiftAssigned: 'নির্ধারিত শিফট',
+    rosterWeeklyOff: 'সাপ্তাহিক ছুটির দিন',
+    rosterScheduledDays: 'কাজের দিন',
+    rosterScheduledHours: 'মোট সময়',
+    rosterShiftLabel: 'শিফট',
+    rosterHoursUnit: 'ঘণ্টা',
+    rosterTodayBadge: 'আজ',
+    rosterSelectWeek: 'সপ্তাহ নির্বাচন:',
+    rosterActualAtt: 'এই দিনের বাস্তব উপস্থিতি:',
     heatmapTitle: 'উপস্থিতি হিটম্যাপ ক্যালেন্ডার',
     heatmapSubtitle: 'অ্যাডমিন উপস্থিতির সাথে সিঙ্ককৃত: আসার সময়, যাওয়ার সময়, ওভারটাইম ও মোট ঘণ্টা',
     summaryTotalHours: 'মাসে মোট কাজের সময়',
@@ -291,8 +394,11 @@ export default function ViewPayrollPage() {
   const [dailyAttendanceLogs, setDailyAttendanceLogs] = useState({}) // staffId -> { [date]: log }
   const [showHistory, setShowHistory] = useState(null)
   const [expandedBreakdowns, setExpandedBreakdowns] = useState({})
-  const [staffActiveTab, setStaffActiveTab] = useState({}) // staffId -> 'breakdown' | 'heatmap'
+  const [staffActiveTab, setStaffActiveTab] = useState({}) // staffId -> 'breakdown' | 'heatmap' | 'roster'
   const [selectedDayInfo, setSelectedDayInfo] = useState({}) // staffId -> selected day log
+  const [staffRosters, setStaffRosters] = useState({}) // staffId -> { [date]: rosterRow }
+  const [staffSelectedWeek, setStaffSelectedWeek] = useState({}) // staffId -> saturdayDateStr
+  const [staffSelectedRosterDay, setStaffSelectedRosterDay] = useState({}) // staffId -> dayDateStr
   const [loading, setLoading] = useState(true)
   const [loadingStep, setLoadingStep] = useState(0)
   const [printData, setPrintData] = useState(null)
@@ -377,10 +483,20 @@ export default function ViewPayrollPage() {
         activeStaffList = clientStaffRes.data || []
       }
 
+      // Calculate extended range for duty roster (covers surrounding Saturday-to-Friday weeks)
+      const curToday = new Date()
+      const curDateStr = `${curToday.getFullYear()}-${String(curToday.getMonth() + 1).padStart(2, '0')}-${String(curToday.getDate()).padStart(2, '0')}`
+      const minDate = startDate < curDateStr ? startDate : curDateStr
+      const maxDate = endDate > curDateStr ? endDate : curDateStr
+      const rosterStartObj = new Date(new Date(minDate).getTime() - 14 * 24 * 60 * 60 * 1000)
+      const rosterEndObj = new Date(new Date(maxDate).getTime() + 14 * 24 * 60 * 60 * 1000)
+      const rosterStartDate = rosterStartObj.toISOString().split('T')[0]
+      const rosterEndDate = rosterEndObj.toISOString().split('T')[0]
+
       const safe = (q) => Promise.resolve(q).catch(() => ({ data: [] }))
 
       // Query database tables and attendance report API concurrently
-      const [payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes] = await Promise.all([
+      const [payRes, advRes, unpaidRes, lateRes, presentRes, summaryRes, otRes, logRes, rosterRes] = await Promise.all([
         safe(supabase.from('payroll_entries').select('*').eq('month', m).eq('year', y)),
         safe(supabase.from('advance_log').select('id, staff_id, amount, date, reason').eq('month', m).eq('year', y).order('date', { ascending: false })),
         safe(supabase.from('attendance').select('staff_id, date, status, leave_type').gte('date', startDate).lte('date', endDate)),
@@ -388,8 +504,16 @@ export default function ViewPayrollPage() {
         safe(supabase.from('attendance').select('staff_id').eq('status', 'present').gte('date', startDate).lte('date', endDate)),
         safe(supabase.from('monthly_attendance_summary').select('*').eq('month', m).eq('year', y)),
         safe(supabase.from('overtime_logs').select('staff_id, overtime_hours, overtime_pay, manual_override, manual_overtime_hours, manual_overtime_pay').gte('date', startDate).lte('date', endDate)),
-        safe(supabase.from('attendance_log').select('staff_id, date, status, hours_worked, overtime_minutes, shift_start, check_in_at, check_out_at').gte('date', startDate).lte('date', endDate))
+        safe(supabase.from('attendance_log').select('staff_id, date, status, hours_worked, overtime_minutes, shift_start, check_in_at, check_out_at').gte('date', startDate).lte('date', endDate)),
+        safe(supabase.from('duty_roster').select('*').gte('day_date', rosterStartDate).lte('day_date', rosterEndDate).order('day_date', { ascending: true }))
       ])
+
+      const rosterMap = {}
+      ;(rosterRes?.data || []).forEach(r => {
+        if (!rosterMap[r.staff_id]) rosterMap[r.staff_id] = {}
+        rosterMap[r.staff_id][r.day_date] = r
+      })
+      setStaffRosters(rosterMap)
 
       const summaryMap = {}
       ;(summaryRes.data || []).forEach(s => {
@@ -1420,7 +1544,7 @@ export default function ViewPayrollPage() {
                             </span>
                           )}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '12.5px', color: '#64748B', fontWeight: 600 }}>{s.designation}</span>
                           <span style={{ color: '#CBD5E1' }}>•</span>
                           <span style={{
@@ -1436,6 +1560,22 @@ export default function ViewPayrollPage() {
                           }}>
                             <Timer size={12} color="#7C3A1E" />
                             <span>{totalMonthlyHours} {t.hoursUnit}</span>
+                          </span>
+                          <span style={{ color: '#CBD5E1' }}>•</span>
+                          <span style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: '#7C3A1E',
+                            background: '#FFFBEB',
+                            border: '1px solid #FDE68A',
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            <Clock size={11} color="#B45309" />
+                            <span>{normalizeShiftTime(s.shift_start)} • {s.weekly_off || 'Friday'} Off</span>
                           </span>
                         </div>
                       </div>
@@ -1508,9 +1648,9 @@ export default function ViewPayrollPage() {
                     </div>
                   </div>
 
-                  {/* ── CARD TABS: [💰 SALARY BREAKDOWN] vs [📅 ATTENDANCE HEATMAP] ── */}
+                  {/* ── CARD TABS: [💰 SALARY BREAKDOWN] vs [📅 ATTENDANCE HEATMAP] vs [📋 WEEKLY ROSTER] ── */}
                   {isExpanded && (
-                    <div style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', padding: '6px 20px', display: 'flex', gap: '8px' }}>
+                    <div style={{ borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', padding: '6px 20px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       <button
                         onClick={() => toggleStaffCardTab(s.id, 'breakdown')}
                         style={{
@@ -1551,6 +1691,27 @@ export default function ViewPayrollPage() {
                       >
                         <CalendarDays size={13} />
                         <span>{t.tabAttendanceHeatmap}</span>
+                      </button>
+
+                      <button
+                        onClick={() => toggleStaffCardTab(s.id, 'roster')}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: '8px',
+                          border: activeTab === 'roster' ? '1.5px solid #7C3A1E' : '1px solid #CBD5E1',
+                          background: activeTab === 'roster' ? '#7C3A1E' : '#FFFFFF',
+                          color: activeTab === 'roster' ? '#FFFFFF' : '#475569',
+                          fontWeight: 800,
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <Clock size={13} />
+                        <span>{t.tabWeeklyRoster}</span>
                       </button>
                     </div>
                   )}
@@ -2230,6 +2391,358 @@ export default function ViewPayrollPage() {
 
                     </div>
                   )}
+
+                  {/* ── TAB 3: WEEKLY ROSTER SCHEDULE (Assigned Duty Roster) ── */}
+                  {isExpanded && activeTab === 'roster' && (() => {
+                    const weeks = getWeeksForMonth(year, month)
+                    const activeWeekStart = staffSelectedWeek[s.id] || (weeks.length > 0 ? weeks[0].start : getSaturdayOf(new Date()))
+                    const activeWeek = weeks.find(w => w.start === activeWeekStart) || weeks[0] || { start: activeWeekStart, end: activeWeekStart, days: get7Days(activeWeekStart), label: 'Current Week' }
+                    const staffRosterByDate = staffRosters[s.id] || {}
+                    const selectedRosterDate = staffSelectedRosterDay[s.id] || activeWeek.days[0]
+
+                    // Calculate week stats
+                    let weekScheduledDays = 0
+                    let weekOffDays = 0
+                    let weekTotalHours = 0
+
+                    activeWeek.days.forEach(d => {
+                      const dObj = parseLocalDate(d)
+                      const dayFullName = dObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+                      const isDefaultOff = s.weekly_off && dayFullName === s.weekly_off.toLowerCase()
+                      const item = staffRosterByDate[d]
+                      const isOff = item ? !!item.is_off : isDefaultOff
+                      const isLeave = item ? !!item.is_leave : false
+
+                      if (isOff || isLeave) {
+                        weekOffDays++
+                      } else {
+                        weekScheduledDays++
+                        weekTotalHours += (item?.shift_hours || s.shift_hours || 10)
+                      }
+                    })
+
+                    const todayStr = formatDateStr(new Date())
+
+                    return (
+                      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* Header & Subtitle */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                          <div>
+                            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Clock size={16} color="#7C3A1E" />
+                              <span>{t.rosterTitle}</span>
+                            </h3>
+                            <p style={{ margin: '3px 0 0 0', fontSize: '11.5px', color: '#64748B' }}>
+                              {t.rosterSubtitle}
+                            </p>
+                          </div>
+
+                          {/* Quick standard shift pill */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 800, color: '#7C3A1E', background: '#FFFBEB', border: '1px solid #FDE68A', padding: '5px 10px', borderRadius: '8px' }}>
+                            <Coffee size={13} color="#B45309" />
+                            <span>{t.rosterShiftAssigned}: {normalizeShiftTime(s.shift_start)}</span>
+                            <span style={{ color: '#D97706' }}>•</span>
+                            <span>{t.rosterWeeklyOff}: {s.weekly_off || 'Friday'}</span>
+                          </div>
+                        </div>
+
+                        {/* Week Selection Strip */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            {t.rosterSelectWeek}
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                            {weeks.map((w, idx) => {
+                              const isCur = w.days.includes(todayStr)
+                              const isSelected = w.start === activeWeek.start
+
+                              return (
+                                <button
+                                  key={w.start}
+                                  onClick={() => setStaffSelectedWeek(prev => ({ ...prev, [s.id]: w.start }))}
+                                  style={{
+                                    padding: '7px 12px',
+                                    borderRadius: '8px',
+                                    border: isSelected ? '1.5px solid #7C3A1E' : '1px solid #E2E8F0',
+                                    background: isSelected ? '#7C3A1E' : isCur ? '#FEF3C7' : '#FFFFFF',
+                                    color: isSelected ? '#FFFFFF' : isCur ? '#92400E' : '#334155',
+                                    fontWeight: 800,
+                                    fontSize: '11.5px',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    transition: 'all 0.15s'
+                                  }}
+                                >
+                                  <span>Week {idx + 1}: {w.label}</span>
+                                  {isCur && (
+                                    <span style={{
+                                      fontSize: '9px',
+                                      padding: '1px 5px',
+                                      borderRadius: '4px',
+                                      background: isSelected ? 'rgba(255,255,255,0.25)' : '#D97706',
+                                      color: '#FFFFFF',
+                                      fontWeight: 800
+                                    }}>
+                                      {t.rosterTodayBadge}
+                                    </span>
+                                  )}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Week KPI Strip */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                          gap: '8px',
+                          background: '#FFFFFF',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '10px',
+                          padding: '10px 14px'
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.rosterScheduledDays}</div>
+                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+                              {weekScheduledDays} {t.daysUnit}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.rosterDayOff}</div>
+                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#DC2626', marginTop: '2px' }}>
+                              {weekOffDays} {t.daysUnit}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.rosterScheduledHours}</div>
+                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
+                              {weekTotalHours} {t.hoursUnit}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.rosterShiftAssigned}</div>
+                            <div style={{ fontSize: '14px', fontWeight: 800, color: '#7C3A1E', marginTop: '2px' }}>
+                              {normalizeShiftTime(s.shift_start)}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 7-Days Schedule Cards Grid (Saturday to Friday) */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                          gap: '8px'
+                        }}>
+                          {activeWeek.days.map((d) => {
+                            const dObj = parseLocalDate(d)
+                            const dayName = dObj.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { weekday: 'short' })
+                            const dayNum = dObj.getDate()
+                            const monthShort = dObj.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { month: 'short' })
+                            const isToday = d === todayStr
+                            const isSelected = selectedRosterDate === d
+
+                            const dayFullNameEn = dObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+                            const isDefaultOff = s.weekly_off && dayFullNameEn === s.weekly_off.toLowerCase()
+                            const item = staffRosterByDate[d]
+                            const isOff = item ? !!item.is_off : isDefaultOff
+                            const isLeave = item ? !!item.is_leave : false
+                            const isDutyChange = item ? !!item.is_duty_change : false
+
+                            let shiftVal = isOff ? 'OFF' : (item?.shift_start ? normalizeShiftTime(item.shift_start, isOff) : (s.shift_start ? normalizeShiftTime(s.shift_start, isOff) : '11:00 AM'))
+                            const hours = item?.shift_hours || s.shift_hours || 10
+
+                            // Actual attendance for cross-checking
+                            const attLog = (logsForStaff || {})[d]
+
+                            let cardBg = '#F8FAFC'
+                            let cardBorder = '#CBD5E1'
+                            let shiftBadgeBg = '#EEF2FF'
+                            let shiftBadgeColor = '#4338CA'
+
+                            if (isOff) {
+                              cardBg = '#FEF2F2'
+                              cardBorder = '#FECACA'
+                              shiftBadgeBg = '#FEE2E2'
+                              shiftBadgeColor = '#B91C1C'
+                            } else if (isLeave) {
+                              cardBg = '#F0F9FF'
+                              cardBorder = '#BAE6FD'
+                              shiftBadgeBg = '#E0F2FE'
+                              shiftBadgeColor = '#0369A1'
+                            } else if (shiftVal === '11:00 AM') {
+                              cardBg = '#FFFBEB'
+                              cardBorder = '#FDE68A'
+                              shiftBadgeBg = '#FEF3C7'
+                              shiftBadgeColor = '#B45309'
+                            } else if (shiftVal === '1:00 PM') {
+                              cardBg = '#EEF2FF'
+                              cardBorder = '#C7D2FE'
+                              shiftBadgeBg = '#E0E7FF'
+                              shiftBadgeColor = '#4338CA'
+                            }
+
+                            return (
+                              <div
+                                key={d}
+                                onClick={() => setStaffSelectedRosterDay(prev => ({ ...prev, [s.id]: d }))}
+                                style={{
+                                  background: cardBg,
+                                  border: isSelected ? '2px solid #7C3A1E' : `1.5px solid ${cardBorder}`,
+                                  borderRadius: '10px',
+                                  padding: '10px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'space-between',
+                                  cursor: 'pointer',
+                                  position: 'relative',
+                                  boxShadow: isToday ? '0 0 0 2px #D4933A' : 'none',
+                                  transition: 'transform 0.15s, box-shadow 0.15s'
+                                }}
+                              >
+                                <div>
+                                  {/* Day Header */}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '11.5px', fontWeight: 800, color: isOff ? '#DC2626' : '#0F172A' }}>
+                                      {dayName}
+                                    </span>
+                                    <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>
+                                      {dayNum} {monthShort}
+                                    </span>
+                                  </div>
+
+                                  {/* Today indicator */}
+                                  {isToday && (
+                                    <div style={{ marginTop: '3px' }}>
+                                      <span style={{ fontSize: '8.5px', padding: '1px 5px', borderRadius: '4px', background: '#D97706', color: '#FFFFFF', fontWeight: 800 }}>
+                                        {t.rosterTodayBadge}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {/* Shift Time Badge */}
+                                  <div style={{ marginTop: '8px' }}>
+                                    <div style={{
+                                      fontSize: '11px',
+                                      fontWeight: 900,
+                                      padding: '4px 6px',
+                                      borderRadius: '6px',
+                                      background: shiftBadgeBg,
+                                      color: shiftBadgeColor,
+                                      textAlign: 'center',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      gap: '4px'
+                                    }}>
+                                      {isOff ? (
+                                        <span>🔴 {t.rosterDayOff}</span>
+                                      ) : isLeave ? (
+                                        <span>🔵 {t.rosterLeave}</span>
+                                      ) : (
+                                        <span>☕ {shiftVal}</span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Duty change badge */}
+                                  {isDutyChange && (
+                                    <div style={{ marginTop: '4px', textAlign: 'center' }}>
+                                      <span style={{ fontSize: '9px', fontWeight: 800, color: '#D97706', background: '#FEF3C7', padding: '1px 5px', borderRadius: '4px' }}>
+                                        {t.rosterDutyChange}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Bottom Info: Hours & Actual attendance status */}
+                                <div style={{ marginTop: '8px', borderTop: '1px dashed #CBD5E1', paddingTop: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                  <span style={{ fontSize: '9.5px', color: '#64748B', fontWeight: 700 }}>
+                                    {isOff || isLeave ? '—' : `${hours} ${t.rosterHoursUnit}`}
+                                  </span>
+                                  {attLog && (
+                                    <span style={{
+                                      fontSize: '9px',
+                                      fontWeight: 800,
+                                      color: attLog.status === 'present' ? '#15803D' : attLog.status === 'late' ? '#B45309' : '#64748B'
+                                    }}>
+                                      {attLog.status === 'present' ? '✓ Attended' : attLog.status === 'late' ? '⚠ Late' : attLog.status}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+
+                        {/* Selected Day Cross-Check Inspector */}
+                        {selectedRosterDate && (() => {
+                          const sDateObj = parseLocalDate(selectedRosterDate)
+                          const sDayName = sDateObj.toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', { weekday: 'long' })
+                          const sItem = staffRosterByDate[selectedRosterDate]
+                          const sDayFullName = sDateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+                          const sIsDefaultOff = s.weekly_off && sDayFullName === s.weekly_off.toLowerCase()
+                          const sIsOff = sItem ? !!sItem.is_off : sIsDefaultOff
+                          const sShift = sIsOff ? 'OFF' : (sItem?.shift_start ? normalizeShiftTime(sItem.shift_start, sIsOff) : (s.shift_start ? normalizeShiftTime(s.shift_start, sIsOff) : '11:00 AM'))
+                          const sHours = sItem?.shift_hours || s.shift_hours || 10
+                          const sAttLog = (logsForStaff || {})[selectedRosterDate]
+
+                          return (
+                            <div style={{
+                              background: '#FFFFFF',
+                              border: '1.5px solid #CBD5E1',
+                              borderRadius: '10px',
+                              padding: '12px 16px',
+                              fontSize: '12px'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                                <div style={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <Calendar size={14} color="#7C3A1E" />
+                                  <span>{sDayName}, {selectedRosterDate}</span>
+                                </div>
+                                <div style={{
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  background: sIsOff ? '#FEE2E2' : '#DCFCE7',
+                                  color: sIsOff ? '#B91C1C' : '#15803D'
+                                }}>
+                                  {sIsOff ? t.rosterDayOff : `${sShift} (${sHours} ${t.rosterHoursUnit})`}
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px' }}>
+                                <div style={{ background: '#F8FAFC', padding: '8px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                  <div style={{ color: '#64748B', fontSize: '10px', fontWeight: 700 }}>{t.rosterTitle}</div>
+                                  <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+                                    {sIsOff ? t.rosterDayOff : `${sShift} Shift`}
+                                    {sItem?.notes ? ` • Note: ${sItem.notes}` : ''}
+                                  </div>
+                                </div>
+
+                                <div style={{ background: '#F8FAFC', padding: '8px 10px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                  <div style={{ color: '#64748B', fontSize: '10px', fontWeight: 700 }}>{t.rosterActualAtt}</div>
+                                  <div style={{ fontWeight: 800, color: sAttLog ? '#0F172A' : '#64748B', marginTop: '2px' }}>
+                                    {sAttLog ? (
+                                      <span>
+                                        {sAttLog.status?.toUpperCase()} • {sAttLog.check_in_at ? formatTime12(sAttLog.check_in_at) : '—'} to {sAttLog.check_out_at ? formatTime12(sAttLog.check_out_at) : (sAttLog.check_in_at ? t.stillWorkingText : '—')} ({sAttLog.hours_worked || sAttLog.hoursWorked || 0} {t.rosterHoursUnit})
+                                      </span>
+                                    ) : (
+                                      <span style={{ fontStyle: 'italic' }}>{t.noRecordDay}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    )
+                  })()}
 
                   {/* Card Bottom Actions */}
                   <div style={{
