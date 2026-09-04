@@ -134,6 +134,42 @@ function getWeeksForMonth(y, m) {
   return weeks
 }
 
+function getRosterWeeks(baseDate = new Date()) {
+  const currentSatStr = getSaturdayOf(baseDate)
+  const currentDays = get7Days(currentSatStr)
+  const curStartObj = parseLocalDate(currentDays[0])
+  const curEndObj = parseLocalDate(currentDays[6])
+
+  const nextSatObj = parseLocalDate(currentSatStr)
+  nextSatObj.setDate(nextSatObj.getDate() + 7)
+  const nextSatStr = formatDateStr(nextSatObj)
+  const nextDays = get7Days(nextSatStr)
+  const nextStartObj = parseLocalDate(nextDays[0])
+  const nextEndObj = parseLocalDate(nextDays[6])
+
+  const curLabel = `${curStartObj.getDate()} ${curStartObj.toLocaleDateString('en-US', { month: 'short' })} – ${curEndObj.getDate()} ${curEndObj.toLocaleDateString('en-US', { month: 'short' })}`
+  const nextLabel = `${nextStartObj.getDate()} ${nextStartObj.toLocaleDateString('en-US', { month: 'short' })} – ${nextEndObj.getDate()} ${nextEndObj.toLocaleDateString('en-US', { month: 'short' })}`
+
+  return [
+    {
+      id: 'current',
+      start: currentSatStr,
+      end: currentDays[6],
+      label: curLabel,
+      days: currentDays,
+      isCurrent: true
+    },
+    {
+      id: 'next',
+      start: nextSatStr,
+      end: nextDays[6],
+      label: nextLabel,
+      days: nextDays,
+      isCurrent: false
+    }
+  ]
+}
+
 const I18N = {
   en: {
     months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
@@ -217,6 +253,9 @@ const I18N = {
     rosterShiftLabel: 'Shift',
     rosterHoursUnit: 'hrs',
     rosterTodayBadge: 'TODAY',
+    rosterUpcomingBadge: 'UPCOMING',
+    rosterCurrentWeekTab: 'Current Week',
+    rosterNextWeekTab: 'Next Week (+1 Week)',
     rosterSelectWeek: 'Select Week:',
     rosterActualAtt: 'Actual Attendance on this Day:',
     heatmapTitle: 'Attendance Heatmap Calendar',
@@ -333,6 +372,9 @@ const I18N = {
     rosterShiftLabel: 'শিফট',
     rosterHoursUnit: 'ঘণ্টা',
     rosterTodayBadge: 'আজ',
+    rosterUpcomingBadge: 'আসন্ন',
+    rosterCurrentWeekTab: 'চলতি সপ্তাহ',
+    rosterNextWeekTab: 'পরবর্তী সপ্তাহ (+১ সপ্তাহ)',
     rosterSelectWeek: 'সপ্তাহ নির্বাচন:',
     rosterActualAtt: 'এই দিনের বাস্তব উপস্থিতি:',
     heatmapTitle: 'উপস্থিতি হিটম্যাপ ক্যালেন্ডার',
@@ -483,15 +525,15 @@ export default function ViewPayrollPage() {
         activeStaffList = clientStaffRes.data || []
       }
 
-      // Calculate extended range for duty roster (covers surrounding Saturday-to-Friday weeks)
+      // Calculate range for duty roster: ensure Current Week and Next Week (+1 Week) are ALWAYS fetched
       const curToday = new Date()
-      const curDateStr = `${curToday.getFullYear()}-${String(curToday.getMonth() + 1).padStart(2, '0')}-${String(curToday.getDate()).padStart(2, '0')}`
-      const minDate = startDate < curDateStr ? startDate : curDateStr
-      const maxDate = endDate > curDateStr ? endDate : curDateStr
-      const rosterStartObj = new Date(new Date(minDate).getTime() - 14 * 24 * 60 * 60 * 1000)
-      const rosterEndObj = new Date(new Date(maxDate).getTime() + 14 * 24 * 60 * 60 * 1000)
-      const rosterStartDate = rosterStartObj.toISOString().split('T')[0]
-      const rosterEndDate = rosterEndObj.toISOString().split('T')[0]
+      const curSatStr = getSaturdayOf(curToday)
+      const nextSatObj = parseLocalDate(curSatStr)
+      nextSatObj.setDate(nextSatObj.getDate() + 14)
+      const nextWeekEndStr = formatDateStr(nextSatObj)
+
+      const rosterStartDate = startDate < curSatStr ? startDate : curSatStr
+      const rosterEndDate = endDate > nextWeekEndStr ? endDate : nextWeekEndStr
 
       const safe = (q) => Promise.resolve(q).catch(() => ({ data: [] }))
 
@@ -2363,7 +2405,7 @@ export default function ViewPayrollPage() {
 
                   {/* ── TAB 3: WEEKLY ROSTER SCHEDULE (Assigned Duty Roster) ── */}
                   {isExpanded && activeTab === 'roster' && (() => {
-                    const weeks = getWeeksForMonth(year, month)
+                    const weeks = getRosterWeeks(new Date())
                     const activeWeekStart = staffSelectedWeek[s.id] || (weeks.length > 0 ? weeks[0].start : getSaturdayOf(new Date()))
                     const activeWeek = weeks.find(w => w.start === activeWeekStart) || weeks[0] || { start: activeWeekStart, end: activeWeekStart, days: get7Days(activeWeekStart), label: 'Current Week' }
                     const staffRosterByDate = staffRosters[s.id] || {}
@@ -2372,7 +2414,6 @@ export default function ViewPayrollPage() {
                     // Calculate week stats
                     let weekScheduledDays = 0
                     let weekOffDays = 0
-                    let weekTotalHours = 0
 
                     activeWeek.days.forEach(d => {
                       const dObj = parseLocalDate(d)
@@ -2386,7 +2427,6 @@ export default function ViewPayrollPage() {
                         weekOffDays++
                       } else {
                         weekScheduledDays++
-                        weekTotalHours += (item?.shift_hours || s.shift_hours || 10)
                       }
                     })
 
@@ -2420,44 +2460,48 @@ export default function ViewPayrollPage() {
                           <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                             {t.rosterSelectWeek}
                           </div>
-                          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-                            {weeks.map((w, idx) => {
+                          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                            {weeks.map((w) => {
                               const isCur = w.days.includes(todayStr)
                               const isSelected = w.start === activeWeek.start
 
                               return (
                                 <button
                                   key={w.start}
-                                  onClick={() => setStaffSelectedWeek(prev => ({ ...prev, [s.id]: w.start }))}
+                                  onClick={() => {
+                                    setStaffSelectedWeek(prev => ({ ...prev, [s.id]: w.start }))
+                                    setStaffSelectedRosterDay(prev => ({ ...prev, [s.id]: w.days[0] }))
+                                  }}
                                   style={{
-                                    padding: '7px 12px',
+                                    padding: '8px 14px',
                                     borderRadius: '8px',
                                     border: isSelected ? '1.5px solid #7C3A1E' : '1px solid #E2E8F0',
-                                    background: isSelected ? '#7C3A1E' : isCur ? '#FEF3C7' : '#FFFFFF',
+                                    background: isSelected ? '#7C3A1E' : isCur ? '#FFFBEB' : '#FFFFFF',
                                     color: isSelected ? '#FFFFFF' : isCur ? '#92400E' : '#334155',
                                     fontWeight: 800,
-                                    fontSize: '11.5px',
+                                    fontSize: '12px',
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '6px',
-                                    transition: 'all 0.15s'
+                                    gap: '8px',
+                                    transition: 'all 0.15s',
+                                    boxShadow: isSelected ? '0 2px 4px rgba(124, 58, 30, 0.15)' : 'none'
                                   }}
                                 >
-                                  <span>Week {idx + 1}: {w.label}</span>
-                                  {isCur && (
-                                    <span style={{
-                                      fontSize: '9px',
-                                      padding: '1px 5px',
-                                      borderRadius: '4px',
-                                      background: isSelected ? 'rgba(255,255,255,0.25)' : '#D97706',
-                                      color: '#FFFFFF',
-                                      fontWeight: 800
-                                    }}>
-                                      {t.rosterTodayBadge}
-                                    </span>
-                                  )}
+                                  <span>{w.isCurrent ? t.rosterCurrentWeekTab : t.rosterNextWeekTab} ({w.label})</span>
+                                  <span style={{
+                                    fontSize: '9.5px',
+                                    padding: '2px 6px',
+                                    borderRadius: '5px',
+                                    background: isSelected 
+                                      ? 'rgba(255,255,255,0.25)' 
+                                      : w.isCurrent ? '#D97706' : '#2563EB',
+                                    color: '#FFFFFF',
+                                    fontWeight: 800
+                                  }}>
+                                    {w.isCurrent ? t.rosterTodayBadge : t.rosterUpcomingBadge}
+                                  </span>
                                 </button>
                               )
                             })}
@@ -2487,15 +2531,15 @@ export default function ViewPayrollPage() {
                             </div>
                           </div>
                           <div>
-                            <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.rosterScheduledHours}</div>
-                            <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
-                              {weekTotalHours} {t.hoursUnit}
-                            </div>
-                          </div>
-                          <div>
                             <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.rosterShiftAssigned}</div>
                             <div style={{ fontSize: '14px', fontWeight: 800, color: '#7C3A1E', marginTop: '2px' }}>
                               {normalizeShiftTime(s.shift_start)}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.rosterWeeklyOff}</div>
+                            <div style={{ fontSize: '14px', fontWeight: 800, color: '#475569', marginTop: '2px' }}>
+                              {s.weekly_off || 'Friday'}
                             </div>
                           </div>
                         </div>
