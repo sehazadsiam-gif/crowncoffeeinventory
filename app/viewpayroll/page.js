@@ -268,8 +268,9 @@ const I18N = {
 
 export default function ViewPayrollPage() {
   const today = new Date()
-  const [month, setMonth] = useState(today.getMonth() + 1)
-  const [year, setYear] = useState(today.getFullYear())
+  const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+  const [month, setMonth] = useState(prevMonthDate.getMonth() + 1)
+  const [year, setYear] = useState(prevMonthDate.getFullYear())
 
   // Language state: 'bn' or 'en'
   const [lang, setLang] = useState('bn')

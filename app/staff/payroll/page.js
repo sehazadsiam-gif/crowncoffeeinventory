@@ -48,8 +48,10 @@ export default function PayrollPage() {
     date: new Date().toISOString().split('T')[0],
     notes: ''
   })
-  const [month, setMonth] = useState(7)
-  const [year, setYear] = useState(2026)
+  const now = new Date()
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const [month, setMonth] = useState(prevMonthDate.getMonth() + 1)
+  const [year, setYear] = useState(prevMonthDate.getFullYear())
   const [loading, setLoading] = useState(true)
   const [printData, setPrintData] = useState(null)
   const [nameSort, setNameSort] = useState('asc') // 'asc' | 'desc'
