@@ -220,7 +220,7 @@ const I18N = {
     rosterSelectWeek: 'Select Week:',
     rosterActualAtt: 'Actual Attendance on this Day:',
     heatmapTitle: 'Attendance Heatmap Calendar',
-    heatmapSubtitle: 'Synced with Admin Attendance: Arrival, Departure, Overtime & Total Monthly Hours',
+    heatmapSubtitle: 'Synced with Admin Attendance: Arrival, Departure & Overtime logs',
     summaryTotalHours: 'Total Monthly Hours',
     summaryDaysWorked: 'Days Present',
     summaryTotalOT: 'Total Overtime',
@@ -336,7 +336,7 @@ const I18N = {
     rosterSelectWeek: 'সপ্তাহ নির্বাচন:',
     rosterActualAtt: 'এই দিনের বাস্তব উপস্থিতি:',
     heatmapTitle: 'উপস্থিতি হিটম্যাপ ক্যালেন্ডার',
-    heatmapSubtitle: 'অ্যাডমিন উপস্থিতির সাথে সিঙ্ককৃত: আসার সময়, যাওয়ার সময়, ওভারটাইম ও মোট ঘণ্টা',
+    heatmapSubtitle: 'অ্যাডমিন উপস্থিতির সাথে সিঙ্ককৃত: আসার সময়, যাওয়ার সময় ও ওভারটাইম বিবরণী',
     summaryTotalHours: 'মাসে মোট কাজের সময়',
     summaryDaysWorked: 'উপস্থিত দিন',
     summaryTotalOT: 'মোট ওভারটাইম',
@@ -1548,21 +1548,6 @@ export default function ViewPayrollPage() {
                           <span style={{ fontSize: '12.5px', color: '#64748B', fontWeight: 600 }}>{s.designation}</span>
                           <span style={{ color: '#CBD5E1' }}>•</span>
                           <span style={{
-                            fontSize: '11.5px',
-                            fontWeight: 700,
-                            color: '#0F172A',
-                            background: 'rgba(212, 147, 58, 0.15)',
-                            padding: '2px 8px',
-                            borderRadius: '6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
-                            <Timer size={12} color="#7C3A1E" />
-                            <span>{totalMonthlyHours} {t.hoursUnit}</span>
-                          </span>
-                          <span style={{ color: '#CBD5E1' }}>•</span>
-                          <span style={{
                             fontSize: '11px',
                             fontWeight: 700,
                             color: '#7C3A1E',
@@ -1619,7 +1604,7 @@ export default function ViewPayrollPage() {
                     </div>
                   </div>
 
-                  {/* High-Level Settlement KPI Strip (Includes Total Monthly Hours) */}
+                  {/* High-Level Settlement KPI Strip */}
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
@@ -1639,12 +1624,6 @@ export default function ViewPayrollPage() {
                     <div>
                       <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>{t.remainingDue}</span>
                       <p style={{ margin: '2px 0 0 0', fontSize: '17px', fontWeight: 900, color: remaining > 0 ? '#DC2626' : '#059669' }}>৳{remaining.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '10.5px', color: '#64748B', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>{t.totalHoursWorkedLabel}</span>
-                      <p style={{ margin: '2px 0 0 0', fontSize: '17px', fontWeight: 900, color: '#0F172A' }}>
-                        {totalMonthlyHours} <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#64748B' }}>{t.hoursUnit}</span>
-                      </p>
                     </div>
                   </div>
 
@@ -1746,10 +1725,6 @@ export default function ViewPayrollPage() {
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                             <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.ratePerHour}</div>
                             <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>৳{calc.hourlyRate.toLocaleString()}</div>
-                          </div>
-                          <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                            <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.monthlyWorkedHours}</div>
-                            <div style={{ fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{totalMonthlyHours} {t.hoursUnit}</div>
                           </div>
                           <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                             <div style={{ color: '#64748B', fontSize: '10.5px', fontWeight: 700 }}>{t.daysPresent}</div>
@@ -2039,12 +2014,6 @@ export default function ViewPayrollPage() {
                         borderRadius: '10px',
                         padding: '10px 14px'
                       }}>
-                        <div>
-                          <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.summaryTotalHours}</div>
-                          <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A', marginTop: '2px' }}>
-                            {totalMonthlyHours} {t.hoursUnit}
-                          </div>
-                        </div>
                         <div>
                           <div style={{ fontSize: '10.5px', color: '#64748B', fontWeight: 700 }}>{t.summaryDaysWorked}</div>
                           <div style={{ fontSize: '15px', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
