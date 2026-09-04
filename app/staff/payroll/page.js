@@ -1,10 +1,10 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
-import { Printer, Plus, Trash2, X, History, ChevronUp, ChevronDown, Calculator, RefreshCw } from 'lucide-react'
+import { Printer, Plus, Trash2, X, History, ChevronUp, ChevronDown, Calculator, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 import PayrollCalculator from '../../../components/PayrollCalculator'
 import dynamic from 'next/dynamic'
 
@@ -61,7 +61,38 @@ export default function PayrollPage() {
   const [salaryInput, setSalaryInput] = useState('')
   const [refreshing, setRefreshing] = useState(false)
 
+  // Auto-save states and refs for bulletproof editing without stale closures
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle') // 'idle' | 'pending' | 'saving' | 'saved' | 'error'
+  const autoSaveTimers = useRef({}) // { [staffId]: timeoutId }
+  const payrollRef = useRef({})
+  const staffRef = useRef([])
+  const waivedRef = useRef({})
+  const resetSavedTimer = useRef(null)
+
+  useEffect(() => {
+    payrollRef.current = payroll
+  }, [payroll])
+
+  useEffect(() => {
+    staffRef.current = staff
+  }, [staff])
+
+  useEffect(() => {
+    waivedRef.current = waivedStaff
+  }, [waivedStaff])
+
+  useEffect(() => {
+    return () => {
+      // Clear timers on unmount or month/year switch
+      Object.keys(autoSaveTimers.current).forEach(id => {
+        clearTimeout(autoSaveTimers.current[id])
+      })
+      if (resetSavedTimer.current) clearTimeout(resetSavedTimer.current)
+    }
+  }, [month, year])
+
   async function handleRefresh() {
+    flushAllSaves()
     setRefreshing(true)
     try {
       await fetchAll(month, year)
@@ -341,6 +372,8 @@ export default function PayrollPage() {
 
       setStaff(activeStaff)
       setPayroll(payMap)
+      staffRef.current = activeStaff
+      payrollRef.current = payMap
 
       const initialWaived = {}
       for (const s of activeStaff) {
@@ -349,6 +382,7 @@ export default function PayrollPage() {
         }
       }
       setWaivedStaff(initialWaived)
+      waivedRef.current = initialWaived
     } catch (err) {
       console.error('Fetch payroll error:', err)
       addToast('Error loading payroll', 'error')
@@ -376,9 +410,11 @@ export default function PayrollPage() {
       const { error } = await supabase.from('staff').update({ base_salary: val }).eq('id', staffId)
       if (error) throw error
       setStaff(prev => prev.map(s => s.id === staffId ? { ...s, base_salary: val } : s))
+      staffRef.current = staffRef.current.map(s => s.id === staffId ? { ...s, base_salary: val } : s)
       setEditingSalary(null)
       addToast('Salary updated', 'success')
       await fetchAll(month, year)
+      saveStaffPayroll(staffId, { silent: true })
     } catch (err) {
       addToast('Failed to update salary', 'error')
     }
@@ -419,47 +455,27 @@ export default function PayrollPage() {
     return Math.max(0, netBeforePenalty - penaltyCut)
   }
 
-  function handleInput(staffId, field, value) {
-    setPayroll(prev => {
-      const row = { ...prev[staffId], [field]: value }
-      if (field === 'overtime_hours') {
-        const autoVal = row.overtime_auto_hours || 0
-        row.overtime_manual = Number(value) !== autoVal
-        const s = staff.find(st => st.id === staffId)
-        const perHourRate = s?.hourly_rate || Math.floor(Math.round((Number(s?.base_salary) || 0) / 30) / 10)
-        row.overtime_pay = (Number(value) || 0) * perHourRate
-      }
-      if (field === 'lunch_dinner') {
-        const autoVal = row.lunch_dinner_auto || 0
-        row.lunch_dinner_manual = Number(value) !== autoVal
-      }
-      return { ...prev, [staffId]: row }
-    })
-  }
+  const saveStaffPayroll = useCallback(async (staffId, { overrideRow, overrideWaived, silent = true } = {}) => {
+    if (autoSaveTimers.current[staffId]) {
+      clearTimeout(autoSaveTimers.current[staffId])
+      delete autoSaveTimers.current[staffId]
+    }
 
-  async function handleBlur(staffId) {
-    const row = payroll[staffId]
-    const s = staff.find(st => st.id === staffId)
+    const row = overrideRow || payrollRef.current[staffId]
+    const s = staffRef.current.find(st => st.id === staffId)
     if (!s || !row) return
-    const finalSalary = calculateFinalSalary(s, row, waivedStaff[staffId])
-    
-    const base = Number(s.base_salary) || 0
-    const perDay = Math.round(base / 30)
-    const absentDays = Number(row.absent_days) || 0
-    const autoUnpaidDays = Math.max(0, absentDays - 4)
-    const waivedDays = Number(row.waived_unpaid_days) || 0
-    const finalUnpaidDays = Math.max(0, autoUnpaidDays - waivedDays)
-    const unpaidDeduction = finalUnpaidDays * perDay
-    const manualUnpaid = row.manual_unpaid_days !== undefined && row.manual_unpaid_days !== null
-      ? Number(row.manual_unpaid_days) * perDay
-      : unpaidDeduction
-    const late = waivedStaff[staffId] ? 0 : (Number(row.late_deduction) || 0)
+
+    const isWaived = overrideWaived !== undefined ? overrideWaived : Boolean(waivedRef.current[staffId])
+    const finalSalary = calculateFinalSalary(s, row, isWaived)
+
+    setAutoSaveStatus('saving')
+    if (resetSavedTimer.current) clearTimeout(resetSavedTimer.current)
 
     try {
-      const { error } = await supabase.from('payroll_entries').upsert({
-        staff_id: row.staff_id,
-        month: Number(row.month),
-        year: Number(row.year),
+      const payload = {
+        staff_id: staffId,
+        month: Number(row.month || month),
+        year: Number(row.year || year),
         overtime_hours: Number(row.overtime_hours) || 0,
         overtime_pay: Number(row.overtime_pay) || 0,
         service_charge: Number(row.service_charge) || 0,
@@ -471,61 +487,120 @@ export default function PayrollPage() {
         miscellaneous: Number(row.miscellaneous) || 0,
         miscellaneous_note: row.miscellaneous_note || '',
         miscellaneous_plus: row.overtime_manual ? 1 : 0,
-        is_paid: row.is_paid || false,
-        manual_unpaid_days: row.manual_unpaid_days === null ? null : Number(row.manual_unpaid_days),
+        is_paid: Boolean(row.is_paid),
+        manual_unpaid_days:
+          row.manual_unpaid_days === null ||
+          row.manual_unpaid_days === undefined ||
+          row.manual_unpaid_days === ''
+            ? null
+            : Number(row.manual_unpaid_days),
         waived_unpaid_days: Number(row.waived_unpaid_days) || 0,
         absent_days: Number(row.absent_days) || 0,
-        late_waived: waivedStaff[staffId] || false,
-        lunch_dinner_manual: row.lunch_dinner_manual || row.morning_food_manual || false,
+        late_waived: isWaived,
+        lunch_dinner_manual: Boolean(row.lunch_dinner_manual),
         final_salary: finalSalary
-      }, { onConflict: 'staff_id,month,year' })
-      if (error) throw error
-      console.log('Saved payroll for', s.name)
+      }
 
-      // Email Notification for Payroll (First time set)
-      if (row.isNew && finalSalary > 0) {
-        const { data: staffData } = await supabase
-          .from('staff')
-          .select('email, name')
-          .eq('id', staffId)
-          .single()
+      let saveOk = false
+      try {
+        const res = await fetch('/api/payroll/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        if (res.ok) {
+          saveOk = true
+        } else {
+          const errData = await res.json()
+          console.warn('API /api/payroll/save error, fallback to Supabase:', errData)
+        }
+      } catch (apiErr) {
+        console.warn('API fetch failed, fallback to Supabase:', apiErr)
+      }
 
-        if (staffData?.email) {
-          try {
-            await fetch('/api/email/send', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: 'payroll',
-                to: staffData.email,
-                name: staffData.name,
-                month: months[month - 1],
-                year,
-                breakdown: {
-                  base: s.base_salary,
-                  overtime: row.overtime_pay,
-                  service_charge: row.service_charge,
-                  bonus: row.bonus,
-                  lunch_dinner: row.lunch_dinner,
-                  morning_food: row.morning_food,
-                  advance: row.advance_taken,
-                  others: row.others_taken,
-                  final: finalSalary
-                }
-              })
-            })
-            // Mark as not new anymore to avoid duplicate emails
-            setPayroll(prev => ({ ...prev, [staffId]: { ...prev[staffId], isNew: false } }))
-          } catch (emailErr) {
-            console.error('Email send failed:', emailErr)
-          }
+      if (!saveOk) {
+        const { error } = await supabase
+          .from('payroll_entries')
+          .upsert(payload, { onConflict: 'staff_id,month,year' })
+        if (error) throw error
+      }
+
+      setAutoSaveStatus('saved')
+      resetSavedTimer.current = setTimeout(() => {
+        setAutoSaveStatus('idle')
+      }, 2500)
+
+      if (!silent) {
+        addToast(`Saved payroll for ${s.name}`, 'success')
+      }
+
+      if (row.isNew) {
+        setPayroll(prev => ({
+          ...prev,
+          [staffId]: { ...(prev[staffId] || row), isNew: false }
+        }))
+        if (payrollRef.current[staffId]) {
+          payrollRef.current[staffId].isNew = false
         }
       }
     } catch (err) {
-      console.error('Save error:', err)
-      addToast('Save failed: ' + err.message, 'error')
+      console.error('Save error for', s?.name, err)
+      setAutoSaveStatus('error')
+      addToast('Save failed: ' + (err.message || 'Unknown error'), 'error')
     }
+  }, [month, year, addToast])
+
+  function handleInput(staffId, field, value) {
+    let updatedRow
+    setPayroll(prev => {
+      const row = { ...prev[staffId], [field]: value }
+      if (field === 'overtime_hours') {
+        const autoVal = row.overtime_auto_hours || 0
+        row.overtime_manual = Number(value) !== autoVal
+        const s = staffRef.current.find(st => st.id === staffId)
+        const perHourRate = s?.hourly_rate || Math.floor(Math.round((Number(s?.base_salary) || 0) / 30) / 10)
+        row.overtime_pay = (Number(value) || 0) * perHourRate
+      }
+      if (field === 'lunch_dinner') {
+        const autoVal = row.lunch_dinner_auto || 0
+        row.lunch_dinner_manual = Number(value) !== autoVal
+      }
+      updatedRow = row
+      return { ...prev, [staffId]: row }
+    })
+
+    if (payrollRef.current[staffId]) {
+      payrollRef.current[staffId] = { ...payrollRef.current[staffId], [field]: value }
+      if (updatedRow) {
+        payrollRef.current[staffId] = updatedRow
+      }
+    }
+
+    setAutoSaveStatus('pending')
+    if (autoSaveTimers.current[staffId]) {
+      clearTimeout(autoSaveTimers.current[staffId])
+    }
+
+    autoSaveTimers.current[staffId] = setTimeout(() => {
+      saveStaffPayroll(staffId, { silent: true })
+    }, 700)
   }
+
+  function flushSave(staffId) {
+    if (autoSaveTimers.current[staffId]) {
+      clearTimeout(autoSaveTimers.current[staffId])
+      delete autoSaveTimers.current[staffId]
+    }
+    saveStaffPayroll(staffId, { silent: true })
+  }
+
+  function flushAllSaves() {
+    Object.keys(autoSaveTimers.current).forEach(staffId => {
+      flushSave(staffId)
+    })
+  }
+
+  const handleBlur = flushSave
 
   async function savePayment(staffId) {
     const amount = parseFloat(paymentForm.amount)
@@ -652,16 +727,46 @@ export default function PayrollPage() {
       <Navbar />
       <main style={{ width: '100%', maxWidth: '100%', margin: '0 auto', padding: '24px 32px', boxSizing: 'border-box' }}>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Payroll Center</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Payroll Center</h1>
+              {autoSaveStatus === 'pending' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#B45309', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '20px', padding: '3px 10px' }}>
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#D97706', display: 'inline-block' }} />
+                  Unsaved changes...
+                </span>
+              )}
+              {autoSaveStatus === 'saving' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#2563EB', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '20px', padding: '3px 10px' }}>
+                  <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                  Auto-saving...
+                </span>
+              )}
+              {autoSaveStatus === 'saved' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '20px', padding: '3px 10px' }}>
+                  <CheckCircle size={13} />
+                  All changes saved
+                </span>
+              )}
+              {autoSaveStatus === 'error' && (
+                <span
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '20px', padding: '3px 10px', cursor: 'pointer' }}
+                  onClick={() => flushAllSaves()}
+                  title="Click to retry saving"
+                >
+                  <AlertCircle size={13} />
+                  Save failed (Retry)
+                </span>
+              )}
+            </div>
             <p style={{ color: '#64748B', fontSize: '14px', margin: '4px 0 0 0' }}>{months[month - 1]} {year}</p>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <select className="input" style={{ width: '130px' }} value={month} onChange={e => setMonth(Number(e.target.value))}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <select className="input" style={{ width: '130px' }} value={month} onChange={e => { flushAllSaves(); setMonth(Number(e.target.value)) }}>
               {months.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
-            <input type="number" className="input" style={{ width: '85px' }} value={year} onChange={e => setYear(Number(e.target.value))} />
+            <input type="number" className="input" style={{ width: '85px' }} value={year} onChange={e => { flushAllSaves(); setYear(Number(e.target.value)) }} />
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -847,24 +952,31 @@ export default function PayrollPage() {
                         )}
                       </td>
                       <td style={{ padding: '12px 8px' }}>
-                        <input type="number" style={inputStyle} value={row.overtime_hours} onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)} onBlur={() => handleBlur(s.id)} />
+                        <input
+                          type="number"
+                          style={inputStyle}
+                          value={row.overtime_hours ?? ''}
+                          onChange={e => handleInput(s.id, 'overtime_hours', e.target.value)}
+                          onBlur={() => flushSave(s.id)}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                        />
                         {row.overtime_manual && (
                           <p style={{ fontSize: '10px', color: '#fa7b17', marginTop: '2px', fontWeight: 600 }}>Manual</p>
                         )}
                         {row.overtime_manual && (
                           <button
                             onClick={() => {
-                              handleInput(s.id, 'overtime_hours', row.overtime_auto_hours || 0)
-                              setPayroll(prev => ({
-                                ...prev,
-                                [s.id]: {
-                                  ...prev[s.id],
-                                  overtime_hours: row.overtime_auto_hours || 0,
-                                  overtime_pay: row.overtime_auto_pay || 0,
-                                  overtime_manual: false
-                                }
-                              }))
-                              setTimeout(() => handleBlur(s.id), 100)
+                              const autoHours = row.overtime_auto_hours || 0
+                              const autoPay = row.overtime_auto_pay || 0
+                              const updatedRow = {
+                                ...row,
+                                overtime_hours: autoHours,
+                                overtime_pay: autoPay,
+                                overtime_manual: false
+                              }
+                              setPayroll(prev => ({ ...prev, [s.id]: updatedRow }))
+                              payrollRef.current[s.id] = updatedRow
+                              saveStaffPayroll(s.id, { overrideRow: updatedRow })
                             }}
                             style={{
                               color: '#94A3B8', background: 'none', border: 'none',
@@ -874,15 +986,34 @@ export default function PayrollPage() {
                         )}
                         {Number(row.overtime_pay) > 0 && <p style={{ fontSize: '10px', color: '#34D399', margin: '2px 0 0 0', fontWeight: 700 }}>+৳{row.overtime_pay}</p>}
                       </td>
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.service_charge} onChange={e => handleInput(s.id, 'service_charge', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.bonus} onChange={e => handleInput(s.id, 'bonus', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <input
+                          type="number"
+                          style={inputStyle}
+                          value={row.service_charge ?? ''}
+                          onChange={e => handleInput(s.id, 'service_charge', e.target.value)}
+                          onBlur={() => flushSave(s.id)}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                        />
+                      </td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <input
+                          type="number"
+                          style={inputStyle}
+                          value={row.bonus ?? ''}
+                          onChange={e => handleInput(s.id, 'bonus', e.target.value)}
+                          onBlur={() => flushSave(s.id)}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                        />
+                      </td>
                       <td style={{ padding: '14px 8px' }}>
                         <input
                           type="number"
                           style={inputStyle}
-                          value={row.lunch_dinner}
+                          value={row.lunch_dinner ?? ''}
                           onChange={e => handleInput(s.id, 'lunch_dinner', e.target.value)}
-                          onBlur={() => handleBlur(s.id)}
+                          onBlur={() => flushSave(s.id)}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
                         />
                         <p style={{ fontSize: '10px', color: '#64748B', margin: '3px 0 0' }}>
                           {row.present_days || (Number(row.night_days || 0) + Number(row.morning_days || 0))}d × ৳140
@@ -895,16 +1026,15 @@ export default function PayrollPage() {
                         {row.lunch_dinner_manual && (
                           <button
                             onClick={() => {
-                              handleInput(s.id, 'lunch_dinner', row.lunch_dinner_auto || 0)
-                              setPayroll(prev => ({
-                                ...prev,
-                                [s.id]: {
-                                  ...prev[s.id],
-                                  lunch_dinner: row.lunch_dinner_auto || 0,
-                                  lunch_dinner_manual: false
-                                }
-                              }))
-                              setTimeout(() => handleBlur(s.id), 100)
+                              const autoFood = row.lunch_dinner_auto || 0
+                              const updatedRow = {
+                                ...row,
+                                lunch_dinner: autoFood,
+                                lunch_dinner_manual: false
+                              }
+                              setPayroll(prev => ({ ...prev, [s.id]: updatedRow }))
+                              payrollRef.current[s.id] = updatedRow
+                              saveStaffPayroll(s.id, { overrideRow: updatedRow })
                             }}
                             style={{
                               fontSize: '10px', color: '#94A3B8',
@@ -918,8 +1048,26 @@ export default function PayrollPage() {
                         )}
                       </td>
 
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.advance_taken} onChange={e => handleInput(s.id, 'advance_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={{ ...inputStyle, color: '#F87171' }} value={row.others_taken} onChange={e => handleInput(s.id, 'others_taken', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <input
+                          type="number"
+                          style={{ ...inputStyle, color: '#F87171' }}
+                          value={row.advance_taken ?? ''}
+                          onChange={e => handleInput(s.id, 'advance_taken', e.target.value)}
+                          onBlur={() => flushSave(s.id)}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                        />
+                      </td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <input
+                          type="number"
+                          style={{ ...inputStyle, color: '#F87171' }}
+                          value={row.others_taken ?? ''}
+                          onChange={e => handleInput(s.id, 'others_taken', e.target.value)}
+                          onBlur={() => flushSave(s.id)}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                        />
+                      </td>
 
                       <td style={{ padding: '14px 8px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
@@ -929,20 +1077,45 @@ export default function PayrollPage() {
                           
                           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
                             <label style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Waive</label>
-                            <input type="number" min="0" style={inputStyle}
-                              value={row.waived_unpaid_days || ''} placeholder="0"
+                            <input
+                              type="number"
+                              min="0"
+                              style={inputStyle}
+                              value={row.waived_unpaid_days || ''}
+                              placeholder="0"
                               onChange={e => handleInput(s.id, 'waived_unpaid_days', e.target.value)}
-                              onBlur={() => handleBlur(s.id)} />
+                              onBlur={() => flushSave(s.id)}
+                              onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                            />
                           </div>
  
                           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
                             <label style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Override</label>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%' }}>
-                              <input type="number" min="0" style={inputStyle}
-                                placeholder="Auto" value={row.manual_unpaid_days ?? ''}
+                              <input
+                                type="number"
+                                min="0"
+                                style={inputStyle}
+                                placeholder="Auto"
+                                value={row.manual_unpaid_days ?? ''}
                                 onChange={e => handleInput(s.id, 'manual_unpaid_days', e.target.value === '' ? null : Number(e.target.value))}
-                                onBlur={() => handleBlur(s.id)} />
-                              {row.manual_unpaid_days !== null && <button onClick={() => { handleInput(s.id, 'manual_unpaid_days', null); setTimeout(() => handleBlur(s.id), 100) }} style={{ fontSize: '10px', color: '#F87171', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Reset</button>}
+                                onBlur={() => flushSave(s.id)}
+                                onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                              />
+                              {row.manual_unpaid_days !== null && (
+                                <button
+                                  onClick={() => {
+                                    const updatedRow = {
+                                      ...row,
+                                      manual_unpaid_days: null
+                                    }
+                                    setPayroll(prev => ({ ...prev, [s.id]: updatedRow }))
+                                    payrollRef.current[s.id] = updatedRow
+                                    saveStaffPayroll(s.id, { overrideRow: updatedRow })
+                                  }}
+                                  style={{ fontSize: '10px', color: '#F87171', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
+                                >Reset</button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -953,29 +1126,17 @@ export default function PayrollPage() {
                           <div>
                             <p style={{ fontSize: '12px', color: '#FBBF24', fontWeight: 700, margin: 0 }}>{row.late_days} late</p>
                             <p style={{ fontSize: '10px', color: '#F87171', marginTop: '2px', textDecoration: waivedStaff[s.id] ? 'line-through' : 'none' }}>-৳{Number(row.late_deduction).toLocaleString()}</p>
-                            <button onClick={async () => {
-                               const newWaived = !waivedStaff[s.id]
-                               setWaivedStaff(prev => ({ ...prev, [s.id]: newWaived }))
-                               
-                               const row = payroll[s.id]
-                               if (!row) return
-                               
-                               try {
-                                 const { error } = await supabase
-                                   .from('payroll_entries')
-                                   .upsert({
-                                     staff_id: row.staff_id,
-                                     month: row.month,
-                                     year: row.year,
-                                     late_waived: newWaived
-                                   }, { onConflict: 'staff_id,month,year' })
-                                 if (error) throw error
-                                 addToast(newWaived ? 'Late deduction waived' : 'Late deduction restored', 'success')
-                               } catch (err) {
-                                 addToast('Failed to save waiver', 'error')
-                                 setWaivedStaff(prev => ({ ...prev, [s.id]: !newWaived }))
-                               }
-                             }} style={{ padding: '2px 6px', fontSize: '10px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: waivedStaff[s.id] ? '#0D2B1A' : '#1C1500', color: waivedStaff[s.id] ? '#34D399' : '#D4A017' }}>{waivedStaff[s.id] ? 'Waived' : 'Waive'}</button>
+                            <button
+                              onClick={() => {
+                                const newWaived = !waivedStaff[s.id]
+                                setWaivedStaff(prev => ({ ...prev, [s.id]: newWaived }))
+                                waivedRef.current[s.id] = newWaived
+                                saveStaffPayroll(s.id, { overrideWaived: newWaived })
+                              }}
+                              style={{ padding: '2px 6px', fontSize: '10px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: waivedStaff[s.id] ? '#0D2B1A' : '#1C1500', color: waivedStaff[s.id] ? '#34D399' : '#D4A017' }}
+                            >
+                              {waivedStaff[s.id] ? 'Waived' : 'Waive'}
+                            </button>
                           </div>
                         ) : '—'}
                       </td>
@@ -993,7 +1154,16 @@ export default function PayrollPage() {
                           <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
                         )}
                       </td>
-                      <td style={{ padding: '12px 8px' }}><input type="number" style={inputStyle} value={row.miscellaneous} onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)} onBlur={() => handleBlur(s.id)} /></td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <input
+                          type="number"
+                          style={inputStyle}
+                          value={row.miscellaneous ?? ''}
+                          onChange={e => handleInput(s.id, 'miscellaneous', e.target.value)}
+                          onBlur={() => flushSave(s.id)}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+                        />
+                      </td>
                       <td style={{ padding: '12px 8px', fontWeight: 800, color: '#34D399', fontSize: '14px' }}>৳{finalSalary.toLocaleString()}</td>
                       <td style={{ padding: '12px 8px', position: 'relative' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '6px' }}>
@@ -1069,8 +1239,9 @@ export default function PayrollPage() {
           monthName={months[month - 1]}
           onClose={() => setShowCalculator(false)}
           onApply={(staffId, sandboxValues) => {
+            let updated
             setPayroll(prev => {
-              const updated = { ...prev[staffId], ...sandboxValues }
+              updated = { ...prev[staffId], ...sandboxValues }
               if (Number(updated.lunch_dinner) !== Number(updated.lunch_dinner_auto)) {
                 updated.lunch_dinner_manual = true;
               } else {
@@ -1078,7 +1249,10 @@ export default function PayrollPage() {
               }
               return { ...prev, [staffId]: updated }
             })
-            setTimeout(() => handleBlur(staffId), 150)
+            if (payrollRef.current[staffId]) {
+              payrollRef.current[staffId] = updated || { ...payrollRef.current[staffId], ...sandboxValues }
+            }
+            saveStaffPayroll(staffId, { overrideRow: updated, silent: false })
             setShowCalculator(false)
           }}
         />
