@@ -36,14 +36,14 @@ export async function GET(request) {
     let staff = []
     let { data: sData, error: sErr } = await supabaseAdmin
       .from('staff')
-      .select('id, name, employee_id, designation, shift_start, weekly_off, is_rostered, department, rfid_code')
+      .select('id, name, employee_id, designation, shift_start, weekly_off, is_rostered, department, rfid_code, photo_url')
       .eq('is_active', true)
       .order('serial', { ascending: true })
 
     if (sErr) {
       const fallback = await supabaseAdmin
         .from('staff')
-        .select('id, name, employee_id, designation, shift_start, weekly_off')
+        .select('id, name, employee_id, designation, shift_start, weekly_off, photo_url')
         .eq('is_active', true)
         .order('serial', { ascending: true })
       if (fallback.error) throw fallback.error

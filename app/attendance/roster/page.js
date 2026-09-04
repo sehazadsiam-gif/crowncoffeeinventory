@@ -376,21 +376,54 @@ export default function WeeklyRosterPage() {
                 {filteredStaff.map(s => (
                   <tr key={s.id} style={{ borderBottom: '1px solid #F7F3EE' }}>
                     <td style={{ padding: '12px' }}>
-                      <div style={{ fontWeight: 700, color: '#1C1410', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {s.name}
-                        <span style={{
-                          fontSize: '9px',
-                          padding: '1px 6px',
-                          borderRadius: '8px',
-                          background: s.department === 'kitchen' ? '#FFF3E0' : '#E3F2FD',
-                          color: s.department === 'kitchen' ? '#E65100' : '#1565C0',
-                          fontWeight: 700
-                        }}>
-                          {s.department === 'kitchen' ? 'Kitchen' : 'Front'}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9C8A76' }}>
-                        {s.employee_id} • {s.designation}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {s.photo_url ? (
+                          <img
+                            src={s.photo_url}
+                            alt={s.name}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                            }}
+                            style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #CBD5E1', flexShrink: 0 }}
+                          />
+                        ) : null}
+                        <div
+                          style={{
+                            display: s.photo_url ? 'none' : 'flex',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #6B3A2A, #8B5E3C)',
+                            color: '#fff',
+                            fontWeight: 800,
+                            fontSize: '14px',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            border: '1.5px solid #CBD5E1'
+                          }}
+                        >
+                          {s.name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: '#1C1410', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {s.name}
+                            <span style={{
+                              fontSize: '9px',
+                              padding: '1px 6px',
+                              borderRadius: '8px',
+                              background: s.department === 'kitchen' ? '#FFF3E0' : '#E3F2FD',
+                              color: s.department === 'kitchen' ? '#E65100' : '#1565C0',
+                              fontWeight: 700
+                            }}>
+                              {s.department === 'kitchen' ? 'Kitchen' : 'Front'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#9C8A76' }}>
+                            {s.employee_id} • {s.designation}
+                          </div>
+                        </div>
                       </div>
                     </td>
 

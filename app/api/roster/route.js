@@ -22,7 +22,7 @@ export async function GET(request) {
     // 1. Fetch active rostered staff list
     const { data: staff, error: staffErr } = await supabaseAdmin
       .from('staff')
-      .select('id, name, employee_id, designation, department, serial, is_active')
+      .select('id, name, employee_id, designation, department, serial, is_active, photo_url, phone, mobile')
       .eq('is_active', true)
       .eq('is_rostered', true)
       .order('serial', { ascending: true })

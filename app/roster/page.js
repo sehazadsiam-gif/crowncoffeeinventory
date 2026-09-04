@@ -721,9 +721,40 @@ export default function RosterPage() {
                     const waLink = createWhatsAppLink({ phone: s.phone || s.mobile || '', message: waMsg })
                     return (
                       <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{s.name}</div>
-                          <div style={{ fontSize: '11px', color: '#64748B' }}>{s.designation} {s.phone ? `• ${s.phone}` : ''}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {s.photo_url ? (
+                            <img
+                              src={s.photo_url}
+                              alt={s.name}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                              }}
+                              style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0 }}
+                            />
+                          ) : null}
+                          <div
+                            style={{
+                              display: s.photo_url ? 'none' : 'flex',
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #6B3A2A, #8B5E3C)',
+                              color: '#fff',
+                              fontWeight: 800,
+                              fontSize: '12px',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              border: '1px solid #CBD5E1'
+                            }}
+                          >
+                            {s.name?.charAt(0)?.toUpperCase() || '?'}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#0F172A' }}>{s.name}</div>
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>{s.designation} {s.phone ? `• ${s.phone}` : ''}</div>
+                          </div>
                         </div>
                         <a
                           href={waLink}
@@ -836,7 +867,7 @@ function RosterSectionTable({ title, icon, accentColor, staffList, days, gridDat
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
           <thead>
             <tr style={{ background: '#F1F5F9', borderBottom: '1px solid #CBD5E1', color: '#334155', fontSize: '12px', textTransform: 'uppercase' }}>
-              <th style={{ padding: '14px 18px', minWidth: '180px' }}>Staff Name</th>
+              <th style={{ padding: '14px 18px', minWidth: '220px' }}>Staff Name</th>
               <th style={{ padding: '14px 12px', minWidth: '120px' }}>Designation</th>
               {days.map((d, i) => {
                 const dateObj = new Date(d)
@@ -859,9 +890,42 @@ function RosterSectionTable({ title, icon, accentColor, staffList, days, gridDat
 
               return (
                 <tr key={s.id} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                  <td style={{ padding: '14px 18px', fontWeight: 800, color: '#0F172A' }}>
-                    {s.name}
-                    <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>{s.employee_id || 'Staff'}</div>
+                  <td style={{ padding: '12px 18px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {s.photo_url ? (
+                        <img
+                          src={s.photo_url}
+                          alt={s.name}
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                          }}
+                          style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #CBD5E1', flexShrink: 0 }}
+                        />
+                      ) : null}
+                      <div
+                        style={{
+                          display: s.photo_url ? 'none' : 'flex',
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #6B3A2A, #8B5E3C)',
+                          color: '#fff',
+                          fontWeight: 800,
+                          fontSize: '14px',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          border: '1.5px solid #CBD5E1'
+                        }}
+                      >
+                        {s.name?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '13px' }}>{s.name}</div>
+                        <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>{s.employee_id || 'Staff'}</div>
+                      </div>
+                    </div>
                   </td>
                   <td style={{ padding: '14px 12px', color: '#64748B', fontWeight: 600, fontSize: '12.5px' }}>
                     {s.designation || 'Staff'}
@@ -933,7 +997,7 @@ function ExportGridTable({ staffList, days, gridData }) {
     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', border: '1px solid #CBD5E1' }}>
       <thead>
         <tr style={{ background: '#F1F5F9', borderBottom: '2px solid #334155' }}>
-          <th style={{ padding: '10px', textAlign: 'left', minWidth: '160px', borderRight: '1px solid #CBD5E1' }}>Staff Member</th>
+          <th style={{ padding: '10px', textAlign: 'left', minWidth: '190px', borderRight: '1px solid #CBD5E1' }}>Staff Member</th>
           {days.map((d, i) => {
             const dateObj = new Date(d)
             const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' })
@@ -956,9 +1020,43 @@ function ExportGridTable({ staffList, days, gridData }) {
 
           return (
             <tr key={s.id} style={{ borderBottom: '1px solid #CBD5E1', background: idx % 2 === 0 ? '#FFFFFF' : '#F8FAFC' }}>
-              <td style={{ padding: '10px', fontWeight: 800, color: '#0F172A', borderRight: '1px solid #CBD5E1' }}>
-                {s.name}
-                <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>{s.designation || 'Staff'}</div>
+              <td style={{ padding: '8px 10px', fontWeight: 800, color: '#0F172A', borderRight: '1px solid #CBD5E1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {s.photo_url ? (
+                    <img
+                      src={s.photo_url}
+                      alt={s.name}
+                      crossOrigin="anonymous"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                      }}
+                      style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1px solid #CBD5E1', flexShrink: 0 }}
+                    />
+                  ) : null}
+                  <div
+                    style={{
+                      display: s.photo_url ? 'none' : 'flex',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #6B3A2A, #8B5E3C)',
+                      color: '#fff',
+                      fontWeight: 800,
+                      fontSize: '11px',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      border: '1px solid #CBD5E1'
+                    }}
+                  >
+                    {s.name?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, color: '#0F172A', fontSize: '12px' }}>{s.name}</div>
+                    <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 600 }}>{s.designation || 'Staff'}</div>
+                  </div>
+                </div>
               </td>
 
               {days.map((d, i) => {
