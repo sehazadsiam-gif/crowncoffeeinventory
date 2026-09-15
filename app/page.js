@@ -2,7 +2,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, User, Users, ChevronRight } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Shield, User, Users, ChevronRight, Sparkles } from 'lucide-react'
+
+const ConstellationField = dynamic(
+  () => import('@designcodeio/threeui').then((m) => m.ConstellationField),
+  { ssr: false }
+)
 
 export default function LandingPage() {
   const router = useRouter()
@@ -37,7 +43,7 @@ export default function LandingPage() {
       {/* LEFT PANEL */}
       <div style={{
         width: '45%',
-        background: '#5A2810',
+        background: '#451e0b',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -48,6 +54,25 @@ export default function LandingPage() {
         backgroundImage: 'radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px)',
         backgroundSize: '24px 24px'
       }} className="left-panel">
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 1,
+          opacity: 0.4,
+          pointerEvents: 'none',
+        }}>
+          <ConstellationField
+            mode="dark"
+            speed={0.6}
+            size={0.85}
+            strokeWidth={0.8}
+            density={0.8}
+            opacity={0.65}
+            hue={25}
+            saturation={1.2}
+            brightness={1.05}
+          />
+        </div>
         <div style={{ textAlign: 'center', zIndex: 2 }}>
           <h1 style={{ 
             fontSize: '80px', 
@@ -237,6 +262,47 @@ export default function LandingPage() {
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Verify member cards</p>
             </div>
 
+            {/* THREEUI SHOWCASE CARD */}
+            <div style={{ textAlign: 'center' }}>
+              <button
+                onClick={() => router.push('/scene')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '16px 20px',
+                  background: 'var(--bg-card)',
+                  border: '1px dashed var(--accent-gold, #DAA520)',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.25s ease',
+                  width: '100%',
+                  outline: 'none'
+                }}
+                className="option-card showcase-card"
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  background: 'rgba(218, 165, 32, 0.15)',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <Sparkles size={18} color="var(--accent-gold, #DAA520)" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Interactive 3D Experience</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>LiquidMetal, Kage 3D & Constellation</p>
+                </div>
+                <ChevronRight size={18} color="var(--text-faint)" />
+              </button>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Explore shaders & 3D scenes</p>
+            </div>
+
           </div>
 
           <p style={{ marginTop: '48px', fontSize: '11px', color: 'var(--text-faint)', textAlign: 'center', fontFamily: 'var(--font-display)' }}>
@@ -270,6 +336,12 @@ export default function LandingPage() {
           background: var(--bg-hover) !important;
           transform: translateY(-3px);
           box-shadow: 0 8px 20px var(--accent-gold-dim);
+        }
+        .showcase-card:hover {
+          border-color: var(--accent-gold, #DAA520) !important;
+          background: var(--bg-hover) !important;
+          transform: translateY(-3px);
+          box-shadow: 0 8px 20px rgba(218, 165, 32, 0.2);
         }
       `}</style>
     </div>

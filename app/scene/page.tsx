@@ -28,7 +28,26 @@ export default function ScenePreviewPage() {
         boxSizing: "border-box",
       }}
     >
-      <header style={{ marginBottom: "1.5rem", textAlign: "center" }}>
+      <header style={{ marginBottom: "1.5rem", textAlign: "center", position: "relative", width: "100%", maxWidth: "860px" }}>
+        <div style={{ position: "absolute", left: 0, top: "4px" }}>
+          <a
+            href="/"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              color: "#a1a1aa",
+              textDecoration: "none",
+              fontSize: "0.85rem",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              background: "#18181b",
+              border: "1px solid #27272a"
+            }}
+          >
+            ← Crown Coffee
+          </a>
+        </div>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 600, margin: 0, letterSpacing: "-0.02em" }}>
           ThreeUI Components Showcase
         </h1>
