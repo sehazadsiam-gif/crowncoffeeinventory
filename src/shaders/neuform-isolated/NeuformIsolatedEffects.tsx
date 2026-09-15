@@ -1597,8 +1597,8 @@ const EFFECTS = {
     hiddenTargets: [".sr"],
     introWordmark: {
       sceneSelector: "#comp .scene:first-child",
-      text: "ThreeUI",
-      fontSize: 130,
+      text: "Crown Coffee",
+      fontSize: 96,
       endTime: 1.7,
       holdTime: 1.1,
       logoSvg: THREEUI_MARK_SVG,

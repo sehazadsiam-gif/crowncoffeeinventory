@@ -49,7 +49,7 @@ export default function ScenePreviewPage() {
           </a>
         </div>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 600, margin: 0, letterSpacing: "-0.02em" }}>
-          ThreeUI Components Showcase
+          Crown Coffee 3D Showcase
         </h1>
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
           <button
@@ -114,7 +114,7 @@ export default function ScenePreviewPage() {
               fontWeight: 500,
             }}
           >
-            ThreeUIIntro
+            Crown Coffee Intro
           </button>
         </div>
       </header>
