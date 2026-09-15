@@ -215,8 +215,8 @@ export default function Navbar() {
         <div style={{ maxWidth: '1520px', margin: '0 auto', padding: '0 24px', height: '68px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
 
           {/* Brand */}
-          <Link href={userRole === 'admin' ? '/dashboard' : '/'} style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-            <div style={{
+          <Link href={userRole === 'admin' ? '/dashboard' : '/'} className="nav-brand-link" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
+            <div className="coffee-logo-badge" style={{
               background: 'linear-gradient(135deg, #7C3A1E 0%, #D4933A 100%)',
               padding: '9px',
               borderRadius: '12px',
@@ -297,6 +297,7 @@ export default function Navbar() {
                 <button
                   onClick={(e) => { e.stopPropagation(); setIsBellOpen(!isBellOpen); }}
                   title="Notifications & Alerts"
+                  className="nav-icon-btn"
                   style={{
                     width: '36px', height: '36px', display: 'flex', alignItems: 'center',
                     justifyContent: 'center', borderRadius: '10px', border: '1.5px solid var(--border-light)',
@@ -382,6 +383,7 @@ export default function Navbar() {
             <button
               onClick={toggleTheme}
               title={theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+              className="nav-icon-btn"
               style={{
                 width: '36px', height: '36px', display: 'flex', alignItems: 'center',
                 justifyContent: 'center', borderRadius: '10px', border: '1.5px solid var(--border-light)',
@@ -416,6 +418,7 @@ export default function Navbar() {
                 <button
                   onClick={handleLogout}
                   title="Logout"
+                  className="nav-logout-btn"
                   style={{
                     display: 'flex', alignItems: 'center', gap: '5px',
                     padding: '7px 13px', borderRadius: '10px',

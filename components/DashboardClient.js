@@ -187,8 +187,9 @@ export default function DashboardClient() {
         .kpi-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:3px; background: linear-gradient(90deg, var(--kpi-color) 0%, var(--kpi-color)44 100%); }
         .kpi-ghost { position:absolute; right:-8px; bottom:-6px; opacity:0.05; pointer-events:none; }
 
-        .mod-card { padding:16px 12px; border-radius:14px; border:1.5px solid var(--border-light); background:var(--bg-subtle); display:flex; flex-direction:column; align-items:center; gap:10px; transition:all 0.22s cubic-bezier(0.4, 0, 0.2, 1); position:relative; cursor:pointer; min-height:108px; justify-content:center; text-decoration:none; }
-        .mod-card:hover { transform:translateY(-4px); border-color: var(--hover-color) !important; box-shadow: var(--hover-shadow) !important; background: var(--hover-bg) !important; }
+        .mod-card { padding:16px 12px; border-radius:14px; border:1.5px solid var(--border-light); background:var(--bg-subtle); display:flex; flex-direction:column; align-items:center; gap:10px; transition:all 0.25s cubic-bezier(0.16, 1, 0.3, 1); position:relative; cursor:pointer; min-height:108px; justify-content:center; text-decoration:none; overflow:hidden; }
+        .mod-card:hover { transform:translateY(-5px) scale(1.02); border-color: var(--hover-color) !important; box-shadow: var(--hover-shadow) !important; background: var(--hover-bg) !important; }
+        .mod-card:active { transform:translateY(-1px) scale(0.99); }
 
         .panel { background:var(--bg-surface); border:1px solid var(--border-light); border-radius:18px; box-shadow:var(--shadow-sm); overflow:hidden; }
         .panel-header { padding:18px 22px; border-bottom:1px solid var(--border-light); display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -198,9 +199,129 @@ export default function DashboardClient() {
         .alert-row:hover { background:var(--bg-subtle); }
         .alert-row:last-child { border-bottom:none; }
 
-        .date-chip { display:flex; align-items:center; gap:10px; background:var(--bg-surface); padding:9px 16px; border-radius:12px; border:1.5px solid var(--border-light); box-shadow:var(--shadow-xs); }
-        .refresh-btn { width:38px; height:38px; border-radius:10px; border:1.5px solid var(--border-light); background:var(--bg-surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); transition:all 0.2s; }
-        .refresh-btn:hover { background:var(--accent-blue-dim); color:var(--accent-blue); border-color:var(--border-accent); }
+        .date-chip { position:relative; display:flex; align-items:center; gap:10px; background:var(--bg-surface); padding:9px 16px; border-radius:12px; border:1.5px solid var(--border-light); box-shadow:var(--shadow-xs); transition:all 0.25s cubic-bezier(0.16, 1, 0.3, 1); overflow:hidden; animation:dateChipPulse 4s ease-in-out infinite alternate; }
+        .date-chip::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -140%;
+          width: 70%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(37,99,235,0.12), transparent);
+          transform: skewX(-20deg);
+          animation: dateChipSheen 5.5s ease-in-out infinite;
+          pointer-events: none;
+        }
+        @keyframes dateChipSheen {
+          0%, 25% { left: -140%; }
+          65%, 100% { left: 240%; }
+        }
+        @keyframes dateChipPulse {
+          0% { border-color: var(--border-light); box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
+          100% { border-color: rgba(37,99,235,0.32); box-shadow: 0 3px 12px rgba(37,99,235,0.08); }
+        }
+        .date-chip:hover { border-color: rgba(37,99,235,0.5) !important; box-shadow: 0 4px 16px rgba(37,99,235,0.14) !important; transform: translateY(-1.5px); }
+
+        .refresh-btn { position:relative; width:38px; height:38px; border-radius:10px; border:1.5px solid var(--border-light); background:var(--bg-surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-muted); transition:all 0.25s cubic-bezier(0.16, 1, 0.3, 1); overflow:hidden; animation:refreshBtnPulse 4s ease-in-out infinite alternate; }
+        @keyframes refreshBtnPulse {
+          0% { border-color: var(--border-light); box-shadow: 0 1px 4px rgba(0,0,0,0.03); }
+          100% { border-color: rgba(37,99,235,0.35); box-shadow: 0 3px 10px rgba(37,99,235,0.12); }
+        }
+        .refresh-btn:hover { background:var(--accent-blue-dim); color:var(--accent-blue); border-color:var(--border-accent); transform:rotate(60deg) scale(1.08); box-shadow:0 4px 14px rgba(37,99,235,0.22); }
+        .refresh-btn:active { transform:rotate(180deg) scale(0.95); }
+
+        /* Live Animated Audit Engine CTA Button */
+        .live-audit-btn {
+          position: relative;
+          background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+          color: white;
+          padding: 11px 22px;
+          border-radius: 12px;
+          text-decoration: none;
+          font-weight: 800;
+          font-size: 13px;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--font-sans);
+          overflow: hidden;
+          box-shadow: 0 4px 16px rgba(37,99,235,0.45);
+          transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s;
+          animation: auditBtnPulse 3.5s ease-in-out infinite alternate;
+        }
+        .live-audit-btn::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -130%;
+          width: 70%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.4),
+            transparent
+          );
+          transform: skewX(-20deg);
+          animation: auditSheen 3.8s ease-in-out infinite;
+          pointer-events: none;
+        }
+        @keyframes auditSheen {
+          0%, 20% { left: -130%; }
+          70%, 100% { left: 220%; }
+        }
+        @keyframes auditBtnPulse {
+          0% {
+            box-shadow: 0 4px 16px rgba(37,99,235,0.35), 0 0 0 0 rgba(37,99,235,0.15);
+          }
+          100% {
+            box-shadow: 0 8px 26px rgba(37,99,235,0.6), 0 0 14px 2px rgba(37,99,235,0.3);
+          }
+        }
+        .live-audit-btn:hover {
+          transform: translateY(-2.5px) scale(1.02);
+          box-shadow: 0 10px 30px rgba(37,99,235,0.65);
+        }
+        .live-audit-arrow {
+          display: inline-block;
+          transition: transform 0.2s ease;
+          animation: auditArrowDrift 2.2s ease-in-out infinite;
+        }
+        @keyframes auditArrowDrift {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(4px); }
+        }
+        .live-audit-btn:hover .live-audit-arrow {
+          animation: none;
+          transform: translateX(6px);
+        }
+        .live-audit-btn:active {
+          transform: translateY(-0.5px) scale(0.99);
+        }
+
+        /* Live Shield Pulsing Aura Ring */
+        .shield-icon-wrapper {
+          position: relative;
+          background: rgba(59,130,246,0.2);
+          padding: 12px;
+          border-radius: 12px;
+          display: flex;
+        }
+        .shield-icon-wrapper::after {
+          content: '';
+          position: absolute;
+          inset: -4px;
+          border-radius: 16px;
+          border: 1.5px solid rgba(96, 165, 250, 0.6);
+          opacity: 0;
+          animation: shieldPulse 2.8s ease-out infinite;
+          pointer-events: none;
+        }
+        @keyframes shieldPulse {
+          0% { transform: scale(0.92); opacity: 0.8; }
+          65% { transform: scale(1.25); opacity: 0; }
+          100% { transform: scale(1.25); opacity: 0; }
+        }
 
         @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 900px) {
@@ -326,7 +447,7 @@ export default function DashboardClient() {
             boxShadow: '0 8px 24px rgba(15,23,42,0.2)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{ background: 'rgba(59,130,246,0.2)', padding: '12px', borderRadius: '12px', display: 'flex' }}>
+              <div className="shield-icon-wrapper">
                 <ShieldAlert size={26} color="#60A5FA" />
               </div>
               <div>
@@ -340,22 +461,9 @@ export default function DashboardClient() {
             </div>
             <Link
               href="/sales-reconciliation"
-              style={{
-                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
-                color: 'white',
-                padding: '10px 20px',
-                borderRadius: '10px',
-                textDecoration: 'none',
-                fontWeight: 800,
-                fontSize: '13px',
-                boxShadow: '0 4px 14px rgba(37,99,235,0.4)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontFamily: 'var(--font-sans)'
-              }}
+              className="live-audit-btn"
             >
-              Open Audit Engine →
+              Open Audit Engine <span className="live-audit-arrow">→</span>
             </Link>
           </div>
         )}
