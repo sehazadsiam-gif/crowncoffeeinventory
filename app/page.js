@@ -143,39 +143,23 @@ export default function LandingPage() {
             <div style={{ textAlign: 'center' }}>
               <button
                 onClick={() => router.push('/admin/login')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  padding: '20px 24px',
-                  background: 'var(--bg-card)',
-                  border: '2px solid var(--accent-brown)',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.25s ease',
-                  width: '100%',
-                  outline: 'none'
-                }}
-                className="option-card admin-card"
+                className="option-card admin-card live-animated-btn"
               >
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'var(--accent-brown)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <Shield size={18} color="white" />
+                <div className="sheen-layer" />
+                <div className="icon-wrapper admin-icon-wrapper">
+                  <Shield size={19} color="white" />
+                  <span className="icon-pulse-ring" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Admin Portal</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Admin Portal</p>
+                    <span className="live-status-dot admin-dot" />
+                  </div>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Full system access</p>
                 </div>
-                <ChevronRight size={20} color="var(--text-faint)" />
+                <div className="chevron-animated">
+                  <ChevronRight size={20} color="var(--accent-brown)" />
+                </div>
               </button>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Full system access</p>
             </div>
@@ -184,39 +168,23 @@ export default function LandingPage() {
             <div style={{ textAlign: 'center' }}>
               <button
                 onClick={() => router.push('/staff/login')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  padding: '20px 24px',
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.25s ease',
-                  width: '100%',
-                  outline: 'none'
-                }}
-                className="option-card staff-card"
+                className="option-card staff-card live-animated-btn"
               >
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'var(--accent-brown-dim)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <User size={18} color="var(--accent-brown)" />
+                <div className="sheen-layer" />
+                <div className="icon-wrapper staff-icon-wrapper">
+                  <User size={19} color="var(--accent-brown)" />
+                  <span className="icon-pulse-ring" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Staff Portal</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Staff Portal</p>
+                    <span className="live-status-dot staff-dot" />
+                  </div>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>View your records</p>
                 </div>
-                <ChevronRight size={20} color="var(--text-faint)" />
+                <div className="chevron-animated">
+                  <ChevronRight size={20} color="var(--accent-brown)" />
+                </div>
               </button>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>View your records</p>
             </div>
@@ -225,43 +193,26 @@ export default function LandingPage() {
             <div style={{ textAlign: 'center' }}>
               <button
                 onClick={() => router.push('/manager/login')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '16px',
-                  padding: '20px 24px',
-                  background: 'var(--bg-card)',
-                  border: '1px solid var(--border-light)',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.25s ease',
-                  width: '100%',
-                  outline: 'none'
-                }}
-                className="option-card membership-card"
+                className="option-card membership-card live-animated-btn"
               >
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'var(--accent-gold-dim)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <Users size={18} color="var(--accent-gold)" />
+                <div className="sheen-layer" />
+                <div className="icon-wrapper member-icon-wrapper">
+                  <Users size={19} color="var(--accent-gold)" />
+                  <span className="icon-pulse-ring" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Membership Portal</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Membership Portal</p>
+                    <span className="live-status-dot member-dot" />
+                  </div>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Manager access to verify visits</p>
                 </div>
-                <ChevronRight size={20} color="var(--text-faint)" />
+                <div className="chevron-animated">
+                  <ChevronRight size={20} color="var(--accent-gold)" />
+                </div>
               </button>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Verify member cards</p>
             </div>
-
 
           </div>
 
@@ -280,22 +231,238 @@ export default function LandingPage() {
           .left-panel div { margin: 12px auto !important; }
           .right-panel { width: 100% !important; padding: 32px 24px !important; flex: 1; }
         }
-        .admin-card:hover {
-          background: var(--bg-hover) !important;
-          transform: translateY(-3px);
-          box-shadow: 0 8px 20px var(--accent-brown-dim);
+
+        .live-animated-btn {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 20px 24px;
+          background: var(--bg-card);
+          border-radius: 14px;
+          cursor: pointer;
+          text-align: left;
+          width: 100%;
+          outline: none;
+          overflow: hidden;
+          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .staff-card:hover {
-          border-color: var(--accent-brown) !important;
-          background: var(--bg-hover) !important;
-          transform: translateY(-3px);
-          box-shadow: 0 8px 20px var(--accent-brown-dim);
+
+        /* Continuous live light sheen sweeping across each button */
+        .sheen-layer {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 1;
+          overflow: hidden;
         }
-        .membership-card:hover {
-          border-color: var(--accent-gold) !important;
+        .sheen-layer::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -120%;
+          width: 80%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.4),
+            transparent
+          );
+          transform: skewX(-25deg);
+          animation: liveSheen 4.2s ease-in-out infinite;
+        }
+
+        @keyframes liveSheen {
+          0%, 15% {
+            left: -120%;
+          }
+          65%, 100% {
+            left: 200%;
+          }
+        }
+
+        .admin-card .sheen-layer::after {
+          animation-delay: 0s;
+        }
+        .staff-card .sheen-layer::after {
+          animation-delay: 1.4s;
+        }
+        .membership-card .sheen-layer::after {
+          animation-delay: 2.8s;
+        }
+
+        /* Continuous breathing border & ambient shadows */
+        .admin-card {
+          border: 2px solid rgba(124, 58, 30, 0.5) !important;
+          animation: adminAura 3s ease-in-out infinite alternate;
+        }
+        @keyframes adminAura {
+          0% {
+            border-color: rgba(124, 58, 30, 0.4);
+            box-shadow: 0 4px 16px rgba(124, 58, 30, 0.08), 0 0 0 0 rgba(124, 58, 30, 0.15);
+          }
+          100% {
+            border-color: rgba(124, 58, 30, 0.85);
+            box-shadow: 0 8px 26px rgba(124, 58, 30, 0.22), 0 0 14px 2px rgba(124, 58, 30, 0.25);
+          }
+        }
+
+        .staff-card {
+          border: 2px solid rgba(176, 99, 62, 0.4) !important;
+          animation: staffAura 3.3s ease-in-out infinite alternate 0.6s;
+        }
+        @keyframes staffAura {
+          0% {
+            border-color: rgba(176, 99, 62, 0.3);
+            box-shadow: 0 4px 16px rgba(176, 99, 62, 0.06), 0 0 0 0 rgba(176, 99, 62, 0.12);
+          }
+          100% {
+            border-color: rgba(176, 99, 62, 0.8);
+            box-shadow: 0 8px 26px rgba(176, 99, 62, 0.18), 0 0 14px 2px rgba(176, 99, 62, 0.22);
+          }
+        }
+
+        .membership-card {
+          border: 2px solid rgba(212, 147, 58, 0.5) !important;
+          animation: memberAura 3.6s ease-in-out infinite alternate 1.2s;
+        }
+        @keyframes memberAura {
+          0% {
+            border-color: rgba(212, 147, 58, 0.38);
+            box-shadow: 0 4px 16px rgba(212, 147, 58, 0.1), 0 0 0 0 rgba(212, 147, 58, 0.18);
+          }
+          100% {
+            border-color: rgba(212, 147, 58, 0.95);
+            box-shadow: 0 8px 28px rgba(212, 147, 58, 0.28), 0 0 16px 3px rgba(212, 147, 58, 0.3);
+          }
+        }
+
+        /* Icon wrapper with live breathing ring */
+        .icon-wrapper {
+          position: relative;
+          width: 42px;
+          height: 42px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          z-index: 2;
+          transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .admin-icon-wrapper {
+          background: var(--accent-brown);
+        }
+        .staff-icon-wrapper {
+          background: var(--accent-brown-dim);
+        }
+        .member-icon-wrapper {
+          background: var(--accent-gold-dim);
+        }
+
+        .icon-pulse-ring {
+          position: absolute;
+          inset: -4px;
+          border-radius: 14px;
+          border: 1.5px solid currentColor;
+          opacity: 0;
+          animation: pulseRing 2.6s ease-out infinite;
+          pointer-events: none;
+        }
+        .admin-icon-wrapper .icon-pulse-ring {
+          color: var(--accent-brown);
+          animation-delay: 0s;
+        }
+        .staff-icon-wrapper .icon-pulse-ring {
+          color: var(--accent-brown);
+          animation-delay: 0.8s;
+        }
+        .member-icon-wrapper .icon-pulse-ring {
+          color: var(--accent-gold);
+          animation-delay: 1.6s;
+        }
+
+        @keyframes pulseRing {
+          0% {
+            transform: scale(0.9);
+            opacity: 0.8;
+          }
+          60% {
+            transform: scale(1.35);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1.35);
+            opacity: 0;
+          }
+        }
+
+        /* Live status beacon dot */
+        .live-status-dot {
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          animation: beaconPulse 2s ease-in-out infinite;
+        }
+        .admin-dot {
+          background: #10B981;
+          box-shadow: 0 0 6px #10B981;
+        }
+        .staff-dot {
+          background: var(--accent-brown);
+          box-shadow: 0 0 6px var(--accent-brown);
+        }
+        .member-dot {
+          background: var(--accent-gold);
+          box-shadow: 0 0 6px var(--accent-gold);
+        }
+
+        @keyframes beaconPulse {
+          0%, 100% {
+            transform: scale(0.85);
+            opacity: 0.55;
+          }
+          50% {
+            transform: scale(1.35);
+            opacity: 1;
+          }
+        }
+
+        /* Live Chevron micro-drift */
+        .chevron-animated {
+          z-index: 2;
+          display: flex;
+          align-items: center;
+          animation: chevronLiveDrift 2s ease-in-out infinite;
+          transition: transform 0.25s ease;
+        }
+        @keyframes chevronLiveDrift {
+          0%, 100% {
+            transform: translateX(0);
+            opacity: 0.7;
+          }
+          50% {
+            transform: translateX(4px);
+            opacity: 1;
+          }
+        }
+
+        /* Hover & Active tactile micro-spring states */
+        .live-animated-btn:hover {
+          transform: translateY(-4px) scale(1.015) !important;
           background: var(--bg-hover) !important;
-          transform: translateY(-3px);
-          box-shadow: 0 8px 20px var(--accent-gold-dim);
+        }
+        .live-animated-btn:hover .icon-wrapper {
+          transform: scale(1.1) rotate(-3deg);
+        }
+        .live-animated-btn:hover .chevron-animated {
+          animation: none;
+          transform: translateX(6px) !important;
+        }
+        .live-animated-btn:active {
+          transform: translateY(-1px) scale(0.99) !important;
         }
       `}</style>
     </div>
