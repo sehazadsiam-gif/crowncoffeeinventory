@@ -68,7 +68,9 @@ export default async function ViewOnlyMenuEngineeringPage() {
       const cp = channelPricingMap.get(`${item.id}_${ch.id}`)
       channelPrices[ch.id] = {
         selling_price: cp?.selling_price ?? 0,
-        commission_pct: cp?.commission_pct ?? 0,
+        commission_pct: (cp?.commission_pct !== undefined && cp?.commission_pct !== null && cp?.commission_pct !== 0)
+          ? cp.commission_pct
+          : (ch.name?.toLowerCase().includes('foodpanda') ? 23 : (cp?.commission_pct ?? 0)),
         discount_pct: cp?.discount_pct ?? 0
       }
     })

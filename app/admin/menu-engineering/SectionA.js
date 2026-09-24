@@ -48,7 +48,9 @@ export default function SectionA({ items, channels, onSave }) {
         channelPrices: Object.fromEntries(
           channels.map(ch => [ch.id, {
             price:      item.channel_prices?.[ch.id]?.selling_price ?? '',
-            commission: item.channel_prices?.[ch.id]?.commission_pct ?? '',
+            commission: (item.channel_prices?.[ch.id]?.commission_pct !== undefined && item.channel_prices?.[ch.id]?.commission_pct !== null && item.channel_prices?.[ch.id]?.commission_pct !== '')
+              ? item.channel_prices[ch.id].commission_pct
+              : (ch.name?.toLowerCase().includes('foodpanda') ? 23 : ''),
             discount:   item.channel_prices?.[ch.id]?.discount_pct ?? '',
           }])
         ),
