@@ -1,5 +1,1 @@
-import { redirect } from 'next/navigation'
-
-export default function ViewRedirect() {
-  redirect('/menu-engineering/view')
-}
+export { default, metadata, dynamic, revalidate } from '../../menu-engineering/view/page'

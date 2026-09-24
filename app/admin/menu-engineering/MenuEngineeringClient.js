@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Coffee, BarChart2, LogOut, ChevronDown } from 'lucide-react'
+import { Coffee, BarChart2, LogOut, ChevronDown, ExternalLink, Eye } from 'lucide-react'
 import ThemeToggle from '../../../components/ThemeToggle'
 import SectionA from './SectionA'
 import SectionB from './SectionB'
@@ -291,6 +291,28 @@ export default function MenuEngineeringClient() {
 
         <div style={styles.sidebarFooter}>
           <div style={styles.chefLink}>
+            <a
+              href="/menu-engineering/view"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 10px',
+                borderRadius: 8,
+                background: 'rgba(124, 58, 30, 0.08)',
+                border: '1px solid rgba(124, 58, 30, 0.2)',
+                color: 'var(--accent-brown, #7C3A1E)',
+                fontSize: 12,
+                fontWeight: 600,
+                textDecoration: 'none',
+                marginBottom: 8
+              }}
+            >
+              <Eye size={13} />
+              <span>Public View-Only ↗</span>
+            </a>
             <a href="/dashboard" style={{ fontSize: 12, color: 'var(--accent-brown)', textDecoration: 'none', fontWeight: 600, display: 'block', marginBottom: 4 }}>
               ← Main Admin Dashboard
             </a>
@@ -318,6 +340,31 @@ export default function MenuEngineeringClient() {
 
           {/* Month/Year Picker & Theme Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <a
+              href="/menu-engineering/view"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open public view-only page in new tab"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 13px',
+                borderRadius: 8,
+                background: 'var(--card-bg, #ffffff)',
+                border: '1px solid var(--border, #E2E8F0)',
+                color: 'var(--accent-brown, #7C3A1E)',
+                fontSize: 12,
+                fontWeight: 600,
+                textDecoration: 'none',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                cursor: 'pointer'
+              }}
+            >
+              <Eye size={14} />
+              <span>Public View</span>
+              <ExternalLink size={12} style={{ opacity: 0.6 }} />
+            </a>
             <ThemeToggle />
             <div style={styles.monthPicker}>
               <div style={styles.monthPickerWrap}>

@@ -20,7 +20,7 @@ export function middleware(request) {
 
   // /admin/menu-engineering routes — require the costing cookie
   // Full role validation happens in the server component
-  if (path.startsWith('/admin/menu-engineering')) {
+  if (path.startsWith('/admin/menu-engineering') && !path.startsWith('/admin/menu-engineering/view')) {
     if (!hasCostingCookie) {
       return NextResponse.redirect(new URL('/menu-costings/login', request.url))
     }

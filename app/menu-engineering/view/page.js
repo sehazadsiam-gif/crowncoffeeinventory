@@ -6,8 +6,8 @@ export const metadata = {
   description: 'View-only menu engineering, recipe costings, base costs, and margins for Crown Coffee.',
 }
 
-// Revalidate every 60 seconds or dynamic
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function ViewOnlyMenuEngineeringPage() {
   // Fetch all necessary data directly on the server
