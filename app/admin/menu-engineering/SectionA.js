@@ -1,12 +1,13 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   contributionMargin, foodCostPercent, netMarginAfterCommission,
   netFoodCostPctAfterCommission, foodCostColor, formatBDT, formatPct,
   calculateFixedCostPricing, calculatePriceFromTargetProfit, calculateOnlineChannelMetrics
 } from '../../../lib/costing-calculations'
-import { Save, AlertTriangle, Settings, X, Plus, Trash2, Calculator, Info } from 'lucide-react'
+import { Save, AlertTriangle, Settings, X, Plus, Trash2, Calculator, Info, Upload, RefreshCw, Download, Check, CheckCircle, Search } from 'lucide-react'
 import PricingCalculatorModal from '../../menu-costings/PricingCalculatorModal'
+import MenuUploadModal from './MenuUploadModal'
 
 // Food cost badge
 function FCBadge({ pct }) {
@@ -26,11 +27,13 @@ function FCBadge({ pct }) {
 }
 
 export default function SectionA({ items, channels, onSave }) {
-  // localPrices: { [itemId]: { dineIn: '', channelPrices: { [channelId]: { price:'', commission:'', discount:'' } } } }
+  // localPrices: { [itemId]: { dineIn: '', cogs: '', channelPrices: { [channelId]: { price:'', commission:'', discount:'' } } } }
   const [localPrices, setLocalPrices] = useState({})
 
   // Keep localPrices in sync when items/channels load
   const [channelList, setChannelList] = useState(channels)
+  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [savingAll, setSavingAll] = useState(false)
 
   useEffect(() => {
     setChannelList(channels)
@@ -41,6 +44,7 @@ export default function SectionA({ items, channels, onSave }) {
     items.forEach(item => {
       m[item.id] = {
         dineIn: item.dine_in_price ?? '',
+        cogs:   item.current_cogs ?? '',
         channelPrices: Object.fromEntries(
           channels.map(ch => [ch.id, {
             price:      item.channel_prices?.[ch.id]?.selling_price ?? '',
@@ -59,14 +63,109 @@ export default function SectionA({ items, channels, onSave }) {
   const [losingThreshold, setLosingThreshold] = useState(0) // min net margin
   const [calcModalItem, setCalcModalItem]   = useState(null) // item object for calculator
 
+  // Search & Filter
+  const [searchQuery, setSearchQuery]       = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('ALL')
+
+  const categories = useMemo(() => {
+    const set = new Set()
+    items.forEach(i => {
+      if (i.category) set.add(i.category)
+    })
+    return ['ALL', ...Array.from(set).sort()]
+  }, [items])
+
+  const filteredItems = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
+    return items.filter(item => {
+      const matchCat = selectedCategory === 'ALL' || item.category === selectedCategory
+      const matchQuery = !q || item.name.toLowerCase().includes(q) || (item.category && item.category.toLowerCase().includes(q))
+      return matchCat && matchQuery
+    })
+  }, [items, searchQuery, selectedCategory])
+
+  const localPricesRef = useRef(localPrices)
+  useEffect(() => {
+    localPricesRef.current = localPrices
+  }, [localPrices])
+
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle') // 'idle' | 'saving' | 'saved' | 'error'
+  const saveTimersRef = useRef({})
+  const resetTimerRef = useRef(null)
+
+  const saveSingleItem = useCallback(async (itemId) => {
+    const item = items.find(i => i.id === itemId)
+    if (!item) return
+    const local = localPricesRef.current[itemId] || {}
+    const channelPrices = channelList.map(ch => ({
+      channelId:    ch.id,
+      sellingPrice: parseFloat(local.channelPrices?.[ch.id]?.price) || 0,
+      commissionPct: parseFloat(local.channelPrices?.[ch.id]?.commission) || 0,
+      discountPct:   parseFloat(local.channelPrices?.[ch.id]?.discount) || 0,
+    }))
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cc_token') || 'admin_pin_session' : 'admin_pin_session'
+    try {
+      setAutoSaveStatus('saving')
+      const res = await fetch('/api/admin/pricing', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-admin-pin': '1590'
+        },
+        body: JSON.stringify({
+          menuItemId:   item.id,
+          dineInPrice:  parseFloat(local.dineIn) || 0,
+          cogs:         parseFloat(local.cogs !== undefined && local.cogs !== '' ? local.cogs : item.current_cogs) || 0,
+          channelPrices,
+        }),
+      })
+      if (!res.ok) throw new Error('Auto-save failed')
+      setAutoSaveStatus('saved')
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+      resetTimerRef.current = setTimeout(() => {
+        setAutoSaveStatus('idle')
+      }, 3000)
+    } catch (err) {
+      console.error('Auto-save error:', err)
+      setAutoSaveStatus('error')
+    }
+  }, [items, channelList])
+
+  const triggerAutoSave = useCallback((itemId) => {
+    setAutoSaveStatus('saving')
+    if (saveTimersRef.current[itemId]) {
+      clearTimeout(saveTimersRef.current[itemId])
+    }
+    saveTimersRef.current[itemId] = setTimeout(() => {
+      saveSingleItem(itemId)
+    }, 700)
+  }, [saveSingleItem])
+
   function setDineIn(itemId, val) {
     setLocalPrices(p => {
-      const current = p[itemId] || { dineIn: '', channelPrices: {} }
-      return {
+      const current = p[itemId] || { dineIn: '', cogs: '', channelPrices: {} }
+      const updated = {
         ...p,
         [itemId]: { ...current, dineIn: val }
       }
+      localPricesRef.current = updated
+      return updated
     })
+    triggerAutoSave(itemId)
+  }
+
+  function setCogs(itemId, val) {
+    setLocalPrices(p => {
+      const current = p[itemId] || { dineIn: '', cogs: '', channelPrices: {} }
+      const updated = {
+        ...p,
+        [itemId]: { ...current, cogs: val }
+      }
+      localPricesRef.current = updated
+      return updated
+    })
+    triggerAutoSave(itemId)
   }
 
   function setTargetProfitForDineIn(itemId, cogs, profitVal) {
@@ -76,10 +175,10 @@ export default function SectionA({ items, channels, onSave }) {
 
   function setChannelPrice(itemId, chanId, field, val) {
     setLocalPrices(p => {
-      const current = p[itemId] || { dineIn: '', channelPrices: {} }
+      const current = p[itemId] || { dineIn: '', cogs: '', channelPrices: {} }
       const currentChannelPrices = current.channelPrices || {}
       const currentChan = currentChannelPrices[chanId] || { price: '', commission: '', discount: '' }
-      return {
+      const updated = {
         ...p,
         [itemId]: {
           ...current,
@@ -89,7 +188,10 @@ export default function SectionA({ items, channels, onSave }) {
           }
         }
       }
+      localPricesRef.current = updated
+      return updated
     })
+    triggerAutoSave(itemId)
   }
 
   async function saveItem(item) {
@@ -101,17 +203,56 @@ export default function SectionA({ items, channels, onSave }) {
       commissionPct: parseFloat(local.channelPrices?.[ch.id]?.commission) || 0,
       discountPct:   parseFloat(local.channelPrices?.[ch.id]?.discount) || 0,
     }))
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cc_token') || 'admin_pin_session' : 'admin_pin_session'
     await fetch('/api/admin/pricing', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'x-admin-pin': '1590'
+      },
       body: JSON.stringify({
         menuItemId:   item.id,
         dineInPrice:  parseFloat(local.dineIn) || 0,
+        cogs:         parseFloat(local.cogs !== undefined && local.cogs !== '' ? local.cogs : item.current_cogs) || 0,
         channelPrices,
       }),
     })
     if (onSave) onSave()
     setSaving(s => ({ ...s, [item.id]: false }))
+  }
+
+  async function saveAllItems() {
+    setSavingAll(true)
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('cc_token') || 'admin_pin_session' : 'admin_pin_session'
+      for (const item of items) {
+        const local = localPrices[item.id] || {}
+        const channelPrices = channelList.map(ch => ({
+          channelId:    ch.id,
+          sellingPrice: parseFloat(local.channelPrices?.[ch.id]?.price) || 0,
+          commissionPct: parseFloat(local.channelPrices?.[ch.id]?.commission) || 0,
+          discountPct:   parseFloat(local.channelPrices?.[ch.id]?.discount) || 0,
+        }))
+        await fetch('/api/admin/pricing', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'x-admin-pin': '1590'
+          },
+          body: JSON.stringify({
+            menuItemId:   item.id,
+            dineInPrice:  parseFloat(local.dineIn) || 0,
+            cogs:         parseFloat(local.cogs !== undefined && local.cogs !== '' ? local.cogs : item.current_cogs) || 0,
+            channelPrices,
+          }),
+        })
+      }
+      if (onSave) onSave()
+    } finally {
+      setSavingAll(false)
+    }
   }
 
   async function addChannel() {
@@ -158,6 +299,93 @@ export default function SectionA({ items, channels, onSave }) {
     })
   }).sort((a, b) => a.profit - b.profit)
 
+  function exportMenuCSV() {
+    if (!items?.length) return
+
+    const escapeCSV = (val) => {
+      if (val === null || val === undefined) return ''
+      const str = String(val)
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return '"' + str.replace(/"/g, '""') + '"'
+      }
+      return str
+    }
+
+    const channelHeaders = []
+    channelList.forEach(ch => {
+      channelHeaders.push(`${ch.name} Price (৳)`)
+      channelHeaders.push(`${ch.name} Disc %`)
+      channelHeaders.push(`${ch.name} Comm %`)
+      channelHeaders.push(`${ch.name} Net Payout (৳)`)
+      channelHeaders.push(`${ch.name} Profit (৳)`)
+      channelHeaders.push(`${ch.name} Net FC%`)
+    })
+
+    const headers = [
+      'Item Name',
+      'Category',
+      'Making Cost (COGS)',
+      'Utilities (1:1)',
+      'Base Cost',
+      'Dine-In Price',
+      'Target Profit (৳)',
+      'Net Profit (৳)',
+      'FC% (Dine)',
+      ...channelHeaders
+    ]
+
+    const csvRows = [headers.map(escapeCSV).join(',')]
+
+    items.forEach(item => {
+      const local = localPrices[item.id] || {}
+      const cogs = parseFloat(local.cogs !== undefined && local.cogs !== '' ? local.cogs : item.current_cogs) || 0
+      const dineIn = parseFloat(local.dineIn) || 0
+      const anchor = calculateFixedCostPricing(cogs, dineIn)
+
+      const row = [
+        item.name,
+        item.category || '',
+        cogs.toFixed(2),
+        anchor.utilitiesCharge.toFixed(2),
+        anchor.baseCost.toFixed(2),
+        dineIn.toFixed(2),
+        dineIn ? Math.round(anchor.netProfit) : '0',
+        dineIn ? anchor.netProfit.toFixed(2) : '0.00',
+        formatPct(anchor.foodCostPct)
+      ]
+
+      channelList.forEach(ch => {
+        const cp = local.channelPrices?.[ch.id]
+        const sp = parseFloat(cp?.price) || 0
+        const com = parseFloat(cp?.commission) || 0
+        const disc = parseFloat(cp?.discount) || 0
+        if (sp > 0) {
+          const om = calculateOnlineChannelMetrics(sp, cogs, com, disc)
+          row.push(sp.toFixed(2))
+          row.push(disc.toFixed(1) + '%')
+          row.push(com.toFixed(1) + '%')
+          row.push(om.netPayout.toFixed(2))
+          row.push(om.onlineProfit.toFixed(2))
+          row.push(formatPct(om.netFoodCostPct))
+        } else {
+          row.push('0.00', '0.0%', '0.0%', '0.00', '0.00', '0.0%')
+        }
+      })
+
+      csvRows.push(row.map(escapeCSV).join(','))
+    })
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `crown-coffee-menu-engineering-${new Date().toISOString().slice(0, 10)}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div>
       {/* Header */}
@@ -169,8 +397,59 @@ export default function SectionA({ items, channels, onSave }) {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Auto-save status badge */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '7px 12px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-subtle)',
+            border: '1px solid var(--border-medium)',
+            fontSize: 12,
+            fontWeight: 600,
+            color: autoSaveStatus === 'saving'
+              ? 'var(--accent-brown)'
+              : autoSaveStatus === 'saved'
+              ? 'var(--success)'
+              : autoSaveStatus === 'error'
+              ? 'var(--danger)'
+              : 'var(--text-secondary)'
+          }}>
+            {autoSaveStatus === 'saving' ? (
+              <>
+                <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                <span>Auto-saving…</span>
+              </>
+            ) : autoSaveStatus === 'saved' ? (
+              <>
+                <CheckCircle size={13} color="var(--success)" />
+                <span style={{ color: 'var(--success)' }}>All changes saved</span>
+              </>
+            ) : autoSaveStatus === 'error' ? (
+              <>
+                <AlertTriangle size={13} color="var(--danger)" />
+                <span style={{ color: 'var(--danger)' }}>Auto-save error</span>
+              </>
+            ) : (
+              <>
+                <Check size={13} color="var(--success)" />
+                <span>Auto-save active</span>
+              </>
+            )}
+          </div>
+
+          <button onClick={() => setShowUploadModal(true)} style={styles.uploadBtn}>
+            <Upload size={14} /> Upload Menu (CSV)
+          </button>
+          <button onClick={exportMenuCSV} style={styles.outlineBtn} title="Download Menu Engineering as CSV">
+            <Download size={14} /> Export CSV
+          </button>
+          <button onClick={saveAllItems} disabled={savingAll} style={styles.saveAllBtn}>
+            <Save size={14} /> {savingAll ? 'Saving…' : 'Save All Prices'}
+          </button>
           <button onClick={() => setCalcModalItem(items[0] || { current_cogs: 25, dine_in_price: 75 })} style={styles.calcBtn}>
-            <Calculator size={14} /> Open Calculator
+            <Calculator size={14} /> Calculator
           </button>
           <label style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
             Alert if Online Profit &lt;
@@ -206,13 +485,97 @@ export default function SectionA({ items, channels, onSave }) {
         </div>
       )}
 
+      {/* Search & Filter Bar */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 16,
+        padding: '10px 14px',
+        background: 'var(--bg-surface, #fff)',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-light)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 260 }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
+            <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search dishes, drinks, or category…"
+              style={{
+                width: '100%',
+                padding: '7px 30px 7px 32px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-medium)',
+                background: 'var(--bg-subtle)',
+                color: 'var(--text-primary)',
+                fontSize: 13,
+                outline: 'none',
+                fontFamily: 'var(--font-sans)'
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: 8,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Category Dropdown */}
+          <select
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+            style={{
+              padding: '7px 10px',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-medium)',
+              background: 'var(--bg-subtle)',
+              color: 'var(--text-primary)',
+              fontSize: 13,
+              cursor: 'pointer',
+              fontFamily: 'var(--font-sans)',
+              outline: 'none'
+            }}
+          >
+            {categories.map(cat => (
+              <option key={cat} value={cat}>
+                {cat === 'ALL' ? 'All Categories' : cat}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+          Showing <strong>{filteredItems.length}</strong> of {items.length} items
+        </div>
+      </div>
+
       {/* Items Table — Fully Responsive */}
       <div style={styles.tableWrapper}>
         <table style={styles.table}>
           <thead>
             <tr style={styles.thead}>
               <th style={{ ...styles.th, minWidth: 160 }}>Item</th>
-              <th style={styles.th}>Making Cost</th>
+              <th style={{ ...styles.th, minWidth: 100 }}>Making Cost (৳)</th>
               <th style={styles.th}>Utilities (1:1)</th>
               <th style={styles.th}>Base Cost</th>
               <th style={{ ...styles.th, minWidth: 110 }}>Dine-in Price</th>
@@ -233,9 +596,17 @@ export default function SectionA({ items, channels, onSave }) {
             </tr>
           </thead>
           <tbody>
-            {items.map(item => {
+            {filteredItems.length === 0 ? (
+              <tr>
+                <td colSpan={8 + channelList.length * 6 + 1} style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+                  <Search size={24} style={{ marginBottom: 8, opacity: 0.5 }} />
+                  <div>No menu items found matching "{searchQuery}"</div>
+                </td>
+              </tr>
+            ) : (
+              filteredItems.map(item => {
               const local   = localPrices[item.id] || {}
-              const cogs    = item.current_cogs || 0
+              const cogs    = parseFloat(local.cogs !== undefined && local.cogs !== '' ? local.cogs : item.current_cogs) || 0
               const dineIn  = parseFloat(local.dineIn) || 0
 
               const anchor  = calculateFixedCostPricing(cogs, dineIn)
@@ -244,15 +615,32 @@ export default function SectionA({ items, channels, onSave }) {
                 <tr key={item.id} style={styles.tr}>
                   <td style={{ ...styles.td, fontWeight: 600 }}>
                     <div>{item.name}</div>
-                    <button
-                      onClick={() => setCalcModalItem(item)}
-                      style={styles.inlineCalcBtn}
-                      title="Calculate margins for this item"
-                    >
-                      <Calculator size={11} /> Calc
-                    </button>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{item.category}</span>
+                    <div>
+                      <button
+                        onClick={() => setCalcModalItem(item)}
+                        style={styles.inlineCalcBtn}
+                        title="Calculate margins for this item"
+                      >
+                        <Calculator size={11} /> Calc
+                      </button>
+                    </div>
                   </td>
-                  <td style={styles.td}>{formatBDT(anchor.makingCost)}</td>
+
+                  {/* Making Cost (COGS) - editable directly by Admin */}
+                  <td style={styles.td}>
+                    <div style={styles.priceInputWrap}>
+                      <span style={styles.currencyPrefix}>৳</span>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={local.cogs !== undefined ? local.cogs : (item.current_cogs || '')}
+                        onChange={e => setCogs(item.id, e.target.value)}
+                        style={{ ...inS, width: 75, paddingLeft: 20 }}
+                        placeholder="0"
+                        title="Making Cost / COGS"
+                      />
+                    </div>
+                  </td>
                   <td style={styles.td}>{formatBDT(anchor.utilitiesCharge)}</td>
                   <td style={{ ...styles.td, fontWeight: 600 }}>{formatBDT(anchor.baseCost)}</td>
 
@@ -386,15 +774,29 @@ export default function SectionA({ items, channels, onSave }) {
                   </td>
                 </tr>
               )
-            })}
+            }))}
             {items.length === 0 && (
-              <tr><td colSpan={99} style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>
-                No menu items found. Ask the chef to add items in Menu Costings first.
+              <tr><td colSpan={99} style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>No menu items found</div>
+                <div style={{ fontSize: 13, marginBottom: 14 }}>Upload your menu with prices using CSV, or sync from your POS items.</div>
+                <button onClick={() => setShowUploadModal(true)} style={{ ...styles.uploadBtn, margin: '0 auto', display: 'inline-flex' }}>
+                  <Upload size={14} /> Upload Menu (CSV)
+                </button>
               </td></tr>
             )}
           </tbody>
         </table>
       </div>
+
+      {/* Upload Menu Modal */}
+      <MenuUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={() => {
+          setShowUploadModal(false)
+          if (onSave) onSave()
+        }}
+      />
 
       {/* Pricing Calculator Modal */}
       <PricingCalculatorModal
@@ -449,6 +851,8 @@ const styles = {
   secTitle:  { fontSize: 20, fontWeight: 700, marginBottom: 4 },
   secSub:    { fontSize: 13, color: 'var(--text-muted)' },
   calcBtn:   { display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'linear-gradient(135deg, var(--accent-brown), var(--accent-brown-dark))', color: '#fff', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)' },
+  uploadBtn: { display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'var(--accent-brown, #7C3A1E)', color: '#fff', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', boxShadow: '0 2px 4px rgba(124,58,30,0.2)' },
+  saveAllBtn:{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'var(--success, #10B981)', color: '#fff', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)' },
   inlineCalcBtn: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 4, background: 'var(--accent-brown-dim)', color: 'var(--accent-brown)', fontSize: 10, fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: 4, fontFamily: 'var(--font-sans)' },
   alertBox:  { background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginBottom: 20 },
   alertTitle:{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: 'var(--danger)', marginBottom: 10, fontSize: 14 },

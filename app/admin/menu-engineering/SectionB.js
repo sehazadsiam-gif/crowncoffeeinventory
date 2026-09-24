@@ -1,8 +1,8 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { classifyMenuItems, CLASSIFICATION_ACTIONS, formatBDT, formatPct, contributionMargin } from '../../../lib/costing-calculations'
 import ScatterChart from './ScatterChart'
-import { Upload, Save, Download } from 'lucide-react'
+import { Upload, Save, Download, RefreshCw, CheckCircle, Check, Search, X } from 'lucide-react'
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
@@ -10,6 +10,46 @@ export default function SectionB({ items, pricingData, year, month, salesData = 
   const [saved, setSaved]         = useState(false)
   const [saving, setSaving]       = useState(false)
   const [csvError, setCsvError]   = useState('')
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle') // 'idle' | 'saving' | 'saved'
+  const [searchQuery, setSearchQuery] = useState('')
+  const autoSaveTimerRef = useRef(null)
+
+  const performSaveSales = useCallback(async (currentSales) => {
+    setAutoSaveStatus('saving')
+    const entries = []
+    for (const [itemId, channels] of Object.entries(currentSales)) {
+      entries.push({ menuItemId: itemId, channelId: null, quantitySold: parseInt(channels.dineIn) || 0 })
+    }
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cc_token') || 'admin_pin_session' : 'admin_pin_session'
+    try {
+      await fetch('/api/admin/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-admin-pin': '1590'
+        },
+        body: JSON.stringify({ year, month, entries }),
+      })
+      setAutoSaveStatus('saved')
+      setSaved(true)
+      setTimeout(() => {
+        setAutoSaveStatus('idle')
+        setSaved(false)
+      }, 2500)
+    } catch (e) {
+      console.error('Error auto-saving sales:', e)
+      setAutoSaveStatus('error')
+    }
+  }, [year, month])
+
+  function triggerAutoSaveSales(newSales) {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    setAutoSaveStatus('saving')
+    autoSaveTimerRef.current = setTimeout(() => {
+      performSaveSales(newSales)
+    }, 700)
+  }
 
   // Merge item info + pricing data
   const enrichedItems = items.map(item => {
@@ -39,6 +79,11 @@ export default function SectionB({ items, pricingData, year, month, salesData = 
   }))
 
   const classified = classifyMenuItems(withPop)
+
+  const filteredClassified = classified.filter(item => {
+    if (!searchQuery.trim()) return true
+    return item.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
+  })
 
   const medianCM  = classified[0]?.medianCM  ?? 0
   const medianPop = classified[0]?.medianPop ?? 0
@@ -78,9 +123,14 @@ export default function SectionB({ items, pricingData, year, month, salesData = 
       // dineIn channel (null = dine-in)
       entries.push({ menuItemId: itemId, channelId: null, quantitySold: channels.dineIn || 0 })
     }
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cc_token') || 'admin_pin_session' : 'admin_pin_session'
     await fetch('/api/admin/sales', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'x-admin-pin': '1590'
+      },
       body: JSON.stringify({ year, month, entries }),
     })
     setSaved(true)
@@ -97,6 +147,40 @@ export default function SectionB({ items, pricingData, year, month, salesData = 
           <p style={styles.secSub}>{MONTH_NAMES[month-1]} {year} · {totalUnitsSold} units sold</p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 12px',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--bg-subtle)',
+            border: '1px solid var(--border-medium)',
+            fontSize: 12,
+            fontWeight: 600,
+            color: autoSaveStatus === 'saving'
+              ? 'var(--accent-brown)'
+              : autoSaveStatus === 'saved'
+              ? 'var(--success)'
+              : 'var(--text-secondary)'
+          }}>
+            {autoSaveStatus === 'saving' ? (
+              <>
+                <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} />
+                <span>Auto-saving…</span>
+              </>
+            ) : autoSaveStatus === 'saved' ? (
+              <>
+                <CheckCircle size={13} color="var(--success)" />
+                <span style={{ color: 'var(--success)' }}>All changes saved</span>
+              </>
+            ) : (
+              <>
+                <Check size={13} color="var(--success)" />
+                <span>Auto-save active</span>
+              </>
+            )}
+          </div>
+
           <label style={styles.csvLabel}>
             <Upload size={13} /> Import CSV
             <input type="file" accept=".csv,.txt" onChange={handleCSV} style={{ display: 'none' }} />
@@ -111,6 +195,64 @@ export default function SectionB({ items, pricingData, year, month, salesData = 
       </div>
 
       {csvError && <div style={styles.errorMsg}>{csvError}</div>}
+
+      {/* Search Bar for Section B */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        marginBottom: 16,
+        padding: '10px 14px',
+        background: 'var(--bg-surface, #fff)',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-light)',
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <div style={{ position: 'relative', width: 340 }}>
+          <Search size={15} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search items to enter sales…"
+            style={{
+              width: '100%',
+              padding: '7px 30px 7px 32px',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-medium)',
+              background: 'var(--bg-subtle)',
+              color: 'var(--text-primary)',
+              fontSize: 13,
+              outline: 'none',
+              fontFamily: 'var(--font-sans)'
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute',
+                right: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+          Showing <strong>{filteredClassified.length}</strong> of {classified.length} items
+        </div>
+      </div>
 
       {/* Sales Entry Table */}
       <div style={styles.tableWrapper}>
@@ -130,7 +272,15 @@ export default function SectionB({ items, pricingData, year, month, salesData = 
             </tr>
           </thead>
           <tbody>
-            {classified.map(item => {
+            {filteredClassified.length === 0 ? (
+              <tr>
+                <td colSpan={10} style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--text-muted)' }}>
+                  <Search size={22} style={{ marginBottom: 6, opacity: 0.5 }} />
+                  <div>No items found matching "{searchQuery}"</div>
+                </td>
+              </tr>
+            ) : (
+              filteredClassified.map(item => {
               const action = CLASSIFICATION_ACTIONS[item.classification]
               return (
                 <tr key={item.id} style={styles.tr}>
@@ -141,10 +291,15 @@ export default function SectionB({ items, pricingData, year, month, salesData = 
                     <input
                       type="number" min="0"
                       value={salesData[item.id]?.dineIn ?? ''}
-                      onChange={e => setSalesData(p => {
-                        const curr = p[item.id] || {}
-                        return { ...p, [item.id]: { ...curr, dineIn: e.target.value } }
-                      })}
+                      onChange={e => {
+                        const val = e.target.value
+                        setSalesData(p => {
+                          const curr = p[item.id] || {}
+                          const next = { ...p, [item.id]: { ...curr, dineIn: val } }
+                          triggerAutoSaveSales(next)
+                          return next
+                        })
+                      }}
                       style={{ ...inS, width: 90 }}
                       placeholder="0"
                     />
@@ -165,7 +320,7 @@ export default function SectionB({ items, pricingData, year, month, salesData = 
                   </td>
                 </tr>
               )
-            })}
+            }))}
             {/* Totals */}
             <tr style={{ ...styles.tr, background: 'var(--bg-subtle)', fontWeight: 700 }}>
               <td style={styles.td}>TOTAL</td>

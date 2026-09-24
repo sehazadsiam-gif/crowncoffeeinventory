@@ -1,8 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { computeProfitability, formatBDT, formatPct } from '../../../lib/costing-calculations'
 import TrendChart from './TrendChart'
-import { Save, Download, TrendingUp, TrendingDown } from 'lucide-react'
+import { Save, Download, TrendingUp, TrendingDown, RefreshCw, CheckCircle, Check } from 'lucide-react'
 
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
@@ -12,9 +12,20 @@ export default function SectionC({ year, month, totalCM, totalRevenue, onExport 
   const [saved, setSaved]       = useState(false)
   const [trendData, setTrendData] = useState([])
 
+  const getAuthHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('cc_token') || 'admin_pin_session' : 'admin_pin_session'
+    return {
+      'Authorization': `Bearer ${token}`,
+      'x-admin-pin': '1590',
+      'Content-Type': 'application/json'
+    }
+  }
+
   // Load existing fixed costs
   useEffect(() => {
-    fetch(`/api/admin/fixed-costs?year=${year}&month=${month}`)
+    fetch(`/api/admin/fixed-costs?year=${year}&month=${month}`, {
+      headers: getAuthHeaders()
+    })
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data) && data[0]) {
@@ -29,7 +40,9 @@ export default function SectionC({ year, month, totalCM, totalRevenue, onExport 
   useEffect(() => {
     const fromYear = month <= 6 ? year - 1 : year
     const fromMonth = month <= 6 ? month + 6 : month - 6
-    fetch(`/api/admin/fixed-costs?fromYear=${fromYear}&fromMonth=${fromMonth}&toYear=${year}&toMonth=${month}`)
+    fetch(`/api/admin/fixed-costs?fromYear=${fromYear}&fromMonth=${fromMonth}&toYear=${year}&toMonth=${month}`, {
+      headers: getAuthHeaders()
+    })
       .then(r => r.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -67,12 +80,43 @@ export default function SectionC({ year, month, totalCM, totalRevenue, onExport 
     setSaving(true)
     await fetch('/api/admin/fixed-costs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ year, month, ...costs }),
     })
     setSaved(true)
     setSaving(false)
     setTimeout(() => setSaved(false), 3000)
+  }
+
+  const [autoSaveStatus, setAutoSaveStatus] = useState('idle')
+  const autoSaveTimerRef = useRef(null)
+
+  const performSaveCosts = useCallback(async (currentCosts) => {
+    setAutoSaveStatus('saving')
+    try {
+      await fetch('/api/admin/fixed-costs', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ year, month, ...currentCosts }),
+      })
+      setAutoSaveStatus('saved')
+      setSaved(true)
+      setTimeout(() => {
+        setAutoSaveStatus('idle')
+        setSaved(false)
+      }, 2500)
+    } catch (e) {
+      console.error('Error auto-saving costs:', e)
+      setAutoSaveStatus('error')
+    }
+  }, [year, month])
+
+  function triggerAutoSaveCosts(nextCosts) {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    setAutoSaveStatus('saving')
+    autoSaveTimerRef.current = setTimeout(() => {
+      performSaveCosts(nextCosts)
+    }, 700)
   }
 
   return (
@@ -126,7 +170,42 @@ export default function SectionC({ year, month, totalCM, totalRevenue, onExport 
       {/* Fixed Costs Input */}
       <div style={styles.costsCard}>
         <div style={styles.costsHeader}>
-          <h3 style={{ fontWeight: 700, fontSize: 16 }}>Monthly Fixed Costs</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h3 style={{ fontWeight: 700, fontSize: 16 }}>Monthly Fixed Costs</h3>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '4px 10px',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-subtle)',
+              border: '1px solid var(--border-medium)',
+              fontSize: 12,
+              fontWeight: 600,
+              color: autoSaveStatus === 'saving'
+                ? 'var(--accent-brown)'
+                : autoSaveStatus === 'saved'
+                ? 'var(--success)'
+                : 'var(--text-secondary)'
+            }}>
+              {autoSaveStatus === 'saving' ? (
+                <>
+                  <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                  <span>Auto-saving…</span>
+                </>
+              ) : autoSaveStatus === 'saved' ? (
+                <>
+                  <CheckCircle size={12} color="var(--success)" />
+                  <span style={{ color: 'var(--success)' }}>Saved</span>
+                </>
+              ) : (
+                <>
+                  <Check size={12} color="var(--success)" />
+                  <span>Auto-save active</span>
+                </>
+              )}
+            </div>
+          </div>
           <button onClick={saveCosts} disabled={saving} style={styles.saveBtn}>
             <Save size={13} /> {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save'}
           </button>
@@ -145,7 +224,14 @@ export default function SectionC({ year, month, totalCM, totalRevenue, onExport 
                 <input
                   type="number" min="0" step="1"
                   value={costs[key]}
-                  onChange={e => setCosts(p => ({ ...p, [key]: e.target.value }))}
+                  onChange={e => {
+                    const val = e.target.value
+                    setCosts(p => {
+                      const next = { ...p, [key]: val }
+                      triggerAutoSaveCosts(next)
+                      return next
+                    })
+                  }}
                   style={{ ...inS, paddingLeft: 28 }}
                   placeholder="0"
                 />
@@ -157,7 +243,14 @@ export default function SectionC({ year, month, totalCM, totalRevenue, onExport 
           <label style={styles.costLabel}>Notes (optional)</label>
           <textarea
             value={costs.notes}
-            onChange={e => setCosts(p => ({ ...p, notes: e.target.value }))}
+            onChange={e => {
+              const val = e.target.value
+              setCosts(p => {
+                const next = { ...p, notes: val }
+                triggerAutoSaveCosts(next)
+                return next
+              })
+            }}
             rows={2}
             style={{ ...inS, width: '100%', marginTop: 6, resize: 'vertical' }}
             placeholder="Any notes about this month's overhead…"

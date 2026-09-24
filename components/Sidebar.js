@@ -24,7 +24,8 @@ import {
   X,
   AlertTriangle,
   Trophy,
-  ArrowLeftRight
+  ArrowLeftRight,
+  FileSpreadsheet
 } from 'lucide-react'
 import { useFeatureFlags } from '../hooks/useFeatureFlags'
 
@@ -58,6 +59,7 @@ export default function Sidebar({ role, currentPage, staffName }) {
       { label: 'Members', icon: UserCheck, path: '/admin/members', flag: 'members' },
       { label: 'Pending Approvals', icon: UserCheck, path: '/admin/members/pending', flag: 'members' },
       { label: 'Balance Sheet', icon: TrendingUp, path: '/balance-sheet', flag: 'balance_sheet' },
+      { label: 'Rough Sheet', icon: FileSpreadsheet, path: '/admin/rough-sheet' },
     ],
     staff: [
       { label: 'Dashboard', icon: Home, path: '/staff-portal' },

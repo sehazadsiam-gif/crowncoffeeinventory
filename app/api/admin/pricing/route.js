@@ -79,15 +79,33 @@ export async function POST(request) {
   const { error, status } = await requireRole(request, 'admin')
   if (error) return NextResponse.json({ error }, { status })
 
-  const { menuItemId, dineInPrice, channelPrices = [] } = await request.json()
+  const { menuItemId, dineInPrice, cogs, channelPrices = [] } = await request.json()
   if (!menuItemId) return NextResponse.json({ error: 'menuItemId required' }, { status: 400 })
+
+  // Update COGS in costing_menu_items if provided
+  if (cogs !== undefined) {
+    await supabase
+      .from('costing_menu_items')
+      .update({ current_cogs: parseFloat(cogs) || 0 })
+      .eq('id', menuItemId)
+  }
 
   // Upsert dine-in
   if (dineInPrice !== undefined) {
+    const numPrice = parseFloat(dineInPrice) || 0
     const { error: e } = await supabase
       .from('costing_item_pricing')
-      .upsert({ menu_item_id: menuItemId, dine_in_price: parseFloat(dineInPrice) || 0 }, { onConflict: 'menu_item_id' })
+      .upsert({ menu_item_id: menuItemId, dine_in_price: numPrice }, { onConflict: 'menu_item_id' })
     if (e) return NextResponse.json({ error: e.message }, { status: 500 })
+
+    // Also sync to POS menu_items table
+    const { data: item } = await supabase.from('costing_menu_items').select('name').eq('id', menuItemId).maybeSingle()
+    if (item?.name) {
+      await supabase
+        .from('menu_items')
+        .update({ selling_price: numPrice })
+        .ilike('name', item.name)
+    }
   }
 
   // Upsert channel prices

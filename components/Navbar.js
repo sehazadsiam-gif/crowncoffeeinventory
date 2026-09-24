@@ -178,6 +178,7 @@ export default function Navbar() {
       ]
     },
     { href: '/admin/members', label: 'Members', icon: <Users size={16} />, flag: 'members' },
+    { href: '/admin/rough-sheet', label: 'Rough Sheet', icon: <FileSpreadsheet size={16} /> },
     { href: '/waste', label: 'Waste', icon: <Trash2 size={16} />, flag: 'waste' },
     { href: '/balance-sheet', label: 'Balance', icon: <CalcIcon size={16} />, flag: 'balance_sheet' },
   ]
