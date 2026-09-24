@@ -245,9 +245,66 @@ export default function MenuEngineeringClient() {
   }
 
   return (
-    <div style={styles.shell}>
+    <div className="admin-shell" style={styles.shell}>
+      <style>{`
+        @media (max-width: 900px) {
+          .admin-shell {
+            flex-direction: column !important;
+          }
+          .admin-sidebar {
+            width: 100% !important;
+            height: auto !important;
+            position: relative !important;
+            border-right: none !important;
+            border-bottom: 1px solid var(--border-light) !important;
+          }
+          .admin-nav-section {
+            display: flex !important;
+            flex-direction: row !important;
+            overflow-x: auto !important;
+            gap: 6px !important;
+            padding: 6px 12px !important;
+            align-items: center !important;
+            -webkit-overflow-scrolling: touch !important;
+          }
+          .admin-nav-item {
+            padding: 8px 12px !important;
+            white-space: nowrap !important;
+            margin-bottom: 0 !important;
+            border-left: none !important;
+            border-bottom: 3px solid transparent !important;
+          }
+          .admin-sidebar-footer {
+            display: none !important;
+          }
+          .admin-topbar {
+            padding: 12px 16px !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+          .admin-content {
+            padding: 14px 10px !important;
+          }
+        }
+        @media (min-width: 1921px) {
+          .admin-sidebar {
+            width: 280px !important;
+          }
+          .admin-topbar {
+            padding: 22px 36px !important;
+          }
+          .admin-page-title {
+            font-size: 24px !important;
+          }
+          .admin-content {
+            padding: 32px 40px !important;
+            max-width: 2600px !important;
+          }
+        }
+      `}</style>
       {/* ── SIDEBAR ─────────────────────────────────────── */}
-      <aside style={styles.sidebar}>
+      <aside className="admin-sidebar" style={styles.sidebar}>
         <div style={styles.sidebarHeader}>
           <div style={styles.logoRow}>
             <div style={styles.logoIcon}><Coffee size={20} color="#fff" /></div>
@@ -259,7 +316,7 @@ export default function MenuEngineeringClient() {
         </div>
 
         <nav style={styles.nav}>
-          <div style={styles.navSection}>
+          <div className="admin-nav-section" style={styles.navSection}>
             <div style={styles.navLabel}>Menu Engineering</div>
             {(['A','B','C']).map(tab => {
               const labels = { A: 'Items & Pricing', B: 'Monthly Sales', C: 'Profitability' }
@@ -267,6 +324,7 @@ export default function MenuEngineeringClient() {
                 <button
                   key={tab}
                   id={`tab-${tab}`}
+                  className="admin-nav-item"
                   onClick={() => setActiveTab(tab)}
                   style={{
                     ...styles.navItem,
@@ -289,7 +347,7 @@ export default function MenuEngineeringClient() {
           </div>
         </nav>
 
-        <div style={styles.sidebarFooter}>
+        <div className="admin-sidebar-footer" style={styles.sidebarFooter}>
           <div style={styles.chefLink}>
             <a
               href="/menu-engineering/view"
@@ -327,11 +385,11 @@ export default function MenuEngineeringClient() {
       </aside>
 
       {/* ── MAIN ────────────────────────────────────────── */}
-      <main style={styles.main}>
+      <main className="admin-main" style={styles.main}>
         {/* Top bar */}
-        <div style={styles.topBar}>
+        <div className="admin-topbar" style={styles.topBar}>
           <div style={styles.topBarLeft}>
-            <h1 style={styles.pageTitle}>
+            <h1 className="admin-page-title" style={styles.pageTitle}>
               {activeTab === 'A' && 'Items & Pricing'}
               {activeTab === 'B' && 'Monthly Sales & Classification'}
               {activeTab === 'C' && 'Business Profitability'}
@@ -339,7 +397,7 @@ export default function MenuEngineeringClient() {
           </div>
 
           {/* Month/Year Picker & Theme Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <a
               href="/menu-engineering/view"
               target="_blank"
@@ -393,7 +451,7 @@ export default function MenuEngineeringClient() {
         </div>
 
         {/* Section content */}
-        <div style={styles.content}>
+        <div className="admin-content" style={styles.content}>
           {activeTab === 'A' && (
             <SectionA
               items={items}
