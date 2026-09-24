@@ -11,8 +11,8 @@ export function middleware(request) {
   // ── Costing module route protection ──────────────────────
   const hasCostingCookie = request.cookies.has(COOKIE_NAME)
 
-  // /menu-costings/** routes (except /menu-costings/login)
-  if (path.startsWith('/menu-costings') && !path.startsWith('/menu-costings/login')) {
+  // /menu-costings/** routes (except /menu-costings/login and /menu-costings/view)
+  if (path.startsWith('/menu-costings') && !path.startsWith('/menu-costings/login') && !path.startsWith('/menu-costings/view')) {
     if (!hasCostingCookie) {
       return NextResponse.redirect(new URL('/menu-costings/login', request.url))
     }
