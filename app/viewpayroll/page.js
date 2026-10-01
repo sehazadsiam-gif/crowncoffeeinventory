@@ -787,7 +787,30 @@ export default function ViewPayrollPage() {
       return
     }
 
+    // Custom passcode override: Esa (Commis 3) uses 'esakhan@cc' or 'esakhan'
+    if (namePart === 'esakhan') {
+      const esaCommis = staff.find(s =>
+        s.id === 'fc267adb-582a-4617-b932-ebf34b8b593a' ||
+        (s.name.trim().toLowerCase() === 'esa' && (s.designation || '').toLowerCase().includes('commis'))
+      )
+      if (esaCommis) {
+        const session = { role: 'staff', staff: esaCommis }
+        sessionStorage.setItem('cc_viewpayroll_session', JSON.stringify(session))
+        setAuthRole('staff')
+        setAuthStaff(esaCommis)
+        setPasswordInput('')
+        return
+      }
+    }
+
     const matches = staff.filter(s => {
+      // If staff is Esa (Commis 3), his dedicated passcode is esakhan@cc; do not match generic 'esa'
+      const isEsaCommis = s.id === 'fc267adb-582a-4617-b932-ebf34b8b593a' ||
+        (s.name.trim().toLowerCase() === 'esa' && (s.designation || '').toLowerCase().includes('commis'))
+      if (isEsaCommis && (namePart === 'esa' || namePart === 'esa@cc')) {
+        return false
+      }
+
       const sName = s.name.trim().toLowerCase()
       const firstName = sName.split(/\s+/)[0]
       const noSpaces = sName.replace(/\s+/g, '')
