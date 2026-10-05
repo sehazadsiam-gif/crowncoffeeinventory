@@ -49,7 +49,7 @@ export async function POST(request) {
           const netMins = Math.max(0, elapsedMins - breakMins)
           const hoursWorked = Math.round((netMins / 60) * 100) / 100
 
-          const otThresholdHours = 11.0
+          const otThresholdHours = 10.0
           const overtimeHours = hoursWorked > otThresholdHours ? Math.round((hoursWorked - otThresholdHours) * 100) / 100 : 0
           const overtimeMins = Math.round(overtimeHours * 60)
 
