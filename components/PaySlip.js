@@ -28,16 +28,19 @@ export default function PaySlip({ data, onClose }) {
   const paidBorderColor = payroll.is_paid ? '#1e8e3e' : '#d93025'
   const paidTextColor = payroll.is_paid ? '#1e8e3e' : '#d93025'
 
+  const totalFoodAmount = Number(payroll.lunch_dinner || 0) + Number(payroll.morning_food || 0)
+  const foodDays = payroll.present_days || (totalFoodAmount > 0 ? Math.round(totalFoodAmount / 140) : (Number(payroll.night_days || 0) + Number(payroll.morning_days || 0)))
+
   const earnings = [
     { label: 'Base Salary', amount: Number(base_salary) },
     { label: overtimeLabel, amount: Number(payroll.overtime_pay) },
     { label: 'Service Charge', amount: Number(payroll.service_charge) },
     { label: 'Bonus', amount: Number(payroll.bonus) },
     {
-      label: (payroll.present_days || (Number(payroll.night_days || 0) + Number(payroll.morning_days || 0)))
-        ? `Food Allowance (${payroll.present_days || (Number(payroll.night_days || 0) + Number(payroll.morning_days || 0))}d @ ৳140)`
+      label: foodDays
+        ? `Food Allowance (${foodDays}d @ ৳140)`
         : 'Food Allowance (@ ৳140)',
-      amount: Number(payroll.lunch_dinner || 0) + Number(payroll.morning_food || 0)
+      amount: totalFoodAmount
     }
   ]
 

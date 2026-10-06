@@ -431,8 +431,9 @@ export default function ViewPayrollPage() {
 
   async function fetchPayroll(m, y) {
     try {
-      const startDate = new Date(y, m - 1, 1).toISOString().split('T')[0]
-      const endDate = new Date(y, m, 0).toISOString().split('T')[0]
+      const startDate = `${y}-${String(m).padStart(2, '0')}-01`
+      const lastDay = new Date(y, m, 0).getDate()
+      const endDate = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
 
       let activeStaffList = []
       try {
@@ -627,8 +628,31 @@ export default function ViewPayrollPage() {
         const summary = summaryMap[s.id]
         const reportEntry = reportStaffMap[s.id]
 
-        const lateDays = reportEntry ? reportEntry.late : (summary ? Number(summary.late_days ?? summary.total_late ?? 0) : (logLateMap[s.id] || lateMap[s.id] || 0))
-        const presentCount = reportEntry ? reportEntry.total_days_worked : (summary ? Number(summary.present_days ?? summary.total_present ?? 0) : (logPresentMap[s.id] || presentMap[s.id] || 0))
+        const lateDays = (reportEntry && reportEntry.total_days_worked > 0)
+          ? reportEntry.late
+          : (summary ? Number(summary.late_days ?? summary.total_late ?? 0) : (logLateMap[s.id] || lateMap[s.id] || 0))
+
+        let presentCount = 0
+        if (reportEntry && reportEntry.total_days_worked > 0) {
+          // reportEntry.total_days_worked includes both present and late days
+          presentCount = reportEntry.total_days_worked
+        } else if (logPresentMap[s.id] !== undefined && logPresentMap[s.id] > 0) {
+          // logPresentMap already combines present + late from attendance_log
+          presentCount = logPresentMap[s.id]
+        } else if (summary) {
+          const sumPres = Number(summary.present_days ?? summary.total_present ?? 0)
+          const sumLate = Number(summary.late_days ?? summary.total_late ?? 0)
+          const sumAbs = Number(summary.absent_days ?? summary.total_absent ?? 0)
+          // If sumPres + sumLate + sumAbs <= 31 and sumLate > 0, sumPres was on-time only, so add late days for total worked days
+          if (sumPres + sumLate + sumAbs <= 31 && sumLate > 0) {
+            presentCount = sumPres + sumLate
+          } else {
+            presentCount = sumPres
+          }
+        } else {
+          // Direct attendance table: combine on-time present and late days
+          presentCount = (presentMap[s.id] || 0) + (lateMap[s.id] || 0)
+        }
 
         const explicitOffAbsent = (logAbsentMap[s.id] || 0) + (logOffMap[s.id] || 0)
         const unworkedDays = Math.max(0, 30 - presentCount)
@@ -644,7 +668,8 @@ export default function ViewPayrollPage() {
 
         const morningDays = reportEntry ? reportEntry.morning_days : (defaultShift === 'night' ? loggedMorning : loggedMorning + unassigned)
         const nightDays = reportEntry ? reportEntry.night_days : (defaultShift === 'night' ? loggedNight + unassigned : loggedNight)
-        const autoFoodTotal = reportEntry ? reportEntry.total_food : (presentCount * 140)
+        // Food allowance: flat ৳140/day for all worked days (both on-time and late)
+        const autoFoodTotal = (reportEntry && reportEntry.total_food > 0) ? reportEntry.total_food : (presentCount * 140)
         const autoMorningFood = 0
         const autoLunchDinner = autoFoodTotal
 

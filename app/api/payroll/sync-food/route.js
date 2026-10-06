@@ -23,16 +23,17 @@ export async function GET(request) {
 
     if (sErr) throw sErr
 
-    const { data: rawLogs, error: lErr } = await supabaseAdmin
-      .from('attendance_log')
-      .select('*')
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: true })
+    const [rawLogsRes, summaryRes, attRes] = await Promise.all([
+      supabaseAdmin.from('attendance_log').select('*').gte('date', startDate).lte('date', endDate).order('date', { ascending: true }),
+      supabaseAdmin.from('monthly_attendance_summary').select('*').eq('month', month).eq('year', year),
+      supabaseAdmin.from('attendance').select('staff_id, status').gte('date', startDate).lte('date', endDate)
+    ])
 
-    if (lErr) throw lErr
+    const rawLogs = rawLogsRes.data || []
+    const summaryList = summaryRes.data || []
+    const attList = attRes.data || []
 
-    const logs = injectAugustBaselineLogs(rawLogs || [], staff || [], startDate, endDate)
+    const logs = injectAugustBaselineLogs(rawLogs, staff || [], startDate, endDate)
     const { data: payrollEntries, error: pErr } = await supabaseAdmin
       .from('payroll_entries')
       .select('*')
@@ -54,7 +55,20 @@ export async function GET(request) {
         else nightDays++
       })
 
-      const totalFood = sLogs.length * 140
+      let totalDaysWorked = sLogs.length
+      if (totalDaysWorked === 0) {
+        const sumRecord = summaryList.find(r => r.staff_id === s.id)
+        if (sumRecord) {
+          const sumPres = Number(sumRecord.present_days ?? sumRecord.total_present ?? 0)
+          const sumLate = Number(sumRecord.late_days ?? sumRecord.total_late ?? 0)
+          const sumAbs = Number(sumRecord.absent_days ?? sumRecord.total_absent ?? 0)
+          totalDaysWorked = (sumPres + sumLate + sumAbs <= 31 && sumLate > 0) ? (sumPres + sumLate) : sumPres
+        } else {
+          totalDaysWorked = attList.filter(a => a.staff_id === s.id && (a.status === 'present' || a.status === 'late')).length
+        }
+      }
+
+      const totalFood = totalDaysWorked * 140
       const morningFood = 0
       const lunchDinner = totalFood
 
