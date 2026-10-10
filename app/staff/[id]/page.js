@@ -265,7 +265,7 @@ export default function StaffProfile() {
                 <tr>
                   <td>${monthNames[p.month - 1]} ${p.year}</td>
                   <td>৳${Number(staff.base_salary).toLocaleString()}</td>
-                  <td>৳${Number(p.overtime_pay || 0).toLocaleString()}</td>
+                  <td>৳${Math.round(Number(p.overtime_pay || 0)).toLocaleString()}</td>
                   <td>৳${Number(p.bonus || 0).toLocaleString()}</td>
                   <td>৳${Number(p.advance_taken || 0).toLocaleString()}</td>
                   <td>৳${Number(p.final_salary).toLocaleString()}</td>

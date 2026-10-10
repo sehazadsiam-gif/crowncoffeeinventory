@@ -44,7 +44,7 @@ export async function POST(request) {
       month: Number(month),
       year: Number(year),
       overtime_hours: Number(overtime_hours) || 0,
-      overtime_pay: Number(overtime_pay) || 0,
+      overtime_pay: Math.round(Number(overtime_pay)) || 0,
       service_charge: Number(service_charge) || 0,
       bonus: Number(bonus) || 0,
       lunch_dinner: Number(lunch_dinner) || 0,

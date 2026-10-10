@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { X, Calculator, Users, ChevronDown, RotateCcw, CheckCircle } from 'lucide-react'
+import { calculateOvertimePay } from '../lib/overtime'
 
 export default function PayrollCalculator({ staff, payroll, waivedStaff, month, year, monthName, onApply, onClose }) {
   const [tab, setTab] = useState('single') // 'single' | 'all' | 'calc'
@@ -84,10 +85,10 @@ export default function PayrollCalculator({ staff, payroll, waivedStaff, month, 
     if (!s || !p) return { gross: 0, deductions: 0, net: 0, breakdown: {} }
     const base = Number(s.base_salary) || 0
     const perDay = Math.round(base / 30)
-    const perHourRate = s.hourly_rate || Math.floor(Math.floor(base / 30) / 10)
+    const perHourRate = s.hourly_rate ? Number(s.hourly_rate) : Math.floor(Math.floor(base / 30) / 10)
     const ot = p.overtime_pay !== undefined && p.overtime_pay !== null && p.overtime_pay !== ''
-      ? Number(p.overtime_pay)
-      : (Number(p.overtime_hours) || 0) * perHourRate
+      ? Math.round(Number(p.overtime_pay))
+      : calculateOvertimePay(p.overtime_hours, perHourRate)
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
     const lunch = Number(p.lunch_dinner) || 0
@@ -124,8 +125,8 @@ export default function PayrollCalculator({ staff, payroll, waivedStaff, month, 
       const updated = { ...prev, [field]: value }
       if (field === 'overtime_hours') {
         const s = staff.find(st => st.id === selectedId)
-        const perHourRate = s?.hourly_rate || Math.floor(Math.floor((Number(s?.base_salary) || 0) / 30) / 10)
-        updated.overtime_pay = (Number(value) || 0) * perHourRate
+        const perHourRate = s?.hourly_rate ? Number(s.hourly_rate) : Math.floor(Math.floor((Number(s?.base_salary) || 0) / 30) / 10)
+        updated.overtime_pay = calculateOvertimePay(value, perHourRate)
       }
       return updated
     })
@@ -277,7 +278,7 @@ export default function PayrollCalculator({ staff, payroll, waivedStaff, month, 
                 <p style={{ margin: '0 0 10px 0', fontSize: '11px', fontWeight: 800, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em' }}>+ Earnings</p>
                 {[
                   { label: 'Base Salary', field: null, val: `৳${(Number(selectedStaff?.base_salary) || 0).toLocaleString()}` },
-                  { label: 'Overtime Hours', field: 'overtime_hours', type: 'hours', extra: `= ৳${Number(sandbox.overtime_pay || 0).toLocaleString()}` },
+                  { label: 'Overtime Hours', field: 'overtime_hours', type: 'hours', extra: `= ৳${Math.round(Number(sandbox.overtime_pay || 0)).toLocaleString()}` },
                   { label: 'Service Charge', field: 'service_charge', type: 'money' },
                   { label: 'Bonus', field: 'bonus', type: 'money' },
                   { label: 'Lunch + Dinner', field: 'lunch_dinner', type: 'money' },

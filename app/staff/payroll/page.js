@@ -7,6 +7,7 @@ import { useToast } from '../../../components/Toast'
 import { Printer, Plus, Trash2, X, History, ChevronUp, ChevronDown, Calculator, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react'
 import PayrollCalculator from '../../../components/PayrollCalculator'
 import dynamic from 'next/dynamic'
+import { calculateOvertimePay } from '../../../lib/overtime'
 
 function getShiftType(log, staffDefaultShift = '11:00') {
   if (log?.check_in_at) {
@@ -242,7 +243,7 @@ export default function PayrollPage() {
         }
         if (l.status === 'absent') logAbsentMap[l.staff_id] = (logAbsentMap[l.staff_id] || 0) + 1
         if (l.status === 'off') logOffMap[l.staff_id] = (logOffMap[l.staff_id] || 0) + 1
-        const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 660)
+        const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 600)
         logOtMap[l.staff_id] = (logOtMap[l.staff_id] || 0) + (otMins / 60)
       })
 
@@ -332,9 +333,9 @@ export default function PayrollPage() {
         const trackedOt = otMap[s.id]?.hours || 0
         const autoOtHours = summaryOtHours > 0 ? summaryOtHours : (trackedOt > 0 ? trackedOt : logOt)
 
-        const hourlyRate = s.hourly_rate || Math.floor(Math.round((Number(s.base_salary) || 0) / 30) / 10)
+        const hourlyRate = s.hourly_rate ? Number(s.hourly_rate) : Math.floor(Math.round((Number(s.base_salary) || 0) / 30) / 10)
         const summaryOtPay = summary ? Number(summary.overtime_pay ?? summary.total_overtime_pay ?? 0) : 0
-        const autoOtPay = summaryOtPay > 0 ? summaryOtPay : (otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate))
+        const autoOtPay = summaryOtPay > 0 ? Math.round(summaryOtPay) : calculateOvertimePay(autoOtHours, hourlyRate)
 
         if (!payMap[s.id]) {
           payMap[s.id] = {
@@ -448,10 +449,10 @@ export default function PayrollPage() {
   function calculateFinalSalary(s, p, isLateWaived) {
     if (!s || !p) return 0
     const base = Number(s.base_salary) || 0
-    const perHourRate = s.hourly_rate || Math.floor(Math.floor(base / 30) / 10)
+    const perHourRate = s.hourly_rate ? Number(s.hourly_rate) : Math.floor(Math.floor(base / 30) / 10)
     const ot = p.overtime_pay !== undefined && p.overtime_pay !== null && p.overtime_pay !== ''
-      ? Number(p.overtime_pay)
-      : (Number(p.overtime_hours) || 0) * perHourRate
+      ? Math.round(Number(p.overtime_pay))
+      : calculateOvertimePay(p.overtime_hours, perHourRate)
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0
     const lunch = Number(p.lunch_dinner) || 0
@@ -502,7 +503,7 @@ export default function PayrollPage() {
         month: Number(row.month || month),
         year: Number(row.year || year),
         overtime_hours: Number(row.overtime_hours) || 0,
-        overtime_pay: Number(row.overtime_pay) || 0,
+        overtime_pay: Math.round(Number(row.overtime_pay)) || 0,
         service_charge: Number(row.service_charge) || 0,
         bonus: Number(row.bonus) || 0,
         lunch_dinner: Number(row.lunch_dinner) || 0,
@@ -583,8 +584,8 @@ export default function PayrollPage() {
         const autoVal = row.overtime_auto_hours || 0
         row.overtime_manual = Number(value) !== autoVal
         const s = staffRef.current.find(st => st.id === staffId)
-        const perHourRate = s?.hourly_rate || Math.floor(Math.round((Number(s?.base_salary) || 0) / 30) / 10)
-        row.overtime_pay = (Number(value) || 0) * perHourRate
+        const perHourRate = s?.hourly_rate ? Number(s.hourly_rate) : Math.floor(Math.round((Number(s?.base_salary) || 0) / 30) / 10)
+        row.overtime_pay = calculateOvertimePay(value, perHourRate)
       }
       if (field === 'lunch_dinner') {
         const autoVal = row.lunch_dinner_auto || 0
@@ -992,7 +993,7 @@ export default function PayrollPage() {
                           <button
                             onClick={() => {
                               const autoHours = row.overtime_auto_hours || 0
-                              const autoPay = row.overtime_auto_pay || 0
+                              const autoPay = Math.round(row.overtime_auto_pay || 0)
                               const updatedRow = {
                                 ...row,
                                 overtime_hours: autoHours,
@@ -1009,7 +1010,7 @@ export default function PayrollPage() {
                             }}
                           >Reset</button>
                         )}
-                        {Number(row.overtime_pay) > 0 && <p style={{ fontSize: '10px', color: '#34D399', margin: '2px 0 0 0', fontWeight: 700 }}>+৳{row.overtime_pay}</p>}
+                        {Number(row.overtime_pay) > 0 && <p style={{ fontSize: '10px', color: '#34D399', margin: '2px 0 0 0', fontWeight: 700 }}>+৳{Math.round(Number(row.overtime_pay)).toLocaleString()}</p>}
                       </td>
                       <td style={{ padding: '12px 8px' }}>
                         <input

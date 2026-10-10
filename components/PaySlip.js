@@ -23,7 +23,8 @@ export default function PaySlip({ data, onClose }) {
   const { staff, payroll, month, year } = data
   const { base_salary, per_hour_rate } = staff
 
-  const overtimeLabel = 'Overtime (' + (payroll.overtime_hours || 0) + ' hrs @ ' + Math.round(per_hour_rate || 0) + ')'
+  const effectiveHourlyRate = staff.hourly_rate ? Math.round(Number(staff.hourly_rate)) : (staff.per_hour_rate ? Math.round(Number(staff.per_hour_rate)) : Math.round(Number(base_salary || 0) / 300))
+  const overtimeLabel = 'Overtime (' + (payroll.overtime_hours || 0) + ' hrs @ ' + effectiveHourlyRate + ')'
   const miscLabel = 'Miscellaneous' + (payroll.miscellaneous_note ? ' (' + payroll.miscellaneous_note + ')' : '')
   const paidBorderColor = payroll.is_paid ? '#1e8e3e' : '#d93025'
   const paidTextColor = payroll.is_paid ? '#1e8e3e' : '#d93025'
@@ -33,7 +34,7 @@ export default function PaySlip({ data, onClose }) {
 
   const earnings = [
     { label: 'Base Salary', amount: Number(base_salary) },
-    { label: overtimeLabel, amount: Number(payroll.overtime_pay) },
+    { label: overtimeLabel, amount: Math.round(Number(payroll.overtime_pay || 0)) },
     { label: 'Service Charge', amount: Number(payroll.service_charge) },
     { label: 'Bonus', amount: Number(payroll.bonus) },
     {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '../../../../lib/supabase'
+import { parseOvertimeHoursToDecimal, calculateOvertimePay } from '../../../../lib/overtime'
 
 export function getShiftType(log, staffDefaultShift = '11:00') {
   if (log?.check_in_at) {
@@ -296,7 +297,7 @@ export async function POST(request) {
         if (totalMins > 960) totalMins = 960 // Safety Cap: 16 hours max per shift
         const netMins = Math.max(0, totalMins - breakDurationMin)
         computedHoursWorked = Math.round((netMins / 60) * 100) / 100
-        computedOvertimeMins = Math.max(0, netMins - 660)
+        computedOvertimeMins = Math.max(0, netMins - 600)
       } else if (status === 'present' || status === 'late') {
         computedHoursWorked = 10.0
       }
@@ -306,7 +307,7 @@ export async function POST(request) {
         : computedHoursWorked
 
       const finalOvertimeMins = (overtime_hours !== undefined && overtime_hours !== null && overtime_hours !== '')
-        ? Math.round(parseFloat(overtime_hours) * 60)
+        ? Math.round(parseOvertimeHoursToDecimal(overtime_hours) * 60)
         : computedOvertimeMins
 
       const updateData = {
@@ -448,8 +449,8 @@ export async function POST(request) {
         }, 0) * 100) / 100
 
         const base = Number(s.base_salary) || 0
-        const hourlyRate = s.hourly_rate || Math.floor(Math.round(base / 30) / 10)
-        const sOvertimePay = Math.round(sOvertimeHours * hourlyRate)
+        const hourlyRate = s.hourly_rate ? Number(s.hourly_rate) : Math.floor(Math.round(base / 30) / 10)
+        const sOvertimePay = calculateOvertimePay(sOvertimeHours, hourlyRate)
 
         return {
           staff_id: s.id,

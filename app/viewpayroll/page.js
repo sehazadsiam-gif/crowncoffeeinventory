@@ -13,6 +13,7 @@ import dynamic from 'next/dynamic'
 
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
 import { normalizeShiftTime } from '../../lib/roster-utils'
+import { calculateOvertimePay } from '../../lib/overtime'
 
 function getShiftType(log, staffDefaultShift = '11:00') {
   if (log?.shift_type) return log.shift_type
@@ -579,7 +580,7 @@ export default function ViewPayrollPage() {
         }
         if (l.status === 'absent') logAbsentMap[l.staff_id] = (logAbsentMap[l.staff_id] || 0) + 1
         if (l.status === 'off') logOffMap[l.staff_id] = (logOffMap[l.staff_id] || 0) + 1
-        const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 660)
+        const otMins = l.overtime_minutes || Math.max(0, Math.round((l.hours_worked || 0) * 60) - 600)
         logOtMap[l.staff_id] = (logOtMap[l.staff_id] || 0) + (otMins / 60)
       })
 
@@ -682,9 +683,9 @@ export default function ViewPayrollPage() {
         const trackedOt = otMap[s.id]?.hours || 0
         const autoOtHours = summaryOtHours > 0 ? summaryOtHours : (trackedOt > 0 ? trackedOt : logOt)
 
-        const hourlyRate = s.hourly_rate || Math.floor(Math.round((Number(s.base_salary) || 0) / 30) / 10)
+        const hourlyRate = s.hourly_rate ? Number(s.hourly_rate) : Math.floor(Math.round((Number(s.base_salary) || 0) / 30) / 10)
         const summaryOtPay = summary ? Number(summary.overtime_pay ?? summary.total_overtime_pay ?? 0) : 0
-        const autoOtPay = summaryOtPay > 0 ? summaryOtPay : (otMap[s.id]?.pay || Math.round(autoOtHours * hourlyRate))
+        const autoOtPay = summaryOtPay > 0 ? Math.round(summaryOtPay) : calculateOvertimePay(autoOtHours, hourlyRate)
 
         // Compute total hours worked for the month
         const staffDaily = dailyMap[s.id] || {}
@@ -912,12 +913,12 @@ export default function ViewPayrollPage() {
 
     const base = Number(s.base_salary) || 0
     const perDay = Math.round(base / 30)
-    const hourlyRate = s.hourly_rate || Math.floor(perDay / 10)
+    const hourlyRate = s.hourly_rate ? Number(s.hourly_rate) : Math.floor(perDay / 10)
 
     const otHours = Number(p.overtime_hours) || 0
     const otPay = p.overtime_pay !== undefined && p.overtime_pay !== null && p.overtime_pay !== ''
-      ? Number(p.overtime_pay)
-      : otHours * hourlyRate
+      ? Math.round(Number(p.overtime_pay))
+      : calculateOvertimePay(p.overtime_hours, hourlyRate)
 
     const sc = Number(p.service_charge) || 0
     const bonus = Number(p.bonus) || 0

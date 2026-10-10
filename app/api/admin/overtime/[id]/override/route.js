@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../../../../lib/supabase';
+import { parseOvertimeHoursToDecimal, calculateOvertimePay } from '../../../../../../lib/overtime';
 
 export async function PATCH(request, { params }) {
   try {
@@ -27,10 +28,14 @@ export async function PATCH(request, { params }) {
         updated_at: new Date().toISOString()
       };
     } else {
+      const hoursDec = parseOvertimeHoursToDecimal(manual_overtime_hours);
+      const payVal = manual_overtime_pay !== undefined && manual_overtime_pay !== null && manual_overtime_pay !== ''
+        ? Math.round(Number(manual_overtime_pay))
+        : calculateOvertimePay(hoursDec, existingLog.hourly_rate);
       updateData = {
         manual_override: true,
-        manual_overtime_hours: Number(manual_overtime_hours),
-        manual_overtime_pay: Number(manual_overtime_pay),
+        manual_overtime_hours: hoursDec,
+        manual_overtime_pay: payVal,
         notes,
         updated_at: new Date().toISOString()
       };
@@ -80,7 +85,7 @@ export async function PATCH(request, { params }) {
       .from('staff')
       .update({
         overtime_hours_month: Number(total_ot_hours.toFixed(2)),
-        overtime_pay_month: Number(total_ot_pay.toFixed(2))
+        overtime_pay_month: Math.round(total_ot_pay)
       })
       .eq('id', existingLog.staff_id);
 
