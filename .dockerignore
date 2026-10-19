@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.agents
+scratch
+*.sql
+*.bat
+nohup.out
+.DS_Store

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import * as XLSX from 'xlsx'
 import Navbar from '../../../components/Navbar'
@@ -30,7 +30,8 @@ import {
   Columns,
   Rows,
   X,
-  AlertCircle
+  AlertCircle,
+  CheckSquare
 } from 'lucide-react'
 
 const DEFAULT_COL_COUNT = 6
@@ -62,7 +63,7 @@ function createDefaultColumns(count = DEFAULT_COL_COUNT) {
     key: `col_${i + 1}`,
     letter: getColumnLetter(i),
     title: initialTitles[i] || `Column ${getColumnLetter(i)}`,
-    width: i === 0 ? 170 : i === 1 ? 170 : i === 2 ? 140 : i === 3 ? 240 : 130
+    width: i === 0 ? 180 : i === 1 ? 170 : i === 2 ? 140 : i === 3 ? 240 : 130
   }))
 }
 
@@ -94,11 +95,22 @@ export default function RoughSheetPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState(null)
+  const [isCloudSynced, setIsCloudSynced] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   // Selection & Navigation State
   const [activeCell, setActiveCell] = useState({ row: 0, col: 0 })
-  const [editingCell, setEditingCell] = useState(null) // { row, col } or null
+  const [selection, setSelection] = useState({
+    mode: 'cells', // 'cells' | 'rows' | 'cols' | 'all'
+    startRow: 0,
+    startCol: 0,
+    endRow: 0,
+    endCol: 0,
+    selectedRowIndices: [],
+    selectedColIndices: []
+  })
+
+  const [editingCell, setEditingCell] = useState(null) // { row, col, initialValue } or null
   const [formulaValue, setFormulaValue] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [editingHeaderKey, setEditingHeaderKey] = useState(null)
@@ -109,10 +121,14 @@ export default function RoughSheetPage() {
   // Cell Styles Map { "row_col": { bold: true, italic: true, bg: '#fff' } }
   const [cellStyles, setCellStyles] = useState({})
 
-  // File upload ref
+  // File upload ref & input refs
   const fileInputRef = useRef(null)
   const gridContainerRef = useRef(null)
   const cellInputRef = useRef(null)
+
+  // Mouse drag selection refs
+  const isMouseDownRef = useRef(false)
+  const dragAnchorRef = useRef({ row: 0, col: 0, type: 'cell' })
 
   // Auth gate
   useEffect(() => {
@@ -144,6 +160,8 @@ export default function RoughSheetPage() {
         })
         setSheets(formatted)
         setCellStyles(formatted[0]?.styles || {})
+        setIsCloudSynced(true)
+        setLastSaved('Cloud Synced')
       } else {
         // Fallback to local storage or initial defaults
         const cached = localStorage.getItem('cc_rough_sheets_backup')
@@ -153,6 +171,8 @@ export default function RoughSheetPage() {
             if (Array.isArray(parsed) && parsed.length > 0) {
               setSheets(parsed)
               setCellStyles(parsed[0]?.styles || {})
+              setIsCloudSynced(false)
+              setLastSaved('Local Backup')
               setLoading(false)
               return
             }
@@ -179,9 +199,23 @@ export default function RoughSheetPage() {
           }
         ]
         setSheets(initial)
+        setIsCloudSynced(false)
+        setLastSaved('Ready')
       }
     } catch (err) {
       console.error('Error loading sheets:', err)
+      const cached = localStorage.getItem('cc_rough_sheets_backup')
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSheets(parsed)
+            setCellStyles(parsed[0]?.styles || {})
+          }
+        } catch (e) {}
+      }
+      setIsCloudSynced(false)
+      setLastSaved('Offline')
       addToast('Working in offline/local mode', 'info')
     } finally {
       setLoading(false)
@@ -199,6 +233,15 @@ export default function RoughSheetPage() {
     styles: {}
   }
 
+  // Global mouse up for selection drag release
+  useEffect(() => {
+    const handleMouseUp = () => {
+      isMouseDownRef.current = false
+    }
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => window.removeEventListener('mouseup', handleMouseUp)
+  }, [])
+
   // Update formula bar value when active cell changes
   useEffect(() => {
     if (!currentSheet || !currentSheet.columns || !currentSheet.data) return
@@ -212,9 +255,9 @@ export default function RoughSheetPage() {
   // Save changes to API & LocalStorage
   const handleSave = useCallback(async (customSheets) => {
     const sheetsToSave = customSheets || sheets
+    if (!sheetsToSave || sheetsToSave.length === 0) return
     setSaving(true)
     try {
-      // Save locally first
       localStorage.setItem('cc_rough_sheets_backup', JSON.stringify(sheetsToSave))
 
       const res = await fetch('/api/rough-sheets', {
@@ -225,17 +268,20 @@ export default function RoughSheetPage() {
       const result = await res.json()
       if (result.success) {
         setHasUnsavedChanges(false)
-        setLastSaved(new Date().toLocaleTimeString())
+        setIsCloudSynced(true)
+        setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
         addToast('All changes saved to cloud!', 'success')
       } else {
         setHasUnsavedChanges(false)
-        setLastSaved(new Date().toLocaleTimeString() + ' (Local)')
+        setIsCloudSynced(false)
+        setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (Local)')
         addToast('Saved locally in browser!', 'info')
       }
     } catch (err) {
       console.error('Save failed:', err)
       setHasUnsavedChanges(false)
-      setLastSaved(new Date().toLocaleTimeString() + ' (Local)')
+      setIsCloudSynced(false)
+      setLastSaved(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (Local)')
       addToast('Saved locally in browser!', 'info')
     } finally {
       setSaving(false)
@@ -251,20 +297,32 @@ export default function RoughSheetPage() {
     return () => clearTimeout(timer)
   }, [hasUnsavedChanges, handleSave])
 
-  // Keyboard shortcut Ctrl+S / Cmd+S
+  // Keyboard shortcut Ctrl+S / Cmd+S & Select All Ctrl+A
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault()
         handleSave()
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return
+        e.preventDefault()
+        setSelection({
+          mode: 'all',
+          startRow: 0,
+          startCol: 0,
+          endRow: currentSheet.data.length - 1,
+          endCol: currentSheet.columns.length - 1,
+          selectedRowIndices: [],
+          selectedColIndices: []
+        })
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleSave])
+  }, [handleSave, currentSheet])
 
   // Update a single cell value
-  const updateCellValue = (rowIndex, colIndex, value) => {
+  const updateCellValue = useCallback((rowIndex, colIndex, value) => {
     setSheets(prevSheets => {
       const newSheets = [...prevSheets]
       const targetSheet = { ...newSheets[activeSheetIndex] }
@@ -282,7 +340,7 @@ export default function RoughSheetPage() {
     })
     setFormulaValue(value)
     setHasUnsavedChanges(true)
-  }
+  }, [activeSheetIndex])
 
   // Formula bar input changes
   const handleFormulaChange = (e) => {
@@ -291,55 +349,459 @@ export default function RoughSheetPage() {
     updateCellValue(activeCell.row, activeCell.col, val)
   }
 
-  // Navigation with Arrow keys, Enter, Tab
+  // --- SELECTION HELPERS & CHECKERS ---
+  const isCellSelected = useCallback((r, c) => {
+    if (selection.mode === 'all') return true
+    if (selection.mode === 'rows') {
+      if (selection.selectedRowIndices?.length > 0) {
+        return selection.selectedRowIndices.includes(r)
+      }
+      const minR = Math.min(selection.startRow, selection.endRow)
+      const maxR = Math.max(selection.startRow, selection.endRow)
+      return r >= minR && r <= maxR
+    }
+    if (selection.mode === 'cols') {
+      if (selection.selectedColIndices?.length > 0) {
+        return selection.selectedColIndices.includes(c)
+      }
+      const minC = Math.min(selection.startCol, selection.endCol)
+      const maxC = Math.max(selection.startCol, selection.endCol)
+      return c >= minC && c <= maxC
+    }
+    // 'cells' mode
+    const minR = Math.min(selection.startRow, selection.endRow)
+    const maxR = Math.max(selection.startRow, selection.endRow)
+    const minC = Math.min(selection.startCol, selection.endCol)
+    const maxC = Math.max(selection.startCol, selection.endCol)
+    return r >= minR && r <= maxR && c >= minC && c <= maxC
+  }, [selection])
+
+  const isRowSelected = useCallback((r) => {
+    if (selection.mode === 'all') return true
+    if (selection.mode === 'rows') {
+      if (selection.selectedRowIndices?.length > 0) {
+        return selection.selectedRowIndices.includes(r)
+      }
+      const minR = Math.min(selection.startRow, selection.endRow)
+      const maxR = Math.max(selection.startRow, selection.endRow)
+      return r >= minR && r <= maxR
+    }
+    return false
+  }, [selection])
+
+  const isColSelected = useCallback((c) => {
+    if (selection.mode === 'all') return true
+    if (selection.mode === 'cols') {
+      if (selection.selectedColIndices?.length > 0) {
+        return selection.selectedColIndices.includes(c)
+      }
+      const minC = Math.min(selection.startCol, selection.endCol)
+      const maxC = Math.max(selection.startCol, selection.endCol)
+      return c >= minC && c <= maxC
+    }
+    return false
+  }, [selection])
+
+  // Extract all currently selected cells as array of { row, col }
+  const getSelectedCells = useCallback(() => {
+    const list = []
+    const totalR = currentSheet.data.length
+    const totalC = currentSheet.columns.length
+
+    if (selection.mode === 'all') {
+      for (let r = 0; r < totalR; r++) {
+        for (let c = 0; c < totalC; c++) {
+          list.push({ row: r, col: c })
+        }
+      }
+    } else if (selection.mode === 'rows') {
+      const rows = selection.selectedRowIndices?.length > 0
+        ? selection.selectedRowIndices
+        : Array.from(
+            { length: Math.abs(selection.endRow - selection.startRow) + 1 },
+            (_, i) => Math.min(selection.startRow, selection.endRow) + i
+          )
+      rows.forEach(r => {
+        if (r >= 0 && r < totalR) {
+          for (let c = 0; c < totalC; c++) {
+            list.push({ row: r, col: c })
+          }
+        }
+      })
+    } else if (selection.mode === 'cols') {
+      const cols = selection.selectedColIndices?.length > 0
+        ? selection.selectedColIndices
+        : Array.from(
+            { length: Math.abs(selection.endCol - selection.startCol) + 1 },
+            (_, i) => Math.min(selection.startCol, selection.endCol) + i
+          )
+      cols.forEach(c => {
+        if (c >= 0 && c < totalC) {
+          for (let r = 0; r < totalR; r++) {
+            list.push({ row: r, col: c })
+          }
+        }
+      })
+    } else {
+      const minR = Math.min(selection.startRow, selection.endRow)
+      const maxR = Math.max(selection.startRow, selection.endRow)
+      const minC = Math.min(selection.startCol, selection.endCol)
+      const maxC = Math.max(selection.startCol, selection.endCol)
+      for (let r = minR; r <= maxR && r < totalR; r++) {
+        for (let c = minC; c <= maxC && c < totalC; c++) {
+          list.push({ row: r, col: c })
+        }
+      }
+    }
+    return list
+  }, [currentSheet, selection])
+
+  // --- MOUSE SELECTION HANDLERS ---
+  const handleCellMouseDown = (e, rowIndex, colIndex) => {
+    if (editingCell) return
+
+    if (e.shiftKey) {
+      // Shift+Click: expand selection box from activeCell
+      setSelection({
+        mode: 'cells',
+        startRow: activeCell.row,
+        startCol: activeCell.col,
+        endRow: rowIndex,
+        endCol: colIndex,
+        selectedRowIndices: [],
+        selectedColIndices: []
+      })
+    } else {
+      // Regular click: reset to single cell and start drag
+      setActiveCell({ row: rowIndex, col: colIndex })
+      setSelection({
+        mode: 'cells',
+        startRow: rowIndex,
+        startCol: colIndex,
+        endRow: rowIndex,
+        endCol: colIndex,
+        selectedRowIndices: [],
+        selectedColIndices: []
+      })
+      isMouseDownRef.current = true
+      dragAnchorRef.current = { row: rowIndex, col: colIndex, type: 'cell' }
+    }
+  }
+
+  const handleCellMouseEnter = (rowIndex, colIndex) => {
+    if (!isMouseDownRef.current || dragAnchorRef.current.type !== 'cell') return
+    setSelection(prev => ({
+      ...prev,
+      mode: 'cells',
+      endRow: rowIndex,
+      endCol: colIndex,
+      selectedRowIndices: [],
+      selectedColIndices: []
+    }))
+  }
+
+  // Row header click and drag (multi-row selection)
+  const handleRowHeaderMouseDown = (e, rowIndex) => {
+    e.preventDefault()
+    const totalCols = currentSheet.columns.length - 1
+
+    if (e.ctrlKey || e.metaKey) {
+      // Toggle row in non-contiguous multi-row selection
+      const prevRows = selection.mode === 'rows' && selection.selectedRowIndices?.length > 0
+        ? [...selection.selectedRowIndices]
+        : [activeCell.row]
+
+      const newRows = prevRows.includes(rowIndex)
+        ? prevRows.filter(r => r !== rowIndex)
+        : [...prevRows, rowIndex]
+
+      setActiveCell({ row: rowIndex, col: 0 })
+      setSelection({
+        mode: 'rows',
+        startRow: rowIndex,
+        startCol: 0,
+        endRow: rowIndex,
+        endCol: totalCols,
+        selectedRowIndices: newRows,
+        selectedColIndices: []
+      })
+    } else if (e.shiftKey) {
+      // Shift+Click: range select rows
+      setSelection(prev => ({
+        mode: 'rows',
+        startRow: prev.startRow,
+        startCol: 0,
+        endRow: rowIndex,
+        endCol: totalCols,
+        selectedRowIndices: [],
+        selectedColIndices: []
+      }))
+    } else {
+      // Single row select and start drag
+      setActiveCell({ row: rowIndex, col: 0 })
+      setSelection({
+        mode: 'rows',
+        startRow: rowIndex,
+        startCol: 0,
+        endRow: rowIndex,
+        endCol: totalCols,
+        selectedRowIndices: [rowIndex],
+        selectedColIndices: []
+      })
+      isMouseDownRef.current = true
+      dragAnchorRef.current = { row: rowIndex, col: 0, type: 'row' }
+    }
+  }
+
+  const handleRowHeaderMouseEnter = (rowIndex) => {
+    if (!isMouseDownRef.current || dragAnchorRef.current.type !== 'row') return
+    const totalCols = currentSheet.columns.length - 1
+    setSelection(prev => ({
+      ...prev,
+      mode: 'rows',
+      endRow: rowIndex,
+      endCol: totalCols,
+      selectedRowIndices: []
+    }))
+  }
+
+  // Column header click and drag (multi-column selection)
+  const handleColumnHeaderMouseDown = (e, colIndex) => {
+    e.preventDefault()
+    const totalRows = currentSheet.data.length - 1
+
+    if (e.ctrlKey || e.metaKey) {
+      // Toggle column in non-contiguous multi-col selection
+      const prevCols = selection.mode === 'cols' && selection.selectedColIndices?.length > 0
+        ? [...selection.selectedColIndices]
+        : [activeCell.col]
+
+      const newCols = prevCols.includes(colIndex)
+        ? prevCols.filter(c => c !== colIndex)
+        : [...prevCols, colIndex]
+
+      setActiveCell({ row: 0, col: colIndex })
+      setSelection({
+        mode: 'cols',
+        startRow: 0,
+        startCol: colIndex,
+        endRow: totalRows,
+        endCol: colIndex,
+        selectedRowIndices: [],
+        selectedColIndices: newCols
+      })
+    } else if (e.shiftKey) {
+      // Shift+Click: range select columns
+      setSelection(prev => ({
+        mode: 'cols',
+        startRow: 0,
+        startCol: prev.startCol,
+        endRow: totalRows,
+        endCol: colIndex,
+        selectedRowIndices: [],
+        selectedColIndices: []
+      }))
+    } else {
+      // Single column select and start drag
+      setActiveCell({ row: 0, col: colIndex })
+      setSelection({
+        mode: 'cols',
+        startRow: 0,
+        startCol: colIndex,
+        endRow: totalRows,
+        endCol: colIndex,
+        selectedRowIndices: [],
+        selectedColIndices: [colIndex]
+      })
+      isMouseDownRef.current = true
+      dragAnchorRef.current = { row: 0, col: colIndex, type: 'col' }
+    }
+  }
+
+  const handleColumnHeaderMouseEnter = (colIndex) => {
+    if (!isMouseDownRef.current || dragAnchorRef.current.type !== 'col') return
+    const totalRows = currentSheet.data.length - 1
+    setSelection(prev => ({
+      ...prev,
+      mode: 'cols',
+      endRow: totalRows,
+      endCol: colIndex,
+      selectedRowIndices: [],
+      selectedColIndices: []
+    }))
+  }
+
+  // Select all via top-left corner '#'
+  const handleSelectAll = () => {
+    setActiveCell({ row: 0, col: 0 })
+    setSelection({
+      mode: 'all',
+      startRow: 0,
+      startCol: 0,
+      endRow: currentSheet.data.length - 1,
+      endCol: currentSheet.columns.length - 1,
+      selectedRowIndices: [],
+      selectedColIndices: []
+    })
+    addToast('Selected all cells', 'info')
+  }
+
+  // Navigation with Arrow keys, Enter, Tab, Shift+Arrows, Backspace, Ctrl+C
   const handleCellKeyDown = (e, rowIndex, colIndex) => {
+    // If inside cell inline editor
     if (editingCell) {
       if (e.key === 'Enter') {
         e.preventDefault()
+        const val = e.currentTarget.value
+        updateCellValue(rowIndex, colIndex, val)
         setEditingCell(null)
-        // Move to next row
-        if (rowIndex + 1 < currentSheet.data.length) {
-          setActiveCell({ row: rowIndex + 1, col: colIndex })
+        if (e.shiftKey) {
+          if (rowIndex > 0) {
+            setActiveCell({ row: rowIndex - 1, col: colIndex })
+            setSelection({ mode: 'cells', startRow: rowIndex - 1, startCol: colIndex, endRow: rowIndex - 1, endCol: colIndex, selectedRowIndices: [], selectedColIndices: [] })
+          }
+        } else {
+          if (rowIndex + 1 < currentSheet.data.length) {
+            setActiveCell({ row: rowIndex + 1, col: colIndex })
+            setSelection({ mode: 'cells', startRow: rowIndex + 1, startCol: colIndex, endRow: rowIndex + 1, endCol: colIndex, selectedRowIndices: [], selectedColIndices: [] })
+          }
         }
       } else if (e.key === 'Tab') {
         e.preventDefault()
+        const val = e.currentTarget.value
+        updateCellValue(rowIndex, colIndex, val)
         setEditingCell(null)
-        // Move to next col
-        if (colIndex + 1 < currentSheet.columns.length) {
-          setActiveCell({ row: rowIndex, col: colIndex + 1 })
+        if (e.shiftKey) {
+          if (colIndex > 0) {
+            setActiveCell({ row: rowIndex, col: colIndex - 1 })
+            setSelection({ mode: 'cells', startRow: rowIndex, startCol: colIndex - 1, endRow: rowIndex, endCol: colIndex - 1, selectedRowIndices: [], selectedColIndices: [] })
+          }
+        } else {
+          if (colIndex + 1 < currentSheet.columns.length) {
+            setActiveCell({ row: rowIndex, col: colIndex + 1 })
+            setSelection({ mode: 'cells', startRow: rowIndex, startCol: colIndex + 1, endRow: rowIndex, endCol: colIndex + 1, selectedRowIndices: [], selectedColIndices: [] })
+          }
         }
       } else if (e.key === 'Escape') {
+        e.preventDefault()
         setEditingCell(null)
       }
       return
     }
 
+    // Copy with Ctrl+C / Cmd+C (Supports single cell & full multi-cell selection grid)
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C')) {
+      const selectedCells = getSelectedCells()
+      if (selectedCells.length <= 1) {
+        const colKey = currentSheet.columns[colIndex]?.key
+        const val = currentSheet.data[rowIndex]?.[colKey] || ''
+        navigator.clipboard.writeText(String(val))
+        addToast('Copied cell to clipboard', 'info')
+      } else {
+        const minR = Math.min(...selectedCells.map(c => c.row))
+        const maxR = Math.max(...selectedCells.map(c => c.row))
+        const minC = Math.min(...selectedCells.map(c => c.col))
+        const maxC = Math.max(...selectedCells.map(c => c.col))
+
+        const lines = []
+        for (let r = minR; r <= maxR; r++) {
+          const lineVals = []
+          for (let c = minC; c <= maxC; c++) {
+            const isSel = selectedCells.some(item => item.row === r && item.col === c)
+            if (isSel) {
+              const colKey = currentSheet.columns[c]?.key
+              lineVals.push(currentSheet.data[r]?.[colKey] || '')
+            } else {
+              lineVals.push('')
+            }
+          }
+          lines.push(lineVals.join('\t'))
+        }
+        navigator.clipboard.writeText(lines.join('\n'))
+        addToast(`Copied ${selectedCells.length} cells (${maxR - minR + 1}×${maxC - minC + 1}) to clipboard`, 'success')
+      }
+      return
+    }
+
+    // Shift + Arrow keys to expand/contract selection range
+    if (e.shiftKey && ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault()
+      setSelection(prev => {
+        let nEndRow = prev.endRow
+        let nEndCol = prev.endCol
+        if (e.key === 'ArrowDown') nEndRow = Math.min(currentSheet.data.length - 1, prev.endRow + 1)
+        if (e.key === 'ArrowUp') nEndRow = Math.max(0, prev.endRow - 1)
+        if (e.key === 'ArrowRight') nEndCol = Math.min(currentSheet.columns.length - 1, prev.endCol + 1)
+        if (e.key === 'ArrowLeft') nEndCol = Math.max(0, prev.endCol - 1)
+        return {
+          ...prev,
+          mode: 'cells',
+          endRow: nEndRow,
+          endCol: nEndCol,
+          selectedRowIndices: [],
+          selectedColIndices: []
+        }
+      })
+      return
+    }
+
+    // Grid navigation (Single cell movement)
     if (e.key === 'ArrowDown' || (e.key === 'Enter' && !e.shiftKey)) {
       e.preventDefault()
       if (rowIndex + 1 < currentSheet.data.length) {
         setActiveCell({ row: rowIndex + 1, col: colIndex })
+        setSelection({ mode: 'cells', startRow: rowIndex + 1, startCol: colIndex, endRow: rowIndex + 1, endCol: colIndex, selectedRowIndices: [], selectedColIndices: [] })
       }
     } else if (e.key === 'ArrowUp' || (e.key === 'Enter' && e.shiftKey)) {
       e.preventDefault()
       if (rowIndex > 0) {
         setActiveCell({ row: rowIndex - 1, col: colIndex })
+        setSelection({ mode: 'cells', startRow: rowIndex - 1, startCol: colIndex, endRow: rowIndex - 1, endCol: colIndex, selectedRowIndices: [], selectedColIndices: [] })
       }
     } else if (e.key === 'ArrowRight' || (e.key === 'Tab' && !e.shiftKey)) {
       e.preventDefault()
       if (colIndex + 1 < currentSheet.columns.length) {
         setActiveCell({ row: rowIndex, col: colIndex + 1 })
+        setSelection({ mode: 'cells', startRow: rowIndex, startCol: colIndex + 1, endRow: rowIndex, endCol: colIndex + 1, selectedRowIndices: [], selectedColIndices: [] })
       }
     } else if (e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey)) {
       e.preventDefault()
       if (colIndex > 0) {
         setActiveCell({ row: rowIndex, col: colIndex - 1 })
+        setSelection({ mode: 'cells', startRow: rowIndex, startCol: colIndex - 1, endRow: rowIndex, endCol: colIndex - 1, selectedRowIndices: [], selectedColIndices: [] })
       }
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault()
-      updateCellValue(rowIndex, colIndex, '')
+      const selectedCells = getSelectedCells()
+      if (selectedCells.length <= 1) {
+        updateCellValue(rowIndex, colIndex, '')
+      } else {
+        // Bulk clear all selected cells
+        setSheets(prevSheets => {
+          const newSheets = [...prevSheets]
+          const targetSheet = { ...newSheets[activeSheetIndex] }
+          const newData = [...targetSheet.data]
+
+          selectedCells.forEach(({ row: r, col: c }) => {
+            const colKey = targetSheet.columns[c]?.key
+            if (colKey && newData[r]) {
+              newData[r] = { ...newData[r], [colKey]: '' }
+            }
+          })
+
+          targetSheet.data = newData
+          newSheets[activeSheetIndex] = targetSheet
+          return newSheets
+        })
+        setFormulaValue('')
+        setHasUnsavedChanges(true)
+        addToast(`Cleared ${selectedCells.length} cells`, 'info')
+      }
     } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
       // Start typing immediately into cell
-      setEditingCell({ row: rowIndex, col: colIndex })
+      e.preventDefault()
+      updateCellValue(rowIndex, colIndex, e.key)
+      setEditingCell({ row: rowIndex, col: colIndex, initialValue: e.key })
     }
   }
 
@@ -348,16 +810,13 @@ export default function RoughSheetPage() {
     const pasteData = e.clipboardData.getData('text')
     if (!pasteData) return
 
-    // If typing in an input directly, let default paste happen unless it contains tabs/newlines
     if (editingCell && !pasteData.includes('\t') && !pasteData.includes('\n')) {
       return
     }
 
     e.preventDefault()
 
-    // Parse Excel TSV / CSV clipboard
     const rows = pasteData.split(/\r\n|\n|\r/).filter((r, idx, arr) => {
-      // keep lines except trailing blank
       if (idx === arr.length - 1 && r.trim() === '') return false
       return true
     })
@@ -377,7 +836,6 @@ export default function RoughSheetPage() {
       const requiredCols = startCol + Math.max(...parsedMatrix.map(r => r.length))
       const requiredRows = startRow + parsedMatrix.length
 
-      // Auto-expand columns if needed
       while (targetColumns.length < requiredCols) {
         const nextColIndex = targetColumns.length
         targetColumns.push({
@@ -388,14 +846,12 @@ export default function RoughSheetPage() {
         })
       }
 
-      // Auto-expand rows if needed
       while (targetData.length < requiredRows) {
         const rowObj = {}
         targetColumns.forEach(c => { rowObj[c.key] = '' })
         targetData.push(rowObj)
       }
 
-      // Fill in cells
       parsedMatrix.forEach((pRow, rIdx) => {
         const rTarget = startRow + rIdx
         targetData[rTarget] = { ...targetData[rTarget] }
@@ -410,6 +866,17 @@ export default function RoughSheetPage() {
       targetSheet.data = targetData
       newSheets[activeSheetIndex] = targetSheet
       return newSheets
+    })
+
+    // Update selection to match pasted range
+    setSelection({
+      mode: 'cells',
+      startRow,
+      startCol,
+      endRow: startRow + parsedMatrix.length - 1,
+      endCol: startCol + Math.max(...parsedMatrix.map(r => r.length)) - 1,
+      selectedRowIndices: [],
+      selectedColIndices: []
     })
 
     setHasUnsavedChanges(true)
@@ -474,8 +941,81 @@ export default function RoughSheetPage() {
     if (activeCell.row >= currentSheet.data.length - 1) {
       setActiveCell(prev => ({ ...prev, row: Math.max(0, prev.row - 1) }))
     }
+    setSelection({ mode: 'cells', startRow: 0, startCol: 0, endRow: 0, endCol: 0, selectedRowIndices: [], selectedColIndices: [] })
     setHasUnsavedChanges(true)
     addToast('Row deleted', 'info')
+  }
+
+  // Bulk Delete Selected Rows
+  const handleDeleteSelectedRows = () => {
+    const selectedRowsSet = new Set()
+    if (selection.mode === 'rows') {
+      if (selection.selectedRowIndices?.length > 0) {
+        selection.selectedRowIndices.forEach(r => selectedRowsSet.add(r))
+      } else {
+        const minR = Math.min(selection.startRow, selection.endRow)
+        const maxR = Math.max(selection.startRow, selection.endRow)
+        for (let r = minR; r <= maxR; r++) selectedRowsSet.add(r)
+      }
+    } else {
+      selectedRowsSet.add(activeCell.row)
+    }
+
+    if (currentSheet.data.length <= selectedRowsSet.size) {
+      addToast('Cannot delete all rows in sheet', 'warning')
+      return
+    }
+
+    setSheets(prevSheets => {
+      const newSheets = [...prevSheets]
+      const targetSheet = { ...newSheets[activeSheetIndex] }
+      targetSheet.data = targetSheet.data.filter((_, idx) => !selectedRowsSet.has(idx))
+      newSheets[activeSheetIndex] = targetSheet
+      return newSheets
+    })
+
+    setActiveCell({ row: 0, col: 0 })
+    setSelection({ mode: 'cells', startRow: 0, startCol: 0, endRow: 0, endCol: 0, selectedRowIndices: [], selectedColIndices: [] })
+    setHasUnsavedChanges(true)
+    addToast(`Deleted ${selectedRowsSet.size} selected row(s)`, 'info')
+  }
+
+  // Bulk Delete Selected Columns
+  const handleDeleteSelectedColumns = () => {
+    const selectedColsSet = new Set()
+    if (selection.mode === 'cols') {
+      if (selection.selectedColIndices?.length > 0) {
+        selection.selectedColIndices.forEach(c => selectedColsSet.add(c))
+      } else {
+        const minC = Math.min(selection.startCol, selection.endCol)
+        const maxC = Math.max(selection.startCol, selection.endCol)
+        for (let c = minC; c <= maxC; c++) selectedColsSet.add(c)
+      }
+    } else {
+      selectedColsSet.add(activeCell.col)
+    }
+
+    if (currentSheet.columns.length <= selectedColsSet.size) {
+      addToast('Cannot delete all columns in sheet', 'warning')
+      return
+    }
+
+    setSheets(prevSheets => {
+      const newSheets = [...prevSheets]
+      const targetSheet = { ...newSheets[activeSheetIndex] }
+      const remainingCols = targetSheet.columns
+        .filter((_, idx) => !selectedColsSet.has(idx))
+        .map((col, idx) => ({ ...col, letter: getColumnLetter(idx) }))
+
+      targetSheet.columns = remainingCols
+      newSheets[activeSheetIndex] = targetSheet
+      return newSheets
+    })
+
+    setActiveCell({ row: 0, col: 0 })
+    setSelection({ mode: 'cells', startRow: 0, startCol: 0, endRow: 0, endCol: 0, selectedRowIndices: [], selectedColIndices: [] })
+    setHasUnsavedChanges(true)
+    addToast(`Deleted ${selectedColsSet.size} selected column(s)`, 'info')
   }
 
   // Clear Empty Rows
@@ -521,43 +1061,54 @@ export default function RoughSheetPage() {
     setHasUnsavedChanges(true)
   }
 
-  // Formatting Tools (Bold, Italic, Bg Color)
+  // Formatting Tools applied to ALL selected cells (Bold, Italic, Bg Color)
   const toggleStyle = (styleKey) => {
-    const cellKey = `${activeCell.row}_${activeCell.col}`
-    const existing = cellStyles[cellKey] || {}
-    const updated = {
-      ...cellStyles,
-      [cellKey]: {
-        ...existing,
-        [styleKey]: !existing[styleKey]
+    const selectedCells = getSelectedCells()
+    const activeKey = `${activeCell.row}_${activeCell.col}`
+    const targetState = !cellStyles[activeKey]?.[styleKey]
+
+    const updatedStyles = { ...cellStyles }
+    selectedCells.forEach(({ row, col }) => {
+      const k = `${row}_${col}`
+      updatedStyles[k] = {
+        ...(updatedStyles[k] || {}),
+        [styleKey]: targetState
       }
-    }
-    setCellStyles(updated)
+    })
+
+    setCellStyles(updatedStyles)
     setSheets(prev => {
       const copy = [...prev]
-      copy[activeSheetIndex] = { ...copy[activeSheetIndex], styles: updated }
+      copy[activeSheetIndex] = { ...copy[activeSheetIndex], styles: updatedStyles }
       return copy
     })
     setHasUnsavedChanges(true)
+    if (selectedCells.length > 1) {
+      addToast(`Applied ${styleKey} to ${selectedCells.length} cells`, 'info')
+    }
   }
 
   const setCellBgColor = (color) => {
-    const cellKey = `${activeCell.row}_${activeCell.col}`
-    const existing = cellStyles[cellKey] || {}
-    const updated = {
-      ...cellStyles,
-      [cellKey]: {
-        ...existing,
+    const selectedCells = getSelectedCells()
+    const updatedStyles = { ...cellStyles }
+    selectedCells.forEach(({ row, col }) => {
+      const k = `${row}_${col}`
+      updatedStyles[k] = {
+        ...(updatedStyles[k] || {}),
         bg: color
       }
-    }
-    setCellStyles(updated)
+    })
+
+    setCellStyles(updatedStyles)
     setSheets(prev => {
       const copy = [...prev]
-      copy[activeSheetIndex] = { ...copy[activeSheetIndex], styles: updated }
+      copy[activeSheetIndex] = { ...copy[activeSheetIndex], styles: updatedStyles }
       return copy
     })
     setHasUnsavedChanges(true)
+    if (selectedCells.length > 1) {
+      addToast(color ? `Highlighted ${selectedCells.length} cells` : `Cleared highlight for ${selectedCells.length} cells`, 'info')
+    }
   }
 
   // Add Sheet / Tab
@@ -575,6 +1126,7 @@ export default function RoughSheetPage() {
     setActiveSheetIndex(updatedSheets.length - 1)
     setCellStyles({})
     setActiveCell({ row: 0, col: 0 })
+    setSelection({ mode: 'cells', startRow: 0, startCol: 0, endRow: 0, endCol: 0, selectedRowIndices: [], selectedColIndices: [] })
     setHasUnsavedChanges(true)
     addToast(`Added new sheet: Sheet ${newSheetIndex}`, 'success')
   }
@@ -610,7 +1162,6 @@ export default function RoughSheetPage() {
     setHasUnsavedChanges(true)
     addToast(`Deleted ${sheetToDelete.sheet_name}`, 'info')
 
-    // If sheet had an id in DB, call DELETE API
     if (sheetToDelete.id) {
       fetch(`/api/rough-sheets?id=${sheetToDelete.id}`, { method: 'DELETE' }).catch(console.error)
     }
@@ -622,7 +1173,6 @@ export default function RoughSheetPage() {
       const wb = XLSX.utils.book_new()
 
       sheets.forEach((sheet) => {
-        // Build table array with headers as first row
         const headerRow = sheet.columns.map(c => c.title || c.letter)
         const rowData = sheet.data.map(row => {
           return sheet.columns.map(c => row[c.key] || '')
@@ -661,7 +1211,6 @@ export default function RoughSheetPage() {
           return
         }
 
-        // First row is headers
         const firstRow = jsonData[0] || []
         const importedCols = firstRow.map((headerText, i) => ({
           key: `col_${i + 1}`,
@@ -670,7 +1219,6 @@ export default function RoughSheetPage() {
           width: 160
         }))
 
-        // Rest are data rows
         const importedRows = jsonData.slice(1).map(r => {
           const rowObj = {}
           importedCols.forEach((col, idx) => {
@@ -700,6 +1248,15 @@ export default function RoughSheetPage() {
     e.target.value = ''
   }
 
+  // Focus and select cell input on edit mount
+  useEffect(() => {
+    if (editingCell && cellInputRef.current) {
+      cellInputRef.current.focus()
+      const len = cellInputRef.current.value.length
+      cellInputRef.current.setSelectionRange(len, len)
+    }
+  }, [editingCell])
+
   // Active cell coordinate label
   const activeColLetter = currentSheet.columns[activeCell.col]?.letter || 'A'
   const activeCellCoord = `${activeColLetter}${activeCell.row + 1}`
@@ -709,11 +1266,45 @@ export default function RoughSheetPage() {
   const activeCellValue = currentSheet.data[activeCell.row]?.[activeCellKey] || ''
   const detectedPhone = extractPhoneNumber(activeCellValue)
 
-  // Status bar calculations: count & sum
+  // Selection metrics calculation
+  const selectedCells = useMemo(() => getSelectedCells(), [getSelectedCells])
+  const isMultiSelected = selectedCells.length > 1
+
+  const selectionMetrics = useMemo(() => {
+    let sum = 0
+    let numericCount = 0
+    let min = Infinity
+    let max = -Infinity
+
+    selectedCells.forEach(({ row, col }) => {
+      const colKey = currentSheet.columns[col]?.key
+      const v = currentSheet.data[row]?.[colKey]
+      if (v !== undefined && v !== null && String(v).trim() !== '') {
+        const num = parseFloat(String(v).replace(/[^\d.-]/g, ''))
+        if (!isNaN(num)) {
+          sum += num
+          numericCount++
+          if (num < min) min = num
+          if (num > max) max = num
+        }
+      }
+    })
+
+    return {
+      count: selectedCells.length,
+      numericCount,
+      sum,
+      avg: numericCount > 0 ? sum / numericCount : 0,
+      min: min !== Infinity ? min : null,
+      max: max !== -Infinity ? max : null
+    }
+  }, [selectedCells, currentSheet])
+
+  // Overall sheet status metrics
   const activeSheetTotalRows = currentSheet.data.length
   const activeSheetTotalCols = currentSheet.columns.length
   let filledCellCount = 0
-  let numericSum = 0
+  let wholeSheetSum = 0
   let hasNumericValues = false
 
   currentSheet.data.forEach(row => {
@@ -723,7 +1314,7 @@ export default function RoughSheetPage() {
         filledCellCount++
         const num = parseFloat(String(v).replace(/[^\d.-]/g, ''))
         if (!isNaN(num)) {
-          numericSum += num
+          wholeSheetSum += num
           hasNumericValues = true
         }
       }
@@ -742,17 +1333,34 @@ export default function RoughSheetPage() {
   })
   const duplicatePhoneList = Object.keys(phoneCounts).filter(p => phoneCounts[p] > 1)
 
+  // Selected row/col counts for toolbar indicator
+  const selectedRowsCount = selection.mode === 'rows'
+    ? (selection.selectedRowIndices?.length || (Math.abs(selection.endRow - selection.startRow) + 1))
+    : 0
+
+  const selectedColsCount = selection.mode === 'cols'
+    ? (selection.selectedColIndices?.length || (Math.abs(selection.endCol - selection.startCol) + 1))
+    : 0
+
   return (
     <div 
-      style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main, #0F1117)', color: 'var(--text-main, #E4E7EB)' }}
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--bg-base, #F2F5FA)',
+        color: 'var(--text-primary, #0D1117)',
+        fontFamily: 'var(--font-sans, system-ui, sans-serif)',
+        userSelect: isMouseDownRef.current ? 'none' : 'auto'
+      }}
       onPaste={handlePaste}
     >
       <Navbar />
 
       {/* Top Application Header */}
       <div style={{
-        background: 'var(--bg-surface, #181B24)',
-        borderBottom: '1px solid var(--border-light, #262B38)',
+        background: 'var(--bg-surface, #FFFFFF)',
+        borderBottom: '1px solid var(--border-light, #E5E7EB)',
         padding: '12px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -762,21 +1370,28 @@ export default function RoughSheetPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #107C41 0%, #18A756 100%)',
-            width: '40px',
-            height: '40px',
+            background: 'linear-gradient(135deg, #107C41 0%, #16A34A 100%)',
+            width: '42px',
+            height: '42px',
             borderRadius: '10px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#fff',
-            boxShadow: '0 4px 14px rgba(16, 124, 65, 0.35)'
+            color: '#FFFFFF',
+            boxShadow: '0 4px 14px rgba(16, 124, 65, 0.25)',
+            flexShrink: 0
           }}>
             <FileSpreadsheet size={22} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-main, #FFFFFF)', letterSpacing: '-0.01em' }}>
+              <h1 style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: 700,
+                color: 'var(--text-primary, #0D1117)',
+                letterSpacing: '-0.01em'
+              }}>
                 Rough Workbook & Phone Directory
               </h1>
               <span style={{
@@ -791,7 +1406,7 @@ export default function RoughSheetPage() {
                 Excel Mode
               </span>
             </div>
-            <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted, #94A3B8)' }}>
+            <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-muted, #6B7280)' }}>
               Rough scratchpad for phone numbers, notes, supplier lists, and fast multi-cell Excel paste
             </p>
           </div>
@@ -799,22 +1414,23 @@ export default function RoughSheetPage() {
 
         {/* Sync Status & Primary Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Cloud Sync Status */}
+          {/* Sync Status Badge */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
             fontSize: '12px',
-            color: hasUnsavedChanges ? '#F59E0B' : '#10B981',
-            background: hasUnsavedChanges ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.08)',
+            color: hasUnsavedChanges ? '#D97706' : '#10B981',
+            background: hasUnsavedChanges ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
             padding: '6px 12px',
             borderRadius: '8px',
-            border: `1px solid ${hasUnsavedChanges ? 'rgba(245, 158, 11, 0.25)' : 'rgba(16, 185, 129, 0.2)'}`
+            border: `1px solid ${hasUnsavedChanges ? 'rgba(245, 158, 11, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+            fontWeight: 500
           }}>
             {saving ? (
               <>
                 <RefreshCw size={13} className="spin" />
-                <span>Saving to cloud...</span>
+                <span>Saving...</span>
               </>
             ) : hasUnsavedChanges ? (
               <>
@@ -824,12 +1440,12 @@ export default function RoughSheetPage() {
             ) : (
               <>
                 <Check size={13} />
-                <span>Saved {lastSaved ? `(${lastSaved})` : 'to cloud'}</span>
+                <span>{lastSaved ? (isCloudSynced ? `Saved to cloud (${lastSaved})` : `Saved (${lastSaved})`) : 'Saved'}</span>
               </>
             )}
           </div>
 
-          {/* Manual Save */}
+          {/* Manual Save Button */}
           <button
             onClick={() => handleSave()}
             disabled={saving}
@@ -837,32 +1453,32 @@ export default function RoughSheetPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: hasUnsavedChanges ? '#107C41' : '#262B38',
-              color: '#fff',
-              border: 'none',
+              background: hasUnsavedChanges ? '#107C41' : 'var(--bg-subtle, #EEF1F8)',
+              color: hasUnsavedChanges ? '#FFFFFF' : 'var(--text-secondary, #374151)',
+              border: hasUnsavedChanges ? 'none' : '1px solid var(--border-light, #E5E7EB)',
               padding: '8px 14px',
               borderRadius: '8px',
               fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
               transition: 'all 0.2s',
-              boxShadow: hasUnsavedChanges ? '0 2px 8px rgba(16, 124, 65, 0.4)' : 'none'
+              boxShadow: hasUnsavedChanges ? '0 2px 10px rgba(16, 124, 65, 0.35)' : 'none'
             }}
           >
             <Save size={15} />
             <span>{saving ? 'Saving...' : 'Save (Ctrl+S)'}</span>
           </button>
 
-          {/* Import File */}
+          {/* Import File Button */}
           <button
             onClick={() => fileInputRef.current?.click()}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: '#262B38',
-              color: 'var(--text-main, #E4E7EB)',
-              border: '1px solid var(--border-light, #374151)',
+              background: 'var(--bg-subtle, #EEF1F8)',
+              color: 'var(--text-secondary, #374151)',
+              border: '1px solid var(--border-light, #E5E7EB)',
               padding: '8px 12px',
               borderRadius: '8px',
               fontSize: '13px',
@@ -881,16 +1497,16 @@ export default function RoughSheetPage() {
             onChange={handleImportFile}
           />
 
-          {/* Export File */}
+          {/* Export File Button */}
           <button
             onClick={handleExportExcel}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: '#262B38',
-              color: 'var(--text-main, #E4E7EB)',
-              border: '1px solid var(--border-light, #374151)',
+              background: 'var(--bg-subtle, #EEF1F8)',
+              color: 'var(--text-secondary, #374151)',
+              border: '1px solid var(--border-light, #E5E7EB)',
               padding: '8px 12px',
               borderRadius: '8px',
               fontSize: '13px',
@@ -904,10 +1520,10 @@ export default function RoughSheetPage() {
         </div>
       </div>
 
-      {/* Spreadsheet Toolbar (Formulas, Formatting, Add rows/cols) */}
+      {/* Spreadsheet Toolbar (Formulas, Formatting, Add rows/cols, Multi-Select Bulk Actions) */}
       <div style={{
-        background: 'var(--bg-surface, #141720)',
-        borderBottom: '1px solid var(--border-light, #262B38)',
+        background: 'var(--bg-surface, #FFFFFF)',
+        borderBottom: '1px solid var(--border-light, #E5E7EB)',
         padding: '8px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -922,12 +1538,13 @@ export default function RoughSheetPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              background: '#1F2430',
-              color: '#CBD5E1',
-              border: '1px solid #2F3647',
+              background: 'var(--bg-subtle, #EEF1F8)',
+              color: 'var(--text-secondary, #374151)',
+              border: '1px solid var(--border-light, #E5E7EB)',
               padding: '5px 10px',
               borderRadius: '6px',
               fontSize: '12px',
+              fontWeight: 500,
               cursor: 'pointer'
             }}
           >
@@ -940,12 +1557,13 @@ export default function RoughSheetPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              background: '#1F2430',
-              color: '#CBD5E1',
-              border: '1px solid #2F3647',
+              background: 'var(--bg-subtle, #EEF1F8)',
+              color: 'var(--text-secondary, #374151)',
+              border: '1px solid var(--border-light, #E5E7EB)',
               padding: '5px 10px',
               borderRadius: '6px',
               fontSize: '12px',
+              fontWeight: 500,
               cursor: 'pointer'
             }}
           >
@@ -957,12 +1575,13 @@ export default function RoughSheetPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              background: '#1F2430',
-              color: '#CBD5E1',
-              border: '1px solid #2F3647',
+              background: 'var(--bg-subtle, #EEF1F8)',
+              color: 'var(--text-secondary, #374151)',
+              border: '1px solid var(--border-light, #E5E7EB)',
               padding: '5px 10px',
               borderRadius: '6px',
               fontSize: '12px',
+              fontWeight: 500,
               cursor: 'pointer'
             }}
           >
@@ -976,9 +1595,9 @@ export default function RoughSheetPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              background: '#1F2430',
-              color: '#94A3B8',
-              border: '1px solid #2F3647',
+              background: 'var(--bg-subtle, #EEF1F8)',
+              color: 'var(--text-muted, #6B7280)',
+              border: '1px solid var(--border-light, #E5E7EB)',
               padding: '5px 10px',
               borderRadius: '6px',
               fontSize: '12px',
@@ -989,42 +1608,95 @@ export default function RoughSheetPage() {
           </button>
         </div>
 
-        <div style={{ width: '1px', height: '22px', background: '#2B3242' }} />
+        {/* Dynamic Context Actions for Multi-Row / Multi-Column Selection */}
+        {selectedRowsCount > 0 && (
+          <>
+            <div style={{ width: '1px', height: '22px', background: 'var(--border-light, #E5E7EB)' }} />
+            <button
+              onClick={handleDeleteSelectedRows}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                color: '#EF4444',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              title="Delete all currently selected rows"
+            >
+              <Trash2 size={13} />
+              <span>Delete {selectedRowsCount} Row{selectedRowsCount > 1 ? 's' : ''}</span>
+            </button>
+          </>
+        )}
 
-        {/* Formatting Tools */}
+        {selectedColsCount > 0 && (
+          <>
+            <div style={{ width: '1px', height: '22px', background: 'var(--border-light, #E5E7EB)' }} />
+            <button
+              onClick={handleDeleteSelectedColumns}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                color: '#EF4444',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                padding: '5px 10px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              title="Delete all currently selected columns"
+            >
+              <Trash2 size={13} />
+              <span>Delete {selectedColsCount} Column{selectedColsCount > 1 ? 's' : ''}</span>
+            </button>
+          </>
+        )}
+
+        <div style={{ width: '1px', height: '22px', background: 'var(--border-light, #E5E7EB)' }} />
+
+        {/* Formatting Tools (Applied to selection) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
             onClick={() => toggleStyle('bold')}
             style={{
-              background: cellStyles[`${activeCell.row}_${activeCell.col}`]?.bold ? '#107C41' : '#1F2430',
-              color: '#fff',
-              border: '1px solid #2F3647',
+              background: cellStyles[`${activeCell.row}_${activeCell.col}`]?.bold ? '#107C41' : 'var(--bg-subtle, #EEF1F8)',
+              color: cellStyles[`${activeCell.row}_${activeCell.col}`]?.bold ? '#FFFFFF' : 'var(--text-secondary, #374151)',
+              border: '1px solid var(--border-light, #E5E7EB)',
               padding: '5px 8px',
               borderRadius: '6px',
               cursor: 'pointer'
             }}
-            title="Bold"
+            title={isMultiSelected ? `Bold selection (${selectedCells.length} cells)` : 'Bold'}
           >
             <Bold size={13} />
           </button>
           <button
             onClick={() => toggleStyle('italic')}
             style={{
-              background: cellStyles[`${activeCell.row}_${activeCell.col}`]?.italic ? '#107C41' : '#1F2430',
-              color: '#fff',
-              border: '1px solid #2F3647',
+              background: cellStyles[`${activeCell.row}_${activeCell.col}`]?.italic ? '#107C41' : 'var(--bg-subtle, #EEF1F8)',
+              color: cellStyles[`${activeCell.row}_${activeCell.col}`]?.italic ? '#FFFFFF' : 'var(--text-secondary, #374151)',
+              border: '1px solid var(--border-light, #E5E7EB)',
               padding: '5px 8px',
               borderRadius: '6px',
               cursor: 'pointer'
             }}
-            title="Italic"
+            title={isMultiSelected ? `Italic selection (${selectedCells.length} cells)` : 'Italic'}
           >
             <Italic size={13} />
           </button>
 
           {/* Color markers */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: '6px' }}>
-            {['#107C4140', '#F59E0B30', '#3B82F630', '#EF444430', ''].map((color, i) => (
+            {['#10B98125', '#F59E0B25', '#3B82F625', '#EF444425', ''].map((color, i) => (
               <button
                 key={i}
                 onClick={() => setCellBgColor(color)}
@@ -1032,31 +1704,31 @@ export default function RoughSheetPage() {
                   width: '18px',
                   height: '18px',
                   borderRadius: '4px',
-                  background: color || '#262B38',
-                  border: '1px solid #4B5563',
+                  background: color || 'var(--bg-surface, #FFFFFF)',
+                  border: color ? '1px solid rgba(0,0,0,0.2)' : '1px solid var(--border-medium, #D1D5DB)',
                   cursor: 'pointer'
                 }}
-                title={color ? 'Highlight cell' : 'Clear highlight'}
+                title={color ? 'Highlight selection' : 'Clear highlight'}
               />
             ))}
           </div>
         </div>
 
-        <div style={{ width: '1px', height: '22px', background: '#2B3242' }} />
+        <div style={{ width: '1px', height: '22px', background: 'var(--border-light, #E5E7EB)' }} />
 
         {/* Search Input */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          background: '#1F2430',
+          background: 'var(--bg-subtle, #EEF1F8)',
           padding: '4px 10px',
           borderRadius: '6px',
-          border: '1px solid #2F3647',
+          border: '1px solid var(--border-light, #E5E7EB)',
           flex: 1,
-          maxWidth: '280px'
+          maxWidth: '260px'
         }}>
-          <Search size={13} color="#94A3B8" />
+          <Search size={13} color="var(--text-muted, #6B7280)" />
           <input
             type="text"
             placeholder="Search workbook..."
@@ -1065,14 +1737,14 @@ export default function RoughSheetPage() {
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#fff',
+              color: 'var(--text-primary, #0D1117)',
               fontSize: '12px',
               width: '100%',
               outline: 'none'
             }}
           />
           {searchQuery && (
-            <X size={12} color="#94A3B8" style={{ cursor: 'pointer' }} onClick={() => setSearchQuery('')} />
+            <X size={12} color="var(--text-muted, #6B7280)" style={{ cursor: 'pointer' }} onClick={() => setSearchQuery('')} />
           )}
         </div>
 
@@ -1082,12 +1754,13 @@ export default function RoughSheetPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            background: 'rgba(239, 68, 68, 0.12)',
+            background: 'rgba(239, 68, 68, 0.1)',
             color: '#EF4444',
             border: '1px solid rgba(239, 68, 68, 0.25)',
             padding: '4px 10px',
             borderRadius: '6px',
-            fontSize: '12px'
+            fontSize: '12px',
+            fontWeight: 500
           }}>
             <AlertCircle size={13} />
             <span>{duplicatePhoneList.length} duplicate phone number(s) found</span>
@@ -1097,30 +1770,34 @@ export default function RoughSheetPage() {
 
       {/* Formula Bar & Active Cell Info */}
       <div style={{
-        background: 'var(--bg-surface, #181B24)',
-        borderBottom: '1px solid var(--border-light, #262B38)',
+        background: 'var(--bg-surface, #FFFFFF)',
+        borderBottom: '1px solid var(--border-light, #E5E7EB)',
         padding: '6px 24px',
         display: 'flex',
         alignItems: 'center',
         gap: '12px'
       }}>
-        {/* Active Coordinate */}
+        {/* Active Coordinate / Selection Range */}
         <div style={{
-          background: '#0F1117',
-          border: '1px solid #2F3647',
+          background: 'var(--bg-subtle, #EEF1F8)',
+          border: '1px solid var(--border-light, #E5E7EB)',
           padding: '4px 12px',
           borderRadius: '4px',
           fontSize: '13px',
           fontWeight: 700,
-          color: '#10B981',
+          color: '#107C41',
           minWidth: '60px',
-          textAlign: 'center'
+          textAlign: 'center',
+          fontFamily: 'var(--font-mono, monospace)',
+          userSelect: 'none'
         }}>
-          {activeCellCoord}
+          {isMultiSelected 
+            ? `${activeCellCoord} (${selectedCells.length})`
+            : activeCellCoord}
         </div>
 
         {/* fx symbol */}
-        <div style={{ color: '#64748B', fontWeight: 700, fontSize: '13px', userSelect: 'none' }}>
+        <div style={{ color: 'var(--text-muted, #6B7280)', fontWeight: 700, fontSize: '13px', userSelect: 'none' }}>
           fx
         </div>
 
@@ -1132,11 +1809,11 @@ export default function RoughSheetPage() {
           placeholder="Click any cell or type rough value here..."
           style={{
             flex: 1,
-            background: '#0F1117',
-            border: '1px solid #2F3647',
-            padding: '5px 12px',
+            background: 'var(--bg-subtle, #EEF1F8)',
+            border: '1px solid var(--border-light, #E5E7EB)',
+            padding: '6px 12px',
             borderRadius: '4px',
-            color: '#fff',
+            color: 'var(--text-primary, #0D1117)',
             fontSize: '13px',
             outline: 'none'
           }}
@@ -1148,7 +1825,7 @@ export default function RoughSheetPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            background: 'rgba(16, 185, 129, 0.15)',
+            background: 'rgba(16, 185, 129, 0.12)',
             border: '1px solid rgba(16, 185, 129, 0.3)',
             padding: '4px 10px',
             borderRadius: '6px',
@@ -1173,6 +1850,18 @@ export default function RoughSheetPage() {
               <MessageCircle size={13} />
               <span>WhatsApp</span>
             </a>
+            <a
+              href={`tel:${detectedPhone}`}
+              style={{
+                color: 'var(--text-muted, #6B7280)',
+                display: 'flex',
+                alignItems: 'center',
+                textDecoration: 'none'
+              }}
+              title="Call Phone"
+            >
+              <ExternalLink size={12} />
+            </a>
             <button
               onClick={() => {
                 navigator.clipboard.writeText(detectedPhone)
@@ -1181,7 +1870,7 @@ export default function RoughSheetPage() {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#94A3B8',
+                color: 'var(--text-muted, #6B7280)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center'
@@ -1200,7 +1889,7 @@ export default function RoughSheetPage() {
         style={{
           flex: 1,
           overflow: 'auto',
-          background: '#0F1117',
+          background: 'var(--bg-base, #F2F5FA)',
           position: 'relative'
         }}
       >
@@ -1209,69 +1898,84 @@ export default function RoughSheetPage() {
           width: 'max-content',
           minWidth: '100%',
           tableLayout: 'fixed',
-          fontFamily: 'Inter, system-ui, sans-serif',
+          fontFamily: 'var(--font-sans, system-ui, sans-serif)',
           fontSize: '13px'
         }}>
           {/* Header Row */}
           <thead>
             <tr>
-              {/* Corner Cell */}
-              <th style={{
-                position: 'sticky',
-                top: 0,
-                left: 0,
-                zIndex: 30,
-                width: '46px',
-                minWidth: '46px',
-                background: '#1A1D27',
-                borderRight: '1px solid #2B3242',
-                borderBottom: '1px solid #2B3242',
-                color: '#64748B',
-                fontSize: '11px',
-                textAlign: 'center',
-                padding: '6px 0',
-                userSelect: 'none'
-              }}>
+              {/* Corner Cell: Select All */}
+              <th 
+                onClick={handleSelectAll}
+                style={{
+                  position: 'sticky',
+                  top: 0,
+                  left: 0,
+                  zIndex: 35,
+                  width: '46px',
+                  minWidth: '46px',
+                  background: selection.mode === 'all' ? '#107C41' : 'var(--bg-subtle, #EEF1F8)',
+                  borderRight: '1px solid var(--border-light, #E5E7EB)',
+                  borderBottom: '1px solid var(--border-light, #E5E7EB)',
+                  color: selection.mode === 'all' ? '#FFFFFF' : 'var(--text-muted, #6B7280)',
+                  fontSize: '11px',
+                  textAlign: 'center',
+                  padding: '6px 0',
+                  userSelect: 'none',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.15s ease'
+                }}
+                title="Select All (Ctrl+A)"
+              >
                 #
               </th>
 
               {/* Column Headers (A, B, C... with customizable title) */}
               {currentSheet.columns.map((col, colIndex) => {
-                const isColActive = activeCell.col === colIndex
+                const isColActive = isColSelected(colIndex)
                 return (
                   <th
                     key={col.key}
+                    onMouseDown={(e) => handleColumnHeaderMouseDown(e, colIndex)}
+                    onMouseEnter={() => handleColumnHeaderMouseEnter(colIndex)}
                     style={{
                       position: 'sticky',
                       top: 0,
                       zIndex: 20,
                       width: `${col.width || 150}px`,
                       minWidth: '110px',
-                      background: isColActive ? '#232938' : '#1A1D27',
-                      borderRight: '1px solid #2B3242',
-                      borderBottom: '1px solid #2B3242',
-                      color: isColActive ? '#10B981' : '#94A3B8',
+                      background: isColActive ? 'rgba(16, 124, 65, 0.14)' : 'var(--bg-subtle, #EEF1F8)',
+                      borderRight: '1px solid var(--border-light, #E5E7EB)',
+                      borderBottom: isColActive ? '2px solid #107C41' : '1px solid var(--border-light, #E5E7EB)',
+                      color: isColActive ? '#107C41' : 'var(--text-secondary, #374151)',
                       padding: '8px 10px',
                       textAlign: 'left',
                       fontWeight: 600,
-                      userSelect: 'none'
+                      userSelect: 'none',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.12s ease'
                     }}
+                    title={`Column ${col.letter} (Click to select, drag/Shift to multi-select)`}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1, overflow: 'hidden' }}>
-                        <span style={{ fontSize: '11px', color: '#64748B' }}>{col.letter}</span>
+                        <span style={{ fontSize: '11px', color: isColActive ? '#107C41' : 'var(--text-muted, #6B7280)', fontWeight: 700 }}>
+                          {col.letter}
+                        </span>
                         {editingHeaderKey === col.key ? (
                           <input
                             type="text"
                             value={headerTitleDraft}
                             autoFocus
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
                             onChange={(e) => setHeaderTitleDraft(e.target.value)}
                             onBlur={() => saveHeaderTitle(col.key)}
                             onKeyDown={(e) => e.key === 'Enter' && saveHeaderTitle(col.key)}
                             style={{
-                              background: '#0F1117',
-                              border: '1px solid #10B981',
-                              color: '#fff',
+                              background: 'var(--bg-surface, #FFFFFF)',
+                              border: '1px solid #107C41',
+                              color: 'var(--text-primary, #0D1117)',
                               fontSize: '12px',
                               padding: '2px 6px',
                               borderRadius: '4px',
@@ -1281,12 +1985,14 @@ export default function RoughSheetPage() {
                           />
                         ) : (
                           <span
-                            onDoubleClick={() => startEditingHeader(col.key, col.title)}
+                            onDoubleClick={(e) => {
+                              e.stopPropagation()
+                              startEditingHeader(col.key, col.title)
+                            }}
                             style={{
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              cursor: 'pointer'
+                              whiteSpace: 'nowrap'
                             }}
                             title="Double-click to rename column"
                           >
@@ -1296,9 +2002,12 @@ export default function RoughSheetPage() {
                       </div>
                       <Edit2
                         size={11}
-                        color="#64748B"
+                        color="var(--text-muted, #6B7280)"
                         style={{ cursor: 'pointer', flexShrink: 0 }}
-                        onClick={() => startEditingHeader(col.key, col.title)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          startEditingHeader(col.key, col.title)
+                        }}
                         title="Rename column"
                       />
                     </div>
@@ -1311,41 +2020,47 @@ export default function RoughSheetPage() {
           {/* Table Data Rows */}
           <tbody>
             {currentSheet.data.map((row, rowIndex) => {
-              const isRowActive = activeCell.row === rowIndex
+              const isRowActive = isRowSelected(rowIndex)
               return (
                 <tr key={rowIndex}>
                   {/* Row Number Header */}
                   <td
+                    onMouseDown={(e) => handleRowHeaderMouseDown(e, rowIndex)}
+                    onMouseEnter={() => handleRowHeaderMouseEnter(rowIndex)}
                     style={{
                       position: 'sticky',
                       left: 0,
                       zIndex: 10,
-                      background: isRowActive ? '#232938' : '#141720',
-                      borderRight: '1px solid #2B3242',
-                      borderBottom: '1px solid #1E2330',
-                      color: isRowActive ? '#10B981' : '#64748B',
+                      background: isRowActive ? 'rgba(16, 124, 65, 0.14)' : 'var(--bg-subtle, #EEF1F8)',
+                      borderRight: isRowActive ? '2px solid #107C41' : '1px solid var(--border-light, #E5E7EB)',
+                      borderBottom: '1px solid var(--border-light, #E5E7EB)',
+                      color: isRowActive ? '#107C41' : 'var(--text-muted, #6B7280)',
                       fontSize: '11px',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       textAlign: 'center',
                       padding: '4px 0',
                       userSelect: 'none',
-                      position: 'sticky',
-                      left: 0
+                      cursor: 'pointer',
+                      transition: 'background-color 0.12s ease'
                     }}
+                    title={`Row ${rowIndex + 1} (Click to select, drag/Shift to multi-select)`}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
                       <span>{rowIndex + 1}</span>
                       <button
-                        onClick={() => handleDeleteRow(rowIndex)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteRow(rowIndex)
+                        }}
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#64748B',
+                          color: '#EF4444',
                           cursor: 'pointer',
                           padding: '2px',
                           display: isRowActive ? 'inline-block' : 'none'
                         }}
-                        title="Delete row"
+                        title="Delete this row"
                       >
                         <Trash2 size={10} color="#EF4444" />
                       </button>
@@ -1354,7 +2069,8 @@ export default function RoughSheetPage() {
 
                   {/* Cells */}
                   {currentSheet.columns.map((col, colIndex) => {
-                    const isSelected = activeCell.row === rowIndex && activeCell.col === colIndex
+                    const isFocused = activeCell.row === rowIndex && activeCell.col === colIndex
+                    const isSelected = isCellSelected(rowIndex, colIndex)
                     const isEditing = editingCell?.row === rowIndex && editingCell?.col === colIndex
                     const cellVal = row[col.key] || ''
                     const cellKey = `${rowIndex}_${colIndex}`
@@ -1364,36 +2080,43 @@ export default function RoughSheetPage() {
 
                     const isSearchMatch = searchQuery && String(cellVal).toLowerCase().includes(searchQuery.toLowerCase())
 
+                    // Cell Background determination
+                    let cellBg = 'var(--bg-surface, #FFFFFF)'
+                    if (isSearchMatch) {
+                      cellBg = 'rgba(245, 158, 11, 0.25)'
+                    } else if (style.bg) {
+                      cellBg = style.bg
+                    } else if (isSelected) {
+                      cellBg = 'rgba(16, 124, 65, 0.12)'
+                    }
+
                     return (
                       <td
                         key={col.key}
-                        onClick={() => {
-                          setActiveCell({ row: rowIndex, col: colIndex })
-                        }}
+                        onMouseDown={(e) => handleCellMouseDown(e, rowIndex, colIndex)}
+                        onMouseEnter={() => handleCellMouseEnter(rowIndex, colIndex)}
                         onDoubleClick={() => {
                           setActiveCell({ row: rowIndex, col: colIndex })
-                          setEditingCell({ row: rowIndex, col: colIndex })
+                          setSelection({ mode: 'cells', startRow: rowIndex, startCol: colIndex, endRow: rowIndex, endCol: colIndex, selectedRowIndices: [], selectedColIndices: [] })
+                          setEditingCell({ row: rowIndex, col: colIndex, initialValue: cellVal })
                         }}
                         style={{
-                          borderRight: '1px solid #1E2330',
-                          borderBottom: '1px solid #1E2330',
+                          borderRight: '1px solid var(--border-light, #E5E7EB)',
+                          borderBottom: '1px solid var(--border-light, #E5E7EB)',
                           padding: 0,
                           height: '32px',
                           position: 'relative',
-                          background: isSearchMatch 
-                            ? 'rgba(245, 158, 11, 0.25)' 
-                            : style.bg || (isSelected ? '#182232' : 'transparent'),
-                          outline: isSelected ? '2px solid #10B981' : 'none',
+                          background: cellBg,
+                          outline: isFocused ? '2px solid #107C41' : 'none',
                           outlineOffset: '-2px',
-                          zIndex: isSelected ? 5 : 1
+                          zIndex: isFocused ? 5 : 1
                         }}
                       >
                         {isEditing ? (
                           <input
                             ref={cellInputRef}
                             type="text"
-                            autoFocus
-                            defaultValue={cellVal}
+                            defaultValue={editingCell.initialValue !== undefined ? editingCell.initialValue : cellVal}
                             onBlur={(e) => {
                               updateCellValue(rowIndex, colIndex, e.target.value)
                               setEditingCell(null)
@@ -1402,9 +2125,9 @@ export default function RoughSheetPage() {
                             style={{
                               width: '100%',
                               height: '100%',
-                              background: '#0B0D13',
+                              background: 'var(--bg-surface, #FFFFFF)',
                               border: 'none',
-                              color: '#fff',
+                              color: 'var(--text-primary, #0D1117)',
                               padding: '0 8px',
                               fontSize: '13px',
                               outline: 'none',
@@ -1427,7 +2150,7 @@ export default function RoughSheetPage() {
                               outline: 'none',
                               fontWeight: style.bold ? 'bold' : 'normal',
                               fontStyle: style.italic ? 'italic' : 'normal',
-                              color: isDuplicate ? '#FCA5A5' : 'inherit'
+                              color: isDuplicate ? '#EF4444' : 'inherit'
                             }}
                           >
                             <span style={{
@@ -1438,9 +2161,9 @@ export default function RoughSheetPage() {
                               {cellVal}
                             </span>
 
-                            {/* If Cell contains Phone Number, show subtle direct WhatsApp button on hover/selection */}
+                            {/* Direct WhatsApp button on hover/selection if cell has phone number */}
                             {phone && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: isSelected ? 1 : 0.4 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: isFocused ? 1 : 0.4 }}>
                                 <a
                                   href={`https://wa.me/${phone.replace(/^\+/, '')}`}
                                   target="_blank"
@@ -1470,10 +2193,10 @@ export default function RoughSheetPage() {
         </table>
       </div>
 
-      {/* Bottom Sheets Tab Bar & Status Bar (Google Sheets style) */}
+      {/* Bottom Sheets Tab Bar & Status Bar (Google Sheets style with Multi-Select Stats) */}
       <div style={{
-        background: 'var(--bg-surface, #141720)',
-        borderTop: '1px solid var(--border-light, #262B38)',
+        background: 'var(--bg-surface, #FFFFFF)',
+        borderTop: '1px solid var(--border-light, #E5E7EB)',
         padding: '6px 16px',
         display: 'flex',
         alignItems: 'center',
@@ -1482,16 +2205,16 @@ export default function RoughSheetPage() {
         flexWrap: 'wrap'
       }}>
         {/* Sheet Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', maxWidth: '70%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', maxWidth: '55%' }}>
           <button
             onClick={handleAddSheet}
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: '#1F2430',
-              color: '#10B981',
-              border: '1px solid #2F3647',
+              background: 'var(--bg-subtle, #EEF1F8)',
+              color: '#107C41',
+              border: '1px solid var(--border-light, #E5E7EB)',
               borderRadius: '6px',
               width: '28px',
               height: '28px',
@@ -1512,13 +2235,14 @@ export default function RoughSheetPage() {
                   setActiveSheetIndex(idx)
                   setCellStyles(sheet.styles || {})
                   setActiveCell({ row: 0, col: 0 })
+                  setSelection({ mode: 'cells', startRow: 0, startCol: 0, endRow: 0, endCol: 0, selectedRowIndices: [], selectedColIndices: [] })
                 }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: isActive ? '#107C41' : '#1F2430',
-                  color: isActive ? '#fff' : '#94A3B8',
+                  background: isActive ? '#107C41' : 'var(--bg-subtle, #EEF1F8)',
+                  color: isActive ? '#FFFFFF' : 'var(--text-secondary, #374151)',
                   padding: '4px 12px',
                   borderRadius: '6px',
                   fontSize: '12px',
@@ -1526,7 +2250,7 @@ export default function RoughSheetPage() {
                   cursor: 'pointer',
                   userSelect: 'none',
                   whiteSpace: 'nowrap',
-                  border: isActive ? '1px solid #18A756' : '1px solid #2F3647'
+                  border: isActive ? '1px solid #107C41' : '1px solid var(--border-light, #E5E7EB)'
                 }}
               >
                 {editingSheetTitleIndex === idx ? (
@@ -1538,9 +2262,9 @@ export default function RoughSheetPage() {
                     onBlur={() => handleRenameSheet(idx)}
                     onKeyDown={(e) => e.key === 'Enter' && handleRenameSheet(idx)}
                     style={{
-                      background: '#0F1117',
+                      background: 'var(--bg-surface, #FFFFFF)',
                       border: 'none',
-                      color: '#fff',
+                      color: 'var(--text-primary, #0D1117)',
                       fontSize: '12px',
                       padding: '2px 4px',
                       borderRadius: '4px',
@@ -1566,7 +2290,7 @@ export default function RoughSheetPage() {
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: isActive ? '#fff' : '#64748B',
+                      color: isActive ? '#FFFFFF' : 'var(--text-muted, #6B7280)',
                       cursor: 'pointer',
                       padding: 0,
                       display: 'flex',
@@ -1582,13 +2306,42 @@ export default function RoughSheetPage() {
           })}
         </div>
 
-        {/* Status Bar Metrics (Sum, Count, Rows) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#94A3B8' }}>
-          <span>Cells: <strong>{filledCellCount}</strong> filled</span>
-          {hasNumericValues && (
-            <span>Sum: <strong style={{ color: '#10B981' }}>{numericSum.toLocaleString()}</strong></span>
+        {/* Status Bar Metrics (Sum, Count, Selected Stats) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: 'var(--text-muted, #6B7280)', flexWrap: 'wrap' }}>
+          {isMultiSelected ? (
+            <>
+              <span style={{
+                background: 'rgba(16, 124, 65, 0.1)',
+                color: '#107C41',
+                padding: '2px 8px',
+                borderRadius: '4px',
+                fontWeight: 600
+              }}>
+                Selected: <strong>{selectionMetrics.count}</strong> cells
+              </span>
+              {selectionMetrics.numericCount > 0 && (
+                <>
+                  <span>Sum: <strong style={{ color: '#107C41' }}>{selectionMetrics.sum.toLocaleString()}</strong></span>
+                  <span>Avg: <strong>{selectionMetrics.avg.toFixed(1)}</strong></span>
+                  <span>Count: <strong>{selectionMetrics.numericCount}</strong></span>
+                  {selectionMetrics.min !== null && (
+                    <span>Min: <strong>{selectionMetrics.min.toLocaleString()}</strong></span>
+                  )}
+                  {selectionMetrics.max !== null && (
+                    <span>Max: <strong>{selectionMetrics.max.toLocaleString()}</strong></span>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <span>Cells: <strong style={{ color: 'var(--text-primary, #0D1117)' }}>{filledCellCount}</strong> filled</span>
+              {hasNumericValues && (
+                <span>Sum: <strong style={{ color: '#107C41' }}>{wholeSheetSum.toLocaleString()}</strong></span>
+              )}
+              <span>Grid: <strong style={{ color: 'var(--text-primary, #0D1117)' }}>{activeSheetTotalRows}</strong> rows × <strong style={{ color: 'var(--text-primary, #0D1117)' }}>{activeSheetTotalCols}</strong> cols</span>
+            </>
           )}
-          <span>Grid: <strong>{activeSheetTotalRows}</strong> rows × <strong>{activeSheetTotalCols}</strong> cols</span>
         </div>
       </div>
     </div>

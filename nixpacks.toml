@@ -1,0 +1,6 @@
+# Nixpacks configuration for Coolify deployment
+[variables]
+NODE_OPTIONS = "--dns-result-order=ipv4first"
+
+[phases.install]
+cmds = ["npm ci --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 --maxsockets=15"]

@@ -85,6 +85,20 @@ export async function GET() {
         ON CONFLICT (staff_id, date) DO UPDATE
         SET penalty_percent = EXCLUDED.penalty_percent, reason = EXCLUDED.reason;
 
+        CREATE TABLE IF NOT EXISTS rough_sheets (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          sheet_name TEXT NOT NULL,
+          columns JSONB NOT NULL DEFAULT '[]'::jsonb,
+          data JSONB NOT NULL DEFAULT '[]'::jsonb,
+          styles JSONB DEFAULT '{}'::jsonb,
+          is_default BOOLEAN DEFAULT FALSE,
+          sort_order INTEGER DEFAULT 0,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_rough_sheets_sort ON rough_sheets (sort_order, updated_at DESC);
+
         NOTIFY pgrst, 'reload schema';
       `)
       await client.end()
