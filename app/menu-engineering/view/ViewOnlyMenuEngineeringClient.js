@@ -7,6 +7,7 @@ import {
   ChevronRight, TrendingUp, CheckCircle2, ChevronDown
 } from 'lucide-react'
 import ThemeToggle from '../../../components/ThemeToggle'
+import RecipeModal from '../../../components/RecipeModal'
 import {
   calculateFixedCostPricing,
   calculateOnlineChannelMetrics,
@@ -45,11 +46,37 @@ function FCBadge({ pct, large = false }) {
 }
 
 export default function ViewOnlyMenuEngineeringClient({ initialItems = [], channels = [] }) {
+  const [itemsList, setItemsList]               = useState(initialItems)
   const [searchQuery, setSearchQuery]           = useState('')
   const [selectedCategory, setSelectedCategory] = useState('ALL')
   const [selectedRecipeItem, setSelectedRecipeItem] = useState(null)
   const [viewMode, setViewMode]                 = useState('table') // 'table' | 'cards'
   const [expandedCardId, setExpandedCardId]     = useState(null)
+
+  useEffect(() => {
+    setItemsList(initialItems)
+  }, [initialItems])
+
+  function handleRecipeSaveSuccess({ itemId, recipe, current_cogs }) {
+    const updatedCogs = parseFloat(current_cogs) || 0
+    setItemsList(prev => prev.map(item => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          recipe,
+          current_cogs: updatedCogs
+        }
+      }
+      return item
+    }))
+    if (selectedRecipeItem && selectedRecipeItem.id === itemId) {
+      setSelectedRecipeItem(prev => ({
+        ...prev,
+        recipe,
+        current_cogs: updatedCogs
+      }))
+    }
+  }
 
   // Auto-detect mobile screen on mount to choose Cards view
   useEffect(() => {
@@ -70,34 +97,34 @@ export default function ViewOnlyMenuEngineeringClient({ initialItems = [], chann
   // Extract distinct categories
   const categories = useMemo(() => {
     const set = new Set()
-    initialItems.forEach(i => {
+    itemsList.forEach(i => {
       if (i.category) set.add(i.category)
     })
     return ['ALL', ...Array.from(set).sort()]
-  }, [initialItems])
+  }, [itemsList])
 
   // Filter items
   const filteredItems = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
-    return initialItems.filter(item => {
+    return itemsList.filter(item => {
       const matchCat = selectedCategory === 'ALL' || item.category === selectedCategory
       const matchQuery = !q || item.name.toLowerCase().includes(q) || (item.category && item.category.toLowerCase().includes(q))
       return matchCat && matchQuery
     })
-  }, [initialItems, searchQuery, selectedCategory])
+  }, [itemsList, searchQuery, selectedCategory])
 
   // High-level metrics
-  const totalItems = initialItems.length
-  const itemsWithRecipes = initialItems.filter(i => i.recipe && i.recipe.length > 0).length
-  const itemsWithPrices = initialItems.filter(i => i.dine_in_price > 0).length
+  const totalItems = itemsList.length
+  const itemsWithRecipes = itemsList.filter(i => i.recipe && i.recipe.length > 0).length
+  const itemsWithPrices = itemsList.filter(i => i.dine_in_price > 0).length
 
   // Average food cost
   const avgFoodCost = useMemo(() => {
-    const pricedItems = initialItems.filter(i => i.dine_in_price > 0 && i.current_cogs > 0)
+    const pricedItems = itemsList.filter(i => i.dine_in_price > 0 && i.current_cogs > 0)
     if (!pricedItems.length) return 0
     const sum = pricedItems.reduce((acc, i) => acc + ((i.current_cogs / i.dine_in_price) * 100), 0)
     return Math.round(sum / pricedItems.length)
-  }, [initialItems])
+  }, [itemsList])
 
   // Export CSV
   function exportCSV() {
@@ -813,85 +840,12 @@ export default function ViewOnlyMenuEngineeringClient({ initialItems = [], chann
       </main>
 
       {/* ── RESPONSIVE RECIPE MODAL ─────────────────────────── */}
-      {selectedRecipeItem && (
-        <div
-          className="view-modal-overlay"
-          style={styles.modalOverlay}
-          onClick={() => setSelectedRecipeItem(null)}
-        >
-          <div
-            className="view-modal-card"
-            style={styles.modalCard}
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="view-modal-header" style={styles.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={styles.modalIcon}>
-                  <Utensils size={20} color="var(--accent-brown, #7C3A1E)" />
-                </div>
-                <div>
-                  <h3 className="view-modal-title" style={styles.modalTitle}>{selectedRecipeItem.name}</h3>
-                  <div style={styles.modalSub}>
-                    {selectedRecipeItem.category || 'General'} · Total Making Cost: <strong style={{ color: 'var(--accent-brown)' }}>{formatBDT(selectedRecipeItem.current_cogs)}</strong>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedRecipeItem(null)}
-                style={styles.modalCloseBtn}
-                aria-label="Close modal"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="view-modal-body" style={styles.modalBody}>
-              {selectedRecipeItem.recipe && selectedRecipeItem.recipe.length > 0 ? (
-                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                  <table style={styles.recipeTable}>
-                    <thead>
-                      <tr style={styles.recipeThead}>
-                        <th style={styles.recipeTh}>Ingredient</th>
-                        <th style={styles.recipeTh}>Qty</th>
-                        <th style={styles.recipeTh}>Unit</th>
-                        <th style={styles.recipeTh}>Unit Rate</th>
-                        <th style={{ ...styles.recipeTh, textAlign: 'right' }}>Total Cost</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedRecipeItem.recipe.map((ing, idx) => (
-                        <tr key={idx} style={styles.recipeTr}>
-                          <td style={{ ...styles.recipeTd, fontWeight: 600 }}>{ing.ingredient_name}</td>
-                          <td style={styles.recipeTd}>{ing.quantity}</td>
-                          <td style={styles.recipeTd}>{ing.unit}</td>
-                          <td style={styles.recipeTd}>
-                            {formatBDT(ing.price)} / {ing.price_basis_unit ? ing.price_basis_unit.replace('per ', '') : ing.unit}
-                          </td>
-                          <td style={{ ...styles.recipeTd, textAlign: 'right', fontWeight: 700 }}>
-                            {formatBDT(ing.line_cost)}
-                          </td>
-                        </tr>
-                      ))}
-                      <tr style={styles.recipeTotalRow}>
-                        <td colSpan={4} style={{ ...styles.recipeTd, fontWeight: 800 }}>Total Making Cost (COGS)</td>
-                        <td style={{ ...styles.recipeTd, textAlign: 'right', fontWeight: 900, color: 'var(--accent-brown, #7C3A1E)', fontSize: 16 }}>
-                          {formatBDT(selectedRecipeItem.current_cogs)}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '36px 14px', color: 'var(--text-muted)' }}>
-                  <AlertTriangle size={36} style={{ marginBottom: 10, opacity: 0.5 }} />
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>No ingredient breakdown recorded</div>
-                  <div style={{ fontSize: 12, marginTop: 4 }}>This item has not yet been costed in the chef recipe database.</div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <RecipeModal
+        item={selectedRecipeItem}
+        isOpen={!!selectedRecipeItem}
+        onClose={() => setSelectedRecipeItem(null)}
+        onSaveSuccess={handleRecipeSaveSuccess}
+      />
     </div>
   )
 }

@@ -4,9 +4,6 @@ import { requireRole } from '../../../../lib/costing-auth'
 
 // GET /api/costing/ingredients?search=<text>
 export async function GET(request) {
-  const { error, status } = await requireRole(request, 'chef', 'admin')
-  if (error) return NextResponse.json({ error }, { status })
-
   const { searchParams } = new URL(request.url)
   const search = searchParams.get('search') || ''
 

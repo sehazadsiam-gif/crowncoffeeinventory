@@ -5,9 +5,10 @@ import {
   netFoodCostPctAfterCommission, foodCostColor, formatBDT, formatPct,
   calculateFixedCostPricing, calculatePriceFromTargetProfit, calculateOnlineChannelMetrics
 } from '../../../lib/costing-calculations'
-import { Save, AlertTriangle, Settings, X, Plus, Trash2, Calculator, Info, Upload, RefreshCw, Download, Check, CheckCircle, Search } from 'lucide-react'
+import { Save, AlertTriangle, Settings, X, Plus, Trash2, Calculator, Info, Upload, RefreshCw, Download, Check, CheckCircle, Search, Utensils } from 'lucide-react'
 import PricingCalculatorModal from '../../menu-costings/PricingCalculatorModal'
 import MenuUploadModal from './MenuUploadModal'
+import RecipeModal from '../../../components/RecipeModal'
 
 // Food cost badge
 function FCBadge({ pct }) {
@@ -33,6 +34,7 @@ export default function SectionA({ items, channels, onSave }) {
   // Keep localPrices in sync when items/channels load
   const [channelList, setChannelList] = useState(channels)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [selectedRecipeItem, setSelectedRecipeItem] = useState(null)
   const [savingAll, setSavingAll] = useState(false)
 
   useEffect(() => {
@@ -618,13 +620,20 @@ export default function SectionA({ items, channels, onSave }) {
                   <td style={{ ...styles.td, fontWeight: 600 }}>
                     <div>{item.name}</div>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{item.category}</span>
-                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                       <button
                         onClick={() => setCalcModalItem(item)}
                         style={styles.inlineCalcBtn}
                         title="Calculate margins for this item"
                       >
                         <Calculator size={11} /> Calc
+                      </button>
+                      <button
+                        onClick={() => setSelectedRecipeItem(item)}
+                        style={styles.inlineRecipeBtn}
+                        title="View and edit recipe ingredients"
+                      >
+                        <Utensils size={11} /> Recipe
                       </button>
                     </div>
                   </td>
@@ -832,6 +841,23 @@ export default function SectionA({ items, channels, onSave }) {
           </div>
         </div>
       )}
+
+      {/* Recipe Modal with View & Edit Modes */}
+      <RecipeModal
+        item={selectedRecipeItem}
+        isOpen={!!selectedRecipeItem}
+        onClose={() => setSelectedRecipeItem(null)}
+        onSaveSuccess={({ itemId, recipe, current_cogs }) => {
+          setCogs(itemId, current_cogs)
+          if (selectedRecipeItem && selectedRecipeItem.id === itemId) {
+            setSelectedRecipeItem(prev => ({
+              ...prev,
+              recipe,
+              current_cogs
+            }))
+          }
+        }}
+      />
     </div>
   )
 }
@@ -855,7 +881,8 @@ const styles = {
   calcBtn:   { display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'linear-gradient(135deg, var(--accent-brown), var(--accent-brown-dark))', color: '#fff', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)' },
   uploadBtn: { display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'var(--accent-brown, #7C3A1E)', color: '#fff', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)', boxShadow: '0 2px 4px rgba(124,58,30,0.2)' },
   saveAllBtn:{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 'var(--radius-md)', background: 'var(--success, #10B981)', color: '#fff', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)' },
-  inlineCalcBtn: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 4, background: 'var(--accent-brown-dim)', color: 'var(--accent-brown)', fontSize: 10, fontWeight: 600, border: 'none', cursor: 'pointer', marginTop: 4, fontFamily: 'var(--font-sans)' },
+  inlineCalcBtn: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 4, background: 'var(--accent-brown-dim)', color: 'var(--accent-brown)', fontSize: 10, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)' },
+  inlineRecipeBtn: { display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 6px', borderRadius: 4, background: 'rgba(16, 124, 65, 0.12)', color: '#107C41', fontSize: 10, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'var(--font-sans)' },
   alertBox:  { background: 'var(--danger-bg)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginBottom: 20 },
   alertTitle:{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, color: 'var(--danger)', marginBottom: 10, fontSize: 14 },
   alertList: { display: 'flex', flexDirection: 'column', gap: 6 },
