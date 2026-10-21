@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import {
@@ -59,6 +59,36 @@ const LiveTrackingMap = dynamic(() => import('../../../components/LiveTrackingMa
   )
 })
 
+// Play a short beep using Web Audio API for geofence exit alerts
+function playAlertBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const oscillator = ctx.createOscillator()
+    const gain = ctx.createGain()
+    oscillator.connect(gain)
+    gain.connect(ctx.destination)
+    oscillator.type = 'sine'
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime) // A5 note
+    gain.gain.setValueAtTime(0.3, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+    oscillator.start(ctx.currentTime)
+    oscillator.stop(ctx.currentTime + 0.5)
+    // Play second beep after 0.15s
+    const osc2 = ctx.createOscillator()
+    const gain2 = ctx.createGain()
+    osc2.connect(gain2)
+    gain2.connect(ctx.destination)
+    osc2.type = 'sine'
+    osc2.frequency.setValueAtTime(1046, ctx.currentTime + 0.15) // C6 note
+    gain2.gain.setValueAtTime(0.3, ctx.currentTime + 0.15)
+    gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.65)
+    osc2.start(ctx.currentTime + 0.15)
+    osc2.stop(ctx.currentTime + 0.65)
+  } catch (e) {
+    // Web Audio not available
+  }
+}
+
 export default function LiveTrackingPage() {
   const [locations, setLocations] = useState([])
   const [staffList, setStaffList] = useState([])
@@ -68,6 +98,9 @@ export default function LiveTrackingPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [activeFilter, setActiveFilter] = useState('all') // 'all' | 'cafe' | 'transit' | 'offsite' | 'offline'
   const [selectedStaffId, setSelectedStaffId] = useState(null)
+
+  // Track previous geofence states for exit detection (improvement #3)
+  const prevGeofenceStateRef = useRef({})
 
   // Route playback state
   const [routePoints, setRoutePoints] = useState([])
@@ -127,6 +160,36 @@ export default function LiveTrackingPage() {
   // Movement Heatmap density mode
   const [heatmapMode, setHeatmapMode] = useState(false)
 
+  // ── IMPROVEMENT #3: Detect geofence exits and play alert sound ──
+  useEffect(() => {
+    if (locations.length === 0) return
+    const prev = prevGeofenceStateRef.current
+    const exitedStaff = []
+
+    locations.forEach((loc) => {
+      const sid = loc.staff_id
+      const wasInside = prev[sid]
+      const isNowInside = loc.is_inside_geofence
+
+      // Check if staff was previously inside and now outside
+      if (wasInside === true && isNowInside === false) {
+        const staffName = loc.staff?.name || sid
+        exitedStaff.push(staffName)
+      }
+
+      // Update tracked state
+      if (isNowInside !== undefined && isNowInside !== null) {
+        prev[sid] = isNowInside
+      }
+    })
+
+    if (exitedStaff.length > 0) {
+      playAlertBeep()
+    }
+
+    prevGeofenceStateRef.current = prev
+  }, [locations])
+
   // Fetch Live Tracking Data
   const fetchData = async (isManual = false) => {
     if (isManual) setRefreshing(true)
@@ -179,6 +242,7 @@ export default function LiveTrackingPage() {
       const loc = locMap.get(staff.id)
       let status = 'offline'
       let timeAgo = 'Never'
+      let lastSeenExact = '' // Improvement #2: exact timestamp
       let isOffline = true
       let isAtCafe = false
       let isMoving = false
@@ -188,6 +252,13 @@ export default function LiveTrackingPage() {
         const diffMs = now - lastUpdate
         isOffline = diffMs > 10 * 60 * 1000 // > 10 minutes is offline
         timeAgo = formatTimeAgo(loc.last_updated)
+        // Exact time like "2:15 AM"
+        lastSeenExact = new Date(loc.last_updated).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+          timeZone: 'Asia/Dhaka'
+        })
         isAtCafe = loc.is_inside_geofence
         isMoving = (loc.speed || 0) > 1.2
 
@@ -210,6 +281,7 @@ export default function LiveTrackingPage() {
         isAtCafe,
         isMoving,
         timeAgo,
+        lastSeenExact,
         battery: loc?.battery_level !== undefined ? loc.battery_level : null,
         isCharging: loc?.is_charging || false,
         speed: loc?.speed || 0
@@ -1067,7 +1139,7 @@ export default function LiveTrackingPage() {
                         }}
                       >
                         <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Clock size={12} /> {staff.timeAgo}
+                          <Clock size={12} /> {staff.timeAgo}{staff.lastSeenExact ? ` · ${staff.lastSeenExact}` : ''}
                         </span>
 
                         {staff.battery !== null && (

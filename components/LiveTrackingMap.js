@@ -242,6 +242,14 @@ export default function LiveTrackingMap({
       const initial = (staff.name || 'S').charAt(0).toUpperCase()
       const isSelected = selectedStaffId === staffId
 
+      // Generate a unique avatar background color from staffId for initials
+      const avatarColors = ['#6366F1', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316', '#0EA5E9', '#D946EF', '#10B981', '#E11D48', '#0284C7']
+      const avatarBg = avatarColors[Math.abs((staffId || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % avatarColors.length]
+
+      // Direction arrow for moving staff using heading data
+      const headingDeg = loc.heading !== null && loc.heading !== undefined && !isNaN(loc.heading) ? Math.round(loc.heading) : null
+      const showDirectionArrow = isMoving && headingDeg !== null && headingDeg >= 0
+
       const customHtml = `
         <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
           ${
@@ -259,11 +267,24 @@ export default function LiveTrackingMap({
                 "></div>`
               : ''
           }
+          ${showDirectionArrow ? `<div style="
+            position: absolute;
+            top: -18px;
+            left: 50%;
+            transform: translateX(-50%) rotate(${headingDeg}deg);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 14px solid ${ringColor};
+            filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+            z-index: 2;
+          "></div>` : ''}
           <div style="
             width: 36px;
             height: 36px;
             border-radius: 50%;
-            background: #FFFFFF;
+            background: ${staff.photo_url ? '#FFFFFF' : avatarBg};
             border: 3px solid ${ringColor};
             display: flex;
             align-items: center;
@@ -276,7 +297,7 @@ export default function LiveTrackingMap({
             ${
               staff.photo_url
                 ? `<img src="${staff.photo_url}" style="width: 100%; height: 100%; object-fit: cover;" />`
-                : `<span style="font-weight: 800; font-size: 14px; color: #1E293B;">${initial}</span>`
+                : `<span style="font-weight: 800; font-size: 14px; color: #FFFFFF; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${initial}</span>`
             }
           </div>
           <div style="
@@ -290,7 +311,7 @@ export default function LiveTrackingMap({
             white-space: nowrap;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
           ">
-            ${staff.name || 'Staff'}
+            ${staff.name || 'Staff'}${showDirectionArrow ? ' ➤' : ''}
           </div>
         </div>
       `

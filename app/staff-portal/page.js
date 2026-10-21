@@ -56,6 +56,44 @@ export default function StaffPortalPage() {
   const [penalties, setPenalties] = useState([])
   const [hasConsented, setHasConsented] = useState(true)
 
+  // ── IMPROVEMENT #1: Auto-refresh location ping every 30s while portal is open ──
+  useEffect(() => {
+    if (!hasConsented || !staff?.id) return
+    if (typeof window === 'undefined' || !navigator.geolocation) return
+
+    const sendPing = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          fetch('/api/staff/location', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              staffId: staff.id,
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              speed: pos.coords.speed || 0,
+              heading: pos.coords.heading || null,
+              altitude: pos.coords.altitude || null,
+              batteryLevel: null,
+              isCharging: false,
+              trackingMode: 'foreground'
+            })
+          }).catch(() => {})
+        },
+        () => {}, // silently ignore errors
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }
+      )
+    }
+
+    // Send an initial ping immediately
+    sendPing()
+    // Then every 30 seconds
+    const pingInterval = setInterval(sendPing, 30000)
+
+    return () => clearInterval(pingInterval)
+  }, [hasConsented, staff?.id])
+
   useEffect(() => {
     setMounted(true)
     if (typeof window !== 'undefined') {
