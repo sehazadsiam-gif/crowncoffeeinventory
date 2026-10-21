@@ -178,7 +178,16 @@ export default function Navbar() {
       ]
     },
     { href: '/admin/members', label: 'Members', icon: <Users size={16} />, flag: 'members' },
-    { href: '/admin/live-tracking', label: '24/7 Radar', icon: <MapPin size={16} /> },
+    {
+      href: '/admin/live-tracking',
+      label: '24/7 Radar',
+      icon: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981', display: 'inline-block', boxShadow: '0 0 6px #10B981' }} />
+          <MapPin size={15} color="#10B981" />
+        </span>
+      )
+    },
     { href: '/admin/rough-sheet', label: 'Rough Sheet', icon: <FileSpreadsheet size={16} /> },
     { href: '/waste', label: 'Waste', icon: <Trash2 size={16} />, flag: 'waste' },
     { href: '/balance-sheet', label: 'Balance', icon: <CalcIcon size={16} />, flag: 'balance_sheet' },

@@ -11,7 +11,7 @@ import {
   Coffee, ShoppingCart, Receipt, Eraser, AlertTriangle,
   MessageSquare, Star, ExternalLink, ChevronLeft, ChevronRight,
   Wifi, Server, HardDrive, BarChart2, Settings, Clock,
-  CheckCircle, XCircle, RefreshCw, Menu
+  CheckCircle, XCircle, RefreshCw, Menu, Compass, MapPin, Radio
 } from 'lucide-react'
 
 /* ─────────────────────────────────────────────────────────
@@ -154,11 +154,12 @@ export default function AdminClient({ initialStats }) {
   const { stats } = initialStats
 
   const NAV_ITEMS = [
-    { id: 'overview',    icon: BarChart2,     label: 'Overview',          badge: null },
-    { id: 'sales-audit', icon: Receipt,       label: 'Daily Sales Audit', badge: 'AI', badgeColor: 'var(--accent-blue)' },
-    { id: 'db',          icon: Database,      label: 'Database',          badge: '!', badgeColor: 'var(--danger)' },
-    { id: 'entities',    icon: Settings,      label: 'Management',        badge: null },
-    { id: 'feedbacks',   icon: MessageSquare, label: 'Guest Feedbacks',   badge: feedbacks.length || null, badgeColor: 'var(--accent-brown)' },
+    { id: 'overview',      icon: BarChart2,     label: 'Overview',          badge: null },
+    { id: 'live-tracking', icon: Compass,       label: '24/7 Staff Radar',  badge: 'LIVE', badgeColor: '#10B981', href: '/admin/live-tracking' },
+    { id: 'sales-audit',   icon: Receipt,       label: 'Daily Sales Audit', badge: 'AI', badgeColor: 'var(--accent-blue)' },
+    { id: 'db',            icon: Database,      label: 'Database',          badge: '!', badgeColor: 'var(--danger)' },
+    { id: 'entities',      icon: Settings,      label: 'Management',        badge: null },
+    { id: 'feedbacks',     icon: MessageSquare, label: 'Guest Feedbacks',   badge: feedbacks.length || null, badgeColor: 'var(--accent-brown)' },
   ]
 
   return (
@@ -416,6 +417,30 @@ export default function AdminClient({ initialStats }) {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto' }}>
+            <a
+              href="/admin/live-tracking"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '7px',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #064E3B 0%, #047857 100%)',
+                border: '1px solid #10B981',
+                color: '#ECFDF5',
+                fontSize: '12px',
+                fontWeight: 800,
+                fontFamily: 'var(--font-sans)',
+                textDecoration: 'none',
+                boxShadow: '0 2px 10px rgba(16,185,129,0.25)',
+                transition: 'all 0.2s',
+                cursor: 'pointer'
+              }}
+            >
+              <span className="pulse-dot" style={{ width: '6px', height: '6px', background: '#34D399', borderRadius: '50%' }} />
+              <Compass size={14} style={{ color: '#A7F3D0' }} />
+              <span>24/7 Staff Radar</span>
+            </a>
             <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '6px 14px', background: 'var(--bg-subtle)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
               <Clock size={13} style={{ color: 'var(--text-muted)' }} />
               <span style={{ fontFamily: 'monospace', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.05em' }}>{clock}</span>
@@ -451,11 +476,17 @@ export default function AdminClient({ initialStats }) {
             <span className="nav-label">Navigation</span>
           </p>
 
-          {NAV_ITEMS.map(({ id, icon: Icon, label, badge, badgeColor }) => (
+          {NAV_ITEMS.map(({ id, icon: Icon, label, badge, badgeColor, href }) => (
             <div
               key={id}
               className={`nav-item${activeTab === id ? ' active' : ''}`}
-              onClick={() => setActiveTab(id)}
+              onClick={() => {
+                if (href) {
+                  router.push(href)
+                } else {
+                  setActiveTab(id)
+                }
+              }}
             >
               <Icon size={18} strokeWidth={activeTab === id ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
               <span className="nav-label">{label}</span>
@@ -473,6 +504,14 @@ export default function AdminClient({ initialStats }) {
             <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.12em', padding: '4px 14px 4px', margin: 0 }}>
               <span className="nav-label">Quick Access</span>
             </p>
+            <a
+              href="/admin/live-tracking"
+              className="nav-item"
+              style={{ textDecoration: 'none', color: '#10B981', fontWeight: 700 }}
+            >
+              <MapPin size={16} strokeWidth={1.8} style={{ flexShrink: 0, color: '#10B981' }} />
+              <span className="nav-label">Live Radar Map</span>
+            </a>
             <a
               href="https://crowncoffeejobs.vercel.app/admin"
               target="_blank"
@@ -611,6 +650,18 @@ export default function AdminClient({ initialStats }) {
                     </div>
                     <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#64748B' }}>
                       Real-time WebSocket monitoring, minute-by-minute overtime beyond 10 hours.
+                    </p>
+                  </a>
+
+                  <a href="/admin/live-tracking" style={{ display: 'flex', flexDirection: 'column', padding: '16px', background: 'linear-gradient(135deg, #064E3B 0%, #047857 100%)', borderRadius: '12px', border: '1px solid #10B981', textDecoration: 'none', color: '#FFFFFF', boxShadow: '0 4px 16px rgba(16,185,129,0.2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '14px', color: '#ECFDF5' }}>
+                        <Compass size={16} color="#34D399" /> 24/7 Staff GPS Radar
+                      </div>
+                      <span style={{ fontSize: '10px', fontWeight: 800, background: '#10B981', color: '#FFFFFF', padding: '2px 8px', borderRadius: '999px', letterSpacing: '0.05em' }}>● LIVE MAP</span>
+                    </div>
+                    <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#D1FAE5' }}>
+                      24/7 staff geolocation on map, cafe geofence presence, route scrubber & SOS safety panic alerts.
                     </p>
                   </a>
 

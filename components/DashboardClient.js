@@ -8,7 +8,7 @@ import {
   CheckCircle2, Wallet, TrendingUp, AlertTriangle, Calendar,
   Users, UserCheck, FileText, Send, MessageSquare, Clock,
   BellRing, Box, Zap, CalendarDays, ArrowUpRight, Activity,
-  RefreshCw, Coffee, BarChart2, ArrowUp, ArrowDown, Calculator, ShieldAlert
+  RefreshCw, Coffee, BarChart2, ArrowUp, ArrowDown, Calculator, ShieldAlert, Compass, MapPin
 } from 'lucide-react'
 import CafePresenceWidget from './CafePresenceWidget'
 
@@ -357,6 +357,30 @@ export default function DashboardClient() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <Link
+              href="/admin/live-tracking"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 18px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #064E3B 0%, #047857 100%)',
+                border: '1px solid #10B981',
+                color: '#ECFDF5',
+                fontSize: '13px',
+                fontWeight: 800,
+                textDecoration: 'none',
+                boxShadow: '0 4px 14px rgba(16,185,129,0.25)',
+                transition: 'all 0.2s',
+                cursor: 'pointer'
+              }}
+            >
+              <span className="pulse-dot" style={{ width: '7px', height: '7px', background: '#34D399', borderRadius: '50%' }} />
+              <Compass size={16} style={{ color: '#A7F3D0' }} />
+              <span>24/7 Staff Radar</span>
+            </Link>
+
             <div className="date-chip">
               <Calendar size={15} style={{ color: 'var(--accent-blue)', flexShrink: 0 }} />
               <div>
