@@ -10,6 +10,7 @@ import {
   BellRing, Box, Zap, CalendarDays, ArrowUpRight, Activity,
   RefreshCw, Coffee, BarChart2, ArrowUp, ArrowDown, Calculator, ShieldAlert
 } from 'lucide-react'
+import CafePresenceWidget from './CafePresenceWidget'
 
 /* ─────────────────────────────────────────────────────────
    Live greeting
@@ -850,6 +851,9 @@ export default function DashboardClient() {
                 )}
               </div>
             </div>
+
+            {/* Who's at the Cafe Right Now (24/7 Radar) */}
+            <CafePresenceWidget />
 
             {/* Attendance Snapshot */}
             <div className="panel">

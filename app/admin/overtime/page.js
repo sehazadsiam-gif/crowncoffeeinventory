@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Upload, Download } from 'lucide-react'
+import Link from 'next/link'
+import { Upload, Download, MapPin } from 'lucide-react'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -96,8 +97,29 @@ export default function OvertimePage() {
 
   return (
     <div style={{ padding: '32px' }}>
-      <h1 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '8px' }}>Overtime Management</h1>
-      <p style={{ color: '#9C8A76', marginBottom: '32px' }}>Upload Rysenova CSV and calculate overtime</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0 }}>Overtime Management</h1>
+        <Link
+          href="/admin/live-tracking"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: '#107C41',
+            color: '#FFFFFF',
+            padding: '10px 16px',
+            borderRadius: '10px',
+            fontSize: '13px',
+            fontWeight: 700,
+            textDecoration: 'none',
+            boxShadow: '0 4px 12px rgba(16, 124, 65, 0.25)'
+          }}
+        >
+          <MapPin size={16} />
+          <span>24/7 GPS Overtime Audit</span>
+        </Link>
+      </div>
+      <p style={{ color: '#9C8A76', marginBottom: '32px' }}>Upload Rysenova CSV and verify overtime against live GPS logs</p>
 
       {/* CSV Upload Section */}
       <div style={{ background: 'white', borderRadius: '12px', padding: '24px', marginBottom: '32px', border: '2px dashed #E0E0E0' }}>

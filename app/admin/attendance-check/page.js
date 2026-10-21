@@ -7,7 +7,7 @@ import { useToast } from '../../../components/Toast'
 import {
   Clock, CheckCircle2, AlertTriangle, Users, Calendar,
   Radio, Sparkles, RefreshCw, Coffee, Monitor, ShieldCheck,
-  Check, Edit3, Award, DollarSign, Trash2
+  Check, Edit3, Award, DollarSign, Trash2, MapPin
 } from 'lucide-react'
 
 export default function AttendanceCheckPage() {
@@ -362,6 +362,13 @@ export default function AttendanceCheckPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <a
+              href="/admin/live-tracking"
+              style={{ background: '#107C41', color: 'white', textDecoration: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <MapPin size={16} /> Geofence Approvals & Radar
+            </a>
+
             <a
               href={`/api/attendance/export-csv?month=${month}&year=${year}`}
               download

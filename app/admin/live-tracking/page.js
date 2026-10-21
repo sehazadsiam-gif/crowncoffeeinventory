@@ -23,7 +23,11 @@ import {
   AlertTriangle,
   Calendar,
   X,
-  Radio
+  Radio,
+  CheckCircle2,
+  ClipboardList,
+  Check,
+  TrendingUp
 } from 'lucide-react'
 
 // Dynamic import with SSR disabled for Leaflet
@@ -74,6 +78,20 @@ export default function LiveTrackingPage() {
     radius_m: 120
   })
   const [savingZone, setSavingZone] = useState(false)
+
+  // Geofence attendance review modal state
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false)
+  const [attendanceProposals, setAttendanceProposals] = useState([])
+  const [loadingAttendance, setLoadingAttendance] = useState(false)
+  const [attReviewDate, setAttReviewDate] = useState(new Date().toISOString().split('T')[0])
+  const [attActionMsg, setAttActionMsg] = useState(null)
+
+  // Overtime GPS audit modal state
+  const [showOvertimeModal, setShowOvertimeModal] = useState(false)
+  const [overtimeAudits, setOvertimeAudits] = useState([])
+  const [loadingOvertime, setLoadingOvertime] = useState(false)
+  const [otReviewDate, setOtReviewDate] = useState(new Date().toISOString().split('T')[0])
+  const [otActionMsg, setOtActionMsg] = useState(null)
 
   // Fetch Live Tracking Data
   const fetchData = async (isManual = false) => {
@@ -253,6 +271,83 @@ export default function LiveTrackingPage() {
     }
   }
 
+  // Fetch Geofence Attendance Review
+  const fetchAttendanceReview = async (d) => {
+    setLoadingAttendance(true)
+    setAttActionMsg(null)
+    const targetDate = d || attReviewDate
+    try {
+      const res = await fetch(`/api/attendance/geofence-review?date=${targetDate}`)
+      const data = await res.json()
+      if (data.success) {
+        setAttendanceProposals(data.proposals || [])
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingAttendance(false)
+    }
+  }
+
+  // Manually Approve Geofence Check-in or Check-out
+  const handleApproveAttendance = async (staffId, action, timestamp) => {
+    try {
+      const res = await fetch('/api/attendance/geofence-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ staffId, action, timestamp })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setAttActionMsg(`✅ Successfully recorded ${action} for staff!`)
+        fetchAttendanceReview(attReviewDate)
+        fetchData()
+      } else {
+        alert(data.error || 'Failed to record attendance')
+      }
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
+  // Fetch Overtime GPS Audit
+  const fetchOvertimeAudit = async (d) => {
+    setLoadingOvertime(true)
+    setOtActionMsg(null)
+    const targetDate = d || otReviewDate
+    try {
+      const res = await fetch(`/api/admin/overtime/gps-audit?date=${targetDate}`)
+      const data = await res.json()
+      if (data.success) {
+        setOvertimeAudits(data.audits || [])
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingOvertime(false)
+    }
+  }
+
+  // Manually Approve or Adjust Overtime Hours
+  const handleApproveOvertime = async (attendanceId, hours) => {
+    try {
+      const res = await fetch('/api/admin/overtime/gps-audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendanceId, approvedOvertimeHours: hours })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setOtActionMsg(`✅ Overtime approved & updated to ${hours} hrs!`)
+        fetchOvertimeAudit(otReviewDate)
+      } else {
+        alert(data.error || 'Failed to update overtime')
+      }
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
   return (
     <div
       style={{
@@ -380,6 +475,67 @@ export default function LiveTrackingPage() {
               <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
             </button>
           </div>
+        </div>
+
+        {/* Manual Geofence & OT Review Quick Actions */}
+        <div
+          style={{
+            padding: '10px 16px',
+            background: 'rgba(15, 23, 42, 0.8)',
+            borderBottom: '1px solid #1E293B',
+            display: 'flex',
+            gap: '8px'
+          }}
+        >
+          <button
+            onClick={() => {
+              setShowAttendanceModal(true)
+              fetchAttendanceReview()
+            }}
+            style={{
+              flex: 1,
+              background: '#1E293B',
+              color: '#34D399',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '8px',
+              padding: '7px 8px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <ClipboardList size={13} />
+            <span>Attendance Review</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setShowOvertimeModal(true)
+              fetchOvertimeAudit()
+            }}
+            style={{
+              flex: 1,
+              background: '#1E293B',
+              color: '#60A5FA',
+              border: '1px solid rgba(59, 130, 246, 0.3)',
+              borderRadius: '8px',
+              padding: '7px 8px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
+            }}
+          >
+            <Clock size={13} />
+            <span>OT GPS Audit</span>
+          </button>
         </div>
 
         {/* Quick Stats Pills */}
@@ -933,6 +1089,390 @@ export default function LiveTrackingPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── GEOFENCE ATTENDANCE MANUAL REVIEW MODAL ── */}
+      {showAttendanceModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '1px solid #334155',
+              borderRadius: '16px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '680px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              color: '#FFFFFF'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ClipboardList size={22} color="#10B981" />
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0 }}>
+                    Geofence Attendance (Manual Review)
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                    Verify detected cafe arrivals/departures before recording attendance
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAttendanceModal(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Date Selector & Messages */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', background: '#1E293B', padding: '10px 14px', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600 }}>Review Date:</span>
+                <input
+                  type="date"
+                  value={attReviewDate}
+                  onChange={(e) => {
+                    setAttReviewDate(e.target.value)
+                    fetchAttendanceReview(e.target.value)
+                  }}
+                  style={{
+                    background: '#0F172A',
+                    border: '1px solid #334155',
+                    color: '#FFF',
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    fontSize: '12px'
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={() => fetchAttendanceReview(attReviewDate)}
+                style={{
+                  background: '#334155',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '5px 10px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Refresh List
+              </button>
+            </div>
+
+            {attActionMsg && (
+              <div style={{ background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10B981', color: '#34D399', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '12px' }}>
+                {attActionMsg}
+              </div>
+            )}
+
+            {/* Proposals List */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {loadingAttendance ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8', fontSize: '13px' }}>
+                  Analyzing geofence entries...
+                </div>
+              ) : attendanceProposals.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748B', fontSize: '13px' }}>
+                  No cafe geofence arrivals found for {attReviewDate}.
+                </div>
+              ) : (
+                attendanceProposals.map((prop) => (
+                  <div
+                    key={prop.staff_id}
+                    style={{
+                      background: '#1E293B',
+                      border: '1px solid #334155',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '14px', color: '#FFFFFF' }}>{prop.name}</span>
+                        <span style={{ fontSize: '11px', color: '#94A3B8' }}>({prop.designation || 'Staff'})</span>
+                        {prop.is_currently_inside && (
+                          <span style={{ background: 'rgba(16, 124, 65, 0.2)', color: '#34D399', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>
+                            ● In Cafe
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#94A3B8', marginTop: '6px' }}>
+                        <span>Shift: <strong>{prop.rostered_shift_start}</strong></span>
+                        <span>GPS In: <strong style={{ color: '#34D399' }}>{prop.geofence_arrival || 'None'}</strong></span>
+                        <span>GPS Out: <strong style={{ color: '#60A5FA' }}>{prop.geofence_departure || 'None'}</strong></span>
+                      </div>
+
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
+                        Attendance Status: {prop.is_attendance_recorded ? (
+                          <span style={{ color: '#10B981', fontWeight: 700 }}>Recorded ({prop.attendance_status})</span>
+                        ) : (
+                          <span style={{ color: '#F59E0B', fontWeight: 700 }}>Pending Review</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {!prop.is_attendance_recorded && prop.geofence_arrival && (
+                        <button
+                          onClick={() => handleApproveAttendance(prop.staff_id, 'checkin', prop.geofence_arrival_raw)}
+                          style={{
+                            background: '#107C41',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Approve Check-in ({prop.geofence_arrival})
+                        </button>
+                      )}
+
+                      {prop.is_attendance_recorded && !prop.existing_check_out && prop.geofence_departure && (
+                        <button
+                          onClick={() => handleApproveAttendance(prop.staff_id, 'checkout', prop.geofence_departure_raw)}
+                          style={{
+                            background: '#2563EB',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 12px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Approve Check-out ({prop.geofence_departure})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── OVERTIME GPS AUDIT MODAL ── */}
+      {showOvertimeModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '1px solid #334155',
+              borderRadius: '16px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '740px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              color: '#FFFFFF'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Clock size={22} color="#60A5FA" />
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0 }}>
+                    Overtime GPS Verification & Audit
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
+                    Cross-reference overtime claims with actual cafe geofence departure times
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOvertimeModal(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Date Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', background: '#1E293B', padding: '10px 14px', borderRadius: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600 }}>Date:</span>
+                <input
+                  type="date"
+                  value={otReviewDate}
+                  onChange={(e) => {
+                    setOtReviewDate(e.target.value)
+                    fetchOvertimeAudit(e.target.value)
+                  }}
+                  style={{
+                    background: '#0F172A',
+                    border: '1px solid #334155',
+                    color: '#FFF',
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    fontSize: '12px'
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={() => fetchOvertimeAudit(otReviewDate)}
+                style={{
+                  background: '#334155',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '5px 10px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Refresh Audit
+              </button>
+            </div>
+
+            {otActionMsg && (
+              <div style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid #3B82F6', color: '#93C5FD', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', marginBottom: '12px' }}>
+                {otActionMsg}
+              </div>
+            )}
+
+            {/* Audit Table */}
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {loadingOvertime ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#94A3B8', fontSize: '13px' }}>
+                  Calculating GPS departure cross-references...
+                </div>
+              ) : overtimeAudits.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#64748B', fontSize: '13px' }}>
+                  No overtime claims found on {otReviewDate}.
+                </div>
+              ) : (
+                overtimeAudits.map((item) => (
+                  <div
+                    key={item.attendance_id}
+                    style={{
+                      background: '#1E293B',
+                      border: item.discrepancy_status === 'discrepancy' ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid #334155',
+                      borderRadius: '12px',
+                      padding: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '14px', color: '#FFFFFF' }}>{item.staff_name}</span>
+                        <span style={{ fontSize: '11px', color: '#94A3B8' }}>({item.designation})</span>
+                        {item.discrepancy_status === 'discrepancy' ? (
+                          <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#F87171', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>
+                            ⚠️ Overtime Exceeds GPS by {item.discrepancy_hours}h
+                          </span>
+                        ) : item.discrepancy_status === 'verified' ? (
+                          <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#34D399', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>
+                            ✅ GPS Verified
+                          </span>
+                        ) : (
+                          <span style={{ background: 'rgba(107, 114, 128, 0.2)', color: '#94A3B8', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>
+                            ⚪ No GPS Data
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#94A3B8', marginTop: '6px' }}>
+                        <span>Claimed OT: <strong style={{ color: '#FBBF24' }}>{item.claimed_overtime_hours} hrs</strong></span>
+                        <span>GPS Exit: <strong>{item.gps_departure_time || 'None recorded'}</strong></span>
+                        {item.gps_verified_ot_hours !== null && (
+                          <span>Max GPS OT: <strong style={{ color: '#60A5FA' }}>{item.gps_verified_ot_hours} hrs</strong></span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={() => handleApproveOvertime(item.attendance_id, item.claimed_overtime_hours)}
+                        style={{
+                          background: '#334155',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '6px 10px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Keep Claimed ({item.claimed_overtime_hours}h)
+                      </button>
+
+                      {item.gps_verified_ot_hours !== null && (
+                        <button
+                          onClick={() => handleApproveOvertime(item.attendance_id, item.gps_verified_ot_hours)}
+                          style={{
+                            background: '#2563EB',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '6px 10px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Set to GPS ({item.gps_verified_ot_hours}h)
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

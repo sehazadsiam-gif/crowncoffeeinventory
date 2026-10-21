@@ -16,7 +16,11 @@ import {
   Phone,
   Clock,
   MapPin,
-  X
+  X,
+  Play,
+  Pause,
+  FastForward,
+  RotateCcw
 } from 'lucide-react'
 
 // Fix default Leaflet icon assets
@@ -41,7 +45,13 @@ export default function LiveTrackingMap({
   const markersRef = useRef({})
   const circlesRef = useRef([])
   const routePolylineRef = useRef(null)
+  const scrubberMarkerRef = useRef(null)
   const [mapTheme, setMapTheme] = useState('osm') // 'osm' | 'carto_light' | 'carto_dark'
+
+  // Playback Scrubber State
+  const [playIndex, setPlayIndex] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [playbackSpeed, setPlaybackSpeed] = useState(1) // 1x, 2x, 5x
 
   // Initialize Map
   useEffect(() => {
@@ -391,8 +401,71 @@ export default function LiveTrackingMap({
 
       routePolylineRef.current = polyline
       map.fitBounds(polyline.getBounds(), { padding: [50, 50] })
+      setPlayIndex(0)
+      setIsPlaying(false)
     }
   }, [routePoints])
+
+  // Route Scrubber Animation Effect
+  useEffect(() => {
+    if (!isPlaying || !routePoints || routePoints.length === 0) return
+    const intervalTime = Math.max(100, Math.floor(600 / playbackSpeed))
+    const timer = setInterval(() => {
+      setPlayIndex((prev) => {
+        if (prev >= routePoints.length - 1) {
+          setIsPlaying(false)
+          return prev
+        }
+        return prev + 1
+      })
+    }, intervalTime)
+    return () => clearInterval(timer)
+  }, [isPlaying, routePoints, playbackSpeed])
+
+  // Render & Move Scrubber Marker on Map
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    if (!routePoints || routePoints.length === 0) {
+      if (scrubberMarkerRef.current) {
+        map.removeLayer(scrubberMarkerRef.current)
+        scrubberMarkerRef.current = null
+      }
+      return
+    }
+
+    const currentPoint = routePoints[playIndex]
+    if (!currentPoint) return
+
+    const scrubberHtml = `
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
+        <div style="
+          width: 22px;
+          height: 22px;
+          background: #2563EB;
+          border: 3px solid #FFFFFF;
+          border-radius: 50%;
+          box-shadow: 0 0 16px rgba(37, 99, 235, 0.9);
+        "></div>
+      </div>
+    `
+    const icon = L.divIcon({
+      className: 'scrubber-marker',
+      html: scrubberHtml,
+      iconSize: [22, 22],
+      iconAnchor: [11, 11]
+    })
+
+    if (scrubberMarkerRef.current) {
+      scrubberMarkerRef.current.setLatLng([currentPoint.latitude, currentPoint.longitude])
+    } else {
+      scrubberMarkerRef.current = L.marker([currentPoint.latitude, currentPoint.longitude], {
+        icon,
+        zIndexOffset: 2000
+      }).addTo(map)
+    }
+  }, [playIndex, routePoints])
 
   // Reset View to Cafe or Bounds
   const handleResetView = () => {
@@ -549,7 +622,7 @@ export default function LiveTrackingMap({
         </div>
       </div>
 
-      {/* Active Route Playback Overlay Banner */}
+      {/* Interactive Route Playback Scrubber Bar */}
       {routePoints && routePoints.length > 0 && (
         <div
           style={{
@@ -559,40 +632,156 @@ export default function LiveTrackingMap({
             transform: 'translateX(-50%)',
             zIndex: 1000,
             background: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(12px)',
             color: '#FFFFFF',
-            borderRadius: '12px',
-            padding: '10px 18px',
+            borderRadius: '16px',
+            padding: '14px 20px',
             display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,255,255,0.1)'
+            flexDirection: 'column',
+            gap: '10px',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            minWidth: '420px',
+            maxWidth: '560px'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Navigation size={16} color="#60A5FA" />
-            <span style={{ fontSize: '13px', fontWeight: 600 }}>
-              Showing Route Trail: <strong>{routeStaff?.name || 'Staff'}</strong> ({routePoints.length} points)
-            </span>
+          {/* Top Title & Time Info */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Navigation size={16} color="#60A5FA" />
+              <span style={{ fontSize: '13px', fontWeight: 700 }}>
+                {routeStaff?.name || 'Staff'} — Route Replay
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span
+                style={{
+                  background: 'rgba(37, 99, 235, 0.2)',
+                  color: '#93C5FD',
+                  border: '1px solid rgba(37, 99, 235, 0.4)',
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  fontFamily: 'monospace'
+                }}
+              >
+                {routePoints[playIndex]?.recorded_at
+                  ? new Date(routePoints[playIndex].recorded_at).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true,
+                      timeZone: 'Asia/Dhaka'
+                    })
+                  : '--:--:--'}
+              </span>
+
+              <button
+                onClick={onClearRoute}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94A3B8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title="Close route playback"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
-          <button
-            onClick={onClearRoute}
+
+          {/* Timeline Range Slider */}
+          <input
+            type="range"
+            min={0}
+            max={Math.max(1, routePoints.length - 1)}
+            value={playIndex}
+            onChange={(e) => setPlayIndex(Number(e.target.value))}
             style={{
-              background: 'rgba(255,255,255,0.15)',
-              border: 'none',
-              color: '#FFFFFF',
-              borderRadius: '6px',
-              padding: '4px 8px',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
+              width: '100%',
+              accentColor: '#3B82F6',
+              cursor: 'pointer'
             }}
-          >
-            <X size={12} /> Clear Route
-          </button>
+          />
+
+          {/* Playback Controls & Speed Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => setIsPlaying(!isPlaying)}
+                style={{
+                  background: '#2563EB',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                <span>{isPlaying ? 'Pause' : 'Play'}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setPlayIndex(0)
+                  setIsPlaying(true)
+                }}
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '6px 10px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title="Restart from beginning"
+              >
+                <RotateCcw size={14} />
+              </button>
+            </div>
+
+            {/* Step info & Speed buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#94A3B8' }}>
+                Point {playIndex + 1} of {routePoints.length}
+              </span>
+
+              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', padding: '2px' }}>
+                {[1, 2, 5].map((spd) => (
+                  <button
+                    key={spd}
+                    onClick={() => setPlaybackSpeed(spd)}
+                    style={{
+                      background: playbackSpeed === spd ? '#2563EB' : 'transparent',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {spd}x
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
