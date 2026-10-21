@@ -99,6 +99,74 @@ export async function GET() {
 
         CREATE INDEX IF NOT EXISTS idx_rough_sheets_sort ON rough_sheets (sort_order, updated_at DESC);
 
+        CREATE TABLE IF NOT EXISTS staff_locations (
+          staff_id UUID PRIMARY KEY REFERENCES staff(id) ON DELETE CASCADE,
+          latitude DOUBLE PRECISION NOT NULL,
+          longitude DOUBLE PRECISION NOT NULL,
+          accuracy DOUBLE PRECISION,
+          speed DOUBLE PRECISION,
+          heading DOUBLE PRECISION,
+          altitude DOUBLE PRECISION,
+          battery_level INT,
+          is_charging BOOLEAN DEFAULT false,
+          tracking_mode TEXT DEFAULT 'off',
+          address_hint TEXT,
+          is_inside_geofence BOOLEAN DEFAULT false,
+          last_updated TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS staff_location_logs (
+          id BIGSERIAL PRIMARY KEY,
+          staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+          latitude DOUBLE PRECISION NOT NULL,
+          longitude DOUBLE PRECISION NOT NULL,
+          speed DOUBLE PRECISION,
+          battery_level INT,
+          recorded_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_loc_logs_staff_date ON staff_location_logs (staff_id, recorded_at DESC);
+
+        CREATE TABLE IF NOT EXISTS geofence_zones (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          name TEXT NOT NULL,
+          latitude DOUBLE PRECISION NOT NULL,
+          longitude DOUBLE PRECISION NOT NULL,
+          radius_m INT NOT NULL DEFAULT 100,
+          zone_type TEXT DEFAULT 'workplace',
+          is_active BOOLEAN DEFAULT true,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE TABLE IF NOT EXISTS geofence_events (
+          id BIGSERIAL PRIMARY KEY,
+          staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+          zone_id UUID NOT NULL REFERENCES geofence_zones(id) ON DELETE CASCADE,
+          event_type TEXT NOT NULL,
+          recorded_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_geofence_events_staff ON geofence_events (staff_id, recorded_at DESC);
+
+        CREATE TABLE IF NOT EXISTS tracking_consent (
+          staff_id UUID PRIMARY KEY REFERENCES staff(id) ON DELETE CASCADE,
+          consented BOOLEAN DEFAULT false,
+          consented_at TIMESTAMPTZ,
+          revoked_at TIMESTAMPTZ,
+          ip_address TEXT,
+          device_info TEXT
+        );
+
+        INSERT INTO geofence_zones (name, latitude, longitude, radius_m, zone_type)
+        SELECT 'Crown Coffee Main', 23.8759, 90.3795, 120, 'workplace'
+        WHERE NOT EXISTS (SELECT 1 FROM geofence_zones WHERE name = 'Crown Coffee Main');
+
+        ALTER TABLE staff_locations DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE staff_location_logs DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE geofence_zones DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE geofence_events DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE tracking_consent DISABLE ROW LEVEL SECURITY;
+
         NOTIFY pgrst, 'reload schema';
       `)
       await client.end()

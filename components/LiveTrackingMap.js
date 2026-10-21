@@ -1,0 +1,629 @@
+'use client'
+
+import { useEffect, useRef, useState } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import {
+  Coffee,
+  Navigation,
+  Compass,
+  Battery,
+  BatteryCharging,
+  BatteryWarning,
+  Layers,
+  Maximize2,
+  RefreshCw,
+  Phone,
+  Clock,
+  MapPin,
+  X
+} from 'lucide-react'
+
+// Fix default Leaflet icon assets
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+})
+
+export default function LiveTrackingMap({
+  locations = [],
+  zones = [],
+  selectedStaffId = null,
+  onSelectStaff = () => {},
+  routePoints = [],
+  routeStaff = null,
+  onClearRoute = () => {}
+}) {
+  const mapContainerRef = useRef(null)
+  const mapInstanceRef = useRef(null)
+  const markersRef = useRef({})
+  const circlesRef = useRef([])
+  const routePolylineRef = useRef(null)
+  const [mapTheme, setMapTheme] = useState('osm') // 'osm' | 'carto_light' | 'carto_dark'
+
+  // Initialize Map
+  useEffect(() => {
+    if (!mapContainerRef.current || mapInstanceRef.current) return
+
+    // Default center: Crown Coffee Main (Uttara, Dhaka) or fallback
+    const defaultCenter = [23.8759, 90.3795]
+    const defaultZoom = 15
+
+    const map = L.map(mapContainerRef.current, {
+      center: defaultCenter,
+      zoom: defaultZoom,
+      zoomControl: false
+    })
+
+    // Add zoom control top-right
+    L.control.zoom({ position: 'topright' }).addTo(map)
+
+    // Base tile layer
+    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map)
+
+    mapInstanceRef.current = map
+    map._currentTileLayer = tileLayer
+
+    return () => {
+      map.remove()
+      mapInstanceRef.current = null
+    }
+  }, [])
+
+  // Change Map Theme
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    if (map._currentTileLayer) {
+      map.removeLayer(map._currentTileLayer)
+    }
+
+    let url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    let attr = '© OpenStreetMap contributors'
+
+    if (mapTheme === 'carto_dark') {
+      url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      attr = '© OpenStreetMap, © CARTO'
+    } else if (mapTheme === 'carto_light') {
+      url = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+      attr = '© OpenStreetMap, © CARTO'
+    }
+
+    const newLayer = L.tileLayer(url, { maxZoom: 19, attribution: attr }).addTo(map)
+    map._currentTileLayer = newLayer
+  }, [mapTheme])
+
+  // Render Geofence Zones
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    // Clear old circles
+    circlesRef.current.forEach((c) => map.removeLayer(c))
+    circlesRef.current = []
+
+    zones.forEach((zone) => {
+      if (!zone.latitude || !zone.longitude) return
+
+      const circle = L.circle([zone.latitude, zone.longitude], {
+        radius: zone.radius_m || 100,
+        color: '#107C41',
+        weight: 2,
+        fillColor: '#107C41',
+        fillOpacity: 0.15,
+        dashArray: '4, 6'
+      }).addTo(map)
+
+      // Center marker icon for Cafe
+      const cafeIcon = L.divIcon({
+        className: 'custom-cafe-pin',
+        html: `
+          <div style="
+            background: #107C41;
+            color: #FFFFFF;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(16, 124, 65, 0.4);
+            border: 2px solid #FFFFFF;
+            font-size: 14px;
+            font-weight: 700;
+          ">
+            ☕
+          </div>
+          <div style="
+            background: rgba(16, 124, 65, 0.95);
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+            margin-top: 4px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transform: translateX(-25%);
+          ">
+            ${zone.name}
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16]
+      })
+
+      const cafeMarker = L.marker([zone.latitude, zone.longitude], { icon: cafeIcon }).addTo(map)
+      circlesRef.current.push(circle)
+      circlesRef.current.push(cafeMarker)
+    })
+  }, [zones])
+
+  // Render Live Staff Markers
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    const currentIds = new Set()
+
+    locations.forEach((loc) => {
+      const staff = loc.staff || {}
+      const staffId = loc.staff_id
+      currentIds.add(staffId)
+
+      const lat = loc.latitude
+      const lon = loc.longitude
+      if (lat === null || lon === null || isNaN(lat) || isNaN(lon)) return
+
+      // Determine status & styling
+      const now = new Date().getTime()
+      const lastUpdate = new Date(loc.last_updated).getTime()
+      const isOffline = now - lastUpdate > 10 * 60 * 1000 // > 10 min
+      const isAtCafe = loc.is_inside_geofence
+      const isMoving = (loc.speed || 0) > 1.2 // > ~4.3 km/h
+
+      let ringColor = '#107C41' // Green
+      let statusText = 'At Cafe'
+      let pulseAnim = 'animation: pulse 2s infinite;'
+
+      if (isOffline) {
+        ringColor = '#6B7280' // Grey
+        statusText = 'Offline'
+        pulseAnim = ''
+      } else if (isMoving) {
+        ringColor = '#3B82F6' // Blue
+        statusText = `In Transit (${Math.round((loc.speed || 0) * 3.6)} km/h)`
+      } else if (!isAtCafe) {
+        ringColor = '#F59E0B' // Amber
+        statusText = 'Off-site (Stationary)'
+      }
+
+      const initial = (staff.name || 'S').charAt(0).toUpperCase()
+      const isSelected = selectedStaffId === staffId
+
+      const customHtml = `
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+          ${
+            !isOffline
+              ? `<div style="
+                  position: absolute;
+                  width: 44px;
+                  height: 44px;
+                  top: -4px;
+                  left: -4px;
+                  border-radius: 50%;
+                  background: ${ringColor};
+                  opacity: 0.25;
+                  ${pulseAnim}
+                "></div>`
+              : ''
+          }
+          <div style="
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 3px solid ${ringColor};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            overflow: hidden;
+            transform: ${isSelected ? 'scale(1.2)' : 'scale(1)'};
+            transition: transform 0.2s ease;
+          ">
+            ${
+              staff.photo_url
+                ? `<img src="${staff.photo_url}" style="width: 100%; height: 100%; object-fit: cover;" />`
+                : `<span style="font-weight: 800; font-size: 14px; color: #1E293B;">${initial}</span>`
+            }
+          </div>
+          <div style="
+            background: rgba(15, 23, 42, 0.9);
+            color: #FFFFFF;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 3px;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          ">
+            ${staff.name || 'Staff'}
+          </div>
+        </div>
+      `
+
+      const icon = L.divIcon({
+        className: 'staff-live-marker',
+        html: customHtml,
+        iconSize: [40, 52],
+        iconAnchor: [20, 26]
+      })
+
+      // Popup Content
+      const timeAgo = formatTimeAgo(loc.last_updated)
+      const popupHtml = `
+        <div style="min-width: 220px; font-family: system-ui, sans-serif; padding: 4px;">
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <div style="
+              width: 40px; height: 40px; border-radius: 50%;
+              background: #F1F5F9; border: 2px solid ${ringColor};
+              display: flex; align-items: center; justify-content: center;
+              font-weight: 800; font-size: 16px; overflow: hidden;
+            ">
+              ${
+                staff.photo_url
+                  ? `<img src="${staff.photo_url}" style="width: 100%; height: 100%; object-fit: cover;" />`
+                  : initial
+              }
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 14px; color: #0F172A;">${staff.name || 'Unknown'}</div>
+              <div style="font-size: 11px; color: #64748B;">${staff.designation || 'Staff'} • ${staff.employee_id || 'ID'}</div>
+            </div>
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #334155; background: #F8FAFC; padding: 8px; border-radius: 6px; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #64748B;">Status:</span>
+              <span style="font-weight: 700; color: ${ringColor};">${statusText}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #64748B;">Battery:</span>
+              <span style="font-weight: 600;">${loc.battery_level !== null ? `${loc.battery_level}%` : 'N/A'} ${loc.is_charging ? '⚡' : ''}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #64748B;">Last ping:</span>
+              <span style="font-weight: 600;">${timeAgo}</span>
+            </div>
+            ${
+              loc.speed
+                ? `<div style="display: flex; justify-content: space-between;">
+                    <span style="color: #64748B;">Speed:</span>
+                    <span style="font-weight: 600;">${Math.round(loc.speed * 3.6)} km/h</span>
+                  </div>`
+                : ''
+            }
+            ${
+              loc.accuracy
+                ? `<div style="display: flex; justify-content: space-between;">
+                    <span style="color: #64748B;">GPS Accuracy:</span>
+                    <span style="font-weight: 600;">±${Math.round(loc.accuracy)}m</span>
+                  </div>`
+                : ''
+            }
+          </div>
+
+          ${
+            staff.emergency_phone
+              ? `<a href="tel:${staff.emergency_phone}" style="
+                  display: block; text-align: center; background: #107C41; color: #FFFFFF;
+                  text-decoration: none; font-size: 12px; font-weight: 700; padding: 6px;
+                  border-radius: 6px; margin-bottom: 4px;
+                ">
+                  📞 Call ${staff.emergency_phone}
+                </a>`
+              : ''
+          }
+        </div>
+      `
+
+      if (markersRef.current[staffId]) {
+        // Update existing marker position & icon
+        const marker = markersRef.current[staffId]
+        marker.setLatLng([lat, lon])
+        marker.setIcon(icon)
+        marker.setPopupContent(popupHtml)
+      } else {
+        // Create new marker
+        const marker = L.marker([lat, lon], { icon }).addTo(map)
+        marker.bindPopup(popupHtml)
+        marker.on('click', () => onSelectStaff(staffId))
+        markersRef.current[staffId] = marker
+      }
+    })
+
+    // Remove stale markers
+    Object.keys(markersRef.current).forEach((id) => {
+      if (!currentIds.has(id)) {
+        map.removeLayer(markersRef.current[id])
+        delete markersRef.current[id]
+      }
+    })
+  }, [locations, selectedStaffId])
+
+  // Center on Selected Staff
+  useEffect(() => {
+    if (!selectedStaffId || !mapInstanceRef.current) return
+    const marker = markersRef.current[selectedStaffId]
+    if (marker) {
+      mapInstanceRef.current.flyTo(marker.getLatLng(), 17, { duration: 1.2 })
+      marker.openPopup()
+    }
+  }, [selectedStaffId])
+
+  // Render Route Playback Polyline
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    if (routePolylineRef.current) {
+      map.removeLayer(routePolylineRef.current)
+      routePolylineRef.current = null
+    }
+
+    if (routePoints && routePoints.length > 1) {
+      const latlngs = routePoints.map((p) => [p.latitude, p.longitude])
+      const polyline = L.polyline(latlngs, {
+        color: '#2563EB',
+        weight: 4,
+        opacity: 0.8,
+        dashArray: '8, 6'
+      }).addTo(map)
+
+      routePolylineRef.current = polyline
+      map.fitBounds(polyline.getBounds(), { padding: [50, 50] })
+    }
+  }, [routePoints])
+
+  // Reset View to Cafe or Bounds
+  const handleResetView = () => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    if (zones.length > 0 && zones[0].latitude) {
+      map.flyTo([zones[0].latitude, zones[0].longitude], 15, { duration: 1 })
+    } else {
+      map.flyTo([23.8759, 90.3795], 15, { duration: 1 })
+    }
+  }
+
+  // Fit all visible pins
+  const handleFitAll = () => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    const allCoords = locations
+      .filter((l) => l.latitude && l.longitude)
+      .map((l) => [l.latitude, l.longitude])
+
+    zones.forEach((z) => {
+      if (z.latitude && z.longitude) allCoords.push([z.latitude, z.longitude])
+    })
+
+    if (allCoords.length > 0) {
+      const bounds = L.latLngBounds(allCoords)
+      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 17 })
+    }
+  }
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {/* Map Leaflet Container */}
+      <div ref={mapContainerRef} style={{ width: '100%', height: '100%', zIndex: 1 }} />
+
+      {/* Top Map Controls Floating Toolbar */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '16px',
+          left: '16px',
+          zIndex: 1000,
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center'
+        }}
+      >
+        <button
+          onClick={handleResetView}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid #E2E8F0',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            fontSize: '12px',
+            fontWeight: 700,
+            color: '#1E293B',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+          }}
+          title="Center on Crown Coffee Cafe"
+        >
+          <Coffee size={14} color="#107C41" />
+          <span>Cafe Center</span>
+        </button>
+
+        <button
+          onClick={handleFitAll}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid #E2E8F0',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            fontSize: '12px',
+            fontWeight: 700,
+            color: '#1E293B',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+          }}
+          title="Zoom out to show all staff"
+        >
+          <Maximize2 size={14} color="#3B82F6" />
+          <span>Fit All</span>
+        </button>
+
+        {/* Map Style Selector */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid #E2E8F0',
+            borderRadius: '8px',
+            padding: '4px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+          }}
+        >
+          <button
+            onClick={() => setMapTheme('osm')}
+            style={{
+              background: mapTheme === 'osm' ? '#107C41' : 'transparent',
+              color: mapTheme === 'osm' ? '#FFFFFF' : '#64748B',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            Street
+          </button>
+          <button
+            onClick={() => setMapTheme('carto_light')}
+            style={{
+              background: mapTheme === 'carto_light' ? '#107C41' : 'transparent',
+              color: mapTheme === 'carto_light' ? '#FFFFFF' : '#64748B',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            Light
+          </button>
+          <button
+            onClick={() => setMapTheme('carto_dark')}
+            style={{
+              background: mapTheme === 'carto_dark' ? '#107C41' : 'transparent',
+              color: mapTheme === 'carto_dark' ? '#FFFFFF' : '#64748B',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            Dark
+          </button>
+        </div>
+      </div>
+
+      {/* Active Route Playback Overlay Banner */}
+      {routePoints && routePoints.length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            background: 'rgba(15, 23, 42, 0.95)',
+            color: '#FFFFFF',
+            borderRadius: '12px',
+            padding: '10px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Navigation size={16} color="#60A5FA" />
+            <span style={{ fontSize: '13px', fontWeight: 600 }}>
+              Showing Route Trail: <strong>{routeStaff?.name || 'Staff'}</strong> ({routePoints.length} points)
+            </span>
+          </div>
+          <button
+            onClick={onClearRoute}
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              border: 'none',
+              color: '#FFFFFF',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <X size={12} /> Clear Route
+          </button>
+        </div>
+      )}
+
+      {/* CSS Pulse Keyframes */}
+      <style jsx global>{`
+        @keyframes pulse {
+          0% {
+            transform: scale(0.95);
+            opacity: 0.7;
+          }
+          70% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(0.95);
+            opacity: 0;
+          }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+function formatTimeAgo(isoString) {
+  if (!isoString) return 'Never'
+  const diffSec = Math.floor((new Date() - new Date(isoString)) / 1000)
+  if (diffSec < 60) return `${diffSec}s ago`
+  const diffMin = Math.floor(diffSec / 60)
+  if (diffMin < 60) return `${diffMin}m ago`
+  const diffHours = Math.floor(diffMin / 60)
+  if (diffHours < 24) return `${diffHours}h ago`
+  return `${Math.floor(diffHours / 24)}d ago`
+}

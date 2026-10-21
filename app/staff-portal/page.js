@@ -13,6 +13,8 @@ import { translations } from '../../lib/i18n'
 import { normalizeShiftTime } from '../../lib/roster-utils'
 
 import Modal from '../../components/Modal'
+import TrackingBadge from '../../components/TrackingBadge'
+import TrackingConsentModal from '../../components/TrackingConsentModal'
 
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
 
@@ -53,6 +55,7 @@ export default function StaffPortalPage() {
   const t = translations[lang]
 
   const [penalties, setPenalties] = useState([])
+  const [hasConsented, setHasConsented] = useState(true)
 
   useEffect(() => {
     setMounted(true)
@@ -116,6 +119,16 @@ export default function StaffPortalPage() {
       setTasks(tasksRes.data || [])
       setDutyRequests(dutyReqRes.data || [])
       setPenalties(penaltyRes.data || [])
+
+      // Check 24/7 location tracking consent status
+      fetch(`/api/staff/tracking-consent?staffId=${staffId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.success && !data.consented) {
+            setHasConsented(false)
+          }
+        })
+        .catch(() => {})
     } catch (err) {
       console.error('Error fetching staff data:', err)
     } finally {
@@ -452,6 +465,18 @@ export default function StaffPortalPage() {
 
       {/* ── MAIN CONTENT ── */}
       <main style={{ maxWidth: '960px', margin: '0 auto', padding: '24px 16px 80px' }}>
+
+        {/* 24/7 Location Tracking Consent Modal */}
+        {staff && !hasConsented && (
+          <TrackingConsentModal staffId={staff.id} onConsented={() => setHasConsented(true)} />
+        )}
+
+        {/* 24/7 Live Tracking Status Badge */}
+        {staff && (
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+            <TrackingBadge staffId={staff.id} staffName={staff.name} />
+          </div>
+        )}
 
         {/* Month Selector */}
         <div style={{

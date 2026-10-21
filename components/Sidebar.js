@@ -25,7 +25,8 @@ import {
   AlertTriangle,
   Trophy,
   ArrowLeftRight,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Compass
 } from 'lucide-react'
 import { useFeatureFlags } from '../hooks/useFeatureFlags'
 
@@ -47,6 +48,7 @@ export default function Sidebar({ role, currentPage, staffName }) {
     admin: [
       { label: 'Dashboard', icon: BarChart3, path: '/admin/dashboard' },
       { label: 'Feature Manager', icon: Sliders, path: '/admin/features' },
+      { label: '24/7 Staff Radar 📍', icon: Compass, path: '/admin/live-tracking' },
       { label: 'Performance 🏆', icon: Trophy, path: '/admin/staff-performance' },
       { label: 'Shift Swaps', icon: ArrowLeftRight, path: '/admin/shift-swaps' },
       { label: 'Recipe Book', icon: BookOpen, path: '/recipebook', flag: 'recipebook' },

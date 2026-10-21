@@ -7,7 +7,7 @@ import {
   Users, ChevronDown, Trash2, BookOpen, LogOut, LayoutDashboard,
   Upload, FileSpreadsheet, UserCheck, Sun, Moon, Receipt, Package,
   TrendingUp, Calculator as CalcIcon, ShoppingBag, MessageSquare,
-  BellRing, ShieldAlert, AlertTriangle, Calendar, Mail, ClipboardList
+  BellRing, ShieldAlert, AlertTriangle, Calendar, Mail, ClipboardList, MapPin
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useSessionTimeout } from '../hooks/useSessionTimeout'
@@ -178,6 +178,7 @@ export default function Navbar() {
       ]
     },
     { href: '/admin/members', label: 'Members', icon: <Users size={16} />, flag: 'members' },
+    { href: '/admin/live-tracking', label: '24/7 Radar', icon: <MapPin size={16} /> },
     { href: '/admin/rough-sheet', label: 'Rough Sheet', icon: <FileSpreadsheet size={16} /> },
     { href: '/waste', label: 'Waste', icon: <Trash2 size={16} />, flag: 'waste' },
     { href: '/balance-sheet', label: 'Balance', icon: <CalcIcon size={16} />, flag: 'balance_sheet' },
