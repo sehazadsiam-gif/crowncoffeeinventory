@@ -60,6 +60,12 @@ export default function LiveTrackingMap({
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(1) // 1x, 2x, 5x
 
+  // My Device / iOS tracking state
+  const myDeviceMarkerRef = useRef(null)
+  const [isLocatingDevice, setIsLocatingDevice] = useState(false)
+  const [showIosGuideModal, setShowIosGuideModal] = useState(false)
+  const [locErrorMessage, setLocErrorMessage] = useState(null)
+
   // Initialize Map
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return
@@ -669,6 +675,78 @@ export default function LiveTrackingMap({
         </button>
 
         <button
+          onClick={() => {
+            if (typeof window === 'undefined' || !navigator.geolocation) {
+              alert('Geolocation is not supported by this browser.')
+              return
+            }
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const lat = pos.coords.latitude
+                const lng = pos.coords.longitude
+                setIsLocatingDevice(true)
+                setLocErrorMessage(null)
+
+                if (mapInstanceRef.current) {
+                  mapInstanceRef.current.flyTo([lat, lng], 17, { duration: 1.5 })
+
+                  if (myDeviceMarkerRef.current) {
+                    myDeviceMarkerRef.current.setLatLng([lat, lng])
+                  } else {
+                    const iconHtml = `
+                      <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+                        <div style="position: absolute; width: 28px; height: 28px; border-radius: 50%; background: rgba(59, 130, 246, 0.35); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+                        <div style="width: 14px; height: 14px; border-radius: 50%; background: #2563EB; border: 2.5px solid #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,0.3);"></div>
+                      </div>
+                    `
+                    const myIcon = L.divIcon({
+                      className: 'my-device-marker',
+                      html: iconHtml,
+                      iconSize: [28, 28],
+                      iconAnchor: [14, 14]
+                    })
+
+                    myDeviceMarkerRef.current = L.marker([lat, lng], { icon: myIcon })
+                      .addTo(mapInstanceRef.current)
+                      .bindPopup(`
+                        <div style="font-family: sans-serif; font-size: 12px; font-weight: 700; color: #1E293B; padding: 4px;">
+                          <span style="color: #2563EB;">📍 Your Current Device</span><br/>
+                          <span style="font-size: 10px; color: #64748B; font-weight: 500;">GPS Accuracy: ±${Math.round(pos.coords.accuracy)}m</span>
+                        </div>
+                      `)
+                  }
+                }
+              },
+              (err) => {
+                console.warn('[LocateDevice Error]', err)
+                setLocErrorMessage(err.message)
+                setShowIosGuideModal(true)
+              },
+              { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+            )
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: isLocatingDevice ? '#10B981' : 'rgba(255, 255, 255, 0.95)',
+            color: isLocatingDevice ? '#FFFFFF' : '#1E293B',
+            backdropFilter: 'blur(8px)',
+            border: isLocatingDevice ? '1px solid #059669' : '1px solid #E2E8F0',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+          }}
+          title="Click to request iOS / Device GPS permission and pin your position"
+        >
+          <Navigation size={14} color={isLocatingDevice ? '#FFFFFF' : '#10B981'} />
+          <span>{isLocatingDevice ? 'My Location (Active)' : 'Locate My Device'}</span>
+        </button>
+
+        <button
           onClick={handleFitAll}
           style={{
             display: 'flex',
@@ -955,6 +1033,89 @@ export default function LiveTrackingMap({
           }
         }
       `}</style>
+      {/* ── iOS / Safari Location Permission Unlock Modal ── */}
+      {showIosGuideModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#0F172A',
+            color: '#F8FAFC',
+            border: '1px solid rgba(255,255,255,0.15)',
+            borderRadius: '20px',
+            maxWidth: '440px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            fontFamily: 'var(--font-sans)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin size={20} color="#EF4444" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>iOS Location Permission</h3>
+                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>Apple Safari Location Guide</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowIosGuideModal(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#CBD5E1', lineHeight: '1.5', margin: '0 0 16px' }}>
+              Your iPhone or browser blocked the location request. Safari requires location permission to be enabled in your iPhone settings:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#1E293B', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>1</span>
+                <span style={{ fontSize: '12px', color: '#E2E8F0' }}>Open your iPhone <strong>Settings</strong> app.</span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>2</span>
+                <span style={{ fontSize: '12px', color: '#E2E8F0' }}>Go to <strong>Privacy & Security</strong> $\rightarrow$ <strong>Location Services</strong> (turn ON).</span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>3</span>
+                <span style={{ fontSize: '12px', color: '#E2E8F0' }}>Scroll down to <strong>Safari Websites</strong> (or Crown Coffee) $\rightarrow$ choose <strong>"While Using the App"</strong> and turn <strong>Precise Location: ON</strong>.</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowIosGuideModal(false)
+                window.location.reload()
+              }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              I Updated Settings — Reload & Try Again
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

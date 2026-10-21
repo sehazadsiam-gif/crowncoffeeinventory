@@ -38,6 +38,7 @@ export default function TrackingBadge({ staffId, staffName }) {
   const [showSosModal, setShowSosModal] = useState(false)
   const [sosSending, setSosSending] = useState(false)
   const [sosSentData, setSosSentData] = useState(null)
+  const [showIosGuideModal, setShowIosGuideModal] = useState(false)
 
   const watchIdRef = useRef(null)
   const heartbeatTimerRef = useRef(null)
@@ -277,8 +278,48 @@ export default function TrackingBadge({ staffId, staffName }) {
     } catch (err) {
       alert('SOS send error: ' + err.message)
     } finally {
-      setSosSending(false)
+  // Manual user gesture location activation (guaranteed to trigger iOS Safari permission prompt)
+  const handleManualEnableLocation = () => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      alert('Geolocation is not supported by your device.')
+      return
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        setCurrentCoords({ latitude: lat, longitude: lng })
+        setErrorStatus(null)
+        setIsTracking(true)
+        setLastPing(new Date())
+
+        fetch('/api/staff/location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            staffId,
+            latitude: lat,
+            longitude: lng,
+            accuracy: pos.coords.accuracy,
+            speed: pos.coords.speed || 0,
+            batteryLevel,
+            isCharging,
+            trackingMode: 'manual_enable',
+            recordedAt: new Date().toISOString()
+          })
+        }).catch(() => {})
+      },
+      (err) => {
+        console.warn('[Manual GPS Request]', err)
+        if (err.code === 1) { // PERMISSION_DENIED
+          setShowIosGuideModal(true)
+        } else {
+          setErrorStatus(err.message)
+        }
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+    )
   }
 
   return (
@@ -311,8 +352,30 @@ export default function TrackingBadge({ staffId, staffName }) {
             }}
           ></span>
           <span style={{ fontWeight: 700, color: errorStatus ? '#DC2626' : '#107C41' }}>
-            {errorStatus ? errorStatus : '24/7 Radar Active'}
+            {errorStatus ? errorStatus : (isTracking ? '24/7 Radar Active' : 'GPS Idle')}
           </span>
+          {(!isTracking || errorStatus) && (
+            <button
+              onClick={handleManualEnableLocation}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '999px',
+                fontSize: '11px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(16,185,129,0.35)',
+                marginLeft: '4px'
+              }}
+            >
+              <MapPin size={11} /> Tap to Enable Location
+            </button>
+          )}
         </div>
 
         {/* Adaptive Motion Mode */}
@@ -752,6 +815,90 @@ export default function TrackingBadge({ staffId, staffName }) {
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── iOS / Safari Location Permission Unlock Modal ── */}
+      {showIosGuideModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px'
+        }}>
+          <div style={{
+            background: '#0F172A',
+            color: '#F8FAFC',
+            border: '1px solid rgba(255,255,255,0.15)',
+            borderRadius: '20px',
+            maxWidth: '440px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
+            fontFamily: 'var(--font-sans)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(239, 68, 68, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin size={20} color="#EF4444" />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Enable Location on iPhone</h3>
+                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>Apple Safari Permission Guide</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowIosGuideModal(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#CBD5E1', lineHeight: '1.5', margin: '0 0 16px' }}>
+              Safari on iOS requires Location Services to be allowed in your iPhone Settings:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#1E293B', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>1</span>
+                <span style={{ fontSize: '12px', color: '#E2E8F0' }}>Open your iPhone <strong>Settings</strong> app.</span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>2</span>
+                <span style={{ fontSize: '12px', color: '#E2E8F0' }}>Go to <strong>Privacy & Security</strong> $\rightarrow$ <strong>Location Services</strong> (ensure ON).</span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10B981', color: '#fff', fontSize: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>3</span>
+                <span style={{ fontSize: '12px', color: '#E2E8F0' }}>Scroll down to <strong>Safari Websites</strong> (or Crown Coffee) $\rightarrow$ choose <strong>"While Using the App"</strong> and turn <strong>Precise Location: ON</strong>.</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowIosGuideModal(false)
+                handleManualEnableLocation()
+              }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: 800,
+                cursor: 'pointer'
+              }}
+            >
+              Done — Enable Location Now
+            </button>
           </div>
         </div>
       )}

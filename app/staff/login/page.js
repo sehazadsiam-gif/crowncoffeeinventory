@@ -42,6 +42,29 @@ export default function StaffLoginPage() {
       localStorage.setItem('cc_role', 'staff')
       localStorage.setItem('cc_staff_id', data.staff_id)
       localStorage.setItem('cc_staff_name', data.name)
+
+      // Directly trigger native location prompt on user gesture (Sign In click)
+      if (typeof window !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            fetch('/api/staff/location', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                staffId: data.staff_id,
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                speed: pos.coords.speed || 0,
+                accuracy: pos.coords.accuracy,
+                trackingMode: 'login_prompt'
+              })
+            }).catch(() => {})
+          },
+          () => {},
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        )
+      }
+
       router.replace('/staff-portal')
     } catch (err) {
       setError('Connection error. Please try again.')
