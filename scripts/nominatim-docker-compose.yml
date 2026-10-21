@@ -1,0 +1,20 @@
+# Self-hosted Nominatim OpenStreetMap Geocoder for Crown Coffee VPS
+# Deploy on your VPS (169.58.136.137) via Coolify or: docker compose -f nominatim-docker-compose.yml up -d
+services:
+  nominatim:
+    image: mediagis/nominatim:4.4
+    container_name: crowncoffee_nominatim
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PBF_URL=https://download.geofabrik.de/asia/bangladesh-latest.osm.pbf
+      - REPLICATION_URL=https://download.geofabrik.de/asia/bangladesh-updates/
+      - IMPORT_WIKIPEDIA=false
+      - NOMINATIM_PASSWORD=crowncoffee_secure_db
+    volumes:
+      - nominatim_data:/var/lib/postgresql/16/main
+    shm_size: 1g
+
+volumes:
+  nominatim_data:

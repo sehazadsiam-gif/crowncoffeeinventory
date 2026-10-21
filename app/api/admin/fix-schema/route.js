@@ -161,11 +161,45 @@ export async function GET() {
         SELECT 'Crown Coffee Main', 23.8759, 90.3795, 120, 'workplace'
         WHERE NOT EXISTS (SELECT 1 FROM geofence_zones WHERE name = 'Crown Coffee Main');
 
+        CREATE TABLE IF NOT EXISTS sos_alerts (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+          latitude DOUBLE PRECISION NOT NULL,
+          longitude DOUBLE PRECISION NOT NULL,
+          battery_level INT,
+          status TEXT DEFAULT 'active',
+          notes TEXT,
+          resolved_at TIMESTAMPTZ,
+          resolved_by TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sos_alerts_status ON sos_alerts (status, created_at DESC);
+
+        CREATE TABLE IF NOT EXISTS errand_trips (
+          id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+          staff_id UUID NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+          destination TEXT NOT NULL,
+          purpose TEXT,
+          estimated_cost NUMERIC DEFAULT 0,
+          actual_cost NUMERIC DEFAULT 0,
+          departure_time TIMESTAMPTZ DEFAULT NOW(),
+          return_time TIMESTAMPTZ,
+          distance_km NUMERIC DEFAULT 0,
+          status TEXT DEFAULT 'in_progress',
+          notes TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_errand_trips_staff ON errand_trips (staff_id, departure_time DESC);
+
         ALTER TABLE staff_locations DISABLE ROW LEVEL SECURITY;
         ALTER TABLE staff_location_logs DISABLE ROW LEVEL SECURITY;
         ALTER TABLE geofence_zones DISABLE ROW LEVEL SECURITY;
         ALTER TABLE geofence_events DISABLE ROW LEVEL SECURITY;
         ALTER TABLE tracking_consent DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE sos_alerts DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE errand_trips DISABLE ROW LEVEL SECURITY;
 
         NOTIFY pgrst, 'reload schema';
       `)

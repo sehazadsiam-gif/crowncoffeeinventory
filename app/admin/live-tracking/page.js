@@ -27,7 +27,13 @@ import {
   CheckCircle2,
   ClipboardList,
   Check,
-  TrendingUp
+  TrendingUp,
+  ShieldAlert,
+  ShoppingBag,
+  Award,
+  Flame,
+  WifiOff,
+  AlertCircle
 } from 'lucide-react'
 
 // Dynamic import with SSR disabled for Leaflet
@@ -92,6 +98,34 @@ export default function LiveTrackingPage() {
   const [loadingOvertime, setLoadingOvertime] = useState(false)
   const [otReviewDate, setOtReviewDate] = useState(new Date().toISOString().split('T')[0])
   const [otActionMsg, setOtActionMsg] = useState(null)
+
+  // ── PHASE 3 & 4 ADVANCED STATES ──
+  // Emergency SOS Alerts state
+  const [sosAlerts, setSosAlerts] = useState([])
+  const [showSosModal, setShowSosModal] = useState(false)
+  const [loadingSos, setLoadingSos] = useState(false)
+
+  // Errand / Bazar Trip state
+  const [showErrandModal, setShowErrandModal] = useState(false)
+  const [errands, setErrands] = useState([])
+  const [loadingErrands, setLoadingErrands] = useState(false)
+  const [errandForm, setErrandForm] = useState({ staffId: '', destination: '', purpose: '', estimatedCost: '' })
+  const [dispatchingErrand, setDispatchingErrand] = useState(false)
+
+  // Monthly Punctuality & Geofence Scores state
+  const [showPunctualityModal, setShowPunctualityModal] = useState(false)
+  const [punctualityScores, setPunctualityScores] = useState([])
+  const [loadingPunctuality, setLoadingPunctuality] = useState(false)
+  const [scoreMonth, setScoreMonth] = useState(new Date().getMonth() + 1)
+  const [scoreYear, setScoreYear] = useState(new Date().getFullYear())
+
+  // Telemetry & Offline / Low Battery Drawer state
+  const [showOfflineDrawer, setShowOfflineDrawer] = useState(false)
+  const [offlineData, setOfflineData] = useState({ offlineAlerts: [], lowBatteryAlerts: [] })
+  const [loadingOffline, setLoadingOffline] = useState(false)
+
+  // Movement Heatmap density mode
+  const [heatmapMode, setHeatmapMode] = useState(false)
 
   // Fetch Live Tracking Data
   const fetchData = async (isManual = false) => {
@@ -348,6 +382,149 @@ export default function LiveTrackingPage() {
     }
   }
 
+  // ── PHASE 3 & 4 ACTION HANDLERS ──
+  // Fetch SOS Alerts
+  const fetchSosAlerts = async () => {
+    setLoadingSos(true)
+    try {
+      const res = await fetch('/api/staff/sos?status=active')
+      const data = await res.json()
+      if (data.success) {
+        setSosAlerts(data.alerts || [])
+      }
+    } catch (e) {
+      console.error('Fetch SOS error:', e)
+    } finally {
+      setLoadingSos(false)
+    }
+  }
+
+  // Resolve SOS Alert
+  const handleResolveSos = async (alertId) => {
+    try {
+      const res = await fetch('/api/staff/sos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alertId, resolvedBy: 'Admin' })
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchSosAlerts()
+      }
+    } catch (e) {
+      alert('Resolve error: ' + e.message)
+    }
+  }
+
+  // Fetch Errands
+  const fetchErrands = async () => {
+    setLoadingErrands(true)
+    try {
+      const res = await fetch('/api/admin/tracking/errands?status=all')
+      const data = await res.json()
+      if (data.success) {
+        setErrands(data.errands || [])
+      }
+    } catch (e) {
+      console.error('Fetch errands error:', e)
+    } finally {
+      setLoadingErrands(false)
+    }
+  }
+
+  // Dispatch New Errand
+  const handleDispatchErrand = async (e) => {
+    e.preventDefault()
+    if (!errandForm.staffId || !errandForm.destination) {
+      alert('Please select a staff member and enter destination')
+      return
+    }
+    setDispatchingErrand(true)
+    try {
+      const res = await fetch('/api/admin/tracking/errands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(errandForm)
+      })
+      const data = await res.json()
+      if (data.success) {
+        setErrandForm({ staffId: '', destination: '', purpose: '', estimatedCost: '' })
+        fetchErrands()
+      } else {
+        alert(data.error || 'Failed to dispatch errand')
+      }
+    } catch (err) {
+      alert(err.message)
+    } finally {
+      setDispatchingErrand(false)
+    }
+  }
+
+  // Complete Errand
+  const handleCompleteErrand = async (errandId) => {
+    const actualCost = prompt('Enter actual purchase / expense amount in TK (or leave empty):', '0')
+    try {
+      const res = await fetch('/api/admin/tracking/errands', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          errandId,
+          status: 'completed',
+          actualCost: actualCost ? parseFloat(actualCost) : 0
+        })
+      })
+      if (res.ok) {
+        fetchErrands()
+      }
+    } catch (err) {
+      alert(err.message)
+    }
+  }
+
+  // Fetch Punctuality Scores
+  const fetchPunctuality = async (m = scoreMonth, y = scoreYear) => {
+    setLoadingPunctuality(true)
+    try {
+      const res = await fetch(`/api/admin/tracking/punctuality-score?month=${m}&year=${y}`)
+      const data = await res.json()
+      if (data.success) {
+        setPunctualityScores(data.scores || [])
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingPunctuality(false)
+    }
+  }
+
+  // Fetch Telemetry & Offline / Low Battery Alerts
+  const fetchOfflineAlerts = async () => {
+    setLoadingOffline(true)
+    try {
+      const res = await fetch('/api/admin/tracking/offline-alerts')
+      const data = await res.json()
+      if (data.success) {
+        setOfflineData(data)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingOffline(false)
+    }
+  }
+
+  // Auto-poll SOS alerts every 10 seconds
+  useEffect(() => {
+    fetchSosAlerts()
+    fetchOfflineAlerts()
+    const sosTimer = setInterval(fetchSosAlerts, 10000)
+    const offTimer = setInterval(fetchOfflineAlerts, 60000)
+    return () => {
+      clearInterval(sosTimer)
+      clearInterval(offTimer)
+    }
+  }, [])
+
   return (
     <div
       style={{
@@ -484,58 +661,165 @@ export default function LiveTrackingPage() {
             background: 'rgba(15, 23, 42, 0.8)',
             borderBottom: '1px solid #1E293B',
             display: 'flex',
+            flexDirection: 'column',
             gap: '8px'
           }}
         >
-          <button
-            onClick={() => {
-              setShowAttendanceModal(true)
-              fetchAttendanceReview()
-            }}
-            style={{
-              flex: 1,
-              background: '#1E293B',
-              color: '#34D399',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: '8px',
-              padding: '7px 8px',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px'
-            }}
-          >
-            <ClipboardList size={13} />
-            <span>Attendance Review</span>
-          </button>
+          {/* Row 1: Attendance Review & OT Audit */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => {
+                setShowAttendanceModal(true)
+                fetchAttendanceReview()
+              }}
+              style={{
+                flex: 1,
+                background: '#1E293B',
+                color: '#34D399',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: '8px',
+                padding: '7px 8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <ClipboardList size={13} />
+              <span>Attendance Review</span>
+            </button>
 
-          <button
-            onClick={() => {
-              setShowOvertimeModal(true)
-              fetchOvertimeAudit()
-            }}
-            style={{
-              flex: 1,
-              background: '#1E293B',
-              color: '#60A5FA',
-              border: '1px solid rgba(59, 130, 246, 0.3)',
-              borderRadius: '8px',
-              padding: '7px 8px',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px'
-            }}
-          >
-            <Clock size={13} />
-            <span>OT GPS Audit</span>
-          </button>
+            <button
+              onClick={() => {
+                setShowOvertimeModal(true)
+                fetchOvertimeAudit()
+              }}
+              style={{
+                flex: 1,
+                background: '#1E293B',
+                color: '#60A5FA',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '8px',
+                padding: '7px 8px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+            >
+              <Clock size={13} />
+              <span>OT GPS Audit</span>
+            </button>
+          </div>
+
+          {/* Row 2: SOS, Errands, Scores, Offline Telemetry */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+            <button
+              onClick={() => {
+                setShowSosModal(true)
+                fetchSosAlerts()
+              }}
+              style={{
+                background: sosAlerts.length > 0 ? '#DC2626' : '#1E293B',
+                color: sosAlerts.length > 0 ? '#FFFFFF' : '#EF4444',
+                border: `1px solid ${sosAlerts.length > 0 ? '#EF4444' : 'rgba(239, 68, 68, 0.3)'}`,
+                borderRadius: '6px',
+                padding: '6px 4px',
+                fontSize: '10px',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+              title="Emergency SOS Alerts"
+            >
+              <ShieldAlert size={12} />
+              <span>SOS ({sosAlerts.length})</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setShowErrandModal(true)
+                fetchErrands()
+              }}
+              style={{
+                background: '#1E293B',
+                color: '#F59E0B',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                borderRadius: '6px',
+                padding: '6px 4px',
+                fontSize: '10px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+              title="Bazar & Errand Tracking"
+            >
+              <ShoppingBag size={12} />
+              <span>Errands</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setShowPunctualityModal(true)
+                fetchPunctuality()
+              }}
+              style={{
+                background: '#1E293B',
+                color: '#A855F7',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+                borderRadius: '6px',
+                padding: '6px 4px',
+                fontSize: '10px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+              title="Monthly Geofence Punctuality Score"
+            >
+              <Award size={12} />
+              <span>Scores</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setShowOfflineDrawer(true)
+                fetchOfflineAlerts()
+              }}
+              style={{
+                background: (offlineData.offlineAlerts?.length > 0 || offlineData.lowBatteryAlerts?.length > 0) ? '#B45309' : '#1E293B',
+                color: '#FFFFFF',
+                border: '1px solid rgba(251, 191, 36, 0.3)',
+                borderRadius: '6px',
+                padding: '6px 4px',
+                fontSize: '10px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
+              }}
+              title="Offline & Low Battery Telemetry Warnings"
+            >
+              <BatteryWarning size={12} />
+              <span>Alerts</span>
+            </button>
+          </div>
         </div>
 
         {/* Quick Stats Pills */}
@@ -906,6 +1190,46 @@ export default function LiveTrackingPage() {
 
       {/* ── RIGHT MAIN VIEW (INTERACTIVE MAP) ── */}
       <div style={{ flex: 1, height: '100%', position: 'relative' }}>
+        {/* Active Emergency SOS Banner */}
+        {sosAlerts.length > 0 && (
+          <div
+            onClick={() => setShowSosModal(true)}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1500,
+              background: '#DC2626',
+              color: '#FFFFFF',
+              padding: '10px 20px',
+              borderRadius: '12px',
+              boxShadow: '0 8px 24px rgba(220, 38, 38, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontWeight: 800,
+              cursor: 'pointer',
+              border: '2px solid #FFFFFF'
+            }}
+          >
+            <ShieldAlert size={20} />
+            <span>🚨 EMERGENCY: {sosAlerts.length} Active Staff Distress Alert!</span>
+            <span
+              style={{
+                background: '#FFFFFF',
+                color: '#DC2626',
+                borderRadius: '6px',
+                padding: '3px 8px',
+                fontSize: '11px',
+                fontWeight: 900
+              }}
+            >
+              VIEW NOW
+            </span>
+          </div>
+        )}
+
         <LiveTrackingMap
           locations={locations}
           zones={zones}
@@ -917,6 +1241,9 @@ export default function LiveTrackingPage() {
             setRoutePoints([])
             setRouteStaff(null)
           }}
+          sosAlerts={sosAlerts}
+          heatmapMode={heatmapMode}
+          onToggleHeatmap={() => setHeatmapMode(!heatmapMode)}
         />
       </div>
 
@@ -1472,6 +1799,638 @@ export default function LiveTrackingPage() {
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* ── EMERGENCY SOS DISTRESS ALERTS MODAL ──                 */}
+      {/* ========================================================= */}
+      {showSosModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '2px solid #DC2626',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '680px',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(220, 38, 38, 0.4)',
+              overflow: 'hidden'
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #1E293B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#1E293B'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShieldAlert size={22} color="#DC2626" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#FFFFFF' }}>
+                    Emergency SOS Distress Log
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#94A3B8' }}>
+                    Active alerts receive priority dispatch and WhatsApp broadcast
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowSosModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94A3B8',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {loadingSos ? (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#94A3B8' }}>Loading alerts...</div>
+              ) : sosAlerts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '36px', color: '#10B981', fontSize: '14px', fontWeight: 700 }}>
+                  ✓ No active emergency distress alerts. All staff safe!
+                </div>
+              ) : (
+                sosAlerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    style={{
+                      background: '#1E293B',
+                      border: '1px solid #DC2626',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: 800, fontSize: '15px', color: '#FFFFFF' }}>
+                          {alert.staff?.name || 'Staff Member'}
+                        </span>
+                        <span style={{ background: '#DC2626', color: '#FFFFFF', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 900 }}>
+                          EMERGENCY ACTIVE
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>
+                        {alert.staff?.designation || 'Staff'} · Phone: {alert.staff?.phone || 'N/A'} · Battery:{' '}
+                        {alert.battery_level ? `${alert.battery_level}%` : 'N/A'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#64748B', marginTop: '4px' }}>
+                        Triggered at: {new Date(alert.created_at).toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka' })} ({formatTimeAgo(alert.created_at)})
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        onClick={() => {
+                          setSelectedStaffId(alert.staff_id)
+                          setShowSosModal(false)
+                        }}
+                        style={{
+                          background: '#DC2626',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <MapPin size={14} /> Locate Pin
+                      </button>
+
+                      <button
+                        onClick={() => handleResolveSos(alert.id)}
+                        style={{
+                          background: '#107C41',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '8px 12px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Mark Safe
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* ── BAZAR & ERRAND TRIP TRACKER MODAL ──                   */}
+      {/* ========================================================= */}
+      {showErrandModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '1px solid #334155',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '740px',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+              overflow: 'hidden'
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #1E293B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShoppingBag size={20} color="#F59E0B" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#FFFFFF' }}>
+                    Bazar & Errand Tracking
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#94A3B8' }}>
+                    Dispatch staff for market supplies and track distance & return times
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowErrandModal(false)}
+                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
+              {/* Dispatch Form */}
+              <form
+                onSubmit={handleDispatchErrand}
+                style={{
+                  background: '#1E293B',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  marginBottom: '20px',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr auto',
+                  gap: '12px',
+                  alignItems: 'end'
+                }}
+              >
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#94A3B8', marginBottom: '4px' }}>
+                    Staff Member
+                  </label>
+                  <select
+                    value={errandForm.staffId}
+                    onChange={(e) => setErrandForm({ ...errandForm, staffId: e.target.value })}
+                    required
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', background: '#0F172A', color: '#FFF', border: '1px solid #334155', fontSize: '12px' }}
+                  >
+                    <option value="">Select staff</option>
+                    {staffList.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#94A3B8', marginBottom: '4px' }}>
+                    Destination (e.g. Uttara Sector 3 Market)
+                  </label>
+                  <input
+                    type="text"
+                    value={errandForm.destination}
+                    onChange={(e) => setErrandForm({ ...errandForm, destination: e.target.value })}
+                    placeholder="Destination market/store"
+                    required
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', background: '#0F172A', color: '#FFF', border: '1px solid #334155', fontSize: '12px' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#94A3B8', marginBottom: '4px' }}>
+                    Purpose / Supplies
+                  </label>
+                  <input
+                    type="text"
+                    value={errandForm.purpose}
+                    onChange={(e) => setErrandForm({ ...errandForm, purpose: e.target.value })}
+                    placeholder="Milk, coffee beans, ice"
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', background: '#0F172A', color: '#FFF', border: '1px solid #334155', fontSize: '12px' }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={dispatchingErrand}
+                  style={{
+                    padding: '8px 16px',
+                    background: '#F59E0B',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {dispatchingErrand ? 'Dispatching...' : 'Dispatch'}
+                </button>
+              </form>
+
+              {/* Errand List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>
+                  Active & Recent Errand Trips ({errands.length})
+                </div>
+
+                {loadingErrands ? (
+                  <div style={{ textAlign: 'center', padding: '24px', color: '#94A3B8' }}>Loading errands...</div>
+                ) : errands.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px', color: '#64748B' }}>No errands recorded yet.</div>
+                ) : (
+                  errands.map((trip) => {
+                    const isInProgress = trip.status === 'in_progress'
+                    return (
+                      <div
+                        key={trip.id}
+                        style={{
+                          background: '#1E293B',
+                          border: isInProgress ? '1px solid #F59E0B' : '1px solid #334155',
+                          borderRadius: '10px',
+                          padding: '14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px'
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontWeight: 800, fontSize: '14px', color: '#FFF' }}>
+                              {trip.staff?.name || 'Staff Member'}
+                            </span>
+                            <span
+                              style={{
+                                background: isInProgress ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                                color: isInProgress ? '#F59E0B' : '#10B981',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: 800
+                              }}
+                            >
+                              {isInProgress ? 'ON THE WAY' : 'COMPLETED'}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#CBD5E1', marginTop: '4px' }}>
+                            📍 <strong>{trip.destination}</strong> — {trip.purpose || 'Supplies'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                            Departed: {new Date(trip.departure_time).toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka' })} ({formatTimeAgo(trip.departure_time)})
+                            {trip.return_time && ` · Returned: ${new Date(trip.return_time).toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka' })}`}
+                          </div>
+                        </div>
+
+                        {isInProgress && (
+                          <button
+                            onClick={() => handleCompleteErrand(trip.id)}
+                            style={{
+                              background: '#107C41',
+                              color: '#FFF',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '8px 14px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Mark Returned
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* ── MONTHLY GEOFENCE PUNCTUALITY SCORES MODAL ──           */}
+      {/* ========================================================= */}
+      {showPunctualityModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '1px solid #334155',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '840px',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+              overflow: 'hidden'
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #1E293B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Award size={20} color="#A855F7" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#FFFFFF' }}>
+                    Monthly Geofence Punctuality Scorecard
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#94A3B8' }}>
+                    Automated punctuality grading based on physical cafe arrival timestamps
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowPunctualityModal(false)}
+                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
+              {loadingPunctuality ? (
+                <div style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>Calculating scores...</div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', color: '#FFFFFF' }}>
+                  <thead>
+                    <tr style={{ background: '#1E293B', borderBottom: '1px solid #334155' }}>
+                      <th style={{ padding: '10px 12px', textAlign: 'left' }}>Staff Member</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left' }}>Scheduled Shift</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Present Days</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>On-Time</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Late</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Punctuality %</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center' }}>Grade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {punctualityScores.map((score) => {
+                      const gradeColor =
+                        score.grade === 'A+' || score.grade === 'A'
+                          ? '#10B981'
+                          : score.grade === 'B'
+                          ? '#3B82F6'
+                          : score.grade === 'C'
+                          ? '#F59E0B'
+                          : '#EF4444'
+
+                      return (
+                        <tr key={score.staff_id} style={{ borderBottom: '1px solid #1E293B' }}>
+                          <td style={{ padding: '12px' }}>
+                            <div style={{ fontWeight: 700 }}>{score.name}</div>
+                            <div style={{ fontSize: '11px', color: '#64748B' }}>{score.designation}</div>
+                          </td>
+                          <td style={{ padding: '12px', color: '#94A3B8' }}>{score.scheduled_shift}</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>{score.present_days}</td>
+                          <td style={{ padding: '12px', textAlign: 'center', color: '#34D399', fontWeight: 700 }}>{score.on_time_days}</td>
+                          <td style={{ padding: '12px', textAlign: 'center', color: score.late_days > 0 ? '#F87171' : '#64748B' }}>{score.late_days}</td>
+                          <td style={{ padding: '12px', textAlign: 'right', fontWeight: 800 }}>{score.punctuality_percent}%</td>
+                          <td style={{ padding: '12px', textAlign: 'center' }}>
+                            <span
+                              style={{
+                                background: `${gradeColor}22`,
+                                color: gradeColor,
+                                border: `1px solid ${gradeColor}`,
+                                padding: '3px 10px',
+                                borderRadius: '999px',
+                                fontWeight: 900,
+                                fontSize: '12px'
+                              }}
+                            >
+                              {score.grade}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* ── OFFLINE & LOW BATTERY TELEMETRY DRAWER ──              */}
+      {/* ========================================================= */}
+      {showOfflineDrawer && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            style={{
+              background: '#0F172A',
+              border: '1px solid #334155',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '640px',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)',
+              overflow: 'hidden'
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #1E293B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <BatteryWarning size={20} color="#F59E0B" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#FFFFFF' }}>
+                    Telemetry & Connectivity Warnings
+                  </h3>
+                  <div style={{ fontSize: '12px', color: '#94A3B8' }}>
+                    Active alerts for staff phones with low battery (&lt;15%) or disconnected GPS
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowOfflineDrawer(false)}
+                style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px 24px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Low Battery Section */}
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#EF4444', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  Critical Battery Alert (&lt; 15%) ({offlineData.lowBatteryAlerts?.length || 0})
+                </div>
+                {(!offlineData.lowBatteryAlerts || offlineData.lowBatteryAlerts.length === 0) ? (
+                  <div style={{ fontSize: '12px', color: '#10B981', padding: '8px 12px', background: '#1E293B', borderRadius: '8px' }}>
+                    ✓ All staff devices have sufficient battery charge.
+                  </div>
+                ) : (
+                  offlineData.lowBatteryAlerts.map((item) => (
+                    <div
+                      key={item.staff_id}
+                      style={{
+                        background: '#1E293B',
+                        border: '1px solid #EF4444',
+                        borderRadius: '8px',
+                        padding: '10px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '6px'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#FFF' }}>{item.name}</div>
+                        <div style={{ fontSize: '11px', color: '#94A3B8' }}>Phone: {item.phone || 'N/A'}</div>
+                      </div>
+                      <span style={{ color: '#EF4444', fontWeight: 800, fontSize: '13px' }}>
+                        🔋 {item.battery_level}% Battery
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Signal Lost Section */}
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 800, color: '#F59E0B', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  GPS Signal Lost &gt; 15 Mins ({offlineData.offlineAlerts?.length || 0})
+                </div>
+                {(!offlineData.offlineAlerts || offlineData.offlineAlerts.length === 0) ? (
+                  <div style={{ fontSize: '12px', color: '#10B981', padding: '8px 12px', background: '#1E293B', borderRadius: '8px' }}>
+                    ✓ All devices actively broadcasting 24/7 GPS coordinates.
+                  </div>
+                ) : (
+                  offlineData.offlineAlerts.map((item) => (
+                    <div
+                      key={item.staff_id}
+                      style={{
+                        background: '#1E293B',
+                        border: '1px solid #334155',
+                        borderRadius: '8px',
+                        padding: '10px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '6px'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#FFF' }}>{item.name}</div>
+                        <div style={{ fontSize: '11px', color: '#94A3B8' }}>{item.reason}</div>
+                      </div>
+                      <span style={{ color: '#94A3B8', fontSize: '11px' }}>
+                        {item.minutes_offline ? `${item.minutes_offline}m ago` : 'Offline'}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>

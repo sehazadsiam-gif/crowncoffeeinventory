@@ -1,0 +1,27 @@
+{
+  "appId": "online.ccadmin.staff",
+  "appName": "Crown Coffee Staff",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://ccadmin.online/staff-portal",
+    "cleartext": true,
+    "allowNavigation": [
+      "ccadmin.online",
+      "*.ccadmin.online",
+      "*.supabase.co"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "BackgroundGeolocation": {
+      "notificationTitle": "Crown Coffee 24/7 Staff Radar",
+      "notificationText": "Background location active for safety & HR management",
+      "notificationIconColor": "#107C41"
+    }
+  }
+}

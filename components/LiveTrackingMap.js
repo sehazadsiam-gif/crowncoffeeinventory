@@ -20,7 +20,9 @@ import {
   Play,
   Pause,
   FastForward,
-  RotateCcw
+  RotateCcw,
+  Flame,
+  ShieldAlert
 } from 'lucide-react'
 
 // Fix default Leaflet icon assets
@@ -38,7 +40,10 @@ export default function LiveTrackingMap({
   onSelectStaff = () => {},
   routePoints = [],
   routeStaff = null,
-  onClearRoute = () => {}
+  onClearRoute = () => {},
+  sosAlerts = [],
+  heatmapMode = false,
+  onToggleHeatmap = () => {}
 }) {
   const mapContainerRef = useRef(null)
   const mapInstanceRef = useRef(null)
@@ -46,6 +51,8 @@ export default function LiveTrackingMap({
   const circlesRef = useRef([])
   const routePolylineRef = useRef(null)
   const scrubberMarkerRef = useRef(null)
+  const heatmapLayersRef = useRef([])
+  const sosMarkersRef = useRef([])
   const [mapTheme, setMapTheme] = useState('osm') // 'osm' | 'carto_light' | 'carto_dark'
 
   // Playback Scrubber State
@@ -467,6 +474,129 @@ export default function LiveTrackingMap({
     }
   }, [playIndex, routePoints])
 
+  // Render SOS Emergency Beacons
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    sosMarkersRef.current.forEach((m) => map.removeLayer(m))
+    sosMarkersRef.current = []
+
+    const activeSos = (sosAlerts || []).filter((s) => s.status === 'active')
+
+    activeSos.forEach((alert) => {
+      if (!alert.latitude || !alert.longitude) return
+
+      const staff = alert.staff || {}
+      const sosHtml = `
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+          <div style="
+            position: absolute;
+            width: 52px;
+            height: 52px;
+            top: -6px;
+            left: -6px;
+            border-radius: 50%;
+            background: #EF4444;
+            opacity: 0.45;
+            animation: pulse 1.2s infinite;
+          "></div>
+          <div style="
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #DC2626;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.9);
+            border: 3px solid #FFFFFF;
+            font-size: 18px;
+            font-weight: 900;
+          ">
+            🆘
+          </div>
+          <div style="
+            background: #991B1B;
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            margin-top: 4px;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+          ">
+            EMERGENCY: ${staff.name || 'Staff'}
+          </div>
+        </div>
+      `
+      const icon = L.divIcon({
+        className: 'sos-beacon-marker',
+        html: sosHtml,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      })
+
+      const marker = L.marker([alert.latitude, alert.longitude], {
+        icon,
+        zIndexOffset: 3000
+      }).addTo(map)
+
+      marker.bindPopup(`
+        <div style="padding: 6px; font-family: system-ui; text-align: center;">
+          <div style="font-weight: 800; font-size: 14px; color: #DC2626; margin-bottom: 4px;">🚨 SOS EMERGENCY</div>
+          <div style="font-weight: 700; font-size: 13px;">${staff.name || 'Staff'}</div>
+          <div style="font-size: 11px; color: #666; margin-bottom: 8px;">ID: ${staff.employee_id || 'N/A'} · Phone: ${staff.phone || 'N/A'}</div>
+          <div style="font-size: 12px; margin-bottom: 8px;">Battery: ${alert.battery_level ? `${alert.battery_level}%` : 'N/A'}</div>
+          <a href="https://maps.google.com/?q=${alert.latitude},${alert.longitude}" target="_blank" style="display: block; padding: 6px 10px; background: #DC2626; color: white; border-radius: 6px; text-decoration: none; font-size: 11px; font-weight: 700;">Open Google Maps Direction</a>
+        </div>
+      `)
+
+      sosMarkersRef.current.push(marker)
+    })
+  }, [sosAlerts])
+
+  // Render Movement Heatmap Layer
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    if (!map) return
+
+    heatmapLayersRef.current.forEach((layer) => map.removeLayer(layer))
+    heatmapLayersRef.current = []
+
+    if (!heatmapMode) return
+
+    const pointsToHeat =
+      routePoints && routePoints.length > 0
+        ? routePoints
+        : locations.map((l) => ({ latitude: l.latitude, longitude: l.longitude }))
+
+    pointsToHeat.forEach((pt) => {
+      if (!pt.latitude || !pt.longitude) return
+
+      const coreCircle = L.circle([pt.latitude, pt.longitude], {
+        radius: 20,
+        color: '#DC2626',
+        fillColor: '#EF4444',
+        fillOpacity: 0.28,
+        weight: 0
+      }).addTo(map)
+
+      const glowCircle = L.circle([pt.latitude, pt.longitude], {
+        radius: 45,
+        color: '#F59E0B',
+        fillColor: '#F59E0B',
+        fillOpacity: 0.12,
+        weight: 0
+      }).addTo(map)
+
+      heatmapLayersRef.current.push(coreCircle)
+      heatmapLayersRef.current.push(glowCircle)
+    })
+  }, [heatmapMode, routePoints, locations])
+
   // Reset View to Cafe or Bounds
   const handleResetView = () => {
     const map = mapInstanceRef.current
@@ -559,6 +689,29 @@ export default function LiveTrackingMap({
         >
           <Maximize2 size={14} color="#3B82F6" />
           <span>Fit All</span>
+        </button>
+
+        <button
+          onClick={onToggleHeatmap}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: heatmapMode ? '#DC2626' : 'rgba(255, 255, 255, 0.95)',
+            color: heatmapMode ? '#FFFFFF' : '#1E293B',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid #E2E8F0',
+            borderRadius: '8px',
+            padding: '8px 12px',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+          }}
+          title="Toggle movement density heatmap"
+        >
+          <Flame size={14} color={heatmapMode ? '#FFFFFF' : '#DC2626'} />
+          <span>Heatmap</span>
         </button>
 
         {/* Map Style Selector */}
