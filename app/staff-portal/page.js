@@ -13,7 +13,6 @@ import { translations } from '../../lib/i18n'
 import { normalizeShiftTime } from '../../lib/roster-utils'
 
 import Modal from '../../components/Modal'
-import TrackingBadge from '../../components/TrackingBadge'
 import TrackingConsentModal from '../../components/TrackingConsentModal'
 
 const PaySlip = dynamic(() => import('../../components/PaySlip'), { ssr: false })
@@ -471,12 +470,6 @@ export default function StaffPortalPage() {
           <TrackingConsentModal staffId={staff.id} onConsented={() => setHasConsented(true)} />
         )}
 
-        {/* 24/7 Live Tracking Status Badge */}
-        {staff && (
-          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
-            <TrackingBadge staffId={staff.id} staffName={staff.name} />
-          </div>
-        )}
 
         {/* Month Selector */}
         <div style={{
