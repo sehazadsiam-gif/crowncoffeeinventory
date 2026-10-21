@@ -3,6 +3,7 @@ import { ToastProvider } from '../components/Toast'
 import EnvCheck from '../components/EnvCheck'
 import LoginGate from '../components/LoginGate'
 import GlobalRfidListener from '../components/GlobalRfidListener'
+import GlobalStaffTracker from '../components/GlobalStaffTracker'
 
 export const viewport = {
   themeColor: '#8B5E3C',
@@ -71,6 +72,7 @@ export default function RootLayout({ children }) {
         <EnvCheck />
         <ToastProvider>
           <GlobalRfidListener />
+          <GlobalStaffTracker />
           <LoginGate>
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
               {children}
