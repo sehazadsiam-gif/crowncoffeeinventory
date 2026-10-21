@@ -14,13 +14,24 @@ CREATE TABLE IF NOT EXISTS public.staff_locations (
   accuracy DOUBLE PRECISION,
   speed DOUBLE PRECISION DEFAULT 0,
   heading DOUBLE PRECISION,
+  altitude DOUBLE PRECISION,
   battery_level INT,
   is_charging BOOLEAN DEFAULT false,
   is_online BOOLEAN DEFAULT true,
-  last_ping TIMESTAMPTZ DEFAULT NOW(),
+  tracking_mode TEXT DEFAULT 'foreground',
   motion_mode TEXT DEFAULT 'stationary',
+  address_hint TEXT,
+  is_inside_geofence BOOLEAN DEFAULT false,
+  last_ping TIMESTAMPTZ DEFAULT NOW(),
+  last_updated TIMESTAMPTZ DEFAULT NOW(),
   source TEXT DEFAULT 'browser'
 );
+
+ALTER TABLE public.staff_locations ADD COLUMN IF NOT EXISTS altitude DOUBLE PRECISION;
+ALTER TABLE public.staff_locations ADD COLUMN IF NOT EXISTS tracking_mode TEXT DEFAULT 'foreground';
+ALTER TABLE public.staff_locations ADD COLUMN IF NOT EXISTS address_hint TEXT;
+ALTER TABLE public.staff_locations ADD COLUMN IF NOT EXISTS is_inside_geofence BOOLEAN DEFAULT false;
+ALTER TABLE public.staff_locations ADD COLUMN IF NOT EXISTS last_updated TIMESTAMPTZ DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_staff_locations_last_ping ON public.staff_locations (last_ping DESC);
 
