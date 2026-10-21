@@ -7,7 +7,7 @@ import Navbar from '../../../components/Navbar'
 import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
 import Link from 'next/link'
-import { Users, Plus, UserX, UserCheck, Trash2, QrCode, Wifi, Radio, User, Camera, Calendar, CalendarOff, Key, Lock } from 'lucide-react'
+import { Users, Plus, UserX, UserCheck, Trash2, QrCode, Wifi, Radio, User, Camera, Calendar, CalendarOff, Key, Lock, Edit2, ArrowUpDown, Check } from 'lucide-react'
 
 export default function StaffDirectory() {
   const router = useRouter()
@@ -334,9 +334,8 @@ export default function StaffDirectory() {
             <h1 style={{ fontSize: '32px', color: 'var(--text-primary)' }}>Staff Directory</h1>
             <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>Manage your Crown Coffee team</p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button
-              className="btn-secondary"
               onClick={() => {
                 if (isSorting) {
                   handleSaveSerials()
@@ -347,25 +346,62 @@ export default function StaffDirectory() {
                   setIsSorting(true)
                 }
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', background: isSorting ? 'var(--accent-green)' : 'transparent', color: isSorting ? 'white' : 'var(--text-secondary)' }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 16px',
+                borderRadius: '8px',
+                background: isSorting ? '#10B981' : 'var(--bg-surface)',
+                border: `1.5px solid ${isSorting ? '#059669' : 'var(--border-medium)'}`,
+                color: isSorting ? '#ffffff' : 'var(--text-secondary)',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: isSorting ? '0 2px 8px rgba(16, 185, 129, 0.25)' : '0 1px 2px rgba(0,0,0,0.04)',
+                transition: 'all 0.18s ease'
+              }}
             >
+              {isSorting ? <Check size={15} /> : <ArrowUpDown size={15} />}
               {isSorting ? 'Save Ordering' : 'Adjust Serials'}
             </button>
             {isSorting && (
               <button
-                className="btn-secondary"
                 onClick={() => {
                   setIsSorting(false)
                   setTempSerials({})
+                }}
+                style={{
+                  padding: '9px 14px',
+                  borderRadius: '8px',
+                  background: 'var(--bg-surface)',
+                  border: '1.5px solid var(--border-medium)',
+                  color: 'var(--text-muted)',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
                 }}
               >
                 Cancel
               </button>
             )}
             <button
-              className="btn-primary"
               onClick={() => setShowAddForm(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 18px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, var(--accent-blue), #1D4ED8)',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.28)',
+                transition: 'all 0.18s ease'
+              }}
             >
               <Plus size={16} /> Add Staff Member
             </button>
@@ -380,17 +416,18 @@ export default function StaffDirectory() {
                 key={f}
                 onClick={() => setFilter(f)}
                 style={{
-                  padding: '6px 16px',
-                  borderRadius: '20px',
-                  border: '1px solid ' + (isActive ? 'var(--accent-blue)' : 'var(--border-medium)'),
-                  background: isActive ? 'var(--accent-blue)' : 'transparent',
-                  color: isActive ? '#ffffff' : 'var(--text-muted)',
+                  padding: '7px 18px',
+                  borderRadius: '24px',
+                  border: '1.5px solid ' + (isActive ? 'var(--accent-blue)' : 'var(--border-light)'),
+                  background: isActive ? 'var(--accent-blue)' : 'var(--bg-surface)',
+                  color: isActive ? '#ffffff' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   textTransform: 'capitalize',
                   fontFamily: 'var(--font-body)',
                   fontSize: '13px',
-                  fontWeight: isActive ? 600 : 400,
-                  transition: 'all 0.2s ease'
+                  fontWeight: isActive ? 700 : 500,
+                  boxShadow: isActive ? '0 2px 8px rgba(37, 99, 235, 0.22)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
+                  transition: 'all 0.18s ease'
                 }}
               >
                 {f === 'all' ? 'All (' + staff.length + ')' : f.charAt(0).toUpperCase() + f.slice(1)}
@@ -596,144 +633,249 @@ export default function StaffDirectory() {
                     </div>
                   </div>
 
+                  {/* Action Section: Professional 2-Tier Layout */}
                   <div style={{
                     display: 'flex',
+                    flexDirection: 'column',
                     gap: '8px',
                     paddingTop: '16px',
+                    marginTop: 'auto',
                     borderTop: '1px solid var(--border-light)'
                   }}>
-                    <Link href={`/staff/${s.id}`} style={{ textDecoration: 'none' }}>
-                      <button
-                        title="View Staff Profile"
+                    {/* Primary Row: View Profile & Edit Staff (Balanced 50/50 Grid) */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <Link
+                        href={`/staff/${s.id}`}
                         style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
                           padding: '8px 12px',
-                          background: '#6B3A2A',
+                          background: 'linear-gradient(135deg, #5A2810 0%, #7C3A1E 100%)',
                           border: 'none',
-                          borderRadius: '6px',
+                          borderRadius: '8px',
                           color: '#ffffff',
                           fontSize: '13px',
                           fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
+                          textDecoration: 'none',
+                          boxShadow: '0 2px 6px rgba(90, 40, 16, 0.18)',
+                          transition: 'all 0.18s ease',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = 'translateY(-1px)'
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(90, 40, 16, 0.28)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = 'translateY(0)'
+                          e.currentTarget.style.boxShadow = '0 2px 6px rgba(90, 40, 16, 0.18)'
                         }}
                       >
                         <User size={14} /> Profile
+                      </Link>
+
+                      <button
+                        onClick={() => setEditingStaff({ ...s })}
+                        title="Edit Staff Member Details"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          padding: '8px 12px',
+                          background: 'var(--bg-surface)',
+                          border: '1px solid var(--border-medium)',
+                          borderRadius: '8px',
+                          color: 'var(--text-primary)',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.18s ease'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.borderColor = 'var(--accent-blue)'
+                          e.currentTarget.style.color = 'var(--accent-blue)'
+                          e.currentTarget.style.background = 'var(--bg-subtle)'
+                          e.currentTarget.style.transform = 'translateY(-1px)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = 'var(--border-medium)'
+                          e.currentTarget.style.color = 'var(--text-primary)'
+                          e.currentTarget.style.background = 'var(--bg-surface)'
+                          e.currentTarget.style.transform = 'translateY(0)'
+                        }}
+                      >
+                        <Edit2 size={13} /> Edit
                       </button>
-                    </Link>
-                    <button
-                      onClick={() => setSelectedCardStaff(s)}
-                      title="Generate ID Card / QR Sticker"
-                      style={{
-                        padding: '8px 12px',
-                        background: '#FAF7F2',
-                        border: '1px solid #E8E0D4',
-                        borderRadius: '6px',
-                        color: '#6B3A2A',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <QrCode size={14} /> ID Card
-                    </button>
-                    <button
-                      onClick={() => {
-                        setCredModalStaff(s)
-                        setCredPassword('')
-                        setCredUsername(s.employee_id || (s.email ? s.email.split('@')[0] : s.name.toLowerCase().replace(/[^a-z0-9]/g, '')))
-                      }}
-                      title="Set or Update Staff Portal Login Passcode"
-                      style={{
-                        padding: '8px 12px',
-                        background: '#F0FDF4',
-                        border: '1px solid #BBF7D0',
-                        borderRadius: '6px',
-                        color: '#15803D',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Key size={14} /> Passcode
-                    </button>
-                    <button
-                      onClick={() => setEditingStaff({ ...s })}
-                      title="Edit Staff / Change ID"
-                      style={{
-                        padding: '8px 12px',
-                        background: 'var(--bg-subtle)',
-                        border: '1px solid var(--border-medium)',
-                        borderRadius: '6px',
-                        color: 'var(--text-primary)',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => toggleRostered(s.id, s.is_rostered !== false)}
-                      title={s.is_rostered !== false ? 'Exclude from Roster/Payroll' : 'Include in Roster/Payroll'}
-                      style={{
-                        width: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'transparent',
-                        border: '1px solid var(--border-medium)',
-                        borderRadius: '6px',
-                        color: s.is_rostered !== false ? 'var(--accent-blue)' : 'var(--text-muted)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {s.is_rostered !== false ? <Calendar size={16} /> : <CalendarOff size={16} />}
-                    </button>
-                    <button
-                      onClick={() => toggleStatus(s.id, s.is_active)}
-                      title={s.is_active ? 'Deactivate' : 'Activate'}
-                      style={{
-                        width: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'transparent',
-                        border: '1px solid var(--border-medium)',
-                        borderRadius: '6px',
-                        color: 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      {s.is_active ? <UserX size={16} /> : <UserCheck size={16} />}
-                    </button>
-                    <button
-                      onClick={() => deleteStaff(s.id, s.name)}
-                      title="Delete Permanently"
-                      style={{
-                        width: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'transparent',
-                        border: '1px solid #fce8e6',
-                        borderRadius: '6px',
-                        color: 'var(--danger)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    </div>
+
+                    {/* Secondary Row: Quick Tools (ID Card, Passcode) + Controls */}
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => setSelectedCardStaff(s)}
+                        title="Generate ID Card & QR Sticker"
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '5px',
+                          height: '32px',
+                          padding: '0 8px',
+                          background: 'var(--bg-subtle)',
+                          border: '1px solid var(--border-light)',
+                          borderRadius: '7px',
+                          color: 'var(--text-secondary)',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.borderColor = 'var(--accent-brown)'
+                          e.currentTarget.style.color = 'var(--accent-brown)'
+                          e.currentTarget.style.background = 'var(--bg-surface)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = 'var(--border-light)'
+                          e.currentTarget.style.color = 'var(--text-secondary)'
+                          e.currentTarget.style.background = 'var(--bg-subtle)'
+                        }}
+                      >
+                        <QrCode size={13} style={{ color: 'var(--accent-brown)' }} /> ID Card
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setCredModalStaff(s)
+                          setCredPassword('')
+                          setCredUsername(s.employee_id || (s.email ? s.email.split('@')[0] : s.name.toLowerCase().replace(/[^a-z0-9]/g, '')))
+                        }}
+                        title="Set or Update Staff Portal Login Passcode"
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '5px',
+                          height: '32px',
+                          padding: '0 8px',
+                          background: 'var(--bg-subtle)',
+                          border: '1px solid var(--border-light)',
+                          borderRadius: '7px',
+                          color: 'var(--text-secondary)',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.borderColor = '#10B981'
+                          e.currentTarget.style.color = '#059669'
+                          e.currentTarget.style.background = 'var(--bg-surface)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.borderColor = 'var(--border-light)'
+                          e.currentTarget.style.color = 'var(--text-secondary)'
+                          e.currentTarget.style.background = 'var(--bg-subtle)'
+                        }}
+                      >
+                        <Key size={13} style={{ color: '#059669' }} /> Passcode
+                      </button>
+
+                      <div style={{ width: '1px', height: '18px', background: 'var(--border-light)', margin: '0 1px' }} />
+
+                      {/* Roster Toggle */}
+                      <button
+                        onClick={() => toggleRostered(s.id, s.is_rostered !== false)}
+                        title={s.is_rostered !== false ? 'Active in Duty Roster (Click to exclude)' : 'Excluded from Roster (Click to include)'}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: s.is_rostered !== false ? 'rgba(37, 99, 235, 0.08)' : 'var(--bg-subtle)',
+                          border: `1px solid ${s.is_rostered !== false ? 'rgba(37, 99, 235, 0.25)' : 'var(--border-light)'}`,
+                          borderRadius: '7px',
+                          color: s.is_rostered !== false ? 'var(--accent-blue)' : 'var(--text-muted)',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = 'scale(1.06)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = 'scale(1)'
+                        }}
+                      >
+                        {s.is_rostered !== false ? <Calendar size={14} /> : <CalendarOff size={14} />}
+                      </button>
+
+                      {/* Active Status Toggle */}
+                      <button
+                        onClick={() => toggleStatus(s.id, s.is_active)}
+                        title={s.is_active ? 'Active Employee (Click to deactivate)' : 'Inactive (Click to activate)'}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: s.is_active ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                          border: `1px solid ${s.is_active ? 'rgba(16, 185, 129, 0.25)' : 'rgba(239, 68, 68, 0.2)'}`,
+                          borderRadius: '7px',
+                          color: s.is_active ? '#059669' : '#DC2626',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = 'scale(1.06)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = 'scale(1)'
+                        }}
+                      >
+                        {s.is_active ? <UserCheck size={14} /> : <UserX size={14} />}
+                      </button>
+
+                      {/* Delete Permanently */}
+                      <button
+                        onClick={() => deleteStaff(s.id, s.name)}
+                        title="Delete staff record permanently"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'var(--bg-subtle)',
+                          border: '1px solid var(--border-light)',
+                          borderRadius: '7px',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                          e.currentTarget.style.color = '#DC2626'
+                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                          e.currentTarget.style.transform = 'scale(1.06)'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'var(--bg-subtle)'
+                          e.currentTarget.style.color = 'var(--text-muted)'
+                          e.currentTarget.style.borderColor = 'var(--border-light)'
+                          e.currentTarget.style.transform = 'scale(1)'
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
