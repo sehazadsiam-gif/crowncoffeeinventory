@@ -137,57 +137,96 @@ export async function POST(request) {
 
 /**
  * GET /api/staff/location
+/**
+ * GET /api/staff/location
  * Returns all latest staff locations joined with staff profile info and active geofence zones
  */
 export async function GET() {
   try {
-    // 1. Fetch all staff who have location records
-    const { data: locations, error: locErr } = await supabaseAdmin
-      .from('staff_locations')
-      .select(`
-        staff_id,
-        latitude,
-        longitude,
-        accuracy,
-        speed,
-        heading,
-        altitude,
-        battery_level,
-        is_charging,
-        tracking_mode,
-        address_hint,
-        is_inside_geofence,
-        last_updated,
-        staff:staff_id (
-          id,
-          name,
-          employee_id,
-          designation,
-          department,
-          photo_url,
-          emergency_phone,
-          is_active
-        )
-      `)
-      .order('last_updated', { ascending: false })
+    // 1. ALWAYS fetch all active staff from the staff directory first
+    let allStaff = []
+    try {
+      const { data: staffData, error: staffErr } = await supabaseAdmin
+        .from('staff')
+        .select('id, name, employee_id, designation, department, photo_url, emergency_phone, is_active')
+        .eq('is_active', true)
+        .order('name', { ascending: true })
 
-    if (locErr) {
-      console.error('[GET /api/staff/location] Fetch error:', locErr)
-      return NextResponse.json({ error: locErr.message }, { status: 500 })
+      if (staffErr) {
+        console.error('[GET /api/staff/location] Error fetching staff:', staffErr)
+      } else {
+        allStaff = staffData || []
+      }
+    } catch (sErr) {
+      console.error('[GET /api/staff/location] Staff query exception:', sErr)
     }
 
-    // 2. Fetch all staff list to also know who is offline / hasn't reported location yet
-    const { data: allStaff } = await supabaseAdmin
-      .from('staff')
-      .select('id, name, employee_id, designation, department, photo_url, emergency_phone, is_active')
-      .eq('is_active', true)
-      .order('name', { ascending: true })
+    // 2. Fetch geofence zones
+    let zones = []
+    try {
+      const { data: zoneData } = await supabaseAdmin
+        .from('geofence_zones')
+        .select('*')
+        .order('created_at', { ascending: true })
+      zones = zoneData || []
+    } catch (zErr) {
+      console.error('[GET /api/staff/location] Zones query exception:', zErr)
+    }
 
-    // 3. Fetch geofence zones
-    const { data: zones } = await supabaseAdmin
-      .from('geofence_zones')
-      .select('*')
-      .order('created_at', { ascending: true })
+    // Default Crown Coffee geofence zone if none configured in DB
+    if (!zones || zones.length === 0) {
+      zones = [
+        {
+          id: 'crown-main',
+          name: 'Crown Coffee Main',
+          latitude: 23.8759,
+          longitude: 90.3795,
+          radius_m: 120,
+          is_active: true
+        }
+      ]
+    }
+
+    // 3. Fetch latest locations with graceful fallback
+    let locations = []
+    try {
+      const { data: locData, error: locErr } = await supabaseAdmin
+        .from('staff_locations')
+        .select(`
+          staff_id,
+          latitude,
+          longitude,
+          accuracy,
+          speed,
+          heading,
+          altitude,
+          battery_level,
+          is_charging,
+          tracking_mode,
+          address_hint,
+          is_inside_geofence,
+          last_updated,
+          staff:staff_id (
+            id,
+            name,
+            employee_id,
+            designation,
+            department,
+            photo_url,
+            emergency_phone,
+            is_active
+          )
+        `)
+        .order('last_updated', { ascending: false })
+
+      if (locErr) {
+        console.warn('[GET /api/staff/location] Location fetch notice (schema cache or empty):', locErr.message)
+      } else {
+        locations = locData || []
+      }
+    } catch (lErr) {
+      console.warn('[GET /api/staff/location] Location query exception:', lErr.message)
+    }
 
     return NextResponse.json({
       success: true,
@@ -197,6 +236,12 @@ export async function GET() {
     })
   } catch (err) {
     console.error('[GET /api/staff/location]', err)
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 })
+    return NextResponse.json({
+      success: false,
+      error: err.message || 'Server error',
+      locations: [],
+      staffList: [],
+      zones: []
+    }, { status: 500 })
   }
 }

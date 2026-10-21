@@ -193,7 +193,7 @@ export async function GET() {
 
         CREATE INDEX IF NOT EXISTS idx_errand_trips_staff ON errand_trips (staff_id, departure_time DESC);
 
-        ALTER TABLE staff_locations DISABLE ROW LEVEL SECURITY;
+          ALTER TABLE staff_locations DISABLE ROW LEVEL SECURITY;
         ALTER TABLE staff_location_logs DISABLE ROW LEVEL SECURITY;
         ALTER TABLE geofence_zones DISABLE ROW LEVEL SECURITY;
         ALTER TABLE geofence_events DISABLE ROW LEVEL SECURITY;
@@ -201,18 +201,30 @@ export async function GET() {
         ALTER TABLE sos_alerts DISABLE ROW LEVEL SECURITY;
         ALTER TABLE errand_trips DISABLE ROW LEVEL SECURITY;
 
+        GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+        GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO postgres, anon, authenticated, service_role;
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres, anon, authenticated, service_role;
+
         NOTIFY pgrst, 'reload schema';
+        NOTIFY pgrst, 'reload config';
       `)
+
+      const tableCheck = await client.query(`
+        SELECT table_name FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name IN ('staff', 'staff_locations', 'staff_location_logs', 'geofence_zones', 'sos_alerts')
+      `)
+
       await client.end()
-      results.push(`Success on: ${connStr.replace(/:[^:@]+@/, ':***@')}`)
+      results.push({
+        connection: connStr.replace(/:[^:@]+@/, ':***@'),
+        foundTables: tableCheck.rows.map(r => r.table_name)
+      })
     } catch (err) {
       try { await client.end() } catch (e) {}
     }
   }
 
-  if (results.length > 0) {
-    return NextResponse.json({ success: true, results })
-  }
-
-  return NextResponse.json({ error: 'Could not connect to Supabase DB container directly from app network.' }, { status: 500 })
+  return NextResponse.json({ success: results.length > 0, results })
 }
