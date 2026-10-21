@@ -53,7 +53,7 @@ export default function LiveTrackingMap({
   const scrubberMarkerRef = useRef(null)
   const heatmapLayersRef = useRef([])
   const sosMarkersRef = useRef([])
-  const [mapTheme, setMapTheme] = useState('osm') // 'osm' | 'carto_light' | 'carto_dark'
+  const [mapTheme, setMapTheme] = useState('google_streets') // 'google_streets' | 'google_hybrid' | 'google_terrain' | 'carto_dark' | 'osm'
 
   // Playback Scrubber State
   const [playIndex, setPlayIndex] = useState(0)
@@ -83,10 +83,11 @@ export default function LiveTrackingMap({
     // Add zoom control top-right
     L.control.zoom({ position: 'topright' }).addTo(map)
 
-    // Base tile layer
-    const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
+    // Base tile layer: Default to official Google Maps Roads & Landmarks
+    const tileLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 21,
+      subdomains: ['0', '1', '2', '3'],
+      attribution: '© Google Maps'
     }).addTo(map)
 
     mapInstanceRef.current = map
@@ -107,18 +108,28 @@ export default function LiveTrackingMap({
       map.removeLayer(map._currentTileLayer)
     }
 
-    let url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-    let attr = '© OpenStreetMap contributors'
+    let url = 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'
+    let subdomains = ['0', '1', '2', '3']
+    let attr = '© Google Maps'
+    let maxZoom = 21
 
-    if (mapTheme === 'carto_dark') {
+    if (mapTheme === 'google_hybrid') {
+      url = 'https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+    } else if (mapTheme === 'google_terrain') {
+      url = 'https://mt{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}'
+    } else if (mapTheme === 'carto_dark') {
       url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      attr = '© OpenStreetMap, © CARTO'
-    } else if (mapTheme === 'carto_light') {
-      url = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
-      attr = '© OpenStreetMap, © CARTO'
+      subdomains = 'abcd'
+      attr = '© CARTO'
+      maxZoom = 19
+    } else if (mapTheme === 'osm') {
+      url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+      subdomains = 'abc'
+      attr = '© OpenStreetMap contributors'
+      maxZoom = 19
     }
 
-    const newLayer = L.tileLayer(url, { maxZoom: 19, attribution: attr }).addTo(map)
+    const newLayer = L.tileLayer(url, { maxZoom, subdomains, attribution: attr }).addTo(map)
     map._currentTileLayer = newLayer
   }, [mapTheme])
 
@@ -806,10 +817,10 @@ export default function LiveTrackingMap({
           }}
         >
           <button
-            onClick={() => setMapTheme('osm')}
+            onClick={() => setMapTheme('google_streets')}
             style={{
-              background: mapTheme === 'osm' ? '#107C41' : 'transparent',
-              color: mapTheme === 'osm' ? '#FFFFFF' : '#64748B',
+              background: mapTheme === 'google_streets' ? '#107C41' : 'transparent',
+              color: mapTheme === 'google_streets' ? '#FFFFFF' : '#64748B',
               border: 'none',
               borderRadius: '6px',
               padding: '4px 8px',
@@ -818,13 +829,13 @@ export default function LiveTrackingMap({
               cursor: 'pointer'
             }}
           >
-            Street
+            Google Map
           </button>
           <button
-            onClick={() => setMapTheme('carto_light')}
+            onClick={() => setMapTheme('google_hybrid')}
             style={{
-              background: mapTheme === 'carto_light' ? '#107C41' : 'transparent',
-              color: mapTheme === 'carto_light' ? '#FFFFFF' : '#64748B',
+              background: mapTheme === 'google_hybrid' ? '#107C41' : 'transparent',
+              color: mapTheme === 'google_hybrid' ? '#FFFFFF' : '#64748B',
               border: 'none',
               borderRadius: '6px',
               padding: '4px 8px',
@@ -833,7 +844,22 @@ export default function LiveTrackingMap({
               cursor: 'pointer'
             }}
           >
-            Light
+            Satellite
+          </button>
+          <button
+            onClick={() => setMapTheme('google_terrain')}
+            style={{
+              background: mapTheme === 'google_terrain' ? '#107C41' : 'transparent',
+              color: mapTheme === 'google_terrain' ? '#FFFFFF' : '#64748B',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '4px 8px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            Terrain
           </button>
           <button
             onClick={() => setMapTheme('carto_dark')}
