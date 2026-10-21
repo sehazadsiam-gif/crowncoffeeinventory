@@ -1063,8 +1063,8 @@ export default function LiveTrackingMap({
                   <MapPin size={20} color="#EF4444" />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>iOS Location Permission</h3>
-                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>Apple Safari Location Guide</span>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>iOS Permission</h3>
+                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>Permission Guide</span>
                 </div>
               </div>
               <button
@@ -1076,7 +1076,7 @@ export default function LiveTrackingMap({
             </div>
 
             <p style={{ fontSize: '13px', color: '#CBD5E1', lineHeight: '1.5', margin: '0 0 16px' }}>
-              Your iPhone or browser blocked the location request. Safari requires location permission to be enabled in your iPhone settings:
+              Please allow permission in your iPhone settings:
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#1E293B', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>

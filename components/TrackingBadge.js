@@ -251,7 +251,7 @@ export default function TrackingBadge({ staffId, staffName }) {
   // Trigger Emergency SOS Panic Button
   const handleTriggerSos = async () => {
     if (!staffId || !currentCoords) {
-      alert('Unable to get your current GPS location. Please ensure location permissions are enabled.')
+      alert('Unable to get current GPS. Please ensure permissions are enabled.')
       return
     }
 
@@ -853,8 +853,8 @@ export default function TrackingBadge({ staffId, staffName }) {
                   <MapPin size={20} color="#EF4444" />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Enable Location on iPhone</h3>
-                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>Apple Safari Permission Guide</span>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>Enable Permission on iPhone</h3>
+                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>Permission Guide</span>
                 </div>
               </div>
               <button
@@ -866,7 +866,7 @@ export default function TrackingBadge({ staffId, staffName }) {
             </div>
 
             <p style={{ fontSize: '13px', color: '#CBD5E1', lineHeight: '1.5', margin: '0 0 16px' }}>
-              Safari on iOS requires Location Services to be allowed in your iPhone Settings:
+              Please allow permission in iPhone Settings:
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: '#1E293B', padding: '16px', borderRadius: '12px', marginBottom: '20px' }}>
