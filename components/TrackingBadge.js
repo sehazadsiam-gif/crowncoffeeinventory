@@ -278,6 +278,10 @@ export default function TrackingBadge({ staffId, staffName }) {
     } catch (err) {
       alert('SOS send error: ' + err.message)
     } finally {
+      setSosSending(false)
+    }
+  }
+
   // Manual user gesture location activation (guaranteed to trigger iOS Safari permission prompt)
   const handleManualEnableLocation = () => {
     if (typeof window === 'undefined' || !navigator.geolocation) {

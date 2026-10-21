@@ -1,5 +1,7 @@
-import { supabase } from '../../../../lib/supabase'
+import { supabaseAdmin } from '../../../../lib/supabase'
 import { hashPassword } from '../../../../lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(request) {
   try {
@@ -27,7 +29,7 @@ export async function POST(request) {
       if (cleanPass.includes('@cc')) {
         cleanUsername = cleanPass.split('@cc')[0].trim()
       } else {
-        const { data: staffMember } = await supabase
+        const { data: staffMember } = await supabaseAdmin
           .from('staff')
           .select('name')
           .eq('id', staff_id)
@@ -41,7 +43,7 @@ export async function POST(request) {
     }
 
     // Check if another user is using this username
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('staff_accounts')
       .select('id, staff_id')
       .eq('username', cleanUsername)
@@ -49,7 +51,7 @@ export async function POST(request) {
 
     if (existing && existing.staff_id !== staff_id) {
       return Response.json(
-        { error: 'This passcode alias is already assigned to another staff member' },
+        { error: `The username/alias "${cleanUsername}" is already assigned to another staff member` },
         { status: 409 }
       )
     }
@@ -57,44 +59,45 @@ export async function POST(request) {
     const password_hash = await hashPassword(password.trim())
 
     // Check if staff already has account to update or insert
-    const { data: accountExists } = await supabase
+    const { data: accountExists } = await supabaseAdmin
       .from('staff_accounts')
       .select('id')
       .eq('staff_id', staff_id)
       .maybeSingle()
 
-    let resultError;
+    let resultError
 
     if (accountExists) {
       // Update existing
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('staff_accounts')
         .update({ username: cleanUsername, password_hash })
         .eq('staff_id', staff_id)
-      resultError = error;
+      resultError = error
     } else {
-      // Insert new
-      const { error } = await supabase
+      // Insert new - schema has (id, staff_id, username, password_hash)
+      const { error } = await supabaseAdmin
         .from('staff_accounts')
         .insert([{ 
           staff_id, 
           username: cleanUsername, 
-          password_hash,
-          mobile_number: 'user_' + cleanUsername
+          password_hash
         }])
-      resultError = error;
+      resultError = error
     }
 
-    if (resultError) throw resultError
+    if (resultError) {
+      console.error('[set-credentials DB error]', resultError)
+      throw resultError
+    }
 
-    return Response.json({ success: true, message: 'Passcode saved successfully' })
+    return Response.json({ success: true, message: 'Passcode saved successfully', username: cleanUsername })
 
   } catch (error) {
     console.error('Set credentials error:', error)
     return Response.json(
-      { error: 'Failed to save passcode. Please try again.' },
+      { error: error.message || 'Failed to save passcode. Please try again.' },
       { status: 500 }
     )
   }
 }
-

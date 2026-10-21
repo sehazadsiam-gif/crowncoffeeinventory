@@ -1,5 +1,7 @@
-import { supabase } from '../../../../lib/supabase'
+import { supabaseAdmin } from '../../../../lib/supabase'
 import { verifyPassword, createSession } from '../../../../lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(request) {
   try {
@@ -25,7 +27,7 @@ export async function POST(request) {
 
     // 1. Try direct lookup by username if available
     if (candidateUsername) {
-      const { data } = await supabase
+      const { data } = await supabaseAdmin
         .from('staff_accounts')
         .select('*, staff(*)')
         .eq('username', candidateUsername)
@@ -38,7 +40,7 @@ export async function POST(request) {
 
     // 2. Fallback: match by password verification across active staff accounts
     if (!account) {
-      const { data: allAccounts } = await supabase
+      const { data: allAccounts } = await supabaseAdmin
         .from('staff_accounts')
         .select('*, staff(*)')
 

@@ -7,7 +7,7 @@ import Navbar from '../../../components/Navbar'
 import Modal from '../../../components/Modal'
 import { useToast } from '../../../components/Toast'
 import Link from 'next/link'
-import { Users, Plus, UserX, UserCheck, Trash2, QrCode, Wifi, Radio, User, Camera, Calendar, CalendarOff } from 'lucide-react'
+import { Users, Plus, UserX, UserCheck, Trash2, QrCode, Wifi, Radio, User, Camera, Calendar, CalendarOff, Key, Lock } from 'lucide-react'
 
 export default function StaffDirectory() {
   const router = useRouter()
@@ -29,6 +29,12 @@ export default function StaffDirectory() {
   const [editingStaff, setEditingStaff] = useState(null)
   const [isSorting, setIsSorting] = useState(false)
   const [tempSerials, setTempSerials] = useState({})
+  
+  // Staff Passcode / Credentials Modal States
+  const [credModalStaff, setCredModalStaff] = useState(null)
+  const [credPassword, setCredPassword] = useState('')
+  const [credUsername, setCredUsername] = useState('')
+  const [savingCreds, setSavingCreds] = useState(false)
   
   // Image Adjustment States
   const [photoZoom, setPhotoZoom] = useState(100)
@@ -72,6 +78,36 @@ export default function StaffDirectory() {
       addToast('Failed to generate PDF', 'error')
     } finally {
       setPdfLoading(false)
+    }
+  }
+
+  async function handleSaveCredentials() {
+    if (!credPassword || credPassword.length < 4) {
+      addToast('Passcode must be at least 4 characters', 'error')
+      return
+    }
+    setSavingCreds(true)
+    try {
+      const res = await fetch('/api/staff/set-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          staff_id: credModalStaff.id,
+          username: credUsername.trim(),
+          password: credPassword.trim()
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save passcode')
+
+      addToast(`Portal passcode saved for ${credModalStaff.name}!`, 'success')
+      setCredModalStaff(null)
+      setCredPassword('')
+      setCredUsername('')
+    } catch (err) {
+      addToast(err.message, 'error')
+    } finally {
+      setSavingCreds(false)
     }
   }
 
@@ -606,6 +642,29 @@ export default function StaffDirectory() {
                       <QrCode size={14} /> ID Card
                     </button>
                     <button
+                      onClick={() => {
+                        setCredModalStaff(s)
+                        setCredPassword('')
+                        setCredUsername(s.employee_id || (s.email ? s.email.split('@')[0] : s.name.toLowerCase().replace(/[^a-z0-9]/g, '')))
+                      }}
+                      title="Set or Update Staff Portal Login Passcode"
+                      style={{
+                        padding: '8px 12px',
+                        background: '#F0FDF4',
+                        border: '1px solid #BBF7D0',
+                        borderRadius: '6px',
+                        color: '#15803D',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Key size={14} /> Passcode
+                    </button>
+                    <button
                       onClick={() => setEditingStaff({ ...s })}
                       title="Edit Staff / Change ID"
                       style={{
@@ -682,6 +741,50 @@ export default function StaffDirectory() {
           </div>
         )}
       </main>
+
+      {/* Set Staff Passcode Modal */}
+      <Modal
+        isOpen={!!credModalStaff}
+        onClose={() => {
+          setCredModalStaff(null)
+          setCredPassword('')
+          setCredUsername('')
+        }}
+        title={`Set Portal Passcode: ${credModalStaff?.name || ''}`}
+        confirmLabel={savingCreds ? 'Saving...' : 'Save Passcode'}
+        onConfirm={handleSaveCredentials}
+        confirmDisabled={savingCreds || !credPassword || credPassword.length < 4}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+            Set the login passcode for <strong>{credModalStaff?.name}</strong> to sign into the Crown Coffee Staff Portal ({credModalStaff?.employee_id ? `Employee ID: ${credModalStaff.employee_id}` : ''}).
+          </p>
+
+          <div>
+            <label className="label" style={{ color: 'var(--text-secondary)' }}>Username / Login Alias</label>
+            <input
+              className="input"
+              placeholder="e.g. CC104, rafat, or siam"
+              value={credUsername}
+              onChange={e => setCredUsername(e.target.value)}
+            />
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+              Used to identify this employee during login (default: Employee ID or name).
+            </span>
+          </div>
+
+          <div>
+            <label className="label" style={{ color: 'var(--text-secondary)' }}>Passcode / Password * (Min 4 characters)</label>
+            <input
+              className="input"
+              type="text"
+              placeholder="e.g. 1234 or rafat@cc"
+              value={credPassword}
+              onChange={e => setCredPassword(e.target.value)}
+            />
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={showAddForm}
