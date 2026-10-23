@@ -29,7 +29,7 @@ export async function POST(request) {
     // Check Master PIN fallback
     if (verifyMasterPin(password) || verifyMasterPin(username)) {
       rateLimit.reset()
-      const token = await createSession('master_admin', 'admin')
+      const token = await createSession(null, 'admin')
 
       const response = NextResponse.json({
         success: true,

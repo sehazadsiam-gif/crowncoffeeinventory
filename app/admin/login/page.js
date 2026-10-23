@@ -41,7 +41,12 @@ export default function AdminLoginPage() {
       localStorage.setItem('cc_token', data.token)
       localStorage.setItem('cc_role', 'admin')
       localStorage.setItem('cc_username', data.username || 'admin')
-      router.replace('/dashboard')
+      document.cookie = `cc_token=${data.token}; path=/; max-age=604800; SameSite=Lax`
+      document.cookie = `cc_role=admin; path=/; max-age=604800; SameSite=Lax`
+
+      const searchParams = new URLSearchParams(window.location.search)
+      const redirectTarget = searchParams.get('redirect') || '/dashboard'
+      router.replace(redirectTarget)
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.')
       setLoading(false)

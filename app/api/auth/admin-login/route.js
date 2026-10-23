@@ -25,7 +25,7 @@ export async function POST(request) {
     // 1. PIN-based Master Authentication
     if (candidatePin && verifyMasterPin(candidatePin)) {
       rateLimit.reset()
-      const token = await createSession('master_admin', 'admin')
+      const token = await createSession(null, 'admin')
 
       const response = NextResponse.json({
         success: true,
