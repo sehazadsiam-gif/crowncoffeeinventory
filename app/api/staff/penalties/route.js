@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Client } from 'pg'
 import { supabaseAdmin } from '../../../../lib/supabase'
+import { verifyAdminRequest } from '../../../../lib/auth'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -82,6 +83,11 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const auth = await verifyAdminRequest(request)
+    if (!auth.authenticated) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status || 401 })
+    }
+
     const body = await request.json()
     const { staff_id, date, penalty_percent = 0.5, reason = '' } = body
 
@@ -127,6 +133,11 @@ export async function POST(request) {
 
 export async function DELETE(request) {
   try {
+    const auth = await verifyAdminRequest(request)
+    if (!auth.authenticated) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status || 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     const staffId = searchParams.get('staff_id')

@@ -13,8 +13,9 @@ export async function POST(request) {
 
     const cleanPin = String(pin).trim()
 
-    if (type === 'action' || cleanPin === '1590') {
-      if (cleanPin === '1590') {
+    const { verifyMasterPin } = await import('../../../../lib/auth')
+    if (type === 'action' || verifyMasterPin(cleanPin)) {
+      if (verifyMasterPin(cleanPin)) {
         return NextResponse.json({ success: true, message: 'Action PIN verified' })
       }
       return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN' }, { status: 401 })

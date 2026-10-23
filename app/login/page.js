@@ -104,21 +104,32 @@ export default function LampLoginPage() {
   }, [])
 
   // Admin login submission
-  const handleAdminLogin = (e) => {
+  const handleAdminLogin = async (e) => {
     e.preventDefault()
     if (!adminPin.trim()) {
       return addToast('Please enter Admin PIN', 'error')
     }
     setLoading(true)
-    if (adminPin.trim() === '1590' || adminPin.trim() === 'admin12345') {
+    try {
+      const res = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: adminPin.trim() })
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Invalid Admin PIN')
+      }
+
       localStorage.setItem('isAdmin', 'true')
-      localStorage.setItem('cc_token', 'admin_pin_session')
+      localStorage.setItem('cc_token', data.token)
       localStorage.setItem('cc_role', 'admin')
-      localStorage.setItem('cc_username', 'admin')
+      localStorage.setItem('cc_username', data.username || 'admin')
       addToast('Welcome back, Admin!', 'success')
       router.push('/dashboard')
-    } else {
-      addToast('Invalid Admin PIN', 'error')
+    } catch (err) {
+      addToast(err.message || 'Login failed', 'error')
       setLoading(false)
     }
   }

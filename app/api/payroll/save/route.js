@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin, supabase } from '../../../../lib/supabase'
+import { verifyAdminRequest } from '../../../../lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request) {
   try {
+    const auth = await verifyAdminRequest(request)
+    if (!auth.authenticated) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status || 401 })
+    }
+
     const body = await request.json()
     const {
       staff_id,

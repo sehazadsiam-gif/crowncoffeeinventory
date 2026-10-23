@@ -92,7 +92,8 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Item ID is required' }, { status: 400 })
     }
 
-    if (action_pin !== undefined && String(action_pin).trim() !== '1590') {
+    const { verifyMasterPin } = await import('../../../../lib/auth')
+    if (action_pin !== undefined && !verifyMasterPin(action_pin)) {
       return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN' }, { status: 401 })
     }
 
@@ -135,7 +136,8 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Item ID is required' }, { status: 400 })
     }
 
-    if (actionPin && String(actionPin).trim() !== '1590') {
+    const { verifyMasterPin } = await import('../../../../lib/auth')
+    if (actionPin && !verifyMasterPin(actionPin)) {
       return NextResponse.json({ error: 'Invalid Edit/Delete Security PIN' }, { status: 401 })
     }
 

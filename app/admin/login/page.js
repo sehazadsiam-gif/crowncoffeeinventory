@@ -25,14 +25,25 @@ export default function AdminLoginPage() {
     setLoading(true)
     setError('')
 
-    if (pin.trim() === '1590') {
+    try {
+      const res = await fetch('/api/auth/admin-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: pin.trim() })
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Invalid Admin PIN')
+      }
+
       localStorage.setItem('isAdmin', 'true')
-      localStorage.setItem('cc_token', 'admin_pin_session')
+      localStorage.setItem('cc_token', data.token)
       localStorage.setItem('cc_role', 'admin')
-      localStorage.setItem('cc_username', 'admin')
+      localStorage.setItem('cc_username', data.username || 'admin')
       router.replace('/dashboard')
-    } else {
-      setError('Invalid Admin PIN. Please try again.')
+    } catch (err) {
+      setError(err.message || 'Login failed. Please try again.')
       setLoading(false)
     }
   }
