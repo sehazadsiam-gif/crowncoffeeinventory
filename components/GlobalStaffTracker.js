@@ -1,27 +1,22 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 
 /**
  * GlobalStaffTracker
- * Automatically and silently starts background GPS streaming on staff mobile devices
- * whenever any page is loaded, as long as staff is logged in (cc_staff_id in localStorage).
- * No button click required.
+ * Automatically maintains background GPS streaming on staff mobile/tablet devices
+ * whenever any page is active, responding dynamically to login events, pathname changes,
+ * and crown_tracking_activated broadcasts.
  */
 export default function GlobalStaffTracker() {
+  const pathname = usePathname()
   const watchIdRef = useRef(null)
   const heartbeatTimerRef = useRef(null)
-  const isTrackingRef = useRef(false)
+  const activeStaffIdRef = useRef(null)
 
   useEffect(() => {
     if (typeof window === 'undefined' || !navigator.geolocation) return
-
-    // Check if device belongs to an employee
-    const staffId = localStorage.getItem('cc_staff_id')
-    const role = localStorage.getItem('cc_role')
-
-    // Only run if staffId is present and not super admin
-    if (!staffId || role === 'super_admin') return
 
     let batteryLevel = null
     let isCharging = false
@@ -40,7 +35,7 @@ export default function GlobalStaffTracker() {
       }).catch(() => {})
     }
 
-    // 2. Queue offline logs if cellular is disconnected
+    // 2. Queue offline logs if disconnected
     const queueOfflinePing = (payload) => {
       try {
         const raw = localStorage.getItem('crown_offline_gps_pings')
@@ -69,16 +64,18 @@ export default function GlobalStaffTracker() {
       } catch (e) {}
     }
 
-    // Flush whenever device comes back online
     window.addEventListener('online', flushOfflineQueue)
 
-    // 3. Send coordinate payload to 24/7 staff radar
-    const sendCoords = async (pos) => {
+    // 3. Coordinate dispatcher
+    const sendCoords = async (pos, staffId) => {
+      const currentStaffId = staffId || localStorage.getItem('cc_staff_id')
+      if (!currentStaffId) return
+
       const lat = pos.coords.latitude
       const lng = pos.coords.longitude
       const speed = pos.coords.speed || 0
 
-      // Adaptive throttle: 15s if moving fast, 30s walking, 60s stationary
+      // Adaptive throttle: 15s if moving fast (>2m/s), 30s walking (>0.4m/s), 60s stationary
       let nextInterval = 60000
       if (speed > 2.0) {
         nextInterval = 15000
@@ -87,7 +84,7 @@ export default function GlobalStaffTracker() {
       }
 
       const payload = {
-        staffId,
+        staffId: currentStaffId,
         latitude: lat,
         longitude: lng,
         accuracy: pos.coords.accuracy,
@@ -121,39 +118,110 @@ export default function GlobalStaffTracker() {
 
       // Schedule next position check
       if (heartbeatTimerRef.current) clearTimeout(heartbeatTimerRef.current)
-      heartbeatTimerRef.current = setTimeout(requestPing, nextInterval)
+      heartbeatTimerRef.current = setTimeout(() => requestPing(currentStaffId), nextInterval)
     }
 
-    const requestPing = () => {
+    const requestPing = (staffId) => {
+      const currentStaffId = staffId || localStorage.getItem('cc_staff_id')
+      if (!currentStaffId) return
+
       navigator.geolocation.getCurrentPosition(
-        sendCoords,
-        (err) => console.warn('[AutoGPS] Error:', err.message),
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        (pos) => sendCoords(pos, currentStaffId),
+        (err) => {
+          // If high accuracy times out, try standard accuracy
+          navigator.geolocation.getCurrentPosition(
+            (pos) => sendCoords(pos, currentStaffId),
+            (fallbackErr) => console.warn('[AutoGPS] Ping fallback notice:', fallbackErr.message),
+            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+          )
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 10000 }
       )
     }
 
-    // 4. Start auto-tracking immediately
-    requestPing()
+    const startTracking = (forcedStaffId = null) => {
+      const staffId = forcedStaffId || localStorage.getItem('cc_staff_id') || localStorage.getItem('staffPortalId')
+      const role = localStorage.getItem('cc_role')
 
-    try {
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        sendCoords,
-        (err) => console.warn('[AutoGPS] Watch warning:', err.message),
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
-      )
-      isTrackingRef.current = true
-    } catch (e) {
-      console.warn('[AutoGPS] Watch failed:', e)
+      // Only track staff members, never super_admin or admin
+      if (!staffId || role === 'super_admin' || role === 'admin') {
+        stopTracking()
+        return
+      }
+
+      if (activeStaffIdRef.current === staffId && watchIdRef.current !== null) {
+        // Already actively tracking this staff member
+        return
+      }
+
+      activeStaffIdRef.current = staffId
+
+      // Initial ping
+      requestPing(staffId)
+
+      // Clear previous watch if any
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current = null
+      }
+
+      try {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (pos) => sendCoords(pos, staffId),
+          (err) => {
+            console.warn('[AutoGPS] Watch warning:', err.message)
+            // Retry watch with standard accuracy if high accuracy failed
+            if (err.code !== 1 && watchIdRef.current !== null) {
+              navigator.geolocation.clearWatch(watchIdRef.current)
+              watchIdRef.current = navigator.geolocation.watchPosition(
+                (pos) => sendCoords(pos, staffId),
+                () => {},
+                { enableHighAccuracy: false, maximumAge: 30000, timeout: 25000 }
+              )
+            }
+          },
+          { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+        )
+      } catch (e) {
+        console.warn('[AutoGPS] Watch setup failed:', e)
+      }
     }
+
+    const stopTracking = () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current)
+        watchIdRef.current = null
+      }
+      if (heartbeatTimerRef.current) {
+        clearTimeout(heartbeatTimerRef.current)
+        heartbeatTimerRef.current = null
+      }
+      activeStaffIdRef.current = null
+    }
+
+    // Check & start tracking
+    startTracking()
+
+    // Listen to custom activation event triggered on login or consent
+    const handleActivation = (e) => {
+      const incomingId = e?.detail?.staffId || null
+      startTracking(incomingId)
+    }
+
+    const handleStorageChange = () => {
+      startTracking()
+    }
+
+    window.addEventListener('crown_tracking_activated', handleActivation)
+    window.addEventListener('storage', handleStorageChange)
 
     return () => {
       window.removeEventListener('online', flushOfflineQueue)
-      if (heartbeatTimerRef.current) clearTimeout(heartbeatTimerRef.current)
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current)
-      }
+      window.removeEventListener('crown_tracking_activated', handleActivation)
+      window.removeEventListener('storage', handleStorageChange)
+      stopTracking()
     }
-  }, [])
+  }, [pathname])
 
   return null // Headless background worker
 }

@@ -81,8 +81,13 @@ export default function StaffPortalPage() {
             })
           }).catch(() => {})
         },
-        () => {}, // silently ignore errors
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 }
+        (err) => {
+          // If permission is denied or revoked, prompt the consent modal
+          if (err.code === 1) {
+            setHasConsented(false)
+          }
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 15000 }
       )
     }
 
@@ -157,7 +162,18 @@ export default function StaffPortalPage() {
       setDutyRequests(dutyReqRes.data || [])
       setPenalties(penaltyRes.data || [])
 
-      // Check 24/7 location tracking consent status
+      // Check location tracking consent status and device permission
+      const sessionConsented = typeof window !== 'undefined' && localStorage.getItem('cc_tracking_consented') === 'true'
+      if (!sessionConsented) {
+        setHasConsented(false)
+      } else if (typeof window !== 'undefined' && navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'geolocation' }).then((perm) => {
+          if (perm.state === 'denied' || perm.state === 'prompt') {
+            setHasConsented(false)
+          }
+        }).catch(() => {})
+      }
+
       fetch(`/api/staff/tracking-consent?staffId=${staffId}`)
         .then(res => res.json())
         .then(data => {
@@ -505,7 +521,11 @@ export default function StaffPortalPage() {
 
         {/* 24/7 Location Tracking Consent Modal */}
         {staff && !hasConsented && (
-          <TrackingConsentModal staffId={staff.id} onConsented={() => setHasConsented(true)} />
+          <TrackingConsentModal
+            staffId={staff.id}
+            staffName={staff.name}
+            onConsented={() => setHasConsented(true)}
+          />
         )}
 
 

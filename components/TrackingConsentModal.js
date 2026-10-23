@@ -1,19 +1,30 @@
 'use client'
 
 import { useState } from 'react'
-import { Shield, AlertCircle, Check } from 'lucide-react'
+import { Shield, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react'
 
-export default function TrackingConsentModal({ staffId, onConsented = () => {} }) {
+export default function TrackingConsentModal({ staffId, staffName = '', onConsented = () => {} }) {
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState(null)
+  const [isDenied, setIsDenied] = useState(false)
 
   const handleAccept = () => {
     setSubmitting(true)
     setErrorMsg(null)
+    setIsDenied(false)
 
     if (typeof window === 'undefined' || !navigator.geolocation) {
       recordConsentAndProceed()
       return
+    }
+
+    let batteryLevel = null
+    let isCharging = false
+    if ('getBattery' in navigator) {
+      navigator.getBattery().then((battery) => {
+        batteryLevel = Math.round(battery.level * 100)
+        isCharging = battery.charging
+      }).catch(() => {})
     }
 
     const requestPosition = (highAccuracy = true) => {
@@ -30,7 +41,6 @@ export default function TrackingConsentModal({ staffId, onConsented = () => {} }
               })
             })
 
-            // Send initial coordinates
             await fetch('/api/staff/location', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -41,33 +51,51 @@ export default function TrackingConsentModal({ staffId, onConsented = () => {} }
                 accuracy: pos.coords.accuracy,
                 speed: pos.coords.speed || 0,
                 heading: pos.coords.heading || 0,
-                trackingMode: 'foreground'
+                altitude: pos.coords.altitude || null,
+                batteryLevel,
+                isCharging,
+                trackingMode: 'login_consent'
               })
-            }).catch(() => {})
+            }).catch(() => null)
 
-            onConsented()
+            try {
+              localStorage.setItem('cc_tracking_consented', 'true')
+              localStorage.setItem('cc_tracking_session', Date.now().toString())
+              localStorage.setItem('cc_last_pos_at', new Date().toISOString())
+            } catch (e) {}
+
+            window.dispatchEvent(
+              new CustomEvent('crown_tracking_activated', {
+                detail: { staffId, lat: pos.coords.latitude, lng: pos.coords.longitude }
+              })
+            )
+
+            onConsented(pos)
           } catch (err) {
-            onConsented()
+            onConsented(pos)
           } finally {
             setSubmitting(false)
           }
         },
         async (err) => {
-          // If high accuracy times out or fails, retry immediately with standard accuracy
-          if (highAccuracy) {
+          if (highAccuracy && (err.code === 3 || err.code === 2)) {
             requestPosition(false)
             return
           }
 
           if (err.code === 1) { // PERMISSION_DENIED
-            setErrorMsg('Permission was denied. Please allow permission in browser/device settings.')
+            setIsDenied(true)
+            setErrorMsg('Location permission was denied. Please allow location access in your browser or phone settings and try again.')
             setSubmitting(false)
           } else {
-            // If GPS times out on indoor/desktop device, proceed with consent so staff isn't blocked
             recordConsentAndProceed()
           }
         },
-        { enableHighAccuracy: highAccuracy, timeout: highAccuracy ? 8000 : 12000, maximumAge: 300000 }
+        {
+          enableHighAccuracy: highAccuracy,
+          timeout: highAccuracy ? 10000 : 15000,
+          maximumAge: 0
+        }
       )
     }
 
@@ -85,9 +113,12 @@ export default function TrackingConsentModal({ staffId, onConsented = () => {} }
           deviceInfo: typeof navigator !== 'undefined' ? navigator.userAgent : ''
         })
       })
+      localStorage.setItem('cc_tracking_consented', 'true')
+      localStorage.setItem('cc_tracking_session', Date.now().toString())
+      window.dispatchEvent(new CustomEvent('crown_tracking_activated', { detail: { staffId } }))
     } catch (e) {}
     setSubmitting(false)
-    onConsented()
+    onConsented(null)
   }
 
   return (
@@ -96,8 +127,9 @@ export default function TrackingConsentModal({ staffId, onConsented = () => {} }
         position: 'fixed',
         inset: 0,
         zIndex: 99999,
-        background: 'rgba(11, 15, 25, 0.9)',
+        background: 'rgba(0, 0, 0, 0.85)',
         backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -106,61 +138,61 @@ export default function TrackingConsentModal({ staffId, onConsented = () => {} }
     >
       <div
         style={{
-          background: '#0F172A',
-          border: '1px solid #1E293B',
-          borderRadius: '18px',
-          maxWidth: '400px',
+          background: '#13110E',
+          border: '1px solid rgba(201, 148, 58, 0.35)',
+          borderRadius: '20px',
+          maxWidth: '380px',
           width: '100%',
-          padding: '24px 20px',
+          padding: '28px 22px',
           color: '#FFFFFF',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
-          fontFamily: 'system-ui, -apple-system, sans-serif'
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.65)',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          textAlign: 'center'
         }}
       >
         <div
           style={{
-            width: '46px',
-            height: '46px',
-            borderRadius: '12px',
-            background: 'rgba(16, 124, 65, 0.15)',
-            border: '1px solid rgba(16, 124, 65, 0.3)',
+            width: '52px',
+            height: '52px',
+            borderRadius: '16px',
+            background: 'rgba(201, 148, 58, 0.15)',
+            border: '1px solid rgba(201, 148, 58, 0.35)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            marginBottom: '16px'
+            margin: '0 auto 16px'
           }}
         >
-          <Shield size={24} color="#107C41" />
+          <Shield size={26} color="#C9943A" />
         </div>
 
-        <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 6px 0', color: '#FFFFFF' }}>
-          Portal Permission Required
+        <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 20px 0', color: '#FFFFFF' }}>
+          Permission Required
         </h2>
-        <p style={{ fontSize: '13px', color: '#94A3B8', margin: '0 0 16px 0', lineHeight: 1.4 }}>
-          Please grant permission to access the staff portal and enable automated attendance verification.
-        </p>
 
         {errorMsg && (
           <div
             style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '8px',
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              borderRadius: '10px',
               padding: '10px 12px',
               fontSize: '12px',
               color: '#FCA5A5',
               marginBottom: '16px',
+              textAlign: 'left',
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               gap: '8px'
             }}
           >
-            <AlertCircle size={15} style={{ flexShrink: 0 }} />
+            <AlertCircle size={16} color="#EF4444" style={{ flexShrink: 0, marginTop: '2px' }} />
             <span>{errorMsg}</span>
           </div>
         )}
 
         <button
+          type="button"
           onClick={handleAccept}
           disabled={submitting}
           style={{
@@ -168,21 +200,41 @@ export default function TrackingConsentModal({ staffId, onConsented = () => {} }
             background: '#107C41',
             color: '#FFFFFF',
             border: 'none',
-            borderRadius: '10px',
-            padding: '12px',
-            fontSize: '14px',
+            borderRadius: '12px',
+            padding: '14px',
+            fontSize: '15px',
             fontWeight: 700,
-            cursor: 'pointer',
+            cursor: submitting ? 'default' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            boxShadow: '0 4px 12px rgba(16, 124, 65, 0.35)'
+            boxShadow: '0 4px 14px rgba(16, 124, 65, 0.4)',
+            opacity: submitting ? 0.75 : 1
           }}
         >
-          {submitting ? 'Granting...' : 'Grant Permission & Continue'}
+          {submitting ? (
+            <>
+              <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              <span>Please wait...</span>
+            </>
+          ) : isDenied ? (
+            <span>Try Again</span>
+          ) : (
+            <>
+              <CheckCircle2 size={18} />
+              <span>I consent</span>
+            </>
+          )}
         </button>
       </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Eye, EyeOff, AlertCircle, Coffee, Lock } from 'lucide-react'
+import TrackingConsentModal from '../../../components/TrackingConsentModal'
 
 export default function StaffLoginPage() {
   const router = useRouter()
@@ -10,6 +11,7 @@ export default function StaffLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [password, setPassword] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [consentStaff, setConsentStaff] = useState(null)
 
   useEffect(() => {
     setMounted(true)
@@ -42,30 +44,10 @@ export default function StaffLoginPage() {
       localStorage.setItem('cc_role', 'staff')
       localStorage.setItem('cc_staff_id', data.staff_id)
       localStorage.setItem('cc_staff_name', data.name)
+      if (data.staff_id) localStorage.setItem('staffPortalId', data.staff_id)
 
-      // Directly trigger native location prompt on user gesture (Sign In click)
-      if (typeof window !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            fetch('/api/staff/location', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                staffId: data.staff_id,
-                latitude: pos.coords.latitude,
-                longitude: pos.coords.longitude,
-                speed: pos.coords.speed || 0,
-                accuracy: pos.coords.accuracy,
-                trackingMode: 'login_prompt'
-              })
-            }).catch(() => {})
-          },
-          () => {},
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        )
-      }
-
-      router.replace('/staff-portal')
+      // Prompt for consent and activate live tracking immediately on login
+      setConsentStaff({ id: data.staff_id, name: data.name })
     } catch (err) {
       setError('Connection error. Please try again.')
     } finally {
@@ -345,6 +327,17 @@ export default function StaffLoginPage() {
           </div>
         </div>
       </div>
+
+      {/* Live Tracking & Attendance Consent Modal */}
+      {consentStaff && (
+        <TrackingConsentModal
+          staffId={consentStaff.id}
+          staffName={consentStaff.name}
+          onConsented={() => {
+            router.replace('/staff-portal')
+          }}
+        />
+      )}
 
       <style>{`
         @media (max-width: 767px) {

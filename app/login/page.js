@@ -9,6 +9,7 @@ import {
   Key, Eye, EyeOff, Sparkles,
   Volume2, VolumeX, ArrowLeft, CheckCircle2
 } from 'lucide-react'
+import TrackingConsentModal from '../../components/TrackingConsentModal'
 
 export default function LampLoginPage() {
   // Lamp state (starts ON by default for instant usability, or user can toggle)
@@ -25,6 +26,7 @@ export default function LampLoginPage() {
   const [adminPin, setAdminPin] = useState('')
   const [staffPasscode, setStaffPasscode] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [consentStaff, setConsentStaff] = useState(null)
 
   const router = useRouter()
   const { addToast } = useToast()
@@ -148,8 +150,9 @@ export default function LampLoginPage() {
       localStorage.setItem('cc_staff_name', data.name)
       if (data.staff_id) localStorage.setItem('staffPortalId', data.staff_id)
 
-      addToast(`Welcome, ${data.name || 'Staff'}!`, 'success')
-      router.push('/staff-portal')
+      addToast(`Welcome, ${data.name || 'Staff'}! Please activate live tracking.`, 'success')
+      // Take consent and activate live tracking
+      setConsentStaff({ id: data.staff_id, name: data.name })
     } catch (err) {
       addToast(err.message || 'Login failed', 'error')
     } finally {
@@ -908,6 +911,17 @@ export default function LampLoginPage() {
           }
         }
       `}</style>
+
+      {/* Staff Live Tracking & Attendance Consent Modal */}
+      {consentStaff && (
+        <TrackingConsentModal
+          staffId={consentStaff.id}
+          staffName={consentStaff.name}
+          onConsented={() => {
+            router.push('/staff-portal')
+          }}
+        />
+      )}
     </div>
   )
 }
