@@ -61,10 +61,10 @@ export default function BarcodesPage() {
           try {
             window.JsBarcode(el, el.dataset.value, {
               format: 'CODE128',
-              width: 2.2,
-              height: 60,
+              width: 2.8,
+              height: 90,
               displayValue: false,
-              margin: 4,
+              margin: 6,
             })
           } catch (e) {}
         })
@@ -129,19 +129,19 @@ export default function BarcodesPage() {
             <div key={item.id} className="barcode-cell">
               <svg className="barcode-svg" data-value={item.barcode} />
               <div className="barcode-label">{item.name}</div>
-              <div className="barcode-sub">{item.barcode}</div>
-              <div className="barcode-sub">{item.base_unit} · pack: {item.pack_size}</div>
+              <div className="barcode-code">{item.barcode}</div>
+              <div className="barcode-sub">{item.base_unit} · Pack size: {item.pack_size}</div>
             </div>
           ))}
         </div>
 
-        <div className="barcode-section-label" style={{ marginTop: '32px' }}>⚙️ Quantity Codes</div>
+        <div className="barcode-section-label" style={{ marginTop: '36px' }}>⚙️ Quantity Barcodes</div>
         <div className="barcode-grid">
           {QTY_CODES.map(q => (
             <div key={q.code} className="barcode-cell barcode-cell-qty">
               <svg className="barcode-svg" data-value={q.code} />
               <div className="barcode-label">{q.label}</div>
-              <div className="barcode-sub">{q.code}</div>
+              <div className="barcode-code">{q.code}</div>
             </div>
           ))}
         </div>
@@ -156,129 +156,164 @@ export default function BarcodesPage() {
           body > *:not(.print-area) { display: none !important; }
           .print-area {
             display: block !important;
-            padding: 12mm;
-            font-family: Arial, sans-serif;
+            padding: 8mm 10mm;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           }
           .barcode-page-title {
             text-align: center;
-            font-size: 14pt;
-            font-weight: bold;
-            margin-bottom: 8mm;
-            padding: 4mm 6mm;
+            font-size: 15pt;
+            font-weight: 800;
+            margin-bottom: 6mm;
+            padding: 3mm 6mm;
             background: #FEF9C3;
             border: 2px solid #D97706;
             border-radius: 4px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .barcode-section-label {
-            font-size: 11pt;
-            font-weight: bold;
-            margin: 6mm 0 4mm;
+            font-size: 12pt;
+            font-weight: 800;
+            margin: 6mm 0 3mm;
             padding-bottom: 2mm;
-            border-bottom: 1px solid #ccc;
+            border-bottom: 2px solid #ccc;
           }
           .barcode-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6mm;
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 5mm !important;
           }
           .barcode-cell {
-            width: 44mm;
+            width: 100% !important;
             text-align: center;
-            border: 1px solid #ddd;
-            border-radius: 3mm;
-            padding: 3mm 2mm 4mm;
+            border: 1.5px solid #bbb;
+            border-radius: 4mm;
+            padding: 4mm 3mm 5mm;
             page-break-inside: avoid;
             break-inside: avoid;
+            background: #fff !important;
+            box-sizing: border-box;
           }
           .barcode-cell-qty {
-            border: 2px solid #D97706;
-            background: #FFFBEB;
+            border: 2.5px solid #D97706;
+            background: #FFFBEB !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .barcode-cell svg {
-            max-width: 100%;
-            height: auto;
+            width: 100% !important;
+            height: auto !important;
+            max-height: 32mm;
+            display: block;
+            margin: 0 auto;
           }
           .barcode-label {
-            font-size: 8pt;
-            font-weight: bold;
-            margin-top: 2mm;
+            font-size: 11pt;
+            font-weight: 800;
+            margin-top: 3mm;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            color: #000;
+          }
+          .barcode-code {
+            font-family: monospace;
+            font-size: 9pt;
+            font-weight: 700;
+            color: #222;
+            margin-top: 1mm;
+            letter-spacing: 0.05em;
           }
           .barcode-sub {
-            font-size: 6pt;
-            color: #666;
-            margin-top: 1mm;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            font-size: 8pt;
+            color: #555;
+            margin-top: 0.5mm;
+            font-weight: 600;
           }
 
           @page {
-            size: A4;
-            margin: 10mm;
+            size: A4 portrait;
+            margin: 8mm;
           }
         }
 
-        /* Preview on screen too */
+        /* Screen preview */
         @media screen {
           .print-area {
             display: block;
             padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
           }
           .barcode-page-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 800;
             text-align: center;
-            padding: 10px 16px;
+            padding: 12px 20px;
             background: #FEF9C3;
             border: 2px solid #D97706;
-            border-radius: 8px;
-            margin-bottom: 20px;
+            border-radius: 10px;
+            margin-bottom: 24px;
           }
           .barcode-section-label {
-            font-size: 15px;
-            font-weight: 700;
-            margin: 20px 0 12px;
+            font-size: 16px;
+            font-weight: 800;
+            margin: 24px 0 16px;
             padding-bottom: 8px;
             border-bottom: 2px solid var(--border-light);
+            color: var(--text-primary);
           }
           .barcode-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+            gap: 16px;
           }
           .barcode-cell {
-            width: 160px;
             text-align: center;
-            border: 1px solid var(--border-medium);
-            border-radius: 10px;
-            padding: 10px 8px 12px;
+            border: 1.5px solid var(--border-medium);
+            border-radius: 12px;
+            padding: 18px 14px;
             background: var(--bg-surface);
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.15s, box-shadow 0.15s;
+          }
+          .barcode-cell:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
           }
           .barcode-cell-qty {
             border: 2px solid #D97706;
             background: #FFFBEB;
           }
           .barcode-cell svg {
-            max-width: 100%;
+            width: 100%;
+            height: auto;
+            max-height: 100px;
+            display: block;
+            margin: 0 auto;
           }
           .barcode-label {
-            font-size: 11px;
-            font-weight: 700;
-            margin-top: 6px;
+            font-size: 15px;
+            font-weight: 800;
+            margin-top: 10px;
+            color: var(--text-primary);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
           }
+          .barcode-code {
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-top: 4px;
+            letter-spacing: 0.04em;
+          }
           .barcode-sub {
-            font-size: 10px;
+            font-size: 12px;
             color: var(--text-muted);
-            margin-top: 2px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            margin-top: 3px;
+            font-weight: 600;
           }
         }
 
