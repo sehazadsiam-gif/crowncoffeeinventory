@@ -19,6 +19,18 @@ const nextConfig = {
 
         return config;
     },
+    async rewrites() {
+        return [
+            {
+                source: "/dailybazarpractice",
+                destination: "/practice-bazar",
+            },
+            {
+                source: "/dailybazarpractice/:path*",
+                destination: "/practice-bazar/:path*",
+            },
+        ];
+    },
     async headers() {
         return [
             {

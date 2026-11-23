@@ -193,6 +193,72 @@ export async function GET() {
 
         CREATE INDEX IF NOT EXISTS idx_errand_trips_staff ON errand_trips (staff_id, departure_time DESC);
 
+        -- ============================================================
+        -- PRACTICE MODULE TABLES (Daily Bazar Practice)
+        -- ============================================================
+        CREATE TABLE IF NOT EXISTS practice_items (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          name TEXT NOT NULL,
+          barcode TEXT NOT NULL UNIQUE,
+          base_unit TEXT NOT NULL CHECK (base_unit IN ('g','ml','pcs')),
+          pack_size INTEGER NOT NULL DEFAULT 1 CHECK (pack_size > 0),
+          par_level INTEGER NOT NULL DEFAULT 0 CHECK (par_level >= 0),
+          active BOOLEAN NOT NULL DEFAULT true,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS practice_bazar_trips (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','approved')),
+          total_paid NUMERIC(12,2),
+          approved_by TEXT,
+          approved_at TIMESTAMPTZ,
+          created_by TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS practice_bazar_lines (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          trip_id UUID NOT NULL REFERENCES practice_bazar_trips(id) ON DELETE CASCADE,
+          item_id UUID NOT NULL REFERENCES practice_items(id),
+          quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+          scanned_by TEXT,
+          scanned_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        CREATE TABLE IF NOT EXISTS practice_stock_movements (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          item_id UUID NOT NULL REFERENCES practice_items(id),
+          movement_type TEXT NOT NULL CHECK (movement_type IN ('purchase','usage','reversal')),
+          quantity INTEGER NOT NULL,
+          trip_id UUID REFERENCES practice_bazar_trips(id),
+          reason TEXT,
+          created_by TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_practice_lines_trip ON practice_bazar_lines (trip_id);
+        CREATE INDEX IF NOT EXISTS idx_practice_mov_item ON practice_stock_movements (item_id);
+        CREATE INDEX IF NOT EXISTS idx_practice_items_barcode ON practice_items (barcode);
+
+        ALTER TABLE practice_items DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE practice_bazar_trips DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE practice_bazar_lines DISABLE ROW LEVEL SECURITY;
+        ALTER TABLE practice_stock_movements DISABLE ROW LEVEL SECURITY;
+
+        INSERT INTO practice_items (name, barcode, base_unit, pack_size, par_level) VALUES
+          ('Coffee Beans',  'ITEM-COFFEE-BEANS',  'g',   1000, 2000),
+          ('Milk',          'ITEM-MILK',          'ml',  1000, 5000),
+          ('Sugar',         'ITEM-SUGAR',         'g',   1000, 3000),
+          ('Onion',         'ITEM-ONION',         'g',    500, 2000),
+          ('Tomato',        'ITEM-TOMATO',        'g',    500, 2000),
+          ('Chicken',       'ITEM-CHICKEN',       'g',   1000, 5000),
+          ('Flour',         'ITEM-FLOUR',         'g',   1000, 4000),
+          ('Cooking Oil',   'ITEM-COOKING-OIL',   'ml',  1000, 3000),
+          ('Eggs',          'ITEM-EGGS',          'pcs',   12,   24),
+          ('Cheese',        'ITEM-CHEESE',        'g',    500, 1000)
+        ON CONFLICT (barcode) DO NOTHING;
+
           ALTER TABLE staff_locations DISABLE ROW LEVEL SECURITY;
         ALTER TABLE staff_location_logs DISABLE ROW LEVEL SECURITY;
         ALTER TABLE geofence_zones DISABLE ROW LEVEL SECURITY;
@@ -213,7 +279,7 @@ export async function GET() {
       const tableCheck = await client.query(`
         SELECT table_name FROM information_schema.tables 
         WHERE table_schema = 'public' 
-        AND table_name IN ('staff', 'staff_locations', 'staff_location_logs', 'geofence_zones', 'sos_alerts')
+        AND table_name IN ('staff', 'staff_locations', 'staff_location_logs', 'geofence_zones', 'sos_alerts', 'practice_items', 'practice_bazar_trips')
       `)
 
       await client.end()

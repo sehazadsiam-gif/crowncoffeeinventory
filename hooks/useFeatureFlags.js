@@ -27,7 +27,8 @@ export const DEFAULT_FEATURE_FLAGS = {
   tasks: true,
   overtime: true,
   members: true,
-  pos: true
+  pos: true,
+  practice_bazar: true
 }
 
 export function useFeatureFlags() {

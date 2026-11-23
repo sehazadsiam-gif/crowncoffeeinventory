@@ -139,6 +139,17 @@ export default function Navbar() {
 
     { href: '/bazar', label: 'Bazar', icon: <TrendingUp size={16} />, flag: 'bazar' },
     {
+      label: 'Daily Bazar (Practice)',
+      icon: <ShoppingBag size={16} style={{ color: '#D97706' }} />,
+      flag: 'practice_bazar',
+      children: [
+        { href: '/practice-bazar', label: '🛒 Bazar Trips' },
+        { href: '/practice-bazar/inventory', label: '📦 Practice Inventory' },
+        { href: '/practice-bazar/items', label: '🏷️ Manage Items' },
+        { href: '/practice-bazar/barcodes', label: '🖨️ Print Barcodes' },
+      ]
+    },
+    {
       label: 'Stock',
       icon: <Package size={16} />,
       children: [
@@ -193,7 +204,26 @@ export default function Navbar() {
     { href: '/balance-sheet', label: 'Balance', icon: <CalcIcon size={16} />, flag: 'balance_sheet' },
   ]
 
-  const rawNavItems = (userRole === 'admin' || userRole === 'sub_admin') ? adminItems : []
+  const staffItems = [
+    { href: '/staff-portal', label: 'Staff Portal', icon: <LayoutDashboard size={16} /> },
+    {
+      label: 'Daily Bazar (Practice)',
+      icon: <ShoppingBag size={16} style={{ color: '#D97706' }} />,
+      flag: 'practice_bazar',
+      children: [
+        { href: '/practice-bazar', label: '🛒 Bazar Trips' },
+        { href: '/practice-bazar/inventory', label: '📦 Practice Inventory' },
+        { href: '/practice-bazar/items', label: '🏷️ Manage Items' },
+        { href: '/practice-bazar/barcodes', label: '🖨️ Print Barcodes' },
+      ]
+    },
+  ]
+
+  const rawNavItems = (userRole === 'admin' || userRole === 'sub_admin') 
+    ? adminItems 
+    : (userRole === 'staff' || userRole === 'manager') 
+      ? staffItems 
+      : []
   
   // Filter nav items and sub-children based on active feature flags
   const navItems = rawNavItems
