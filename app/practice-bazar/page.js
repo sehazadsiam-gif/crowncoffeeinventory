@@ -485,6 +485,7 @@ export default function PracticeBazarPage() {
           refocusScan()
         }}
         onScan={executeBarcode}
+        recentLines={lines}
       />
 
       <style>{`
