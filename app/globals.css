@@ -820,12 +820,13 @@ tbody tr:last-child td { border-bottom: none; }
   40% { transform: scale(1); }
 }
 
-/* High-DPI HD Staff ID Card Printing */
+/* High-DPI HD Staff ID Card & Barcode Sheet Printing */
 @media print {
   body * {
     visibility: hidden !important;
   }
-  #printable-id-card, #printable-id-card * {
+  #printable-id-card, #printable-id-card *,
+  .print-area, .print-area * {
     visibility: visible !important;
   }
   #printable-id-card {
@@ -839,6 +840,12 @@ tbody tr:last-child td { border-bottom: none; }
     print-color-adjust: exact !important;
     image-rendering: -webkit-optimize-contrast !important;
     image-rendering: crisp-edges !important;
+  }
+  .print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
   }
 }
 

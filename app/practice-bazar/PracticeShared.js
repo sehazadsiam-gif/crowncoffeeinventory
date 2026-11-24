@@ -26,17 +26,24 @@ export function PracticeBanner() {
   )
 }
 
-// Format raw integer quantity for display
+// Format raw integer quantity for display: <amount> gram/kg/litre
 export function fmtQty(qty, unit) {
+  const num = Number(qty) || 0
   if (unit === 'g') {
-    if (qty >= 1000) return `${(qty / 1000).toFixed(qty % 1000 === 0 ? 0 : 2)} kg`
-    return `${qty} g`
+    if (Math.abs(num) >= 1000) {
+      const val = (num / 1000).toFixed(num % 1000 === 0 ? 0 : 2)
+      return `${val} kg`
+    }
+    return `${num} gram`
   }
   if (unit === 'ml') {
-    if (qty >= 1000) return `${(qty / 1000).toFixed(qty % 1000 === 0 ? 0 : 2)} L`
-    return `${qty} ml`
+    if (Math.abs(num) >= 1000) {
+      const val = (num / 1000).toFixed(num % 1000 === 0 ? 0 : 2)
+      return `${val} litre`
+    }
+    return `${num} ml`
   }
-  return `${qty} pcs`
+  return `${num} pcs`
 }
 
 export const PRACTICE_PAGES = [

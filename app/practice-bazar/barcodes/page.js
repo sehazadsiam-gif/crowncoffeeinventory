@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '../../../components/Navbar'
 import { useToast } from '../../../components/Toast'
-import { PracticeBanner, PRACTICE_PAGES } from '../PracticeShared'
+import { PracticeBanner, fmtQty, PRACTICE_PAGES } from '../PracticeShared'
 import { Printer } from 'lucide-react'
 
 // Quantity barcodes for printing
@@ -61,10 +61,10 @@ export default function BarcodesPage() {
           try {
             window.JsBarcode(el, el.dataset.value, {
               format: 'CODE128',
-              width: 2.8,
-              height: 90,
+              width: 3.5,
+              height: 125,
               displayValue: false,
-              margin: 6,
+              margin: 10,
             })
           } catch (e) {}
         })
@@ -130,7 +130,7 @@ export default function BarcodesPage() {
               <svg className="barcode-svg" data-value={item.barcode} />
               <div className="barcode-label">{item.name}</div>
               <div className="barcode-code">{item.barcode}</div>
-              <div className="barcode-sub">{item.base_unit} · Pack size: {item.pack_size}</div>
+              <div className="barcode-sub">{fmtQty(item.pack_size, item.base_unit)}</div>
             </div>
           ))}
         </div>
@@ -153,17 +153,25 @@ export default function BarcodesPage() {
         }
 
         @media print {
-          body > *:not(.print-area) { display: none !important; }
+          .no-print { display: none !important; }
+          .print-area, .print-area * {
+            visibility: visible !important;
+          }
           .print-area {
             display: block !important;
-            padding: 8mm 10mm;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            padding: 6mm 8mm;
+            box-sizing: border-box !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           }
           .barcode-page-title {
             text-align: center;
-            font-size: 15pt;
+            font-size: 16pt;
             font-weight: 800;
-            margin-bottom: 6mm;
+            margin-bottom: 5mm;
             padding: 3mm 6mm;
             background: #FEF9C3;
             border: 2px solid #D97706;
@@ -172,7 +180,7 @@ export default function BarcodesPage() {
             print-color-adjust: exact;
           }
           .barcode-section-label {
-            font-size: 12pt;
+            font-size: 13pt;
             font-weight: 800;
             margin: 6mm 0 3mm;
             padding-bottom: 2mm;
@@ -180,15 +188,15 @@ export default function BarcodesPage() {
           }
           .barcode-grid {
             display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 5mm !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 6mm !important;
           }
           .barcode-cell {
             width: 100% !important;
             text-align: center;
-            border: 1.5px solid #bbb;
+            border: 2px solid #999;
             border-radius: 4mm;
-            padding: 4mm 3mm 5mm;
+            padding: 5mm 4mm 6mm;
             page-break-inside: avoid;
             break-inside: avoid;
             background: #fff !important;
@@ -203,12 +211,13 @@ export default function BarcodesPage() {
           .barcode-cell svg {
             width: 100% !important;
             height: auto !important;
-            max-height: 32mm;
+            min-height: 38mm !important;
+            max-height: 48mm !important;
             display: block;
             margin: 0 auto;
           }
           .barcode-label {
-            font-size: 11pt;
+            font-size: 13pt;
             font-weight: 800;
             margin-top: 3mm;
             overflow: hidden;
@@ -218,17 +227,17 @@ export default function BarcodesPage() {
           }
           .barcode-code {
             font-family: monospace;
-            font-size: 9pt;
-            font-weight: 700;
-            color: #222;
-            margin-top: 1mm;
-            letter-spacing: 0.05em;
+            font-size: 11pt;
+            font-weight: 800;
+            color: #111;
+            margin-top: 1.5mm;
+            letter-spacing: 0.06em;
           }
           .barcode-sub {
-            font-size: 8pt;
-            color: #555;
-            margin-top: 0.5mm;
-            font-weight: 600;
+            font-size: 10pt;
+            color: #444;
+            margin-top: 1mm;
+            font-weight: 700;
           }
 
           @page {
@@ -265,14 +274,14 @@ export default function BarcodesPage() {
           }
           .barcode-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
           }
           .barcode-cell {
             text-align: center;
             border: 1.5px solid var(--border-medium);
             border-radius: 12px;
-            padding: 18px 14px;
+            padding: 20px 16px;
             background: var(--bg-surface);
             box-shadow: var(--shadow-sm);
             transition: transform 0.15s, box-shadow 0.15s;
@@ -288,14 +297,15 @@ export default function BarcodesPage() {
           .barcode-cell svg {
             width: 100%;
             height: auto;
-            max-height: 100px;
+            min-height: 110px;
+            max-height: 150px;
             display: block;
             margin: 0 auto;
           }
           .barcode-label {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 800;
-            margin-top: 10px;
+            margin-top: 12px;
             color: var(--text-primary);
             overflow: hidden;
             text-overflow: ellipsis;
@@ -303,22 +313,18 @@ export default function BarcodesPage() {
           }
           .barcode-code {
             font-family: var(--font-mono);
-            font-size: 13px;
+            font-size: 14px;
             font-weight: 700;
             color: var(--primary);
-            margin-top: 4px;
-            letter-spacing: 0.04em;
+            margin-top: 5px;
+            letter-spacing: 0.05em;
           }
           .barcode-sub {
-            font-size: 12px;
+            font-size: 13px;
             color: var(--text-muted);
-            margin-top: 3px;
-            font-weight: 600;
+            margin-top: 4px;
+            font-weight: 700;
           }
-        }
-
-        @media print {
-          .no-print { display: none !important; }
         }
       `}</style>
     </div>
