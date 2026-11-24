@@ -24,12 +24,8 @@ export default function PracticeInventoryPage() {
     ? (localStorage.getItem('cc_username') || 'staff')
     : 'staff'
 
+  // Public practice mode: no login required
   useEffect(() => {
-    const token = localStorage.getItem('cc_token')
-    const role = localStorage.getItem('cc_role')
-    if (!token || (role !== 'admin' && role !== 'sub_admin' && role !== 'staff' && role !== 'manager')) {
-      router.replace('/'); return
-    }
     fetchStock()
   }, [])
 

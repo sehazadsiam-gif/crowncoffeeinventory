@@ -25,12 +25,8 @@ export default function BarcodesPage() {
   const [jsBarLoaded, setJsBarLoaded] = useState(false)
   const printRef = useRef(null)
 
+  // Public practice mode: no login required
   useEffect(() => {
-    const token = localStorage.getItem('cc_token')
-    const role = localStorage.getItem('cc_role')
-    if (!token || (role !== 'admin' && role !== 'sub_admin' && role !== 'staff' && role !== 'manager')) {
-      router.replace('/'); return
-    }
     fetchItems()
     loadJsBarcode()
   }, [])

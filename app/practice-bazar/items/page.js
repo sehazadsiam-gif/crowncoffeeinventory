@@ -22,12 +22,8 @@ export default function PracticeItemsPage() {
   const [showForm, setShowForm] = useState(false)
   const [csvImporting, setCsvImporting] = useState(false)
 
+  // Public practice mode: no login required
   useEffect(() => {
-    const token = localStorage.getItem('cc_token')
-    const role = localStorage.getItem('cc_role')
-    if (!token || (role !== 'admin' && role !== 'sub_admin' && role !== 'staff' && role !== 'manager')) {
-      router.replace('/'); return
-    }
     fetchItems()
   }, [])
 

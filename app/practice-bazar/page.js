@@ -33,14 +33,8 @@ export default function PracticeBazarPage() {
     ? (localStorage.getItem('cc_username') || localStorage.getItem('cc_staff_name') || 'staff')
     : 'staff'
 
-  // ── Auth guard ────────────────────────────────────────────
+  // ── Public practice mode: no PIN or login required ───────────────────
   useEffect(() => {
-    const token = localStorage.getItem('cc_token')
-    const role = localStorage.getItem('cc_role')
-    if (!token || (role !== 'admin' && role !== 'sub_admin' && role !== 'staff' && role !== 'manager')) {
-      router.replace('/')
-      return
-    }
     fetchTrips()
   }, [])
 
